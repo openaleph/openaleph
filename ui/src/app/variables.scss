@@ -1,3 +1,21 @@
+@import url('https://cdn.investigativedata.org/style/fonts.min.css');
+
+$pt-font-family: var(--font-family-sans);
+$pt-font-family-monospace: var(--font-family-mono);
+
+$black: #1a1a1a;
+$pt-link-color: $black;
+$pt-text-color: $black;
+$pt-intent-primary: #ff5f33;
+$pt-app-background-color: #fff8f1;
+
+$pt-border-radius: 0;
+$pt-border-shadow-opacity: 0;
+$pt-drop-shadow-opacity: 0;
+$pt-dark-border-shadow-opacity: 0;
+$pt-dark-drop-shadow-opacity: 0;
+$pt-input-box-shadow: 0;
+
 @import '~@blueprintjs/core/lib/scss/variables';
 @import '~@blueprintjs/icons/lib/scss/variables';
 
