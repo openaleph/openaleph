@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM python:3.11-slim
 ENV DEBIAN_FRONTEND noninteractive
 
 # build-essential 
@@ -6,7 +6,7 @@ RUN apt-get -qq -y update \
     && apt-get -qq --no-install-recommends -y install locales \
     ca-certificates postgresql-client libpq-dev curl jq \
     python3-pip python3-icu python3-psycopg2 \
-    python3-lxml python3-crypto \
+    python3-lxml python3-cryptography \
     && apt-get -qq -y autoremove \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
