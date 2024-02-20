@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND noninteractive
 # build-essential 
 RUN apt-get -qq -y update \
     && apt-get -qq --no-install-recommends -y install locales \
-    ca-certificates postgresql-client libpq-dev curl jq \
+    ca-certificates postgresql-client libpq-dev curl jq unzip \
     python3-pip python3-icu python3-psycopg2 \
     python3-lxml python3-cryptography \
     && apt-get -qq -y autoremove \
@@ -48,5 +48,9 @@ ENV ALEPH_ELASTICSEARCH_URI=http://elasticsearch:9200/ \
 
 RUN mkdir /run/prometheus
 
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+COPY docker-entrypoint.d /docker-entrypoint.d/
+RUN chmod +x /docker-entrypoint.sh
+ENTRYPOINT ["/docker-entrypoint.sh"]
 # Run the green unicorn
 CMD gunicorn --config /aleph/gunicorn.conf.py --workers 6 --log-level debug --log-file -
