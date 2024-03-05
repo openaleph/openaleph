@@ -146,7 +146,7 @@ msgstr "pendiente"
 
 #: aleph/model/common.py:115
 msgid "successful"
-msgstr ""
+msgstr "listo"
 
 #: aleph/model/common.py:116
 msgid "failed"
@@ -158,7 +158,7 @@ msgstr "Identificación de entidad inválida"
 
 #: aleph/model/event.py:49
 msgid "New datasets"
-msgstr ""
+msgstr "Nuevos conjuntos de datos"
 
 #: aleph/model/event.py:50
 msgid "{{actor}} created {{collection}}"
@@ -166,7 +166,7 @@ msgstr "{{actor}} creó {{collection}}"
 
 #: aleph/model/event.py:57
 msgid "Document uploads"
-msgstr ""
+msgstr "Subida de documentos"
 
 #: aleph/model/event.py:58
 msgid "{{actor}} added {{document}} to {{collection}}"
@@ -174,7 +174,7 @@ msgstr "{{actor}} agregó {{document}} a {{collection}}"
 
 #: aleph/model/event.py:65
 msgid "Entities generated"
-msgstr ""
+msgstr "Entidades generadas"
 
 #: aleph/model/event.py:66
 msgid "{{actor}} generated entities from {{table}} in {{collection}}"
@@ -182,7 +182,7 @@ msgstr "{{actor}} generó entidades a partir de {{table}} en {{collection}}"
 
 #: aleph/model/event.py:75
 msgid "New network diagram"
-msgstr ""
+msgstr "Nuevo diagrama de red"
 
 #: aleph/model/event.py:76
 msgid "{{actor}} began diagramming {{diagram}} in {{collection}}"
@@ -190,7 +190,7 @@ msgstr "{{actor}} empezó a diagramar {{diagram}} en {{collection}}"
 
 #: aleph/model/event.py:85
 msgid "New diagrams and lists"
-msgstr ""
+msgstr "Listas y diagramas nuevos"
 
 #: aleph/model/event.py:86
 msgid "{{actor}} created {{entityset}} in {{collection}}"
@@ -198,7 +198,7 @@ msgstr "{{actor}} creó {{entityset}} en {{collection}}"
 
 #: aleph/model/event.py:93
 msgid "Alert notifications"
-msgstr ""
+msgstr "Notificaciones de alertas"
 
 #: aleph/model/event.py:94
 msgid "{{entity}} matches your alert for {{alert}}"
@@ -206,7 +206,7 @@ msgstr "{{entity}} coincide con su alerta para {{alert}}"
 
 #: aleph/model/event.py:101
 msgid "Dataset access change"
-msgstr ""
+msgstr "Cambio de acceso al conjunto de datos"
 
 #: aleph/model/event.py:102
 msgid "{{actor}} gave {{role}} access to {{collection}}"
@@ -214,7 +214,7 @@ msgstr "{{actor}} otorgó acceso de {{role}} a {{collection}}"
 
 #: aleph/model/event.py:111
 msgid "Dataset published"
-msgstr ""
+msgstr "Se publicó el conjunto de datos"
 
 #: aleph/model/event.py:112
 msgid "{{actor}} published {{collection}}"
@@ -222,11 +222,11 @@ msgstr "{{actor}} publicó {{collection}}"
 
 #: aleph/model/event.py:119
 msgid "Exports completed"
-msgstr ""
+msgstr "Finalizó la exportación"
 
 #: aleph/model/event.py:120
 msgid "{{export}} is ready for download"
-msgstr ""
+msgstr "{{export}} está lista para descargar"
 
 #: aleph/search/__init__.py:76
 msgid "No schema is specified for the query."
@@ -238,6 +238,9 @@ msgid ""
 "    The following export is ready for download:\n"
 "    "
 msgstr ""
+"\n"
+"    La siguiente exportación está lista para descargar:\n"
+"    "
 
 #: aleph/templates/email/export.html:13
 #, python-format
@@ -247,6 +250,10 @@ msgid ""
 "    Browse all of your available exports here:\n"
 "    "
 msgstr ""
+"\n"
+"    Este vínculo a su descarga vencerá el %(expiration_date)s.\n"
+"    Encuentre todas sus exportaciones vigentes aquí:\n"
+"    "
 
 #: aleph/templates/email/layout.html:45
 #, python-format
@@ -367,11 +374,11 @@ msgstr "El token de acceso es inválido."
 #: aleph/views/entities_api.py:173
 #, python-format
 msgid "Search: %s"
-msgstr ""
+msgstr "Buscar: %s"
 
 #: aleph/views/entitysets_api.py:216
 msgid "Only diagrams can be embedded!"
-msgstr ""
+msgstr "¡Solo se pueden incrustar diagramas!"
 
 #: aleph/views/roles_api.py:62
 msgid "prefix filter is too short"
@@ -400,6 +407,9 @@ msgid ""
 "problem. Please check back later and if the problem persists contact an "
 "Aleph administrator"
 msgstr ""
+"Encontramos %(total)d resultados, pero no se pudieron cargar a causa "
+"de un problema técnico. Por favor, inténtelo de nuevo más tarde y si "
+"el problema persiste, contacte a un administrador de Aleph"
 
 #: aleph/views/sessions_api.py:61
 msgid "Invalid user or password."
