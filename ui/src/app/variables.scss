@@ -4,7 +4,6 @@ $pt-font-family: var(--font-family-sans);
 $pt-font-family-monospace: var(--font-family-mono);
 
 $black: #1a1a1a;
-$pt-link-color: $black;
 $pt-text-color: $black;
 $pt-intent-primary: #ff5f33;
 $pt-app-background-color: #fff8f1;
@@ -74,3 +73,8 @@ $warning-text-color: #8a6d3b;
 $button-color-hover: #137cbd;
 $views-menu-background-color: rgba(92, 112, 128, 0.5);
 $aleph-error-highlight-color: rgb(212, 19, 13);
+
+// adjust INTER font
+* {
+  letter-spacing: -0.02rem;
+}
