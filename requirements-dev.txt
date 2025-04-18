@@ -4,3 +4,5 @@ black==23.12.1
 playwright==1.40.0
 pytest-playwright==0.4.3
 ruff===0.1.9
+mkdocs==1.6.1
+mkdocs-material==9.6.11
