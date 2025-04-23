@@ -111,3 +111,6 @@ ENV/
 !/docs/**/*
 
 test-results/
+
+
+.DS_Store
