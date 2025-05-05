@@ -32,6 +32,7 @@ services:
   ingest-file:
     build:
       context: ../ingest-file
+    image: ghcr.io/dataresearchcenter/ingest-file:latest
     hostname: ingest
     tmpfs: /tmp
     volumes:
