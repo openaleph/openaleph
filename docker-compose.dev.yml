@@ -1,5 +1,3 @@
-version: "3.2"
-
 services:
   postgres:
     image: postgres:15
@@ -15,20 +13,15 @@ services:
       POSTGRES_DATABASE: aleph
 
   elasticsearch:
-    image: ghcr.io/alephdata/aleph-elasticsearch:3bb5dbed97cfdb9955324d11e5c623a5c5bbc410
+    image: ghcr.io/dataresearchcenter/aleph-elasticsearch:latest
     restart: on-failure
     environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
-      - "http.cors.enabled=true"
-      - "http.cors.allow-origin=*"
-      - "http.cors.allow-headers=*"
-      - "http.cors.allow-credentials=true"
     ports:
       - "127.0.0.1:9200:9200"
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
+      - ./contrib/es/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
 
   redis:
     image: redis:alpine
@@ -37,7 +30,9 @@ services:
       - redis-data:/data
 
   ingest-file:
-    image: ghcr.io/alephdata/ingest-file:3.20.0
+    build:
+      context: ../ingest-file
+    image: ghcr.io/dataresearchcenter/ingest-file:latest
     hostname: ingest
     tmpfs: /tmp
     volumes:
@@ -67,7 +62,7 @@ services:
   app:
     build:
       context: .
-    image: ghcr.io/alephdata/aleph:${ALEPH_TAG:-latest}
+    # image: ghcr.io/dataresearchcenter/openaleph:latest
     hostname: aleph
     command: /bin/bash
     depends_on:
@@ -95,7 +90,7 @@ services:
   api:
     build:
       context: .
-    image: ghcr.io/alephdata/aleph:${ALEPH_TAG:-latest}
+    # image: ghcr.io/dataresearchcenter/openaleph:latest
     command: python3 -m debugpy --listen 0.0.0.0:5678 -m flask run -h 0.0.0.0 -p 5000 --with-threads --reload --debugger
     ports:
       - "127.0.0.1:5000:5000"
@@ -122,7 +117,7 @@ services:
   ui:
     build:
       context: ui
-    image: ghcr.io/alephdata/aleph-ui:${ALEPH_TAG:-latest}
+    # image: ghcr.io/dataresearchcenter/aleph-ui:latest
     depends_on:
       - api
     command: "bash -c 'rsync --archive --inplace --no-compress --whole-file /node_modules /alephui && npm run start'"
@@ -141,7 +136,7 @@ services:
       - aleph.env
 
   worker:
-    image: alephdata/aleph:${ALEPH_TAG:-latest}
+    image: ghcr.io/dataresearchcenter/openaleph:latest
     command: aleph worker
     restart: on-failure
     depends_on:

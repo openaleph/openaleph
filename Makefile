@@ -1,8 +1,9 @@
-COMPOSE=docker-compose -f docker-compose.dev.yml
-COMPOSE_E2E=docker-compose -f docker-compose.dev.yml -f docker-compose.e2e.yml
+COMPOSE=docker compose -f docker-compose.dev.yml
+COMPOSE_E2E=docker compose -f docker-compose.dev.yml -f docker-compose.e2e.yml
 APPDOCKER=$(COMPOSE) run --rm app
 UIDOCKER=$(COMPOSE) run --no-deps --rm ui
 ALEPH_TAG=latest
+BLACK_OPTS=--extend-exclude aleph/migrate
 
 all: build upgrade web
 
@@ -28,20 +29,23 @@ lint-ui:
 	$(UIDOCKER) npm run lint
 
 format:
-	black aleph/
+	black $(BLACK_OPTS) aleph/
 
 format-ui:
 	$(UIDOCKER) npm run format
 
 format-check:
-	black --check aleph/
+	black --check $(BLACK_OPTS) aleph/
 
 format-check-ui:
 	$(UIDOCKER) npm run format:check
 
 upgrade: build
 	$(COMPOSE) up -d postgres elasticsearch
-	sleep 10
+	# wait for postgres to be available
+	@$(COMPOSE) exec postgres pg_isready --timeout=30
+	# wait for elasticsearch to be available
+	@$(COMPOSE) exec elasticsearch timeout 30 bash -c "printf 'Waiting for elasticsearch'; until curl --silent --output /dev/null localhost:9200/_cat/health?h=st; do printf '.'; sleep 1; done; printf '\n'"
 	$(APPDOCKER) aleph upgrade
 
 api: services
@@ -75,7 +79,7 @@ build-ui:
 	docker build -t ghcr.io/alephdata/aleph-ui-production:$(ALEPH_TAG) -f ui/Dockerfile.production ui
 
 build-e2e:
-	$(COMPOSE_E2E) build
+	$(COMPOSE_E2E) build --build-arg PLAYWRIGHT_VERSION=$(shell awk -F'==' '/^playwright==/ { print $$2 }' e2e/requirements.txt)
 
 build-full: build build-ui build-e2e
 
@@ -114,10 +118,10 @@ e2e: services-e2e e2e/test-results
 	BASE_URL=http://ui:8080 $(COMPOSE_E2E) run --rm e2e pytest -s -v --output=/e2e/test-results/ --screenshot=only-on-failure --video=retain-on-failure e2e/
 
 e2e-local-setup: dev
+	python3 -m pip install -q -r e2e/requirements.txt
 	playwright install
 
 e2e-local:
 	pytest -s -v --screenshot only-on-failure e2e/
 
 .PHONY: build services e2e
-

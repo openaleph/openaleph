@@ -1,7 +1,6 @@
 import logging
 from authlib.jose import JsonWebToken, JsonWebKey
 from authlib.integrations.flask_client import OAuth
-from authlib.jose.errors import DecodeError
 
 from aleph.settings import SETTINGS
 from aleph.util import is_auto_admin
@@ -47,7 +46,8 @@ def _get_groups(provider, oauth_token, id_token):
     """Groups are not standardised in OIDC, so this is provider-specific."""
     try:
         access_token = _parse_access_token(provider, oauth_token)
-    except DecodeError:
+    # except DecodeError:
+    except Exception:  # azure errors
         # Failed to parse the access_token as JWT. Most probably, the required
         # information about groups is in the id_token.
         access_token = {}

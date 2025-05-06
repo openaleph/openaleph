@@ -7,6 +7,7 @@ OpenAleph is in active development and committed to being open, accessible, and 
 ---
 
 ## Table of Contents
+
 - [How to Contribute to OpenAleph](#how-to-contribute-to-openaleph)
 - [Code of Conduct](#code-of-conduct)
 - [How to Get Support](#how-to-get-support)
@@ -138,4 +139,3 @@ We value contributions beyond code changes too. Here are a few guidelines:
 Thank you for considering a contribution to OpenAleph! Whether you’re fixing a bug, proposing a new feature, or simply offering feedback, your involvement makes a real difference. We’re excited to work together to improve the project for everyone.
 
 Happy coding!
-
