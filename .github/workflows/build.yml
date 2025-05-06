@@ -11,7 +11,7 @@ permissions:
   packages: write
 
 jobs:
-  docker:
+  docker-build-aleph:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

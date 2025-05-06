@@ -11,7 +11,7 @@ permissions:
   packages: write
 
 jobs:
-  docker-base:
+  docker-build-ui-base:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,14 +40,17 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: ./ui
+          file: ./ui/Dockerfile
+          build-args: |
+            ALEPH_TAG=${{ github.head_ref || github.ref_name }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  docker:
-    needs: docker-base
+  docker-build-ui:
+    needs: docker-build-ui-base
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
