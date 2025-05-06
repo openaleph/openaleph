@@ -51,6 +51,8 @@ dependencies = [
     "grpcio (>=1.32.0,<2.0.0)",
     "google-cloud-storage (>=1.31.0,<3.0.0)",
     "pydantic (>=2.10.6,<3.0.0)",
+    "pytest (==8.3.3)",
+    "pytest-cov (==6.0.0)",
 ]
 
 [project.scripts]
@@ -62,8 +64,6 @@ aleph = "aleph.manage:cli"
 [tool.poetry.group.dev.dependencies]
 factory-boy = "^3.3.1"
 Faker = "^30.8.2"
-pytest = "^8.3.3"
-pytest-cov = "^6.0.0"
 debugpy = "^1.8.8"
 ipython = "^8.29.0"
 coverage = "^7.6.4"
