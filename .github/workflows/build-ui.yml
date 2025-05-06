@@ -27,7 +27,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
-            type=sha
+            type=sha,format=long
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -91,7 +91,7 @@ jobs:
           context: ./ui
           file: ./ui/Dockerfile.production
           build-args: |
-            ALEPH_TAG=${{ github.sha }}
+            ALEPH_TAG=${{ github.head_ref || github.ref_name }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
