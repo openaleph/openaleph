@@ -91,7 +91,7 @@ jobs:
           context: ./ui
           file: ./ui/Dockerfile.production
           build-args: |
-            ALEPH_TAG=${{ github.head_ref || github.ref_name }}
+            ALEPH_TAG=${{ github.sha }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
