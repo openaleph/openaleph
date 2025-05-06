@@ -27,7 +27,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
-            type=sha,format=long,prefix=sha-
+            type=sha,format=long
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
