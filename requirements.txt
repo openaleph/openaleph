@@ -1671,7 +1671,6 @@ scipy==1.15.2 ; python_version == "3.11" or python_version >= "3.12" and python_
     --hash=sha256:f031846580d9acccd0044efd1a90e6f4df3a6e12b4b6bd694a7bc03a89892b28 \
     --hash=sha256:fb530e4794fc8ea76a4a21ccb67dea33e5e0e60f07fc38a49e821e1eae3b71a0 \
     --hash=sha256:fe8a9eb875d430d81755472c5ba75e84acc980e4a8f6204d402849234d3017db
-servicelayer @ git+https://github.com/investigativedata/servicelayer.git@10f0a4d74d692fc2c5b76607b84b43554a1c8432 ; python_version == "3.11" or python_version >= "3.12" and python_full_version < "4.0.0"
 shortuuid==1.0.13 ; python_version == "3.11" or python_version >= "3.12" and python_full_version < "4.0.0" \
     --hash=sha256:3bb9cf07f606260584b1df46399c0b87dd84773e7b25912b7e391e30797c5e72 \
     --hash=sha256:a482a497300b49b4953e15108a7913244e1bb0d41f9d332f5e9925dba33a3c5a
