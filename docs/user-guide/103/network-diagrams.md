@@ -7,17 +7,22 @@ Network diagrams in OpenAleph let you visually explore relationships between ent
 Network diagrams are interactive graphs that show entities (such as people, companies, or assets) as nodes, and their relationships (like ownership or affiliation) as edges between them.
 
 They are generated directly from structured data within an investigation workspace.
+![Screenshot of a network diagram](../../assets/images/dia.png)
+
+
 
 ## Creating a Diagram
 
 1. Go to your **Investigation**.
 2. Select **Network Diagrams** from the sidebar.
 3. Click **New Diagram**.
-![SCREENSHOT MISSING](../../assets/images/xxx.png)
+![Screenshot of the new network diagram dialog](../../assets/images/new_dia.png)
 4. Add entities from your investigation
-![SCREENSHOT MISSING](../../assets/images/xxx.png)
-5. Expand each entities with a double click, then select
-6. Additionally, you can create new entities in the diagram directly. They will be available in your investigation afterwards.
+![Screenshot of the add entity to network diagram dialog](../../assets/images/add_to_dia.png)
+5. Expand each entities with a double click, then select `Discover asset and shares`
+![Screenshot of the expand entity to network diagram dialog](../../assets/images/expand_dia.png)
+6. Repeat step 6 with the newly discovered entities, if you want.
+7. Additionally, you can create new entities in the diagram directly. They will be available in your investigation afterwards.
 
 
 ## Using the Diagram
