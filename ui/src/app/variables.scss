@@ -1,7 +1,9 @@
-@import url('https://cdn.investigativedata.org/style/fonts.min.css');
+// @import 'https://cdn.investigativedata.org/style/fonts.min.css';
+@import 'app/fonts.min.css';
+// @import 'https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap';
+// @import 'https://rsms.me/inter/inter.css';
 
 $pt-font-family: var(--font-family-sans);
-$pt-font-family-monospace: var(--font-family-mono);
 
 $black: #1a1a1a;
 $pt-text-color: $black;

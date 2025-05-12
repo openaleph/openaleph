@@ -3,7 +3,7 @@
 $vertical-spacing: $aleph-grid-size * 5;
 
 .HomeScreen {
-  font-family: 'Open Sans', sans-serif;
+  font-family: $pt-font-family; 
   font-size: 16px;
   @media screen and (max-width: $aleph-screen-sm-max-width) {
     font-size: 14px;
