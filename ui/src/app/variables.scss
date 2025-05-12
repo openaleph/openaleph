@@ -6,6 +6,7 @@
 $pt-font-family: var(--font-family-sans);
 
 $black: #1a1a1a;
+$white: #fff8f1;
 $pt-text-color: $black;
 $pt-intent-primary: #ff5f33;
 $pt-app-background-color: #fff8f1;
@@ -36,16 +37,16 @@ $aleph-navbar-mobile-max-width: $aleph-screen-sm-max-width + $aleph-grid-size *
   12;
 
 $aleph-breadcrumbs-background: $light-gray4;
-$aleph-page-background: white;
+$aleph-page-background: $white;
 $aleph-link-color: $pt-link-color;
 // $aleph-sidebar-background: $dark-gray5;
 $aleph-sidebar-background: $pt-link-color;
-$aleph-sidebar-foreground: white;
+$aleph-sidebar-foreground: $white;
 $aleph-facet-background: $light-gray4;
 $aleph-query-tag-height: 36px;
-$aleph-table-heading-background: white;
+$aleph-table-heading-background: $white;
 $aleph-table-border-color: $light-gray2;
-$aleph-content-background: white;
+$aleph-content-background: $white;
 $aleph-border-color: $light-gray2;
 
 $aleph-greyed-text: $pt-text-color-muted;
