@@ -45,7 +45,6 @@ dependencies = [
     "zipstream-new (==1.1.8)",
     "prometheus-client (==0.17.1)",
     "followthemoney-compare (==0.4.4)",
-    "nomenklatura (>=3.17.3,<4.0.0)",
     # servicelayer extras requirements
     "servicelayer @ git+https://github.com/dataresearchcenter/servicelayer",
     "boto3 (>=1.11.9,<2.0.0)",
