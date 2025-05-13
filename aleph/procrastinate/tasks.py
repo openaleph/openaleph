@@ -22,8 +22,11 @@ aleph_app = create_app()
 
 
 def aleph_task(original_func=None, **kwargs):
-    # extend @openaleph_procrastinate.tasks.task decorator to ensure aleph app
-    # context for task runtime
+    """
+    extend @openaleph_procrastinate.tasks.task decorator to ensure aleph app
+    context for task runtime and getting the collection_id from the dataset
+    foreign_id
+    """
     def wrap(func):
         def new_func(*job_args, **job_kwargs):
             with aleph_app.app_context():
@@ -43,25 +46,19 @@ def aleph_task(original_func=None, **kwargs):
 
 
 @aleph_task
-def load_entity(job: DatasetJob, collection: Collection) -> DatasetJob:
+def put_entities(job: DatasetJob, collection: Collection) -> DatasetJob:
     """
-    Load an entity into Aleph:
+    Put entities into Aleph:
     - write to ftm store
     - index
     - refresh cache
     """
-    sign_entity(job.entity, collection)
     aggregator = get_aggregator(collection)
-    aggregator.delete(entity_id=job.entity.id)
-    aggregator.put(job.entity, origin=OPAL_ORIGIN)
-    profile_fragments(collection, aggregator, entity_id=job.entity.id)
-    index_proxy(collection, job.entity)
-    refresh_entity(collection, job.entity.id)
-    return job
-
-
-@aleph_task
-def index_entity(job: DatasetJob, collection: Collection) -> DatasetJob:
-    """Index an entity into the aleph index"""
-    index_proxy(collection, job.entity)
+    for entity in job.get_entities():
+        sign_entity(entity, collection)
+        aggregator.delete(entity_id=entity.id)
+        aggregator.put(job.entity, origin=job.context.get("origin") or OPAL_ORIGIN)
+        profile_fragments(collection, aggregator, entity_id=entity.id)
+        index_proxy(collection, job.entity)
+        refresh_entity(collection, job.entity.id)
     return job
