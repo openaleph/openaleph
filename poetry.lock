@@ -3242,10 +3242,12 @@ name = "openaleph-procrastinate"
 version = "0.0.1"
 description = "Task queue logic for OpenAleph built upon procrastinate"
 optional = false
-python-versions = ">=3.11,<4"
+python-versions = "<4,>=3.11"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "openaleph_procrastinate-0.0.1-py3-none-any.whl", hash = "sha256:d03f76b572537032787c07a3abd44859d9b7f851e6c1a35cda8add5957932c4b"},
+    {file = "openaleph_procrastinate-0.0.1.tar.gz", hash = "sha256:e83c0a69089c8bedda7a741197bd7e0a67b5961603fdd425bbce019093674b6c"},
+]
 
 [package.dependencies]
 dj-database-url = ">=2.3.0,<3.0.0"
@@ -3260,12 +3262,6 @@ pydantic-settings = ">=2.9.1,<3.0.0"
 
 [package.extras]
 django = ["django (>=5.2,<6.0)"]
-
-[package.source]
-type = "git"
-url = "https://github.com/openaleph/openaleph-procrastinate"
-reference = "main"
-resolved_reference = "acf1aa22ca477be5fcf9c6d2ee2b680da6c6aa96"
 
 [[package]]
 name = "openpyxl"
@@ -5854,4 +5850,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.11, <4.0.0"
-content-hash = "f7cd441cb40b85d281f3967d1ada4f22be07960754f8d711c8f327ff7386b707"
+content-hash = "205376137d5cb269e46f7c96a0ce57ac2565fc8ca93ecb3b3e2df16473bb00ea"

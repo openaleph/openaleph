@@ -68,7 +68,7 @@ dependencies = [
     # TODO - remove sentry eventually
     "sentry-sdk[flask] (==2.19.2)",
     "pydantic (>=2.10.6,<3.0.0)",
-    "openaleph-procrastinate @ git+https://github.com/openaleph/openaleph-procrastinate@main",
+    "openaleph-procrastinate (>=0.0.1,<0.0.2)",
     "lxml[html-clean] (>=5.4.0,<6.0.0)"
 ]
 
