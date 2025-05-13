@@ -57,8 +57,8 @@ def put_entities(job: DatasetJob, collection: Collection) -> DatasetJob:
     for entity in job.get_entities():
         sign_entity(entity, collection)
         aggregator.delete(entity_id=entity.id)
-        aggregator.put(job.entity, origin=job.context.get("origin") or OPAL_ORIGIN)
+        aggregator.put(entity, origin=job.context.get("origin") or OPAL_ORIGIN)
         profile_fragments(collection, aggregator, entity_id=entity.id)
-        index_proxy(collection, job.entity)
-        refresh_entity(collection, job.entity.id)
+        index_proxy(collection, entity)
+        refresh_entity(collection, entity.id)
     return job
