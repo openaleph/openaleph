@@ -16,7 +16,12 @@ Each workspace is isolated from public collections and is visible only to the us
 
 ## Creating a New Investigation
 
-![Screenshot of the OpenAleph new investigation menu](../../assets/images/new_investigation.png)
+<div>
+  <div style="position:relative;padding-top:56.25%;">
+    <iframe src="https://www.youtube-nocookie.com/embed/LPAc1Nf7yqo?si=xvD6pg-taLsliDc4" frameborder="0" allowfullscreen
+      style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>
+  </div>
+</div>
 
 To create an investigation:
 

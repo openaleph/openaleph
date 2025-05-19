@@ -3,6 +3,12 @@
 Search is at the core of OpenAleph. From the homepage or the top navigation bar, you can run searches across all collections and datasets you have access to.
 
 This guide walks you through the basics of running a search and understanding the results.
+<div>
+  <div style="position:relative;padding-top:56.25%;">
+    <iframe src="https://www.youtube-nocookie.com/embed/lh-KJvz4xtE?si=mgci65CRm-7FnXfW" frameborder="0" allowfullscreen
+      style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>
+  </div>
+</div>
 
 ## 1. Performing a Search
 At the top of every page is the global search bar. To perform a basic search, type a keyword, such as a name, company, or location and press `Enter`.

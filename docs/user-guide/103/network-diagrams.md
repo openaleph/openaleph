@@ -7,8 +7,13 @@ Network diagrams in OpenAleph let you visually explore relationships between ent
 Network diagrams are interactive graphs that show entities (such as people, companies, or assets) as nodes, and their relationships (like ownership or affiliation) as edges between them.
 
 They are generated directly from structured data within an investigation workspace.
-![Screenshot of a network diagram](../../assets/images/dia.png)
 
+<div>
+  <div style="position:relative;padding-top:56.25%;">
+    <iframe src="https://www.youtube-nocookie.com/embed/95fkoGkTO-E?si=00cPWeAcIBrYogVI" frameborder="0" allowfullscreen
+      style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>
+  </div>
+</div>
 
 
 ## Creating a Diagram
