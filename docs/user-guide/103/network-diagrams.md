@@ -61,6 +61,7 @@ Once generated, you can:
 ## Notes and Limitations
 
 - Diagrams are based on the data you have uploaded or linked, so if relationships are missing, they will not appear.
+- Diagrams are based on the data you have uploaded or linked, so if relationships are missing, they will not appear.
 - Large datasets may result in very complex diagrams; filtering before generation can improve clarity.
 
 ---
