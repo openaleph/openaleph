@@ -14,7 +14,7 @@ This guide walks you through the basics of running a search and understanding th
 At the top of every page is the global search bar. To perform a basic search, type a keyword, such as a name, company, or location and press `Enter`.
 
 <div align="center">
-  <img src="../../assets/images/simple_search.png" alt="The OpenAleph search bar" width="600"/>
+  <img src="../../../assets/images/simple_search.png" alt="The OpenAleph search bar" width="600"/>
 </div>
 
 This will show you matching entities, such as Documents, Persons, Companies, or other relevant types.
@@ -23,7 +23,7 @@ This will show you matching entities, such as Documents, Persons, Companies, or 
 Click the `alerts icon` to the right of the search bar to receive email notifications whenever new data added mentions this search.
 
 <div align="center">
-  <img src="../../assets/images/alerts.png" alt="The OpenAleph search bar with alerts" width="600"/>
+  <img src="../../../assets/images/alerts.png" alt="The OpenAleph search bar with alerts" width="600"/>
 </div>
 
 ## 3. Understanding the Results
@@ -33,7 +33,7 @@ The search results page is split into several sections:
 **Filter Sidebar**
 
 <div align="center">
-  <img src="../../assets/images/search_filter.png" alt="The OpenAleph search filters" width="600"/>
+  <img src="../../../assets/images/search_filter.png" alt="The OpenAleph search filters" width="600"/>
 </div>
 
 On the left, you’ll find filters you can apply to narrow your results by dataset, date, schema type, or other criteria.
@@ -41,7 +41,7 @@ On the left, you’ll find filters you can apply to narrow your results by datas
 **Results List**
 
 <div align="center">
-  <img src="../../assets/images/resultlist.png" alt="The OpenAleph search result list" width="800"/>
+  <img src="../../../assets/images/resultlist.png" alt="The OpenAleph search result list" width="800"/>
 </div>
 
 In the main area, results are grouped by relevance. Each item shows a title, snippet of matched content, and metadata.
@@ -49,7 +49,7 @@ In the main area, results are grouped by relevance. Each item shows a title, sni
 ## 4. Previewing a Result
 
 <div align="center">
-  <img src="../../assets/images/result_preview.png" alt="The OpenAleph search result preview" width="800"/>
+  <img src="../../../assets/images/result_preview.png" alt="The OpenAleph search result preview" width="800"/>
 </div>
 
 Click on any document or entity to open its preview pane:

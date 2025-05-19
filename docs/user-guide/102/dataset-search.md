@@ -9,7 +9,7 @@ There are two primary ways to restrict your search to a specific dataset:
 ### 1. From the Dataset Page
 
 <div align="center">
-  <img src="../../assets/images/dataset_search.png" alt="Screenshot of the OpenAleph dataset overview" width="400"/>
+  <img src="../../../assets/images/dataset_search.png" alt="Screenshot of the OpenAleph dataset overview" width="400"/>
 </div>
 
 1. Open the dataset from the **Datasets** tab.
@@ -18,7 +18,7 @@ There are two primary ways to restrict your search to a specific dataset:
 ### 2. Using Filters
 
 <div align="center">
-  <img src="../../assets/images/dataset_filter.png" alt="Screenshot of the OpenAleph filter bar" width="300"/>
+  <img src="../../../assets/images/dataset_filter.png" alt="Screenshot of the OpenAleph filter bar" width="300"/>
 </div>
 
 On a general search results page:
@@ -30,7 +30,7 @@ On a general search results page:
 ## Extracted `mentions` search
 
 <div align="center">
-  <img src="../../assets/images/mentions_search.png" alt="Screenshot of the OpenAleph mentions search" width="600"/>
+  <img src="../../../assets/images/mentions_search.png" alt="Screenshot of the OpenAleph mentions search" width="600"/>
 </div>
 
 OpenAleph extracts several identifiers from the dataset during ingestion. You can click these identifiers on the overview page to see all entities or files containing them within the dataset.
@@ -38,7 +38,7 @@ OpenAleph extracts several identifiers from the dataset during ingestion. You ca
 ## Source documents
 
 <div align="center">
-  <img src="../../assets/images/source_docs.png" alt="Screenshot of the OpenAleph dataset overview" width="600"/>
+  <img src="../../../assets/images/source_docs.png" alt="Screenshot of the OpenAleph dataset overview" width="600"/>
 </div>
 
 If the dataset contains documents and folders, you can browse these sources by clicking the source documents tab, similar to browsing folder structures on your computer.
