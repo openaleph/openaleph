@@ -7,6 +7,9 @@ Network diagrams in OpenAleph let you visually explore relationships between ent
 Network diagrams are interactive graphs that show entities (like people, companies, or assets) as nodes, and their relationships (like ownership or affiliation) as edges between them.
 
 They are generated directly from structured data within an investigation workspace.
+<div align="center">
+  <img src="../../assets/images/dia.png" alt="Screenshot of a network diagram" width="600"/>
+</div>
 
 <div>
   <div style="position:relative;padding-top:56.25%;">
@@ -22,19 +25,19 @@ They are generated directly from structured data within an investigation workspa
 2. Select **Network Diagrams** from the sidebar.
 3. Click **New Diagram**.
 <div align="center">
-  <img src="../../../assets/images/new_dia.png" alt="Screenshot of the new network diagram dialog" width="400"/>
+  <img src="../../assets/images/new_dia.png" alt="Screenshot of the new network diagram dialog" width="400"/>
 </div>
 
 
 4. Add entities from your investigation
 <div align="center">
-  <img src="../../../assets/images/add_to_dia.png" alt="Screenshot of the add entity to network diagram dialog" width="400"/>
+  <img src="../../assets/images/add_to_dia.png" alt="Screenshot of the add entity to network diagram dialog" width="400"/>
 </div>
 
 
 5. Expand each entity with a double click, then select `Discover asset and shares`
 <div align="center">
-  <img src="../../../assets/images/expand_dia.png" alt="Screenshot of the expand entity to network diagram dialog" width="400"/>
+  <img src="../../assets/images/expand_dia.png" alt="Screenshot of the expand entity to network diagram dialog" width="400"/>
 </div>
 
 
@@ -60,7 +63,6 @@ Once generated, you can:
 
 ## Notes and Limitations
 
-- Diagrams are based on the data you have uploaded or linked, so if relationships are missing, they will not appear.
 - Diagrams are based on the data you have uploaded or linked, so if relationships are missing, they will not appear.
 - Large datasets may result in very complex diagrams; filtering before generation can improve clarity.
 

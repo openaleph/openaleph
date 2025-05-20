@@ -37,7 +37,7 @@ To create an investigation:
 ## Uploading Content
 
 <div align="center">
-  <img src="../../../assets/images/upload_files.png" alt="Screenshot of the OpenAleph content upload menu" width="400"/>
+  <img src="../../assets/images/upload_files.png" alt="Screenshot of the OpenAleph content upload menu" width="400"/>
 </div>
 
 Once your workspace is created, you can upload:

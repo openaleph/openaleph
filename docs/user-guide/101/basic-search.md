@@ -14,7 +14,7 @@ This guide walks you through the basics of running a search and understanding th
 At the top of every page is the global search bar. To perform a basic search, type a keyword, such as a name, company, or location and press `Enter`.
 
 <div align="center">
-  <img src="../../../assets/images/simple_search.png" alt="The OpenAleph search bar" width="600"/>
+  <img src="../../assets/images/simple_search.png" alt="The OpenAleph search bar" width="600"/>
 </div>
 
 This will show you matching entities, such as Documents, Persons, Companies, or other relevant types.
