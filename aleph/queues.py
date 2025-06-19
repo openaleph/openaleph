@@ -94,24 +94,17 @@ def cancel_queue(collection):
 
 def ingest_entity(collection, proxy, job_id=None, index=True):
     """Send the given entity proxy to the ingest-file service."""
-
     log.debug("Ingest entity [%s]: %s", proxy.id, proxy.caption)
-    stage = get_stage(collection, OP_INGEST, job_id=job_id)
-    pipeline = list(SETTINGS.INGEST_PIPELINE)
-    if index:
-        pipeline.append(OP_INDEX)
-    context = get_context(collection, pipeline)
-    stage.queue(proxy.to_dict(), context)
+
+    from aleph.procrastinate.tasks import queue_ingest
+
+    queue_ingest(collection, proxy, job_id)
 
 
 def pipeline_entity(collection, proxy, job_id=None):
     """Send an entity through the ingestion pipeline, minus the ingestor itself."""
     log.debug("Pipeline entity [%s]: %s", proxy.id, proxy.caption)
-    pipeline = []
-    if not SETTINGS.TESTING:
-        if proxy.schema.is_a(Entity.ANALYZABLE):
-            pipeline.extend(SETTINGS.INGEST_PIPELINE)
-    pipeline.append(OP_INDEX)
-    stage = get_stage(collection, pipeline.pop(0), job_id=job_id)
-    context = get_context(collection, pipeline)
-    stage.queue({"entity_ids": [proxy.id]}, context)
+
+    from aleph.procrastinate.tasks import queue_analyze
+
+    queue_analyze(collection, proxy, job_id)
