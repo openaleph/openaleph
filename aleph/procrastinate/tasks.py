@@ -13,7 +13,7 @@ from openaleph_procrastinate.tasks import task
 from aleph.core import create_app
 from aleph.logic.aggregator import get_aggregator_name
 from aleph.model.collection import Collection
-from aleph.procrastinate.util import ensure_collection, sign_entity
+from aleph.procrastinate.util import ensure_collection
 from aleph.queues import OP_INDEX, get_context, get_stage
 
 app = make_app(__loader__.name)
@@ -52,29 +52,21 @@ def index(job: DatasetJob, collection: Collection) -> Defers:
     services. For now this index task queues the entities into the Aleph index
     task queue.
     """
-    entity_ids: set[str] = set()
-    for entity in job.get_entities():
-        sign_entity(entity, collection)
-        entity_ids.add(entity.id)
-
+    entity_ids = set(e.id for e in job.get_entities())
     stage = get_stage(collection, OP_INDEX, job.context.get("job_id"))
     context = get_context(collection, [])
-    stage.queue({"entity_ids": [entity_ids]}, context)
+    stage.queue({"entity_ids": entity_ids}, context)
 
 
-def queue_ingest(
-    collection: Collection, proxy: EntityProxy, job_id: str | None = None
-) -> None:
+def queue_ingest(collection: Collection, proxy: EntityProxy, **context) -> None:
     dataset = get_aggregator_name(collection)
-    job = defer.ingest(dataset, proxy, job_id=job_id)
+    job = defer.ingest(dataset, [proxy], **context)
     with app.open():
         job.defer(app=app)
 
 
-def queue_analyze(
-    collection: Collection, proxy: EntityProxy, job_id: str | None = None
-) -> None:
+def queue_analyze(collection: Collection, proxy: EntityProxy, **context) -> None:
     dataset = get_aggregator_name(collection)
-    job = defer.analyze(dataset, [proxy], job_id=job_id)
+    job = defer.analyze(dataset, [proxy], **context)
     with app.open():
         job.defer(app=app)

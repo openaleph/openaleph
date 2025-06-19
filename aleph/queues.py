@@ -5,7 +5,6 @@ from servicelayer.jobs import Job, Dataset, Stage
 
 from aleph.core import kv
 from aleph.settings import SETTINGS
-from aleph.model import Entity
 
 log = logging.getLogger(__name__)
 
@@ -98,7 +97,8 @@ def ingest_entity(collection, proxy, job_id=None, index=True):
 
     from aleph.procrastinate.tasks import queue_ingest
 
-    queue_ingest(collection, proxy, job_id)
+    context = get_context(collection, [])
+    queue_ingest(collection, proxy, job_id=job_id, **context)
 
 
 def pipeline_entity(collection, proxy, job_id=None):
@@ -107,4 +107,5 @@ def pipeline_entity(collection, proxy, job_id=None):
 
     from aleph.procrastinate.tasks import queue_analyze
 
-    queue_analyze(collection, proxy, job_id)
+    context = get_context(collection, [])
+    queue_analyze(collection, proxy, job_id=job_id, **context)
