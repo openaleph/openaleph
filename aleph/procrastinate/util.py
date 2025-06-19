@@ -19,6 +19,11 @@ def sign_entity(entity: EntityProxy, collection: Collection) -> None:
 
 @lru_cache(1024)
 def ensure_collection(dataset: str) -> Collection:
+    if dataset.startswith("ftm_collection_"):
+        collection_id = int(dataset.split("_")[-1])
+        collection = Collection.by_id(collection_id)
+        assert collection is not None, f"Invalid collection: `{dataset}`"
+        return collection
     collection = Collection.by_foreign_id(dataset, deleted=True)
     if collection is None:
         authz = Authz.from_role(Role.load_cli_user())
