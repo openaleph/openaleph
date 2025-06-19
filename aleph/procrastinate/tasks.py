@@ -4,18 +4,17 @@ Tasks handled by procrastinate that can be triggered from other programs
 
 import functools
 
+from followthemoney.proxy import EntityProxy
+from openaleph_procrastinate import defer
 from openaleph_procrastinate.app import make_app
-from openaleph_procrastinate.helpers import OPAL_ORIGIN
-from openaleph_procrastinate.model import DatasetJob
+from openaleph_procrastinate.model import DatasetJob, Defers
 from openaleph_procrastinate.tasks import task
 
 from aleph.core import create_app
-from aleph.index.entities import index_proxy
-from aleph.logic.aggregator import get_aggregator
-from aleph.logic.entities import refresh_entity
-from aleph.logic.profiles import profile_fragments
+from aleph.logic.aggregator import get_aggregator_name
 from aleph.model.collection import Collection
 from aleph.procrastinate.util import ensure_collection, sign_entity
+from aleph.queues import OP_INDEX, get_context, get_stage
 
 app = make_app(__loader__.name)
 aleph_app = create_app()
@@ -27,6 +26,7 @@ def aleph_task(original_func=None, **kwargs):
     context for task runtime and getting the collection_id from the dataset
     foreign_id
     """
+
     def wrap(func):
         def new_func(*job_args, **job_kwargs):
             with aleph_app.app_context():
@@ -46,19 +46,35 @@ def aleph_task(original_func=None, **kwargs):
 
 
 @aleph_task
-def put_entities(job: DatasetJob, collection: Collection) -> DatasetJob:
+def index(job: DatasetJob, collection: Collection) -> Defers:
     """
-    Put entities into Aleph:
-    - write to ftm store
-    - index
-    - refresh cache
+    Index entities into Aleph. This is received from external procrastinate
+    services. For now this index task queues the entities into the Aleph index
+    task queue.
     """
-    aggregator = get_aggregator(collection)
+    entity_ids: set[str] = set()
     for entity in job.get_entities():
         sign_entity(entity, collection)
-        aggregator.delete(entity_id=entity.id)
-        aggregator.put(entity, origin=job.context.get("origin") or OPAL_ORIGIN)
-        profile_fragments(collection, aggregator, entity_id=entity.id)
-        index_proxy(collection, entity)
-        refresh_entity(collection, entity.id)
-    return job
+        entity_ids.add(entity.id)
+
+    stage = get_stage(collection, OP_INDEX, job.context.get("job_id"))
+    context = get_context(collection, [])
+    stage.queue({"entity_ids": [entity_ids]}, context)
+
+
+def queue_ingest(
+    collection: Collection, proxy: EntityProxy, job_id: str | None = None
+) -> None:
+    dataset = get_aggregator_name(collection)
+    job = defer.ingest(dataset, proxy, job_id=job_id)
+    with app.open():
+        job.defer(app=app)
+
+
+def queue_analyze(
+    collection: Collection, proxy: EntityProxy, job_id: str | None = None
+) -> None:
+    dataset = get_aggregator_name(collection)
+    job = defer.analyze(dataset, [proxy], job_id=job_id)
+    with app.open():
+        job.defer(app=app)
