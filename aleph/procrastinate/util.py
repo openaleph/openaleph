@@ -4,22 +4,15 @@ Utilities to map (legacy) Aleph logic to new procrastinate logic
 
 from functools import lru_cache
 
-from followthemoney.proxy import EntityProxy
-
 from aleph.authz import Authz
 from aleph.logic.collections import create_collection
 from aleph.model.collection import Collection
 from aleph.model.role import Role
 
 
-def sign_entity(entity: EntityProxy, collection: Collection) -> None:
-    assert entity.id is not None, "Missing entity ID!"
-    entity.id = collection.ns.sign(entity.id)
-
-
 @lru_cache(1024)
 def ensure_collection(dataset: str) -> Collection:
-    if dataset.startswith("ftm_collection_"):
+    if dataset.startswith("collection_"):
         collection_id = int(dataset.split("_")[-1])
         collection = Collection.by_id(collection_id)
         assert collection is not None, f"Invalid collection: `{dataset}`"
