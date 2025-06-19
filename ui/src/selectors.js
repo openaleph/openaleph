@@ -227,7 +227,6 @@ export function selectEntity(state, entityId) {
     }
     entity.selectorCache = model.getEntity(entity);
   }
-
   const result = entity.selectorCache;
   result.safeHtml = entity.safeHtml;
   result.collection = entity.collection;
@@ -457,6 +456,14 @@ export function selectSimilarResult(state, query) {
   return result;
 }
 
+export function selectNearbyResult(state, query) {
+  const result = selectResult(state, query, undefined);
+  result.results.forEach((obj) => {
+    obj.entity = selectEntity(state, obj.id);
+  });
+  return result;
+}
+
 export function selectQueryLog(state) {
   return selectObject(state, state, 'queryLogs');
 }
@@ -500,4 +507,12 @@ export function selectLocalBookmarks(state) {
 
 export function selectConfigValue(state, name) {
   return state?.config?.[name];
+}
+
+export function selectServiceUrls(state) {
+  return selectMetadata(state)?.service_urls;
+}
+
+export function selectServiceUrl(state, key) {
+  return selectServiceUrls(state)?.[key];
 }

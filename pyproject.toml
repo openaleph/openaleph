@@ -1,6 +1,6 @@
 [project]
 name = "aleph"
-version = "3.17.0"
+version = "3.18.5"
 description = "Search and browse documents and data; find the people and companies you look for."
 authors = [
     { name = "Friedrich Lindenberg", email = "friedrich@pudo.org" },
@@ -67,9 +67,8 @@ dependencies = [
     "mkdocs-material (==9.6.11)",
     # TODO - remove sentry eventually
     "sentry-sdk[flask] (==2.19.2)",
-    "pydantic (>=2.10.6,<3.0.0)",
-    "openaleph-procrastinate (>=0.0.1,<0.0.2)",
-    "lxml[html-clean] (>=5.4.0,<6.0.0)"
+    "lxml[html-clean] (>=5.4.0,<6.0.0)",
+    "openaleph-procrastinate @ git+https://github.com/openaleph/openaleph-procrastinate.git",
 ]
 
 [project.scripts]
