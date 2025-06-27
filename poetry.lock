@@ -1007,20 +1007,33 @@ test-randomorder = ["pytest-randomly"]
 
 [[package]]
 name = "dateparser"
+<<<<<<< HEAD
 version = "1.2.1"
+=======
+version = "1.2.2"
+>>>>>>> a09b0a28d (Bump openaleph_procrastinate, add init-db to docker-entrypoint.sh)
 description = "Date parsing library designed to parse dates from HTML pages"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
+<<<<<<< HEAD
     {file = "dateparser-1.2.1-py3-none-any.whl", hash = "sha256:bdcac262a467e6260030040748ad7c10d6bacd4f3b9cdb4cfd2251939174508c"},
     {file = "dateparser-1.2.1.tar.gz", hash = "sha256:7e4919aeb48481dbfc01ac9683c8e20bfe95bb715a38c1e9f6af889f4f30ccc3"},
+=======
+    {file = "dateparser-1.2.2-py3-none-any.whl", hash = "sha256:5a5d7211a09013499867547023a2a0c91d5a27d15dd4dbcea676ea9fe66f2482"},
+    {file = "dateparser-1.2.2.tar.gz", hash = "sha256:986316f17cb8cdc23ea8ce563027c5ef12fc725b6fb1d137c14ca08777c5ecf7"},
+>>>>>>> a09b0a28d (Bump openaleph_procrastinate, add init-db to docker-entrypoint.sh)
 ]
 
 [package.dependencies]
 python-dateutil = ">=2.7.0"
 pytz = ">=2024.2"
+<<<<<<< HEAD
 regex = ">=2015.06.24,<2019.02.19 || >2019.02.19,<2021.8.27 || >2021.8.27"
+=======
+regex = ">=2024.9.11"
+>>>>>>> a09b0a28d (Bump openaleph_procrastinate, add init-db to docker-entrypoint.sh)
 tzlocal = ">=0.2"
 
 [package.extras]
@@ -2530,8 +2543,11 @@ files = [
     {file = "lxml-5.4.0-cp36-cp36m-win_amd64.whl", hash = "sha256:7ce1a171ec325192c6a636b64c94418e71a1964f56d002cc28122fceff0b6121"},
     {file = "lxml-5.4.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:795f61bcaf8770e1b37eec24edf9771b307df3af74d1d6f27d812e15a9ff3872"},
     {file = "lxml-5.4.0-cp37-cp37m-manylinux_2_12_i686.manylinux2010_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:29f451a4b614a7b5b6c2e043d7b64a15bd8304d7e767055e8ab68387a8cacf4e"},
+    {file = "lxml-5.4.0-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:891f7f991a68d20c75cb13c5c9142b2a3f9eb161f1f12a9489c82172d1f133c0"},
     {file = "lxml-5.4.0-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4aa412a82e460571fad592d0f93ce9935a20090029ba08eca05c614f99b0cc92"},
+    {file = "lxml-5.4.0-cp37-cp37m-manylinux_2_28_aarch64.whl", hash = "sha256:ac7ba71f9561cd7d7b55e1ea5511543c0282e2b6450f122672a2694621d63b7e"},
     {file = "lxml-5.4.0-cp37-cp37m-manylinux_2_28_x86_64.whl", hash = "sha256:c5d32f5284012deaccd37da1e2cd42f081feaa76981f0eaa474351b68df813c5"},
+    {file = "lxml-5.4.0-cp37-cp37m-musllinux_1_2_aarch64.whl", hash = "sha256:ce31158630a6ac85bddd6b830cffd46085ff90498b397bd0a259f59d27a12188"},
     {file = "lxml-5.4.0-cp37-cp37m-musllinux_1_2_x86_64.whl", hash = "sha256:31e63621e073e04697c1b2d23fcb89991790eef370ec37ce4d5d469f40924ed6"},
     {file = "lxml-5.4.0-cp37-cp37m-win32.whl", hash = "sha256:be2ba4c3c5b7900246a8f866580700ef0d538f2ca32535e991027bdaba944063"},
     {file = "lxml-5.4.0-cp37-cp37m-win_amd64.whl", hash = "sha256:09846782b1ef650b321484ad429217f5154da4d6e786636c38e434fa32e94e49"},
@@ -3290,13 +3306,24 @@ files = [
 
 [[package]]
 name = "openaleph-procrastinate"
+<<<<<<< HEAD
 version = "0.0.5"
+=======
+version = "0.0.6"
+>>>>>>> a09b0a28d (Bump openaleph_procrastinate, add init-db to docker-entrypoint.sh)
 description = "Task queue logic for OpenAleph built upon procrastinate"
 optional = false
 python-versions = ">=3.11,<4"
 groups = ["main"]
+<<<<<<< HEAD
 files = []
 develop = false
+=======
+files = [
+    {file = "openaleph_procrastinate-0.0.6-py3-none-any.whl", hash = "sha256:1e4bb469469918f23d36a56f8792203ff2c041a65886387854c97c58b67c631f"},
+    {file = "openaleph_procrastinate-0.0.6.tar.gz", hash = "sha256:d3cc887e32d8e9ee0766850de1d503b572d90666c0d016d5156c822aefbd0a2f"},
+]
+>>>>>>> a09b0a28d (Bump openaleph_procrastinate, add init-db to docker-entrypoint.sh)
 
 [package.dependencies]
 followthemoney = ">=3.8.4,<4.0.0"
@@ -3304,6 +3331,7 @@ followthemoney-store = {version = ">=3.1.0,<4.0.0", extras = ["postgresql"]}
 ftmq = ">=0.8.7,<0.9.0"
 procrastinate = ">=3.2.2,<4.0.0"
 pydantic = ">=2.11.7,<3.0.0"
+<<<<<<< HEAD
 pydantic-settings = ">=2.9.1,<3.0.0"
 
 [package.extras]
@@ -3314,6 +3342,12 @@ type = "git"
 url = "https://github.com/openaleph/openaleph-procrastinate.git"
 reference = "HEAD"
 resolved_reference = "8beab133dae16b92152dcaa432349c6c16845c5e"
+=======
+pydantic-settings = ">=2.10.1,<3.0.0"
+
+[package.extras]
+django = ["dj-database-url (>=2.3.0,<3.0.0)", "django (>=5.2,<6.0)", "procrastinate[django] (>=3.1.0,<4.0.0)"]
+>>>>>>> a09b0a28d (Bump openaleph_procrastinate, add init-db to docker-entrypoint.sh)
 
 [[package]]
 name = "openpyxl"
@@ -4204,14 +4238,14 @@ typing-extensions = ">=4.6.0,<4.7.0 || >4.7.0"
 
 [[package]]
 name = "pydantic-settings"
-version = "2.9.1"
+version = "2.10.1"
 description = "Settings management using Pydantic"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "pydantic_settings-2.9.1-py3-none-any.whl", hash = "sha256:59b4f431b1defb26fe620c71a7d3968a710d719f5f4cdbbdb7926edeb770f6ef"},
-    {file = "pydantic_settings-2.9.1.tar.gz", hash = "sha256:c509bf79d27563add44e8446233359004ed85066cd096d8b510f715e6ef5d268"},
+    {file = "pydantic_settings-2.10.1-py3-none-any.whl", hash = "sha256:a60952460b99cf661dc25c29c0ef171721f98bfcb52ef8d9ea4c943d7c8cc796"},
+    {file = "pydantic_settings-2.10.1.tar.gz", hash = "sha256:06f0062169818d0f5524420a360d632d5857b83cffd4d42fe29597807a1614ee"},
 ]
 
 [package.dependencies]
@@ -6006,4 +6040,8 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.11, <4.0.0"
+<<<<<<< HEAD
 content-hash = "1b0751684a0a42402b5a3ac88c38b6550669c62c4789299a62cdddc0a7f8e992"
+=======
+content-hash = "6169fd126eb665e1f7fcc30155b326507fdf9d19608e09d41d98c8e3f5174415"
+>>>>>>> a09b0a28d (Bump openaleph_procrastinate, add init-db to docker-entrypoint.sh)

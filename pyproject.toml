@@ -67,8 +67,9 @@ dependencies = [
     "mkdocs-material (==9.6.11)",
     # TODO - remove sentry eventually
     "sentry-sdk[flask] (==2.19.2)",
-    "lxml[html-clean] (>=5.4.0,<6.0.0)",
-    "openaleph-procrastinate @ git+https://github.com/openaleph/openaleph-procrastinate.git",
+    "pydantic (>=2.10.6,<3.0.0)",
+    "openaleph-procrastinate (>= 0.0.6, <0.1.0)",
+    "lxml[html-clean] (>=5.4.0,<6.0.0)"
 ]
 
 [project.scripts]
