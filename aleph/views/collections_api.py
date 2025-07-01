@@ -2,6 +2,9 @@ from banal import ensure_list
 from flask import Blueprint, request
 from werkzeug.exceptions import BadRequest
 
+from openaleph_procrastinate import defer
+from openaleph_procrastinate.app import make_app
+
 from aleph.core import db
 from aleph.search import CollectionsQuery
 from aleph.queues import queue_task, get_status, cancel_queue
@@ -16,6 +19,10 @@ from aleph.views.serializers import CollectionSerializer
 from aleph.views.util import get_db_collection, get_index_collection, get_entityset
 from aleph.views.util import require, parse_request, jsonify
 from aleph.views.util import get_flag, get_session_id
+from aleph.logic.aggregator import get_aggregator_name
+
+
+app = make_app(__loader__.name)
 
 blueprint = Blueprint("collections_api", __name__)
 
@@ -305,7 +312,14 @@ def bulk(collection_id):
             )
     collection.touch()
     db.session.commit()
-    queue_task(collection, OP_INDEX, job_id=job_id, entity_ids=entity_ids)
+    # queue_task(collection, OP_INDEX, job_id=job_id, entity_ids=entity_ids)
+
+    dataset = get_aggregator_name(collection)
+    context = {"job_id": job_id}
+    job = defer.index(dataset, entity_ids, **context)
+    with app.open():
+        job.defer(app=app)
+
     return ("", 204)
 
 
