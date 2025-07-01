@@ -95,7 +95,7 @@ def ingest_entity(collection, proxy, job_id=None, index=True):
     """Send the given entity proxy to the ingest-file service."""
     log.debug("Ingest entity [%s]: %s", proxy.id, proxy.caption)
 
-    from aleph.procrastinate.tasks import queue_ingest
+    from aleph.procrastinate.queues import queue_ingest
 
     context = get_context(collection, [])
     queue_ingest(collection, proxy, job_id=job_id, **context)
@@ -105,7 +105,7 @@ def pipeline_entity(collection, proxy, job_id=None):
     """Send an entity through the ingestion pipeline, minus the ingestor itself."""
     log.debug("Pipeline entity [%s]: %s", proxy.id, proxy.caption)
 
-    from aleph.procrastinate.tasks import queue_analyze
+    from aleph.procrastinate.queues import queue_analyze
 
     context = get_context(collection, [])
     queue_analyze(collection, proxy, job_id=job_id, **context)
