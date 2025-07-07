@@ -77,8 +77,8 @@ jobs:
         with:
           context: ./ui
           file: ./ui/Dockerfile.production
-          # build-args: |
-          #   ALEPH_TAG={{ version }}
+          build-args: |
+            ALEPH_TAG={{ version }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
