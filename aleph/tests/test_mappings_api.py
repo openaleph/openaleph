@@ -1,6 +1,5 @@
 import logging
 
-from followthemoney import model
 from followthemoney.proxy import EntityProxy
 
 from aleph.core import archive, db
