@@ -1,12 +1,13 @@
 import logging
-from flask import Blueprint, request
-from pantomime.types import XLSX
 
-from aleph.search import XrefQuery
-from aleph.logic.profiles import pairwise_judgements
+from flask import Blueprint, request
+from rigour.mime.types import XLSX
+
 from aleph.logic.export import create_export
+from aleph.logic.profiles import pairwise_judgements
+from aleph.queues import OP_EXPORT_XREF, OP_XREF, queue_task
+from aleph.search import XrefQuery
 from aleph.views.serializers import XrefSerializer
-from aleph.queues import queue_task, OP_XREF, OP_EXPORT_XREF
 from aleph.views.util import (
     get_db_collection,
     get_index_collection,
@@ -18,7 +19,7 @@ blueprint = Blueprint("xref_api", __name__)
 log = logging.getLogger(__name__)
 
 
-@blueprint.route("/api/2/collections/<int:collection_id>/xref", methods=["GET"])  # noqa
+@blueprint.route("/api/2/collections/<int:collection_id>/xref", methods=["GET"])
 def index(collection_id):
     """
     ---
@@ -118,7 +119,7 @@ def export(collection_id):
       - Collection
     """
     collection = get_db_collection(collection_id, request.authz.READ)
-    label = "%s - Crossreference results" % collection.label
+    label = "%s - Cross-reference results" % collection.label
     export = create_export(
         operation=OP_EXPORT_XREF,
         role_id=request.authz.id,
