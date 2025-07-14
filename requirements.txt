@@ -44,7 +44,7 @@ flask-sqlalchemy==3.1.1 ; python_version >= "3.11" and python_full_version < "4.
 flask-talisman==1.1.0 ; python_version >= "3.11" and python_full_version < "4.0.0"
 flask==2.3.3 ; python_version >= "3.11" and python_full_version < "4.0.0"
 followthemoney-compare==0.4.4 ; python_version >= "3.11" and python_full_version < "4.0.0"
-followthemoney-store==3.1.0 ; python_version >= "3.11" and python_full_version < "4.0.0"
+followthemoney-store @ git+https://github.com/openaleph/followthemoney-store@83029f897380acc7c654a74fcbbdfd5666da68ca ; python_version >= "3.11" and python_full_version < "4.0.0"
 followthemoney==4.0.0 ; python_version >= "3.11" and python_full_version < "4.0.0"
 fuzzywuzzy==0.18.0 ; python_version >= "3.11" and python_full_version < "4.0.0"
 ghp-import==2.1.0 ; python_version >= "3.11" and python_full_version < "4.0.0"

@@ -4,10 +4,10 @@ from followthemoney import model
 from followthemoney.proxy import EntityProxy
 
 from aleph.core import archive, db
-from aleph.model import Mapping
 from aleph.index.entities import index_proxy
-from aleph.views.util import validate
+from aleph.model import Mapping
 from aleph.tests.util import TestCase
+from aleph.views.util import validate
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ class MappingAPITest(TestCase):
             },
         }
 
-        table = EntityProxy.from_dict(model, data, cleaned=False)
+        table = EntityProxy.from_dict(data, cleaned=False)
         table.id = collection.ns.sign(table.id)
         index_proxy(collection=collection, proxy=table)
 
@@ -284,7 +284,6 @@ class MappingAPITest(TestCase):
         # Manually create an entity. Used later on to ensure that flushing a mapping
         # only deletes entities generated from the mapping.
         person = EntityProxy.from_dict(
-            model,
             {
                 "id": "john-doe",
                 "schema": "Person",

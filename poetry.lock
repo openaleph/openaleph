@@ -1130,16 +1130,17 @@ description = "Store raw and structured FollowTheMoney data from different datas
 optional = false
 python-versions = "*"
 groups = ["main"]
-files = [
-    {file = "followthemoney-store-3.1.0.tar.gz", hash = "sha256:4c8e05ddbec4eb729670e813f2e0d768c79229fa2bea6458de87897d51cf5908"},
-    {file = "followthemoney_store-3.1.0-py2.py3-none-any.whl", hash = "sha256:93a021f5c822dfcc21e85bf2291494d96f50c53dfceeb9a86418c6a99feaab82"},
-]
-
-[package.dependencies]
-psycopg2-binary = {version = ">=2.7", optional = true, markers = "extra == \"postgresql\""}
+files = []
+develop = false
 
 [package.extras]
 postgresql = ["psycopg2-binary (>=2.7)"]
+
+[package.source]
+type = "git"
+url = "https://github.com/openaleph/followthemoney-store"
+reference = "HEAD"
+resolved_reference = "83029f897380acc7c654a74fcbbdfd5666da68ca"
 
 [[package]]
 name = "fuzzywuzzy"
@@ -4387,4 +4388,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.11, <4.0.0"
-content-hash = "c220337f3a77f0a141e7e4344ea2478dc041de0aa4ed392f95e56a3c95e12544"
+content-hash = "c284daa18c2e13a837059e5c2a6bbed93db904af01c6db8fa70479e2c1fde33b"

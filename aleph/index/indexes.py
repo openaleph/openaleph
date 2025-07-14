@@ -1,15 +1,24 @@
 import logging
 from copy import deepcopy
+
 from banal import ensure_list
 from followthemoney import model
-from followthemoney.types import registry
 from followthemoney.exc import InvalidData
+from followthemoney.types import registry
 
+from aleph.index.util import (
+    GEOPOINT,
+    KEYWORD,
+    LATIN_TEXT,
+    NUMERIC,
+    NUMERIC_TYPES,
+    PARTIAL_DATE,
+    configure_index,
+    get_shard_weight,
+    index_name,
+    index_settings,
+)
 from aleph.settings import SETTINGS
-from aleph.index.util import GEOPOINT, index_name
-from aleph.index.util import index_settings, configure_index, get_shard_weight
-from aleph.index.util import NUMERIC_TYPES, PARTIAL_DATE, KEYWORD
-from aleph.index.util import LATIN_TEXT, NUMERIC
 
 log = logging.getLogger(__name__)
 
@@ -45,9 +54,9 @@ def schema_scope(schema, expand=True):
 
 def entities_index_list(schema=None, expand=True):
     """Combined index to run all queries against."""
-    for schema in schema_scope(schema, expand=expand):
+    for schema_ in schema_scope(schema, expand=expand):
         for version in SETTINGS.INDEX_READ:
-            yield schema_index(schema, version)
+            yield schema_index(schema_, version)
 
 
 def entities_read_index(schema=None, expand=True):
@@ -94,7 +103,6 @@ def configure_schema(schema, version):
             registry.checksum.group: KEYWORD,
             registry.ip.group: KEYWORD,
             registry.url.group: KEYWORD,
-            registry.iban.group: KEYWORD,
             registry.email.group: KEYWORD,
             registry.phone.group: KEYWORD,
             registry.mimetype.group: KEYWORD,
