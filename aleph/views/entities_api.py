@@ -30,22 +30,8 @@ from aleph.search import (
 )
 from aleph.search.parser import QueryParser, SearchQueryParser
 from aleph.settings import SETTINGS
-from aleph.views.context import enable_cache, tag_request
-from aleph.views.serializers import (
-    EntitySerializer,
-    EntitySetSerializer,
-    SimilarSerializer,
-)
-from aleph.views.util import (
-    get_db_collection,
-    get_flag,
-    get_index_entity,
-    get_nested_collection,
-    get_session_id,
-    jsonify,
-    parse_request,
-    require,
-)
+from aleph.queues import OP_EXPORT_SEARCH
+from aleph.procrastinate.queues import queue_export_search
 
 log = logging.getLogger(__name__)
 blueprint = Blueprint("entities_api", __name__)
@@ -198,8 +184,7 @@ def export():
         mime_type=ZIP,
         meta={"query": query.get_full_query(), "schemata": schemata},
     )
-    job_id = get_session_id()
-    queue_task(None, OP_EXPORT_SEARCH, job_id=job_id, export_id=export.id)
+    queue_export_search(export_id=export.id)
     return ("", 202)
 
 

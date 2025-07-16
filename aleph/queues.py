@@ -97,8 +97,7 @@ def ingest_entity(collection, proxy, job_id=None, index=True):
 
     from aleph.procrastinate.queues import queue_ingest
 
-    context = get_context(collection, [])
-    queue_ingest(collection, proxy, job_id=job_id, **context)
+    queue_ingest(collection, proxy, job_id=job_id, namespace=collection.foreign_id)
 
 
 def pipeline_entity(collection, proxy, job_id=None):

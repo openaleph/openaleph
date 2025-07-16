@@ -5,7 +5,7 @@ from servicelayer.jobs import Job
 
 from aleph.core import db, cache
 from aleph.authz import Authz
-from aleph.queues import cancel_queue, ingest_entity, get_status
+from aleph.queues import cancel_queue, get_status
 from aleph.model import Collection, Entity, Document, Mapping
 from aleph.model import Permission, Events, EntitySet
 from aleph.index import collections as index
@@ -14,6 +14,7 @@ from aleph.index import entities as entities_index
 from aleph.logic.notifications import publish, flush_notifications
 from aleph.logic.documents import ingest_flush, MODEL_ORIGIN
 from aleph.logic.aggregator import get_aggregator
+from aleph.procrastinate.queues import queue_ingest
 
 log = logging.getLogger(__name__)
 
@@ -102,7 +103,7 @@ def compute_collection(collection, force=False, sync=False):
 
 def aggregate_model(collection, aggregator):
     """Sync up the aggregator from the Aleph domain model."""
-    log.debug("[%s] Aggregating model...", collection)
+    log.debug(f"{collection} Aggregating model...", collection)
     aggregator.delete(origin=MODEL_ORIGIN)
     writer = aggregator.bulk()
     for document in Document.by_collection(collection.id):
@@ -139,7 +140,7 @@ def reingest_collection(
         ingest_flush(collection, include_ingest=include_ingest)
     for document in Document.by_collection(collection.id):
         proxy = document.to_proxy(ns=collection.ns)
-        ingest_entity(collection, proxy, job_id=job_id, index=index)
+        queue_ingest(collection, proxy, job_id=job_id, namespace=collection.foreign_id)
 
 
 def reindex_collection(collection, skip_errors=True, sync=False, flush=False):

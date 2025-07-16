@@ -5,22 +5,13 @@ from followthemoney import model
 from followthemoney.compare import compare
 
 from aleph.logic.expand import entity_tags, expand_proxies
-from aleph.logic.profiles import decide_pairwise, get_profile
-from aleph.model import Judgement
-from aleph.queues import OP_UPDATE_ENTITY, queue_task
 from aleph.search import MatchQuery, QueryParser
 from aleph.settings import SETTINGS
 from aleph.views.context import tag_request
-from aleph.views.serializers import ProfileSerializer, SimilarSerializer
-from aleph.views.util import (
-    get_db_collection,
-    get_index_entity,
-    get_session_id,
-    jsonify,
-    obj_or_404,
-    parse_request,
-    require,
-)
+from aleph.views.util import obj_or_404, jsonify, parse_request
+from aleph.views.util import get_index_entity, get_db_collection
+from aleph.views.util import require
+from aleph.procrastinate.queues import queue_update_entity
 
 blueprint = Blueprint("profiles_api", __name__)
 log = logging.getLogger(__name__)
@@ -256,7 +247,6 @@ def pairwise():
         judgement=data.get("judgement"),
         authz=request.authz,
     )
-    job_id = get_session_id()
-    queue_task(collection, OP_UPDATE_ENTITY, job_id=job_id, entity_id=entity.get("id"))
+    queue_update_entity(collection, entity_id=entity.get("id"))
     profile_id = profile.id if profile is not None else None
     return jsonify({"status": "ok", "profile_id": profile_id}, status=200)
