@@ -6,13 +6,13 @@ from aleph.search import XrefQuery
 from aleph.logic.profiles import pairwise_judgements
 from aleph.logic.export import create_export
 from aleph.views.serializers import XrefSerializer
-from aleph.queues import queue_task, OP_XREF, OP_EXPORT_XREF
+from aleph.queues import OP_EXPORT_XREF
 from aleph.views.util import (
     get_db_collection,
     get_index_collection,
-    get_session_id,
     jsonify,
 )
+from aleph.procrastinate.queues import queue_xref, queue_export_xref
 
 blueprint = Blueprint("xref_api", __name__)
 log = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ def generate(collection_id):
       - Collection
     """
     collection = get_db_collection(collection_id, request.authz.WRITE)
-    queue_task(collection, OP_XREF)
+    queue_xref(collection)
     return jsonify({"status": "accepted"}, status=202)
 
 
@@ -126,6 +126,5 @@ def export(collection_id):
         collection=collection,
         mime_type=XLSX,
     )
-    job_id = get_session_id()
-    queue_task(None, OP_EXPORT_XREF, job_id=job_id, export_id=export.id)
+    queue_export_xref(export_id=export.id)
     return ("", 202)

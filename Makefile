@@ -21,7 +21,7 @@ all: build upgrade web
 
 services:
 	$(COMPOSE) up -d --remove-orphans \
-		postgres elasticsearch ingest-file
+		postgres elasticsearch ingest-file ftm-analyze
 
 shell: services
 	$(APPDOCKER) /bin/bash
@@ -80,6 +80,9 @@ web-local:
 
 worker: services
 	$(COMPOSE) run -p 127.0.0.1:5679:5679 --rm app python3 -m debugpy --listen 0.0.0.0:5679 -c "from aleph.manage import cli; cli()" worker
+
+pro: services
+	$(COMPOSE) up procrastinate-worker
 
 worker-local: services
 	aleph worker
