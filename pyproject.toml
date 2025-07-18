@@ -13,7 +13,7 @@ requires-python = ">= 3.11, <4.0.0"
 dependencies = [
     "banal (>=1.0.6,<2.0.0)",
     "followthemoney (>=4.0.3,<5.0.0)",
-    "followthemoney-store @ git+https://github.com/openaleph/followthemoney-store",
+    "ftmq (>=4.0.2,<5.0.0)",
     "fingerprints (==1.2.3)",
     "normality (>=2.6.1,<3.0.0)",
     "pydantic (>=2.10.6,<3.0.0)",
