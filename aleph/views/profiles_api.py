@@ -1,19 +1,26 @@
 import logging
+
 from flask import Blueprint, request
 from followthemoney import model
 from followthemoney.compare import compare
 
-from aleph.settings import SETTINGS
-from aleph.model import Judgement
-from aleph.logic.profiles import get_profile, decide_pairwise
 from aleph.logic.expand import entity_tags, expand_proxies
-from aleph.queues import queue_task, OP_UPDATE_ENTITY
+from aleph.logic.profiles import decide_pairwise, get_profile
+from aleph.model import Judgement
+from aleph.queues import OP_UPDATE_ENTITY, queue_task
 from aleph.search import MatchQuery, QueryParser
-from aleph.views.serializers import ProfileSerializer, SimilarSerializer
+from aleph.settings import SETTINGS
 from aleph.views.context import tag_request
-from aleph.views.util import obj_or_404, jsonify, parse_request, get_session_id
-from aleph.views.util import get_index_entity, get_db_collection
-from aleph.views.util import require
+from aleph.views.serializers import ProfileSerializer, SimilarSerializer
+from aleph.views.util import (
+    get_db_collection,
+    get_index_entity,
+    get_session_id,
+    jsonify,
+    obj_or_404,
+    parse_request,
+    require,
+)
 
 blueprint = Blueprint("profiles_api", __name__)
 log = logging.getLogger(__name__)
@@ -132,7 +139,7 @@ def similar(profile_id):
     result.results = []
     for obj in entities:
         item = {
-            "score": compare(model, profile["merged"], model.get_proxy(obj)),
+            "score": compare(profile["merged"], model.get_proxy(obj)),
             "judgement": Judgement.NO_JUDGEMENT,
             "collection_id": profile.get("collection_id"),
             "entity": obj,

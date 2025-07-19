@@ -1,6 +1,6 @@
 import logging
+
 import fingerprints
-from pprint import pprint  # noqa
 from banal import ensure_list
 from followthemoney.types import registry
 
@@ -9,7 +9,7 @@ from aleph.index.util import bool_query, none_query
 log = logging.getLogger(__name__)
 
 MAX_CLAUSES = 500
-REQUIRED = [registry.name, registry.iban, registry.identifier]
+REQUIRED = [registry.name, registry.identifier]
 
 
 def _make_queries(type_, value):
