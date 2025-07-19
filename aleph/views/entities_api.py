@@ -1,36 +1,51 @@
 import logging
+
 from flask import Blueprint, request
 from flask_babel import gettext
-from werkzeug.exceptions import NotFound
 from followthemoney import model
 from followthemoney.compare import compare
-from pantomime.types import ZIP
+from rigour.mime.types import ZIP
+from werkzeug.exceptions import NotFound
 
 from aleph.core import db, url_for
+from aleph.index.util import MAX_PAGE
+from aleph.logic.entities import (
+    check_write_entity,
+    delete_entity,
+    upsert_entity,
+    validate_entity,
+)
+from aleph.logic.expand import entity_tags, expand_proxies
+from aleph.logic.export import create_export
+from aleph.logic.html import sanitize_html
+from aleph.logic.profiles import pairwise_judgements
+from aleph.model.bookmark import Bookmark
+from aleph.model.entityset import EntitySet, Judgement
+from aleph.queues import OP_EXPORT_SEARCH, queue_task
 from aleph.search import (
+    DatabaseQueryResult,
     EntitiesQuery,
     GeoDistanceQuery,
     MatchQuery,
-    DatabaseQueryResult,
 )
-from aleph.search.parser import SearchQueryParser, QueryParser
-from aleph.logic.entities import upsert_entity, delete_entity
-from aleph.logic.entities import validate_entity, check_write_entity
-from aleph.logic.profiles import pairwise_judgements
-from aleph.logic.expand import entity_tags, expand_proxies
-from aleph.logic.html import sanitize_html
-from aleph.logic.export import create_export
-from aleph.model.entityset import EntitySet, Judgement
-from aleph.model.bookmark import Bookmark
-from aleph.index.util import MAX_PAGE
-from aleph.views.util import get_index_entity, get_db_collection
-from aleph.views.util import jsonify, parse_request, get_flag
-from aleph.views.util import require, get_nested_collection, get_session_id
-from aleph.views.context import enable_cache, tag_request
-from aleph.views.serializers import EntitySerializer, EntitySetSerializer
-from aleph.views.serializers import SimilarSerializer
+from aleph.search.parser import QueryParser, SearchQueryParser
 from aleph.settings import SETTINGS
-from aleph.queues import queue_task, OP_EXPORT_SEARCH
+from aleph.views.context import enable_cache, tag_request
+from aleph.views.serializers import (
+    EntitySerializer,
+    EntitySetSerializer,
+    SimilarSerializer,
+)
+from aleph.views.util import (
+    get_db_collection,
+    get_flag,
+    get_index_entity,
+    get_nested_collection,
+    get_session_id,
+    jsonify,
+    parse_request,
+    require,
+)
 
 log = logging.getLogger(__name__)
 blueprint = Blueprint("entities_api", __name__)
@@ -129,7 +144,7 @@ def index():
           type: integer
       responses:
         '200':
-          description: Resturns a list of entities in result
+          description: Returns a list of entities in result
           content:
             application/json:
               schema:
@@ -254,7 +269,7 @@ def create():
               $ref: '#/components/schemas/EntityCreate'
       responses:
         '200':
-          description: Resturns the created entity
+          description: Returns the created entity
           content:
             application/json:
               schema:
@@ -410,7 +425,7 @@ def similar(entity_id):
     result.results = []
     for obj in entities:
         item = {
-            "score": compare(model, proxy, model.get_proxy(obj)),
+            "score": compare(proxy, model.get_proxy(obj)),
             "judgement": judgements.get((entity_id, obj.get("id"))),
             "collection_id": entity.get("collection_id"),
             "entity": obj,

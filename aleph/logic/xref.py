@@ -1,42 +1,36 @@
-import shutil
 import logging
+import shutil
 import typing
-from pprint import pformat, pprint  # noqa
-from tempfile import mkdtemp
 from dataclasses import dataclass
+from tempfile import mkdtemp
 from timeit import default_timer
 
 import followthemoney
-from followthemoney import model
-from followthemoney.types import registry
-from followthemoney.export.excel import ExcelWriter
+from followthemoney import compare, model
 from followthemoney.exc import InvalidData
+from followthemoney.export.excel import ExcelWriter
 from followthemoney.helpers import name_entity
-from followthemoney import compare
-from followthemoney_compare.models import GLMBernoulli2EEvaluator
 from followthemoney.proxy import EntityProxy
-from servicelayer.archive.util import ensure_path
+from followthemoney.types import registry
+from followthemoney_compare.models import GLMBernoulli2EEvaluator
 from prometheus_client import Counter, Histogram
+from servicelayer.archive.util import ensure_path
 
-from aleph.core import es, db
-from aleph.settings import SETTINGS
-from aleph.model import Collection, Entity, Role, Export, Status
-from aleph.model import EntitySet
 from aleph.authz import Authz
+from aleph.core import db, es
+from aleph.index.collections import delete_entities
+from aleph.index.entities import ENTITY_SOURCE, entities_by_ids, iter_proxies
+from aleph.index.indexes import entities_read_index
+from aleph.index.util import BULK_PAGE, none_query, unpack_result
+from aleph.index.xref import delete_xref, index_matches, iter_matches
 from aleph.logic import resolver
-from aleph.logic.collections import reindex_collection
 from aleph.logic.aggregator import get_aggregator
+from aleph.logic.collections import reindex_collection
+from aleph.logic.export import complete_export
 from aleph.logic.matching import match_query
 from aleph.logic.util import entity_url
-from aleph.index.xref import index_matches, delete_xref, iter_matches
-from aleph.index.entities import iter_proxies, entities_by_ids
-from aleph.index.entities import ENTITY_SOURCE
-from aleph.index.indexes import entities_read_index
-from aleph.index.collections import delete_entities
-from aleph.index.util import unpack_result, none_query
-from aleph.index.util import BULK_PAGE
-from aleph.logic.export import complete_export
-
+from aleph.model import Collection, Entity, EntitySet, Export, Role, Status
+from aleph.settings import SETTINGS
 
 log = logging.getLogger(__name__)
 ORIGIN = "xref"
@@ -51,7 +45,7 @@ XREF_ENTITIES = Counter(
 
 XREF_MATCHES = Histogram(
     "aleph_xref_matches",
-    "Number of matches per xref'ed entitiy or mention",
+    "Number of matches per xref'ed entity or mention",
     buckets=[
         # Listing 0 as a separate bucket size because it's interesting to know
         # what percentage of entities result in no matches at all
@@ -87,7 +81,7 @@ class Match:
 
 def _bulk_compare_ftm(proxies):
     for left, right in proxies:
-        score = compare.compare(model, left, right)
+        score = compare.compare(left, right)
         yield score, None, FTM_VERSION_STR
 
 
@@ -144,11 +138,11 @@ def _query_item(entity, entitysets=True):
         query_duration = result.get("took") / 1000
 
     candidates = []
-    for result in result.get("hits").get("hits"):
-        result = unpack_result(result)
-        if result is None:
+    for hit in result.get("hits").get("hits"):
+        hit = unpack_result(hit)
+        if hit is None:
             continue
-        candidate = model.get_proxy(result)
+        candidate = model.get_proxy(hit)
         candidates.append(candidate)
     log.debug(
         "Candidate [%s]: %s: %d possible matches",
@@ -268,7 +262,8 @@ def xref_entity(collection, proxy):
 def xref_collection(collection):
     """Cross-reference all the entities and documents in a collection."""
     log.info(
-        f"[{collection}] xref_collection scroll settings: scroll={SETTINGS.XREF_SCROLL}, scroll_size={SETTINGS.XREF_SCROLL_SIZE}"
+        f"[{collection}] xref_collection scroll settings: scroll={SETTINGS.XREF_SCROLL}, "
+        f"scroll_size={SETTINGS.XREF_SCROLL_SIZE}"
     )
     log.info(f"[{collection}] Clearing previous xref state....")
     delete_xref(collection, sync=True)
@@ -338,7 +333,7 @@ def export_matches(export_id):
         role = Role.by_id(export.creator_id)
         authz = Authz.from_role(role)
         collection = Collection.by_id(export.collection_id)
-        file_name = "%s - Crossreference.xlsx" % collection.label
+        file_name = "%s - Crossreference.xlsx" % collection.label  # codespell:ignore
         file_path = export_dir.joinpath(f"{export_id}.xslx")
         excel = ExcelWriter()
         headers = [

@@ -1,38 +1,38 @@
-import os
 import gc
-import shutil
 import logging
-import unittest
+import os
+import shutil
 import tempfile
-from flask import json
-import flask_migrate
+import unittest
+from datetime import datetime
 from pathlib import Path
 from tempfile import mkdtemp
-from datetime import datetime
-from servicelayer import settings as sls
-from ftmstore import settings as ftms, get_store
+
+import flask_migrate
+from faker import Factory
+from flask import json
 from followthemoney import model
 from followthemoney.cli.util import read_entity
-from werkzeug.utils import cached_property
-from faker import Factory
+from ftmq.store.fragments import get_store
+from servicelayer import settings as sls
 from sqlalchemy import text
+from werkzeug.utils import cached_property
 
-from aleph.settings import SETTINGS
 from aleph.authz import Authz
-from aleph.model import Role, Collection, Permission, Entity
-from aleph.index.admin import delete_index, upgrade_search, clear_index
+from aleph.core import create_app, db, kv
+from aleph.index.admin import clear_index, delete_index, upgrade_search
 from aleph.logic.aggregator import get_aggregator
-from aleph.logic.collections import update_collection, reindex_collection
+from aleph.logic.collections import reindex_collection, update_collection
 from aleph.logic.roles import create_system_roles
 from aleph.migration import destroy_db
-from aleph.core import db, kv, create_app
+from aleph.model import Collection, Entity, Permission, Role
 from aleph.oauth import oauth
+from aleph.settings import SETTINGS
 
 log = logging.getLogger(__name__)
 APP_NAME = "aleph-test"
 UI_URL = "http://aleph.ui/"
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
-DB_URI = SETTINGS.DATABASE_URI + "_test"
 JSON = "application/json"
 
 
@@ -81,8 +81,6 @@ class TestCase(unittest.TestCase):
         # have actually been evaluated.
         sls.REDIS_URL = None
         sls.WORKER_THREADS = None
-        ftms.DATABASE_URI = DB_URI
-        # ftms.DATABASE_URI = "sqlite:///%s/ftm.store" % self.temp_dir
         SETTINGS.APP_NAME = APP_NAME
         SETTINGS.TESTING = True
         SETTINGS.DEBUG = True
@@ -92,7 +90,6 @@ class TestCase(unittest.TestCase):
         SETTINGS.APP_UI_URL = UI_URL
         SETTINGS.ARCHIVE_TYPE = "file"
         SETTINGS.ARCHIVE_PATH = self.temp_dir
-        SETTINGS.DATABASE_URI = DB_URI
         SETTINGS.ALEPH_PASSWORD_LOGIN = True
         SETTINGS.MAIL_SERVER = None
         SETTINGS.INDEX_PREFIX = APP_NAME
@@ -255,7 +252,7 @@ class TestCase(unittest.TestCase):
         db.session.rollback()
         db.session.close()
 
-        ftm_store = get_store(DB_URI)
+        ftm_store = get_store(SETTINGS.DATABASE_URI)
         for dataset in ftm_store.all():
             dataset.delete()
 

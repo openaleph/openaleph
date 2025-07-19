@@ -1,21 +1,26 @@
-import logging
 import itertools
-import fingerprints
-from pprint import pprint, pformat  # noqa
+import logging
+
 from banal import ensure_list, first
+from elasticsearch.helpers import scan
 from followthemoney import model
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
-from elasticsearch.helpers import scan
 
-from aleph.core import es, cache
+from aleph.core import cache, es
+from aleph.index.indexes import entities_read_index, entities_write_index
+from aleph.index.util import (
+    MAX_PAGE,
+    MAX_REQUEST_TIMEOUT,
+    MAX_TIMEOUT,
+    NUMERIC_TYPES,
+    authz_query,
+    bulk_actions,
+    delete_safe,
+    unpack_result,
+)
+from aleph.logic.util import entity_fingerprints
 from aleph.model import Entity
-from aleph.index.indexes import entities_write_index, entities_read_index
-from aleph.index.util import unpack_result, delete_safe
-from aleph.index.util import authz_query, bulk_actions
-from aleph.index.util import MAX_PAGE, NUMERIC_TYPES
-from aleph.index.util import MAX_REQUEST_TIMEOUT, MAX_TIMEOUT
-
 
 log = logging.getLogger(__name__)
 PROXY_INCLUDES = [
@@ -206,11 +211,7 @@ def format_proxy(proxy, collection):
     data = proxy.to_full_dict(matchable=True)
     data["schemata"] = list(proxy.schema.names)
     data["caption"] = proxy.caption
-
-    names = data.get("names", [])
-    fps = set([fingerprints.generate(name) for name in names])
-    fps.update(names)
-    data["fingerprints"] = [fp for fp in fps if fp is not None]
+    data["fingerprints"] = list(entity_fingerprints(proxy))
 
     # Slight hack: a magic property in followthemoney that gets taken out
     # of the properties and added straight to the index text.

@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:15
+    image: postgres:17
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
@@ -32,8 +32,6 @@ services:
       - redis-data:/data
 
   ingest-file:
-    build:
-      context: ../ingest-file
     image: ghcr.io/openaleph/ingest-file:latest
     hostname: ingest
     tmpfs: /tmp

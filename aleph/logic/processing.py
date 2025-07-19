@@ -1,12 +1,13 @@
 import logging
+
 from banal import ensure_list
 from followthemoney import model
-from followthemoney.types import registry
 from followthemoney.exc import InvalidData
 from followthemoney.helpers import remove_checksums
+from followthemoney.types import registry
 
-from aleph.logic.collections import index_aggregator, refresh_collection
 from aleph.logic.aggregator import get_aggregator
+from aleph.logic.collections import index_aggregator, refresh_collection
 
 log = logging.getLogger(__name__)
 BATCH_SIZE = 100
@@ -36,9 +37,9 @@ def bulk_write(
     writer = aggregator.bulk()
     for data in entities:
         entity = model.get_proxy(data, cleaned=(not clean))
-        entity = collection.ns.apply(entity)
         if entity.id is None:
             raise InvalidData("No ID for entity", errors=entity.to_dict())
+        entity = collection.ns.apply(entity)
         if safe:
             entity = remove_checksums(entity)
         entity.context = {"role_id": role_id, "mutable": mutable}

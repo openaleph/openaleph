@@ -1,8 +1,9 @@
 import logging
-from uuid import uuid4
-from flask import render_template
 from tempfile import NamedTemporaryFile
-from pantomime.types import HTML
+from uuid import uuid4
+
+from flask import render_template
+from rigour.mime.types import HTML
 
 from aleph import settings
 from aleph.core import archive

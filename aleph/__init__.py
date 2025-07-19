@@ -1,14 +1,12 @@
 import logging
 import warnings
-from sqlalchemy.exc import SAWarning
-from pkg_resources import get_distribution
 
-__version__ = get_distribution("aleph").version
+from sqlalchemy.exc import SAWarning
+
+__version__ = "3.18.6"
 
 # shut up useless SA warning:
-warnings.filterwarnings(
-    "ignore", "Unicode type received non-unicode bind param value."
-)  # noqa
+warnings.filterwarnings("ignore", "Unicode type received non-unicode bind param value.")
 warnings.filterwarnings("ignore", category=SAWarning)
 
 # specific loggers
