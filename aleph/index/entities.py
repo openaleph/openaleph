@@ -1,21 +1,26 @@
-import logging
 import itertools
+import logging
+
 import fingerprints
-from pprint import pprint, pformat  # noqa
 from banal import ensure_list, first
+from elasticsearch.helpers import scan
 from followthemoney import model
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
-from elasticsearch.helpers import scan
 
-from aleph.core import es, cache
+from aleph.core import cache, es
+from aleph.index.indexes import entities_read_index, entities_write_index
+from aleph.index.util import (
+    MAX_PAGE,
+    MAX_REQUEST_TIMEOUT,
+    MAX_TIMEOUT,
+    NUMERIC_TYPES,
+    authz_query,
+    bulk_actions,
+    delete_safe,
+    unpack_result,
+)
 from aleph.model import Entity
-from aleph.index.indexes import entities_write_index, entities_read_index
-from aleph.index.util import unpack_result, delete_safe
-from aleph.index.util import authz_query, bulk_actions
-from aleph.index.util import MAX_PAGE, NUMERIC_TYPES
-from aleph.index.util import MAX_REQUEST_TIMEOUT, MAX_TIMEOUT
-
 
 log = logging.getLogger(__name__)
 PROXY_INCLUDES = [
@@ -181,7 +186,7 @@ def _numeric_values(type_, values):
 
 def get_geopoints(proxy: EntityProxy) -> list[dict[str, str]]:
     points = []
-    if proxy.schema.is_a("Address"):
+    if "longitude" in proxy.schema.properties:
         lons = proxy.get("longitude")
         lats = proxy.get("latitude")
         for lon, lat in itertools.product(lons, lats):
