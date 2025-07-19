@@ -2278,6 +2278,19 @@ files = [
 referencing = ">=0.31.0"
 
 [[package]]
+name = "legacy-cgi"
+version = "2.6.3"
+description = "Fork of the standard library cgi and cgitb modules removed in Python 3.13"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+markers = "python_version >= \"3.13\""
+files = [
+    {file = "legacy_cgi-2.6.3-py3-none-any.whl", hash = "sha256:6df2ea5ae14c71ef6f097f8b6372b44f6685283dc018535a75c924564183cdab"},
+    {file = "legacy_cgi-2.6.3.tar.gz", hash = "sha256:4c119d6cb8e9d8b6ad7cc0ddad880552c62df4029622835d06dfd18f438a8154"},
+]
+
+[[package]]
 name = "levenshtein"
 version = "0.27.1"
 description = "Python extension for computing string edit distances and similarities."
@@ -5907,4 +5920,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.11, <4.0.0"
-content-hash = "4c4690ed4af5748bb80ed97510a66c108c5ed632e50aa1ccacec139691a975c5"
+content-hash = "32950421d64eca67ab0736c726873caf079da6e31dbe76ba31e9a47b52b42655"

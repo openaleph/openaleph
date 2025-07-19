@@ -68,6 +68,7 @@ dependencies = [
     "sentry-sdk[flask] (==2.19.2)",
     "lxml[html-clean] (>=5.4.0,<6.0.0)",
     "psycopg2-binary (>=2.9.10,<3.0.0)",
+    "legacy-cgi; python_version >= '3.13'",
 ]
 
 [project.scripts]
@@ -76,7 +77,9 @@ aleph = "aleph.manage:cli"
 [project.gui-scripts]
 aleph = "aleph.manage:cli"
 
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"
