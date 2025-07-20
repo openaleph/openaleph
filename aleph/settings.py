@@ -35,7 +35,7 @@ class Settings:
         ###############################################################################
         # General instance information
 
-        self.APP_TITLE = env.get("ALEPH_APP_TITLE", lazy_gettext("Aleph"))
+        self.APP_TITLE = env.get("ALEPH_APP_TITLE", lazy_gettext("OpenAleph"))
         self.APP_NAME = env.get("ALEPH_APP_NAME", "aleph")
         self.APP_UI_URL = env.get("ALEPH_UI_URL", "http://localhost:8080/")
         self.APP_LOGO = env.get("ALEPH_LOGO", "/static/logo.svg")
@@ -159,7 +159,7 @@ class Settings:
         )
 
         # Publishing network diagram embeds
-        self.REACT_FTM_URL = "https://cdn.jsdelivr.net/npm/@alephdata/react-ftm@latest/dist/react-ftm-embed.js"  # noqa
+        self.REACT_FTM_URL = "https://cdn.jsdelivr.net/npm/@alephdata/react-ftm@latest/dist/react-ftm-embed.js"  # noqa: B950
 
         ##############################################################################
         # E-mail settings
@@ -249,7 +249,7 @@ class Settings:
                         json_value = json.loads(value)
                     except JSONDecodeError as e:
                         log.error(
-                            f"Could not parse config value as JSON for env var {key}: {value}\n{e}"  # noqa
+                            f"Could not parse config value as JSON for env var {key}: {value}\n{e}"  # noqa: B950
                         )
                         raise e
                     setattr(self, key[len(json_prefix) :], json_value)
