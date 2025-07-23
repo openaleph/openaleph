@@ -1,25 +1,34 @@
 from banal import ensure_list
 from flask import Blueprint, request
+from openaleph_procrastinate.app import make_app
 from werkzeug.exceptions import BadRequest
 
-from openaleph_procrastinate.app import make_app
-
 from aleph.core import db
-from aleph.search import CollectionsQuery
-from aleph.queues import get_status, cancel_queue
-from aleph.logic.collections import create_collection, update_collection
-from aleph.logic.collections import delete_collection, refresh_collection
-from aleph.logic.collections import get_deep_collection
-from aleph.logic.entitysets import save_entityset_item
 from aleph.index.collections import update_collection_stats
+from aleph.logic.collections import (
+    create_collection,
+    delete_collection,
+    get_deep_collection,
+    refresh_collection,
+    reingest_collection,
+    update_collection,
+)
+from aleph.logic.entitysets import save_entityset_item
 from aleph.logic.processing import bulk_write
-from aleph.views.serializers import CollectionSerializer
-from aleph.views.util import get_db_collection, get_index_collection, get_entityset
-from aleph.views.util import require, parse_request, jsonify
-from aleph.views.util import get_flag, get_session_id
 from aleph.procrastinate.queues import queue_index, queue_reindex
-from aleph.logic.collections import reingest_collection
-
+from aleph.queues import cancel_queue, get_status
+from aleph.search import CollectionsQuery
+from aleph.views.serializers import CollectionSerializer
+from aleph.views.util import (
+    get_db_collection,
+    get_entityset,
+    get_flag,
+    get_index_collection,
+    get_session_id,
+    jsonify,
+    parse_request,
+    require,
+)
 
 app = make_app(__loader__.name)
 
@@ -240,14 +249,16 @@ def bulk(collection_id):
           minimum: 1
           type: integer
       - description: >-
-          safe=True means that the data cannot be trusted and that file checksums should be removed.
+          safe=True means that the data cannot be trusted
+          and that file checksums should be removed.
           Flag is only available for admins. Default True.
         in: query
         name: safe
         schema:
           type: boolean
       - description: >-
-          clean=True means that the data cannot be trusted and that the data should be cleaned from invalid values.
+          clean=True means that the data cannot be trusted
+          and that the data should be cleaned from invalid values.
           Flag is only available for admins. Default True.
         in: query
         name: clean
@@ -269,7 +280,6 @@ def bulk(collection_id):
     """
     collection = get_db_collection(collection_id, request.authz.WRITE)
     require(request.authz.can_bulk_import())
-    job_id = get_session_id()
     entityset = request.args.get("entityset_id")
     if entityset is not None:
         entityset = get_entityset(entityset, request.authz.WRITE)

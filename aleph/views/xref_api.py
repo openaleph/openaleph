@@ -5,16 +5,15 @@ from rigour.mime.types import XLSX
 
 from aleph.logic.export import create_export
 from aleph.logic.profiles import pairwise_judgements
-from aleph.queues import OP_EXPORT_XREF, OP_XREF, queue_task
+from aleph.procrastinate.queues import queue_export_xref, queue_xref
+from aleph.queues import OP_EXPORT_XREF
 from aleph.search import XrefQuery
 from aleph.views.serializers import XrefSerializer
-from aleph.queues import OP_EXPORT_XREF
 from aleph.views.util import (
     get_db_collection,
     get_index_collection,
     jsonify,
 )
-from aleph.procrastinate.queues import queue_xref, queue_export_xref
 
 blueprint = Blueprint("xref_api", __name__)
 log = logging.getLogger(__name__)

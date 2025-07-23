@@ -5,13 +5,21 @@ from followthemoney import model
 from followthemoney.compare import compare
 
 from aleph.logic.expand import entity_tags, expand_proxies
+from aleph.logic.profiles import decide_pairwise, get_profile
+from aleph.model import Judgement
+from aleph.procrastinate.queues import queue_update_entity
 from aleph.search import MatchQuery, QueryParser
 from aleph.settings import SETTINGS
 from aleph.views.context import tag_request
-from aleph.views.util import obj_or_404, jsonify, parse_request
-from aleph.views.util import get_index_entity, get_db_collection
-from aleph.views.util import require
-from aleph.procrastinate.queues import queue_update_entity
+from aleph.views.serializers import ProfileSerializer, SimilarSerializer
+from aleph.views.util import (
+    get_db_collection,
+    get_index_entity,
+    jsonify,
+    obj_or_404,
+    parse_request,
+    require,
+)
 
 blueprint = Blueprint("profiles_api", __name__)
 log = logging.getLogger(__name__)
