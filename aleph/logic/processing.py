@@ -49,5 +49,5 @@ def bulk_write(
             if dt is not None:
                 entity.context[field] = dt.isoformat()
         writer.put(entity, origin="bulk")
-        yield entity.id
+        yield entity
     writer.flush()
