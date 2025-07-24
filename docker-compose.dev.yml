@@ -87,6 +87,26 @@ services:
     env_file:
       - aleph.env
 
+  procrastinate-worker:
+    # image: ghcr.io/openaleph/openaleph:latest
+    build:
+      context: .
+    command: procrastinate worker -q openaleph,openaleph-periodic
+    restart: on-failure
+    depends_on:
+      - postgres
+      - elasticsearch
+    environment:
+      PROCRASTINATE_APP: aleph.procrastinate.tasks.app
+      FTM_STORE_URI: postgresql://aleph:aleph@postgres/aleph
+      OPENALEPH_DB_URI: postgresql://aleph:aleph@postgres/aleph
+      OPENALEPH_ANALYZE_DEFER: False
+    volumes:
+      - "./aleph:/aleph/aleph"
+      - archive-data:/data
+    env_file:
+      - aleph.env
+
   api:
     build:
       context: .
@@ -135,9 +155,24 @@ services:
     env_file:
       - aleph.env
 
-  worker:
-    image: ghcr.io/openaleph/openaleph:latest
-    command: aleph worker
+  # worker:
+  #   image: ghcr.io/openaleph/openaleph:latest
+  #   command: aleph worker
+  #   restart: on-failure
+  #   depends_on:
+  #     - postgres
+  #     - elasticsearch
+  #     - redis
+  #     - ingest-file
+  #   tmpfs:
+  #     - /tmp
+  #   volumes:
+  #     - archive-data:/data
+  #   env_file:
+  #     - aleph.env
+
+  ftm-analyze:
+    image: ghcr.io/dataresearchcenter/ftm-analyze:latest
     restart: on-failure
     depends_on:
       - postgres
@@ -150,6 +185,11 @@ services:
       - archive-data:/data
     env_file:
       - aleph.env
+    environment:
+      PROCRASTINATE_APP: ftm_analyze.tasks.app
+      FTM_STORE_URI: postgresql://ingest:ingest@postgres/ingest
+      OPENALEPH_DB_URI: postgresql://aleph:aleph@postgres/aleph
+    entrypoint: procrastinate worker -q analyze
 
 volumes:
   archive-data: {}
