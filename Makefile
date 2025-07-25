@@ -16,6 +16,7 @@ export ALEPH_ELASTICSEARCH_URI := http://localhost:9200
 export ALEPH_DATABASE_URI := postgresql://aleph:aleph@localhost:5432/aleph
 export FTM_STORE_URI := postgresql://aleph:aleph@localhost:5432/aleph
 export REDIS_URL := redis://localhost:6379
+export PROCRASTINATE_APP := aleph.procrastinate.tasks.app
 
 all: build upgrade web
 
@@ -87,6 +88,9 @@ pro: services
 worker-local: services
 	aleph worker
 
+worker-procrastinate:
+	procrastinate worker -q openaleph
+
 tail:
 	$(COMPOSE) logs -f
 
@@ -122,8 +126,7 @@ dev:
 # 	python3 -m pip install -q -r requirements-dev.txt
 
 fixtures:
-	aleph crawldir --wait -f fixtures aleph/tests/fixtures/samples
-	balkhash iterate -d fixtures >aleph/tests/fixtures/samples.ijson
+	aleph crawldir -f fixtures aleph/tests/fixtures/samples
 
 # pybabel init -i aleph/translations/messages.pot -d aleph/translations -l de -D aleph
 translate: dev
