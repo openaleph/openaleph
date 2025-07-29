@@ -159,7 +159,7 @@ class Settings:
         )
 
         # Publishing network diagram embeds
-        self.REACT_FTM_URL = "https://cdn.jsdelivr.net/npm/@alephdata/react-ftm@latest/dist/react-ftm-embed.js"  # noqa
+        self.REACT_FTM_URL = "https://cdn.jsdelivr.net/npm/@alephdata/react-ftm@latest/dist/react-ftm-embed.js"  # noqa: B950
 
         ##############################################################################
         # E-mail settings
@@ -229,6 +229,10 @@ class Settings:
         self.PROMETHEUS_PORT = env.to_int("PROMETHEUS_PORT", 9100)
 
         ###############################################################################
+        # Procrastinate
+        self.PROCRASTINATE_TASKS = "aleph.procrastinate.tasks"
+
+        ###############################################################################
         # External services
         self.FTM_ASSETS_URL = env.get("FTM_ASSETS_URL")
 
@@ -249,7 +253,7 @@ class Settings:
                         json_value = json.loads(value)
                     except JSONDecodeError as e:
                         log.error(
-                            f"Could not parse config value as JSON for env var {key}: {value}\n{e}"  # noqa
+                            f"Could not parse config value as JSON for env var {key}: {value}\n{e}"  # noqa: B950
                         )
                         raise e
                     setattr(self, key[len(json_prefix) :], json_value)

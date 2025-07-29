@@ -7,9 +7,10 @@ from openaleph_procrastinate.app import make_app
 
 from aleph.logic.aggregator import get_aggregator_name
 from aleph.model.collection import Collection
+from aleph.settings import SETTINGS
 
 log = structlog.get_logger(__name__)
-app = make_app()
+app = make_app(SETTINGS.PROCRASTINATE_TASKS)
 
 
 def queue_ingest(collection: Collection, proxy: EntityProxy, **context: Any) -> None:

@@ -23,7 +23,7 @@ from aleph.model import Entity, Events, Export, Role, Status
 from aleph.settings import SETTINGS
 
 log = logging.getLogger(__name__)
-app = make_app()
+app = make_app(SETTINGS.PROCRASTINATE_TASKS)
 
 EXTRA_HEADERS = ["url", "collection"]
 WARNING = """
