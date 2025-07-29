@@ -30,7 +30,7 @@ jobs:
       - name: Docker pull services
         run: |
           docker compose pull --quiet elasticsearch ingest-file
-          make ALEPH_TAG=${GITHUB_SHA} services
+          make ALEPH_TAG=${GITHUB_SHA} test-services
 
       - name: Build docker image
         run: docker build -t ghcr.io/openaleph/openaleph:${GITHUB_SHA} .
