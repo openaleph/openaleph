@@ -29,7 +29,7 @@ jobs:
 
       - name: Docker pull services
         run: |
-          docker compose pull --quiet elasticsearch ingest-file
+          docker compose pull --quiet elasticsearch
           make ALEPH_TAG=${GITHUB_SHA} test-services
 
       - name: Build docker image

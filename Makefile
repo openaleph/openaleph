@@ -1,6 +1,7 @@
 COMPOSE=docker compose -f docker-compose.dev.yml
 COMPOSE_E2E=docker compose -f docker-compose.dev.yml -f docker-compose.e2e.yml
 APPDOCKER=$(COMPOSE) run --rm app
+TESTDOCKER=$(COMPOSE) run --no-deps --rm app
 UIDOCKER=$(COMPOSE) run --no-deps --rm ui
 ALEPH_TAG=latest
 BLACK_OPTS=--extend-exclude aleph/migrate
@@ -28,12 +29,12 @@ shell: services
 	$(APPDOCKER) /bin/bash
 
 test-services:
-	$(COMPOSE) up -d --remove-orphans postgres elasticsearch
+	$(COMPOSE) up -d --remove-orphans postgres elasticsearch redis
 
 # To run a single test file:
 # make test file=aleph/tests/test_manage.py
-test:
-	$(APPDOCKER) contrib/test.sh $(file)
+test: test-services
+	$(TESTDOCKER) contrib/test.sh $(file)
 
 test-ui:
 	$(UIDOCKER) npm run test
