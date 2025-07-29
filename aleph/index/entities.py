@@ -186,7 +186,7 @@ def _numeric_values(type_, values):
 
 def get_geopoints(proxy: EntityProxy) -> list[dict[str, str]]:
     points = []
-    if proxy.schema.is_a("Address"):
+    if "longitude" in proxy.schema.properties:
         lons = proxy.get("longitude")
         lats = proxy.get("latitude")
         for lon, lat in itertools.product(lons, lats):

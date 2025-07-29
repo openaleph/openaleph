@@ -3,7 +3,7 @@ import warnings
 
 from sqlalchemy.exc import SAWarning
 
-__version__ = "3.18.6"
+__version__ = "3.19.0"
 
 # shut up useless SA warning:
 warnings.filterwarnings("ignore", "Unicode type received non-unicode bind param value.")
