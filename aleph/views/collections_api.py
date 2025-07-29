@@ -1,6 +1,5 @@
 from banal import ensure_list
 from flask import Blueprint, request
-from openaleph_procrastinate.app import make_app
 from werkzeug.exceptions import BadRequest
 
 from aleph.core import db
@@ -29,8 +28,6 @@ from aleph.views.util import (
     parse_request,
     require,
 )
-
-app = make_app(__loader__.name)
 
 blueprint = Blueprint("collections_api", __name__)
 
@@ -300,11 +297,11 @@ def bulk(collection_id):
 
     # Let UI tools change the entities created by this:
     mutable = get_flag("mutable", default=False)
-    entities = ensure_list(request.get_json(force=True))
+    entities_data = ensure_list(request.get_json(force=True))
     entities = list()
     for entity in bulk_write(
         collection,
-        entities,
+        entities_data,
         safe=safe,
         mutable=mutable,
         clean=clean,
