@@ -21,11 +21,14 @@ export PROCRASTINATE_APP := aleph.procrastinate.tasks.app
 all: build upgrade web
 
 services:
-	$(COMPOSE) up -d --remove-orphans \
-		postgres elasticsearch ingest-file ftm-analyze
+	$(COMPOSE) up -d --remove-orphans redis postgres elasticsearch \
+		ingest-file ftm-analyze
 
 shell: services
 	$(APPDOCKER) /bin/bash
+
+test-services:
+	$(COMPOSE) up -d --remove-orphans postgres elasticsearch
 
 # To run a single test file:
 # make test file=aleph/tests/test_manage.py
@@ -80,16 +83,10 @@ web-local:
 	cd ui ; ALEPH_UI_API_URL=http://localhost:5000 npm run start
 
 worker: services
-	$(COMPOSE) run -p 127.0.0.1:5679:5679 --rm app python3 -m debugpy --listen 0.0.0.0:5679 -c "from aleph.manage import cli; cli()" worker
-
-pro: services
 	$(COMPOSE) up procrastinate-worker
 
-worker-local: services
-	aleph worker
-
-worker-procrastinate:
-	procrastinate worker -q openaleph
+worker-local:
+	procrastinate worker -q openaleph --concurrency 2
 
 tail:
 	$(COMPOSE) logs -f
@@ -110,7 +107,7 @@ build:
 	$(COMPOSE) build
 
 build-ui:
-	docker build -t ghcr.io/alephdata/aleph-ui-production:$(ALEPH_TAG) -f ui/Dockerfile.production ui
+	docker build -t ghcr.io/openaleph/aleph-ui-production:$(ALEPH_TAG) -f ui/Dockerfile.production ui
 
 build-e2e:
 	$(COMPOSE_E2E) build --build-arg PLAYWRIGHT_VERSION=$(shell awk -F'==' '/^playwright==/ { print $$2 }' e2e/requirements.txt)
@@ -140,11 +137,7 @@ translate: dev
 e2e/test-results:
 	mkdir -p e2e/test-results
 
-services-e2e:
-	$(COMPOSE_E2E) up -d --remove-orphans \
-		postgres elasticsearch ingest-file \
-
-e2e: services-e2e e2e/test-results
+e2e: services e2e/test-results
 	$(COMPOSE_E2E) run --rm app aleph upgrade
 	$(COMPOSE_E2E) run --rm app aleph createuser --name="E2E Admin" --admin --password="admin" admin@admin.admin
 	$(COMPOSE_E2E) up -d api ui worker
