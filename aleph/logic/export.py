@@ -1,27 +1,30 @@
+import logging
 import os
 import shutil
-import logging
-from pprint import pformat  # noqa
-from zipfile import ZipFile
 from tempfile import mkdtemp
+from zipfile import ZipFile
+
 from flask import render_template
-from normality import safe_filename
-from followthemoney.helpers import entity_filename
 from followthemoney.export.excel import ExcelExporter
+from followthemoney.helpers import entity_filename
+from normality import safe_filename
+from openaleph_procrastinate import defer
+from openaleph_procrastinate.app import make_app
 from servicelayer.archive.util import checksum, ensure_path
 
 from aleph.core import archive, db
-from aleph.settings import SETTINGS
-from aleph.queues import queue_task
-from aleph.model import Export, Events, Role, Status, Entity
-from aleph.index.entities import iter_proxies, checksums_count
 from aleph.index.collections import get_collection
-from aleph.logic.util import entity_url, ui_url, archive_url
-from aleph.logic.notifications import publish
+from aleph.index.entities import checksums_count, iter_proxies
+from aleph.logic.aggregator import get_aggregator_name
 from aleph.logic.mail import email_role
-
+from aleph.logic.notifications import publish
+from aleph.logic.util import archive_url, entity_url, ui_url
+from aleph.model import Entity, Events, Export, Role, Status
+from aleph.settings import SETTINGS
 
 log = logging.getLogger(__name__)
+app = make_app()
+
 EXTRA_HEADERS = ["url", "collection"]
 WARNING = """
 This data export was aborted before it was complete, because the %s
@@ -29,6 +32,10 @@ exported entities exceeds the limits set by the system operators.
 
 Contact the operator to discuss bulk exports.
 """
+
+# operation
+EXPORT_XREF = "exportxref"
+EXPORT_SEARCH = "exportsearch"
 
 
 def get_export(export_id):
@@ -167,7 +174,13 @@ def delete_expired_exports():
 
 def retry_exports():
     for export in Export.get_pending():
-        queue_task(None, export.operation, export_id=export.id)
+        if export.operation == EXPORT_SEARCH:
+            defer.export_search(app, export_id=export.id)
+        elif export.operation == EXPORT_XREF:
+            dataset = get_aggregator_name(export.collection)
+            defer.export_xref(app, dataset, export_id=export.id)
+        else:
+            raise ValueError(f"Unknown export operation: `{export.operation}`")
 
 
 def send_export_notification(export):

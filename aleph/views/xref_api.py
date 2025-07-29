@@ -127,5 +127,5 @@ def export(collection_id):
         collection=collection,
         mime_type=XLSX,
     )
-    queue_export_xref(export_id=export.id)
+    queue_export_xref(collection, export.id)
     return ("", 202)

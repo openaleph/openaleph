@@ -1,15 +1,15 @@
-import structlog
 from typing import Any
 
+import structlog
 from followthemoney.proxy import EntityProxy
-from openaleph_procrastinate.app import make_app
 from openaleph_procrastinate import defer
+from openaleph_procrastinate.app import make_app
+
 from aleph.logic.aggregator import get_aggregator_name
 from aleph.model.collection import Collection
 
-
 log = structlog.get_logger(__name__)
-app = make_app(__loader__.name)
+app = make_app()
 
 
 def queue_ingest(collection: Collection, proxy: EntityProxy, **context: Any) -> None:
@@ -25,11 +25,11 @@ def queue_analyze(collection: Collection, proxy: EntityProxy, **context: Any) ->
 
 
 def queue_index(
-    collection: Collection, entity_ids: list[EntityProxy], **context: Any
+    collection: Collection, entities: list[EntityProxy], **context: Any
 ) -> None:
     dataset = get_aggregator_name(collection)
     with app.open():
-        defer.index(app, dataset, entity_ids, **context)
+        defer.index(app, dataset, entities, **context)
 
 
 def queue_reindex(collection: Collection, **context: Any) -> None:
@@ -44,9 +44,10 @@ def queue_xref(collection: Collection) -> None:
         defer.xref(app, dataset)
 
 
-def queue_export_xref(**context: Any) -> None:
+def queue_export_xref(collection: Collection, export_id: str) -> None:
+    dataset = get_aggregator_name(collection)
     with app.open():
-        defer.export_xref(app, **context)
+        defer.export_xref(app, dataset, export_id=export_id)
 
 
 def queue_load_mapping(collection: Collection, **context: Any) -> None:
