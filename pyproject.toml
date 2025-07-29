@@ -46,7 +46,7 @@ dependencies = [
     "prometheus-client (==0.17.1)",
     "followthemoney-compare (==0.4.4)",
     # servicelayer extras requirements
-    "servicelayer @ git+https://github.com/dataresearchcenter/servicelayer",
+    "servicelayer @ git+https://github.com/openaleph/servicelayer",
     "boto3 (>=1.11.9,<2.0.0)",
     "grpcio (>=1.32.0,<2.0.0)",
     "google-cloud-storage (>=1.31.0,<3.0.0)",
@@ -92,6 +92,7 @@ black = "^24.10.0"
 ruff = "^0.7.3"
 isort = "^5.13.2"
 ipdb = "^0.13.13"
+pytest-env = "^1.1.5"
 
 
 [build-system]
@@ -100,3 +101,9 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.requires-plugins]
 poetry-plugin-export = ">=1.8"
+
+[tool.pytest_env]
+DEBUG = 1
+OPENALEPH_INGEST_DEFER = 0
+OPENALEPH_ANALYZE_DEFER = 0
+PROCRASTINATE_APP = "aleph.procrastinate.tasks.app"
