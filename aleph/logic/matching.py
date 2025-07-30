@@ -1,10 +1,10 @@
 import logging
 
-import fingerprints
 from banal import ensure_list
 from followthemoney.types import registry
 
 from aleph.index.util import bool_query, none_query
+from aleph.logic.util import make_fingerprint
 
 log = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ def _make_queries(type_, value):
                 }
             }
         }
-        fp = fingerprints.generate(value)
+        fp = make_fingerprint(value)
         if fp is None:
             return
         if fp.lower() != value.lower():

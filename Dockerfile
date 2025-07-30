@@ -49,12 +49,13 @@ RUN mkdir -p /opt/ftm-compare/word-frequencies/ && \
 # Configure some docker defaults:
 ENV ALEPH_ELASTICSEARCH_URI=http://elasticsearch:9200/ \
     ALEPH_DATABASE_URI=postgresql://aleph:aleph@postgres/aleph \
-    FTM_STORE_URI=postgresql://aleph:aleph@postgres/aleph \
+    FTM_FRAGMENTS_URI=postgresql://aleph:aleph@postgres/aleph \
     REDIS_URL=redis://redis:6379/0 \
     ARCHIVE_TYPE=file \
     ARCHIVE_PATH=/data \
     FTM_COMPARE_FREQUENCIES_DIR=/opt/ftm-compare/word-frequencies/ \
-    FTM_COMPARE_MODEL=/opt/ftm-compare/model.pkl
+    FTM_COMPARE_MODEL=/opt/ftm-compare/model.pkl \
+    PROCRASTINATE_APP=aleph.procrastinate.tasks.app
 
 
 RUN mkdir /run/prometheus

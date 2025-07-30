@@ -26,6 +26,9 @@ services:
 shell: services
 	$(APPDOCKER) /bin/bash
 
+test-services:
+	$(COMPOSE) up -d --remove-orphans postgres elasticsearch
+
 # To run a single test file:
 # make test file=aleph/tests/test_manage.py
 test:
@@ -103,7 +106,7 @@ build:
 	$(COMPOSE) build
 
 build-ui:
-	docker build -t ghcr.io/alephdata/aleph-ui-production:$(ALEPH_TAG) -f ui/Dockerfile.production ui
+	docker build -t ghcr.io/openaleph/aleph-ui-production:$(ALEPH_TAG) -f ui/Dockerfile.production ui
 
 build-e2e:
 	$(COMPOSE_E2E) build --build-arg PLAYWRIGHT_VERSION=$(shell awk -F'==' '/^playwright==/ { print $$2 }' e2e/requirements.txt)
@@ -134,11 +137,7 @@ translate: dev
 e2e/test-results:
 	mkdir -p e2e/test-results
 
-services-e2e:
-	$(COMPOSE_E2E) up -d --remove-orphans \
-		postgres elasticsearch ingest-file \
-
-e2e: services-e2e e2e/test-results
+e2e: services e2e/test-results
 	$(COMPOSE_E2E) run --rm app aleph upgrade
 	$(COMPOSE_E2E) run --rm app aleph createuser --name="E2E Admin" --admin --password="admin" admin@admin.admin
 	$(COMPOSE_E2E) up -d api ui worker
