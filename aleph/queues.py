@@ -1,11 +1,11 @@
 import logging
+from typing import TypedDict
 
+from servicelayer.jobs import Dataset, Job
 from servicelayer.rate_limit import RateLimit
-from servicelayer.jobs import Job, Dataset, Stage
 
 from aleph.core import kv
-from aleph.settings import SETTINGS
-from aleph.model import Entity
+from aleph.model.collection import Collection
 
 log = logging.getLogger(__name__)
 
@@ -50,21 +50,6 @@ def get_stage(collection, stage, job_id=None):
     return job.get_stage(stage)
 
 
-def queue_task(dataset, stage, job_id=None, context=None, **payload):
-    stage = get_stage(dataset, stage, job_id=job_id)
-    stage.queue(payload or {}, context or {})
-    if SETTINGS.TESTING:
-        from aleph.worker import get_worker
-
-        worker = get_worker()
-        while True:
-            stages = worker.get_stages()
-            task = Stage.get_task(worker.conn, stages, timeout=None)
-            if task is None:
-                break
-            worker.dispatch_task(task)
-
-
 def get_status(collection):
     dataset = dataset_from_collection(collection)
     return Dataset(kv, dataset).get_status()
@@ -75,15 +60,20 @@ def get_active_dataset_status():
     return data
 
 
-def get_context(collection, pipeline):
+class Context(TypedDict):
+    languages: list[str]
+    ftmstore: str
+    namespace: str
+
+
+def get_context(collection: Collection) -> Context:
     """Set some task context variables that configure the ingestors."""
     from aleph.logic.aggregator import get_aggregator_name
 
     return {
-        "languages": collection.languages,
+        "languages": [x for x in collection.languages if x],
         "ftmstore": get_aggregator_name(collection),
         "namespace": collection.foreign_id,
-        "pipeline": pipeline,
     }
 
 
@@ -94,24 +84,19 @@ def cancel_queue(collection):
 
 def ingest_entity(collection, proxy, job_id=None, index=True):
     """Send the given entity proxy to the ingest-file service."""
-
     log.debug("Ingest entity [%s]: %s", proxy.id, proxy.caption)
-    stage = get_stage(collection, OP_INGEST, job_id=job_id)
-    pipeline = list(SETTINGS.INGEST_PIPELINE)
-    if index:
-        pipeline.append(OP_INDEX)
-    context = get_context(collection, pipeline)
-    stage.queue(proxy.to_dict(), context)
+
+    from aleph.procrastinate.queues import queue_ingest
+
+    context = get_context(collection)
+    queue_ingest(collection, proxy, job_id=job_id, **context)
 
 
 def pipeline_entity(collection, proxy, job_id=None):
     """Send an entity through the ingestion pipeline, minus the ingestor itself."""
     log.debug("Pipeline entity [%s]: %s", proxy.id, proxy.caption)
-    pipeline = []
-    if not SETTINGS.TESTING:
-        if proxy.schema.is_a(Entity.ANALYZABLE):
-            pipeline.extend(SETTINGS.INGEST_PIPELINE)
-    pipeline.append(OP_INDEX)
-    stage = get_stage(collection, pipeline.pop(0), job_id=job_id)
-    context = get_context(collection, pipeline)
-    stage.queue({"entity_ids": [proxy.id]}, context)
+
+    from aleph.procrastinate.queues import queue_analyze
+
+    context = get_context(collection)
+    queue_analyze(collection, proxy, job_id=job_id, **context)

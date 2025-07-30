@@ -1,7 +1,10 @@
-import jwt
-from normality import ascii_text
-from urllib.parse import urlencode, urljoin
 from datetime import datetime, timedelta
+from urllib.parse import urlencode, urljoin
+
+import jwt
+from followthemoney import EntityProxy, model
+from followthemoney.compare import _normalize_names
+from normality import ascii_text
 
 from aleph.core import url_for
 from aleph.settings import SETTINGS
@@ -58,3 +61,16 @@ def archive_token(token):
     token = jwt.decode(token, key=SETTINGS.SECRET_KEY, algorithms=DECODE, verify=True)
     expire = datetime.utcfromtimestamp(token["exp"])
     return token.get("c"), token.get("f"), token.get("m"), expire
+
+
+def entity_fingerprints(entity: EntityProxy) -> set[str]:
+    """Get the set of entity name fingerprints"""
+    # FIXME
+    return set(_normalize_names(entity.schema, entity.names))
+
+
+def make_fingerprint(value: str) -> str | None:
+    """Mimic `fingerprints.generate`"""
+    # FIXME
+    for fp in _normalize_names(model["LegalEntity"], [value]):
+        return fp
