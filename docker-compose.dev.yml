@@ -84,6 +84,7 @@ services:
     cap_add:
       - SYS_PTRACE
     environment:
+      DEBUG: "false"
       ALEPH_DEBUG: "true"
       ALEPH_SECRET_KEY: "development"
     env_file:

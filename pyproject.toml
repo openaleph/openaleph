@@ -103,7 +103,7 @@ build-backend = "poetry.core.masonry.api"
 poetry-plugin-export = ">=1.8"
 
 [tool.pytest_env]
-DEBUG = 1
+DEBUG = 0  # important to use procrastinate with postgres
 OPENALEPH_INGEST_DEFER = 0
 OPENALEPH_ANALYZE_DEFER = 0
 PROCRASTINATE_APP = "aleph.procrastinate.tasks.app"
