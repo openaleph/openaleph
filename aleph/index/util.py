@@ -22,7 +22,7 @@ MAX_TIMEOUT = "700m"
 MAX_REQUEST_TIMEOUT = 84600
 
 # Mapping shortcuts
-DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd||yyyy-MM||yyyy"
+DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd'T'HH:mm||yyyy-MM-dd||yyyy-MM||yyyy"
 PARTIAL_DATE = {"type": "date", "format": DATE_FORMAT}
 TEXT = {
     "type": "text",
