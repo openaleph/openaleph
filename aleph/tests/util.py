@@ -5,7 +5,6 @@ import shutil
 import tempfile
 import unittest
 from datetime import datetime
-from functools import cache
 from pathlib import Path
 from tempfile import mkdtemp
 
@@ -15,7 +14,6 @@ from flask import json
 from followthemoney import model
 from followthemoney.cli.util import read_entity
 from ftmq.store.fragments import get_store
-from openaleph_procrastinate.app import init_db
 from servicelayer import settings as sls
 from sqlalchemy import text
 from werkzeug.utils import cached_property
@@ -36,11 +34,6 @@ APP_NAME = "aleph-test"
 UI_URL = "http://aleph.ui/"
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 JSON = "application/json"
-
-
-@cache
-def make_procrastinate_db():
-    init_db()
 
 
 def read_entities(file_name):
@@ -244,7 +237,6 @@ class TestCase(unittest.TestCase):
             flask_migrate.upgrade()
             delete_index()
             upgrade_search()
-            make_procrastinate_db()
         else:
             clear_index()
             for table in reversed(db.metadata.sorted_tables):
