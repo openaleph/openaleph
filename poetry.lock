@@ -607,14 +607,14 @@ files = [
 
 [[package]]
 name = "certifi"
-version = "2025.7.14"
+version = "2025.8.3"
 description = "Python package for providing Mozilla's CA Bundle."
 optional = false
 python-versions = ">=3.7"
 groups = ["main"]
 files = [
-    {file = "certifi-2025.7.14-py3-none-any.whl", hash = "sha256:6b31f564a415d79ee77df69d757bb49a5bb53bd9f756cbbe24394ffd6fc1f4b2"},
-    {file = "certifi-2025.7.14.tar.gz", hash = "sha256:8ea99dbdfaaf2ba2f9bac77b9249ef62ec5218e7c2b2e903378ed5fccf765995"},
+    {file = "certifi-2025.8.3-py3-none-any.whl", hash = "sha256:f6c12493cfb1b06ba2ff328595af9350c65d6644968e5d3a2ffd78699af217a5"},
+    {file = "certifi-2025.8.3.tar.gz", hash = "sha256:e564105f78ded564e3ae7c923924435e1daa7463faeab5bb932bc53ffae63407"},
 ]
 
 [[package]]
@@ -1598,14 +1598,14 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "ftmq"
-version = "4.1.0"
+version = "4.1.1"
 description = "followthemoney query dsl and io helpers"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "ftmq-4.1.0-py3-none-any.whl", hash = "sha256:49608f6c9f0fdfdcb189447508c4a1b7e88872fb8a7eb29bd12c9eab5060d408"},
-    {file = "ftmq-4.1.0.tar.gz", hash = "sha256:90949b47762a573a5e2d71cbd08781320049b18f8ea4136e8f4d745a25b47bf4"},
+    {file = "ftmq-4.1.1-py3-none-any.whl", hash = "sha256:b2207a8548c13a241c412a298bd9eec5139094174202d15af8b959ce522bd571"},
+    {file = "ftmq-4.1.1.tar.gz", hash = "sha256:e819df2eef1b89da971180b1b1f14599af0808502b57484fd22761d4f938721e"},
 ]
 
 [package.dependencies]
@@ -3433,19 +3433,19 @@ files = [
 
 [[package]]
 name = "openaleph-procrastinate"
-version = "0.0.17"
+version = "0.0.18"
 description = "Task queue logic for OpenAleph built upon procrastinate"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "openaleph_procrastinate-0.0.17-py3-none-any.whl", hash = "sha256:7927cfcb736ecd85d5b758bd1a618e87b840df442df43802ad5138e2a3340f59"},
-    {file = "openaleph_procrastinate-0.0.17.tar.gz", hash = "sha256:b10696d425c0260d5bcda62dc41e13b28af1ee08a5e45b5645c1f775f5d7bb52"},
+    {file = "openaleph_procrastinate-0.0.18-py3-none-any.whl", hash = "sha256:860f7beffde665d1061798c5144f93778d153d3aa54a1347e4242ca28ff1becb"},
+    {file = "openaleph_procrastinate-0.0.18.tar.gz", hash = "sha256:8a91a56add2371be31f4a4db8c57147e7f6685ad9f363bd7e7fc0fe1ffe729da"},
 ]
 
 [package.dependencies]
 followthemoney = ">=4.1.1,<5.0.0"
-ftmq = ">=4.1.0,<5.0.0"
+ftmq = ">=4.1.1,<5.0.0"
 procrastinate = ">=3.2.2"
 psycopg2-binary = ">=2.9.10,<3.0.0"
 pydantic = ">=2.11.7,<3.0.0"
@@ -6177,4 +6177,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.11, <4.0.0"
-content-hash = "02db38d852b00a1ec86c8765e353f2e3c356f29c63a87ee24d3b25ba6ab6bbb4"
+content-hash = "28ff7bacd9754d01cb2f2f7b361da73228588a1a271b3254d80696271386d760"

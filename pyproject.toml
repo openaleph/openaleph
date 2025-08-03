@@ -14,7 +14,7 @@ requires-python = ">= 3.11, <4.0.0"
 dependencies = [
     "banal (>=1.0.6,<2.0.0)",
     "followthemoney (>=4.1.1,<5.0.0)",
-    "ftmq[postgres] (>=4.1.0,<5.0.0)",
+    "ftmq[postgres] (>=4.1.1,<5.0.0)",
     "normality (>=3.0.1,<4.0.0)",
     "pydantic (>=2.10.6,<3.0.0)",
     "pantomime (==0.6.1)",
@@ -68,7 +68,7 @@ dependencies = [
     "sentry-sdk[flask] (==2.19.2)",
     "psycopg2-binary (>=2.9.10,<3.0.0)",
     "legacy-cgi; python_version >= '3.13'",
-    "openaleph-procrastinate (>=0.0.17,<0.0.18)",
+    "openaleph-procrastinate (>=0.0.18,<0.0.19)",
     "lxml[html-clean] (>=5.4.0,<6.0.0)"
 ]
 
@@ -103,7 +103,7 @@ build-backend = "poetry.core.masonry.api"
 poetry-plugin-export = ">=1.8"
 
 [tool.pytest_env]
-DEBUG = 0  # important to use procrastinate with postgres
+DEBUG = 1
 OPENALEPH_INGEST_DEFER = 0
 OPENALEPH_ANALYZE_DEFER = 0
 PROCRASTINATE_SYNC = 1
