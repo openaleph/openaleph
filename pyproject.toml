@@ -68,7 +68,7 @@ dependencies = [
     "sentry-sdk[flask] (==2.19.2)",
     "psycopg2-binary (>=2.9.10,<3.0.0)",
     "legacy-cgi; python_version >= '3.13'",
-    "openaleph-procrastinate (>=0.0.15,<0.0.16)",
+    "openaleph-procrastinate (>=0.0.17,<0.0.18)",
     "lxml[html-clean] (>=5.4.0,<6.0.0)"
 ]
 
@@ -106,4 +106,5 @@ poetry-plugin-export = ">=1.8"
 DEBUG = 0  # important to use procrastinate with postgres
 OPENALEPH_INGEST_DEFER = 0
 OPENALEPH_ANALYZE_DEFER = 0
+PROCRASTINATE_SYNC = 1
 PROCRASTINATE_APP = "aleph.procrastinate.tasks.app"

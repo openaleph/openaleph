@@ -814,14 +814,14 @@ files = [
 
 [[package]]
 name = "click"
-version = "8.2.2"
+version = "8.2.1"
 description = "Composable command line interface toolkit"
 optional = false
 python-versions = ">=3.10"
 groups = ["main", "dev"]
 files = [
-    {file = "click-8.2.2-py3-none-any.whl", hash = "sha256:52e1e9f5d3db8c85aa76968c7c67ed41ddbacb167f43201511c8fd61eb5ba2ca"},
-    {file = "click-8.2.2.tar.gz", hash = "sha256:068616e6ef9705a07b6db727cb9c248f4eb9dae437a30239f56fa94b18b852ef"},
+    {file = "click-8.2.1-py3-none-any.whl", hash = "sha256:61a3265b914e850b85317d0b3109c7f8cd35a670f963866005d6ef1d5175a12b"},
+    {file = "click-8.2.1.tar.gz", hash = "sha256:27c491cc05d968d271d5a1db13e3b5a184636d9d930f148c50b038f0d0646202"},
 ]
 
 [package.dependencies]
@@ -3433,14 +3433,14 @@ files = [
 
 [[package]]
 name = "openaleph-procrastinate"
-version = "0.0.15"
+version = "0.0.17"
 description = "Task queue logic for OpenAleph built upon procrastinate"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "openaleph_procrastinate-0.0.15-py3-none-any.whl", hash = "sha256:f5b88ec5659c149cc3c8974c6f5df6d1e19d0a9805cb4bd434ec7fe7662a4c25"},
-    {file = "openaleph_procrastinate-0.0.15.tar.gz", hash = "sha256:69cef71df4ee72c872beb83319f47e42545aa439a77e995e972b3b73fb2b1feb"},
+    {file = "openaleph_procrastinate-0.0.17-py3-none-any.whl", hash = "sha256:7927cfcb736ecd85d5b758bd1a618e87b840df442df43802ad5138e2a3340f59"},
+    {file = "openaleph_procrastinate-0.0.17.tar.gz", hash = "sha256:b10696d425c0260d5bcda62dc41e13b28af1ee08a5e45b5645c1f775f5d7bb52"},
 ]
 
 [package.dependencies]
@@ -6177,4 +6177,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.11, <4.0.0"
-content-hash = "9edf6a65cb8cfd2281820965c583979b8bbb57a44a79b10b22eb415ddbaf21dc"
+content-hash = "02db38d852b00a1ec86c8765e353f2e3c356f29c63a87ee24d3b25ba6ab6bbb4"
