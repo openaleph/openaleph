@@ -104,6 +104,9 @@ def status():
             [stages[stage]["pending"] for stage in stages]
         )
 
-        results.append(collection_status)
+        # FIXME this should happen somewhere else
+        # find out if it is actually running currently:
+        if collection_status["running"] + collection_status["pending"]:
+            results.append(collection_status)
 
     return jsonify({"results": results, "total": len(results)})
