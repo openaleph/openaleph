@@ -1,4 +1,5 @@
 import flask_migrate
+from openaleph_procrastinate.app import init_db
 from sqlalchemy import MetaData, inspect, text
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.exc import InternalError
@@ -13,6 +14,7 @@ def upgrade_system():
     archive.upgrade()
     create_system_roles()
     upgrade_search()
+    init_db()
 
 
 def cleanup_deleted():
@@ -26,6 +28,9 @@ def cleanup_deleted():
 
 
 def destroy_db():
+    # this is used during pytest. It is important to not try to drop the
+    # procrastinate tables as this hangs:
+    # https://stackoverflow.com/questions/26350911/what-to-do-when-a-py-test-hangs-silently
     metadata = MetaData()
     metadata.bind = db.engine
     metadata.reflect(db.engine)
