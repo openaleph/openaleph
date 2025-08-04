@@ -138,15 +138,25 @@ def export_xref(job: DatasetJob, collection: Collection) -> None:
 
 # every 5 minutes
 @app.periodic(cron="*/5 * * * *")
-@app.task(queue="openaleph")
+@app.task(queue="openaleph", queueing_lock="periodic-clean-compute")
 def periodic_clean_and_compute(timestamp: int):
     with aleph_flask_app.app_context():
         collections.compute_collections()
 
 
+# hourly
+@app.periodic(cron="* */1 * * *")
+@app.task(queue="openaleph", queueing_lock="periodic-retry-stalled")
+async def periodic_retry_stalled(timestamp: int):
+    # https://procrastinate.readthedocs.io/en/stable/howto/production/retry_stalled_jobs.html
+    stalled_jobs = await app.job_manager.get_stalled_jobs()
+    for job in stalled_jobs:
+        await app.job_manager.retry_job(job)
+
+
 # every 24 hours
 @app.periodic(cron="0 0 * * *")
-@app.task(queue="openaleph")
+@app.task(queue="openaleph", queueing_lock="periodic-daily")
 def periodic_daily(timestamp: int):
     with aleph_flask_app.app_context():
         roles.update_roles()
