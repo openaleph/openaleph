@@ -4,6 +4,7 @@ Tasks handled by procrastinate that can be triggered from other programs
 
 import functools
 
+from openaleph_procrastinate import defer
 from openaleph_procrastinate.app import make_app
 from openaleph_procrastinate.exceptions import InvalidJob
 from openaleph_procrastinate.model import DatasetJob, Job
@@ -53,7 +54,7 @@ def aleph_task(original_func=None, **kwargs):
     return wrap(original_func)
 
 
-@aleph_task(retry=True)
+@aleph_task(retry=defer.tasks.index.max_retries)
 def index_entities(job: DatasetJob, collection: Collection) -> None:
     entity_ids = set(e.id for e in job.get_entities())
     aggregator = get_aggregator(collection)
@@ -61,20 +62,20 @@ def index_entities(job: DatasetJob, collection: Collection) -> None:
     collections.refresh_collection(collection.id)
 
 
-@aleph_task(retry=True)
+@aleph_task(retry=defer.tasks.reindex.max_retries)
 def reindex_collection(job: DatasetJob, collection: Collection) -> None:
     flush = job.payload.get("context", {}).get("flush", False)
     collections.reindex_collection(collection, bool(flush))
     collections.refresh_collection(collection.id)
 
 
-@aleph_task(retry=True)
+@aleph_task(retry=defer.tasks.xref.max_retries)
 def xref_collection(job: DatasetJob, collection: Collection) -> None:
     xref.xref_collection(collection)
     collections.refresh_collection(collection.id)
 
 
-@aleph_task(retry=True)
+@aleph_task(retry=defer.tasks.load_mapping.max_retries)
 def load_mapping(job: DatasetJob, collection: Collection) -> None:
     mapping_id = job.payload.get("context", {}).get("mapping_id", None)
     sync = job.payload.get("context", {}).get("sync", False)
@@ -85,7 +86,7 @@ def load_mapping(job: DatasetJob, collection: Collection) -> None:
     collections.refresh_collection(collection.id)
 
 
-@aleph_task(retry=True)
+@aleph_task(retry=defer.tasks.flush_mapping.max_retries)
 def flush_mapping(job: DatasetJob, collection: Collection) -> None:
     mapping_id = job.payload.get("context", {}).get("mapping_id", None)
     sync = job.payload.get("context", {}).get("sync", True)
@@ -96,7 +97,7 @@ def flush_mapping(job: DatasetJob, collection: Collection) -> None:
     collections.refresh_collection(collection.id)
 
 
-@aleph_task(retry=True)
+@aleph_task(retry=defer.tasks.update_entity.max_retries)
 def update_entity(job: DatasetJob, collection: Collection) -> None:
     entity_id = job.payload.get("context", {}).get("entity_id", None)
     if not entity_id:
@@ -106,7 +107,7 @@ def update_entity(job: DatasetJob, collection: Collection) -> None:
     collections.refresh_collection(collection.id)
 
 
-@aleph_task(retry=True)
+@aleph_task(retry=defer.tasks.prune_entity.max_retries)
 def prune_entity(job: DatasetJob, collection: Collection) -> None:
     entity_id = job.payload.get("context", {}).get("entity_id", None)
     if not entity_id:
@@ -116,7 +117,7 @@ def prune_entity(job: DatasetJob, collection: Collection) -> None:
     collections.refresh_collection(collection.id)
 
 
-@aleph_task(retry=True)
+@aleph_task(retry=defer.tasks.export_search.max_retries)
 def export_search(job: Job) -> None:
     export_id = job.payload.get("context", {}).get("export_id", None)
     if not export_id:
@@ -125,7 +126,7 @@ def export_search(job: Job) -> None:
     export.export_entities(export_id)
 
 
-@aleph_task(retry=True)
+@aleph_task(retry=defer.tasks.export_xref.max_retries)
 def export_xref(job: DatasetJob, collection: Collection) -> None:
     export_id = job.payload.get("context", {}).get("export_id", None)
     if not export_id:
