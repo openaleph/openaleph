@@ -9,8 +9,9 @@ from openaleph_procrastinate.app import make_app
 from openaleph_procrastinate.exceptions import InvalidJob
 from openaleph_procrastinate.model import DatasetJob, Job
 from openaleph_procrastinate.tasks import task
+from procrastinate import builtin_tasks
 
-from aleph.core import create_app
+from aleph.core import create_app, db
 from aleph.logic import (
     alerts,
     collections,
@@ -42,7 +43,8 @@ def aleph_task(original_func=None, **kwargs):
                 job = job_args[0]
                 if isinstance(job, DatasetJob):
                     job_kwargs["collection"] = ensure_collection(job.dataset)
-                return func(*job_args, **job_kwargs)
+                _ = func(*job_args, **job_kwargs)
+                db.session.close()
 
         wrapped_func = functools.update_wrapper(new_func, func, updated=())
         # @openaleph_procrastinate.tasks.task
@@ -164,3 +166,15 @@ def periodic_daily(timestamp: int):
         notifications.generate_digest()
         notifications.delete_old_notifications()
         export.delete_expired_exports()
+
+
+@app.periodic(cron="0 4 * * *")
+@app.task(queueing_lock="remove_old_jobs", pass_context=True)
+async def remove_old_jobs(context, timestamp):
+    return await builtin_tasks.remove_old_jobs(
+        context,
+        max_hours=72,
+        remove_failed=True,
+        remove_cancelled=True,
+        remove_aborted=True,
+    )
