@@ -5,8 +5,7 @@ from rigour.mime.types import XLSX
 
 from aleph.logic.export import create_export
 from aleph.logic.profiles import pairwise_judgements
-from aleph.procrastinate.queues import queue_export_xref, queue_xref
-from aleph.queues import OP_EXPORT_XREF
+from aleph.procrastinate.queues import OP_EXPORT_XREF, queue_export_xref, queue_xref
 from aleph.search import XrefQuery
 from aleph.views.serializers import XrefSerializer
 from aleph.views.util import (

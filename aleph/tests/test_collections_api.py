@@ -8,6 +8,8 @@ from aleph.settings import SETTINGS
 from aleph.tests.util import JSON, TestCase
 from aleph.views.util import validate
 
+# import os
+
 
 class CollectionsApiTestCase(TestCase):
     def setUp(self):
@@ -281,6 +283,10 @@ class CollectionsApiTestCase(TestCase):
         assert "vladimir_l@example.com" in stats["emails"]["values"], stats
 
     def test_status(self):
+        # FIXME mock this, then the last test can run
+        # os.environ["OPENALEPH_INGEST_DEFER"] = "1"
+        # os.environ["PROCRASTINATE_SYNC"] = "0"
+
         _, headers = self.login(is_admin=True)
         url = "/api/2/collections/%s/status" % self.col.id
         res = self.client.get(url)

@@ -14,6 +14,7 @@ from flask import json
 from followthemoney import model
 from followthemoney.cli.util import read_entity
 from ftmq.store.fragments import get_store
+from servicelayer import env
 from servicelayer import settings as sls
 from sqlalchemy import text
 from werkzeug.utils import cached_property
@@ -235,8 +236,9 @@ class TestCase(unittest.TestCase):
             SETTINGS._global_test_state = True
             destroy_db()
             flask_migrate.upgrade()
-            delete_index()
-            upgrade_search()
+            if not env.to_bool("TESTING_KEEP_INDEX"):
+                delete_index()
+                upgrade_search()
         else:
             clear_index()
             for table in reversed(db.metadata.sorted_tables):

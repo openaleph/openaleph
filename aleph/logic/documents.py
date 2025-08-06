@@ -1,13 +1,13 @@
-import os
 import logging
+import os
+
 from servicelayer.jobs import Job
 
-from aleph.core import db, archive
-from aleph.settings import SETTINGS
+from aleph.core import archive, db
+from aleph.logic.aggregator import MODEL_ORIGIN, get_aggregator
 from aleph.model import Document
-from aleph.queues import ingest_entity
-from aleph.queues import OP_INGEST
-from aleph.logic.aggregator import get_aggregator, MODEL_ORIGIN
+from aleph.procrastinate.queues import OP_INGEST, queue_ingest
+from aleph.settings import SETTINGS
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ def crawl_directory(collection, path, parent=None, job_id=None):
             job_id = job_id or Job.random_id()
             proxy = document.to_proxy()
             ingest_flush(collection, entity_id=proxy.id)
-            ingest_entity(collection, proxy, job_id=job_id)
+            queue_ingest(collection, proxy, job_id=job_id)
             log.info("Crawl [%s]: %s -> %s", collection.id, path, document.id)
 
         if path.is_dir():

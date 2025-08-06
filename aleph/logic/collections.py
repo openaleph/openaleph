@@ -21,8 +21,8 @@ from aleph.model import (
     Mapping,
     Permission,
 )
-from aleph.procrastinate.queues import queue_ingest
-from aleph.queues import cancel_queue, get_status
+from aleph.procrastinate.queues import cancel_queue, queue_ingest
+from aleph.procrastinate.status import get_collection_status
 
 log = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ def get_deep_collection(collection):
     return {
         "statistics": index.get_collection_stats(collection.id),
         "counts": {"mappings": mappings, "entitysets": entitysets},
-        "status": get_status(collection),
+        "status": get_collection_status(collection),
         "shallow": False,
     }
 

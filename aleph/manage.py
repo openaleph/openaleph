@@ -42,7 +42,8 @@ from aleph.logic.roles import (
 from aleph.logic.xref import xref_collection
 from aleph.migration import cleanup_deleted, destroy_db, upgrade_system
 from aleph.model import Collection, EntitySet, Role
-from aleph.queues import cancel_queue, get_active_dataset_status, get_status
+from aleph.procrastinate.queues import cancel_queue
+from aleph.procrastinate.status import get_collection_status, get_status
 from aleph.util import JSONEncoder
 
 log = logging.getLogger("aleph")
@@ -315,10 +316,10 @@ def status(foreign_id=None):
     """Get the queue status (pending and finished tasks.)"""
     if foreign_id is not None:
         collection = get_collection(foreign_id)
-        status = get_status(collection)
+        status = get_collection_status(collection)
         status = {"datasets": {foreign_id: status}}
     else:
-        status = get_active_dataset_status()
+        status = get_status()
     headers = ["Collection", "Job", "Stage", "Pending", "Running", "Finished"]
     rows = []
     for foreign_id, dataset in status.get("datasets").items():

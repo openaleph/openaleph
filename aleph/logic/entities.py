@@ -1,21 +1,24 @@
 import logging
+
 from banal import ensure_dict
 from flask_babel import gettext
 from followthemoney import model
-from followthemoney.types import registry
 from followthemoney.exc import InvalidData
+from followthemoney.types import registry
 
-from aleph.core import db, cache
-from aleph.model import Entity, Document, EntitySetItem, Mapping, Bookmark
+from aleph.core import cache, db
 from aleph.index import entities as index
-from aleph.queues import pipeline_entity
-from aleph.logic.notifications import flush_notifications
-from aleph.logic.collections import refresh_collection
-from aleph.logic.collections import MODEL_ORIGIN
-from aleph.logic.util import latin_alt
 from aleph.index import xref as xref_index
 from aleph.logic.aggregator import get_aggregator
-from aleph.procrastinate.queues import queue_prune_entity, queue_update_entity
+from aleph.logic.collections import MODEL_ORIGIN, refresh_collection
+from aleph.logic.notifications import flush_notifications
+from aleph.logic.util import latin_alt
+from aleph.model import Bookmark, Document, Entity, EntitySetItem, Mapping
+from aleph.procrastinate.queues import (
+    queue_analyze,
+    queue_prune_entity,
+    queue_update_entity,
+)
 
 log = logging.getLogger(__name__)
 
@@ -56,8 +59,8 @@ def update_entity(collection, entity_id=None, job_id=None):
     inside the request cycle.
 
     Update xref and aggregator, trigger NER and re-index."""
-    from aleph.logic.xref import xref_entity
     from aleph.logic.profiles import profile_fragments
+    from aleph.logic.xref import xref_entity
 
     log.info("[%s] Update entity: %s", collection, entity_id)
     entity = index.get_entity(entity_id)
@@ -68,7 +71,7 @@ def update_entity(collection, entity_id=None, job_id=None):
     aggregator = get_aggregator(collection, origin=MODEL_ORIGIN)
     profile_fragments(collection, aggregator, entity_id=entity_id)
     inline_names(aggregator, proxy)
-    pipeline_entity(collection, proxy, job_id=job_id)
+    queue_analyze(collection, proxy, job_id=job_id)
 
 
 def inline_names(aggregator, proxy):

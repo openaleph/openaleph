@@ -14,8 +14,8 @@ from aleph.logic.collections import (
 )
 from aleph.logic.entitysets import save_entityset_item
 from aleph.logic.processing import bulk_write
-from aleph.procrastinate.queues import queue_index, queue_reindex
-from aleph.queues import cancel_queue, get_status
+from aleph.procrastinate.queues import cancel_queue, queue_index, queue_reindex
+from aleph.procrastinate.status import get_collection_status
 from aleph.search import CollectionsQuery
 from aleph.views.serializers import CollectionSerializer
 from aleph.views.util import (
@@ -349,7 +349,7 @@ def status(collection_id):
     """
     collection = get_db_collection(collection_id, request.authz.READ)
     request.rate_limit = None
-    return jsonify(get_status(collection))
+    return jsonify(get_collection_status(collection))
 
 
 @blueprint.route("/<int:collection_id>/status", methods=["DELETE"])

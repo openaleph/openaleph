@@ -1,21 +1,22 @@
 import math
-import time
 import threading
+import time
 import uuid
-from pprint import pformat  # noqa
-from banal import hash_data
 from datetime import datetime
-from flask_babel import get_locale
-from flask import request, Response, Blueprint
-from werkzeug.exceptions import TooManyRequests
+
 import structlog
-from structlog.contextvars import clear_contextvars, bind_contextvars
+from banal import hash_data
+from flask import Blueprint, Response, request
+from flask_babel import get_locale
+from servicelayer.rate_limit import RateLimit
+from structlog.contextvars import bind_contextvars, clear_contextvars
+from werkzeug.exceptions import TooManyRequests
 
 from aleph import __version__
-from aleph.queues import get_rate_limit
-from aleph.settings import SETTINGS
 from aleph.authz import Authz
+from aleph.core import kv
 from aleph.model import Role
+from aleph.settings import SETTINGS
 
 log = structlog.get_logger(__name__)
 local = threading.local()
@@ -103,6 +104,10 @@ def enable_authz(request):
     request.authz = authz
 
 
+def get_rate_limit(resource, limit=100, interval=60, unit=1):
+    return RateLimit(kv, resource, limit=limit, interval=interval, unit=unit)
+
+
 def enable_rate_limit(request):
     if request.authz.logged_in:
         return
@@ -184,7 +189,7 @@ def setup_logging_context(request):
     role_id = None
     if hasattr(request, "authz"):
         role_id = request.authz.id
-    # Set up context varibales for structured logging. The context is included
+    # Set up context variables for structured logging. The context is included
     # with every log entry produced by this particular request
     clear_contextvars()
     bind_contextvars(

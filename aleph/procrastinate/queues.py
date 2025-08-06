@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TypedDict
 
 import structlog
 from followthemoney.proxy import EntityProxy
@@ -12,14 +12,46 @@ from aleph.settings import SETTINGS
 log = structlog.get_logger(__name__)
 app = make_app(SETTINGS.PROCRASTINATE_TASKS, sync=True)
 
+OP_INGEST = "ingest"
+OP_ANALYZE = "analyze"
+OP_INDEX = "index"
+OP_XREF = "xref"
+OP_REINGEST = "reingest"
+OP_REINDEX = "reindex"
+OP_LOAD_MAPPING = "loadmapping"
+OP_FLUSH_MAPPING = "flushmapping"
+OP_EXPORT_SEARCH = "exportsearch"
+OP_EXPORT_XREF = "exportxref"
+OP_UPDATE_ENTITY = "updateentity"
+OP_PRUNE_ENTITY = "pruneentity"
+
+
+class Context(TypedDict):
+    languages: list[str]
+    ftmstore: str
+    namespace: str
+
+
+def get_context(collection: Collection) -> Context:
+    """Set some task context variables that configure the ingestors."""
+    from aleph.logic.aggregator import get_aggregator_name
+
+    return {
+        "languages": [x for x in collection.languages if x],
+        "ftmstore": get_aggregator_name(collection),
+        "namespace": collection.foreign_id,
+    }
+
 
 def queue_ingest(collection: Collection, proxy: EntityProxy, **context: Any) -> None:
+    context = {**context, **get_context(collection)}
     dataset = get_aggregator_name(collection)
     with app.open():
         defer.ingest(app, dataset, [proxy], **context)
 
 
 def queue_analyze(collection: Collection, proxy: EntityProxy, **context: Any) -> None:
+    context = {**context, **get_context(collection)}
     dataset = get_aggregator_name(collection)
     with app.open():
         defer.analyze(app, dataset, [proxy], **context)
@@ -78,3 +110,7 @@ def queue_prune_entity(collection: Collection, **context: Any) -> None:
 def queue_export_search(**context: Any) -> None:
     with app.open():
         defer.export_search(app, **context)
+
+
+def cancel_queue(collection: Collection | None = None) -> None:
+    log.error("Cancel queue not implemented yet!")
