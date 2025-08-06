@@ -5,32 +5,37 @@ from followthemoney.proxy import EntityProxy
 from openaleph_procrastinate import defer
 from openaleph_procrastinate.app import make_app
 
+from aleph.core import create_app, db
 from aleph.logic.aggregator import get_aggregator_name
 from aleph.model.collection import Collection
 from aleph.settings import SETTINGS
 
 log = structlog.get_logger(__name__)
 app = make_app(SETTINGS.PROCRASTINATE_TASKS, sync=True)
+aleph_flask_app = create_app()
 
 
 def queue_ingest(collection: Collection, proxy: EntityProxy, **context: Any) -> None:
     dataset = get_aggregator_name(collection)
-    with app.open():
-        defer.ingest(app, dataset, [proxy], **context)
+    with aleph_flask_app.app_context():
+        with app.open(db.engine):
+            defer.ingest(app, dataset, [proxy], **context)
 
 
 def queue_analyze(collection: Collection, proxy: EntityProxy, **context: Any) -> None:
     dataset = get_aggregator_name(collection)
-    with app.open():
-        defer.analyze(app, dataset, [proxy], **context)
+    with aleph_flask_app.app_context():
+        with app.open(db.engine):
+            defer.analyze(app, dataset, [proxy], **context)
 
 
 def queue_index(
     collection: Collection, entities: list[EntityProxy], **context: Any
 ) -> None:
     dataset = get_aggregator_name(collection)
-    with app.open():
-        defer.index(app, dataset, entities, **context)
+    with aleph_flask_app.app_context():
+        with app.open(db.engine):
+            defer.index(app, dataset, entities, **context)
 
 
 def queue_reindex(collection: Collection, **context: Any) -> None:
