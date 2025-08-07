@@ -146,8 +146,8 @@ def periodic_clean_and_compute(timestamp: int):
         collections.compute_collections()
 
 
-# hourly
-@app.periodic(cron="*/60 * * * *")
+# every 15 minutes
+@app.periodic(cron="*/15 * * * *")
 @app.task(queue="openaleph", queueing_lock="periodic-retry-stalled")
 async def periodic_retry_stalled(timestamp: int):
     # https://procrastinate.readthedocs.io/en/stable/howto/production/retry_stalled_jobs.html
