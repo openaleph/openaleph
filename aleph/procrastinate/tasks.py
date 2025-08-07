@@ -4,6 +4,7 @@ Tasks handled by procrastinate that can be triggered from other programs
 
 import functools
 
+from anystore.logging import get_logger
 from openaleph_procrastinate import defer
 from openaleph_procrastinate.app import make_app
 from openaleph_procrastinate.exceptions import InvalidJob
@@ -27,6 +28,7 @@ from aleph.procrastinate.util import ensure_collection
 
 app = make_app(__loader__.name)
 aleph_flask_app = create_app()
+log = get_logger(__name__)
 
 
 def aleph_task(original_func=None, **kwargs):
@@ -145,13 +147,16 @@ def periodic_clean_and_compute(timestamp: int):
 
 
 # hourly
-@app.periodic(cron="* */1 * * *")
+@app.periodic(cron="*/60 * * * *")
 @app.task(queue="openaleph", queueing_lock="periodic-retry-stalled")
 async def periodic_retry_stalled(timestamp: int):
     # https://procrastinate.readthedocs.io/en/stable/howto/production/retry_stalled_jobs.html
     stalled_jobs = await app.job_manager.get_stalled_jobs()
+    jobs = 0
     for job in stalled_jobs:
+        jobs += 1
         await app.job_manager.retry_job(job)
+    log.info(f"Retried {jobs} stalled jobs.")
 
 
 # every 24 hours
