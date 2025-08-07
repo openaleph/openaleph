@@ -4,6 +4,7 @@ import structlog
 from followthemoney.proxy import EntityProxy
 from openaleph_procrastinate import defer
 from openaleph_procrastinate.app import make_app
+from openaleph_procrastinate.tasks import cancel_jobs_per_dataset
 
 from aleph.logic.aggregator import get_aggregator_name
 from aleph.model.collection import Collection
@@ -113,4 +114,5 @@ def queue_export_search(**context: Any) -> None:
 
 
 def cancel_queue(collection: Collection | None = None) -> None:
-    log.error("Cancel queue not implemented yet!")
+    dataset = get_aggregator_name(collection)
+    cancel_jobs_per_dataset(dataset)
