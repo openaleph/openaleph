@@ -314,7 +314,7 @@ class CollectionsApiTestCase(TestCase):
 
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, res
-        # FIXME procrastinate status
+        # FIXME procrastinate status (see above)
         # assert 1 == res.json["pending"], res.json
         assert validate(res.json, "CollectionStatus")
 

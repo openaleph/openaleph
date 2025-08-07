@@ -6,6 +6,7 @@ from typing import Any
 
 from openaleph_procrastinate.status import get_status
 
+from aleph.logic.aggregator import get_aggregator_name
 from aleph.model.collection import Collection
 
 FINISHED_JOBS = ["succeeded"]
@@ -94,7 +95,8 @@ def get_active_collections_status(
 
 
 def get_collection_status(collection: Collection) -> dict[str, Any]:
+    dataset = get_aggregator_name(collection)
     for collection_status in get_active_collections_status():
-        if collection_status["collection"]["id"] == collection.id:
+        if collection_status["dataset"] == dataset:
             return collection_status
     return {"finished": 0, "running": 0, "pending": 0, "jobs": []}
