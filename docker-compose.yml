@@ -43,7 +43,7 @@ services:
       - postgres
       - elasticsearch
       - redis
-      - ingest-file
+      - ingest
     tmpfs:
       - /tmp
     volumes:
@@ -58,7 +58,7 @@ services:
       - postgres
       - elasticsearch
       - redis
-      - ingest-file
+      - ingest
       - worker
     tmpfs:
       - /tmp
@@ -78,7 +78,7 @@ services:
       - elasticsearch
       - redis
       - worker
-      - ingest-file
+      - ingest
     tmpfs:
       - /tmp
     volumes:
