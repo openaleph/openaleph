@@ -1,14 +1,21 @@
 import logging
-from pprint import pprint  # noqa
-from normality import normalize
-from followthemoney import model
 
-from aleph.core import es, cache
-from aleph.model import Collection, Entity
+from followthemoney import model
+from normality import normalize
+
+from aleph.core import cache, es
 from aleph.index.indexes import entities_read_index
-from aleph.index.util import index_name, index_settings, configure_index
-from aleph.index.util import query_delete, index_safe, delete_safe
-from aleph.index.util import KEYWORD_COPY, KEYWORD
+from aleph.index.util import (
+    KEYWORD,
+    KEYWORD_COPY,
+    configure_index,
+    delete_safe,
+    index_name,
+    index_safe,
+    index_settings,
+    query_delete,
+)
+from aleph.model import Collection, Entity
 
 STATS_FACETS = [
     "schema",
@@ -40,7 +47,7 @@ def configure_collections():
             "label": {
                 "type": "text",
                 "copy_to": "text",
-                "analyzer": "latin_index",
+                "analyzer": "default",
                 "fields": {"kw": KEYWORD},
             },
             "collection_id": KEYWORD,
@@ -58,7 +65,7 @@ def configure_collections():
             "team_id": KEYWORD,
             "text": {
                 "type": "text",
-                "analyzer": "latin_index",
+                "analyzer": "default",
                 "term_vector": "with_positions_offsets",
                 "store": True,
             },
