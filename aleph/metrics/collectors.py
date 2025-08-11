@@ -1,12 +1,14 @@
-from sqlalchemy import func
+from typing import Any
+
+from followthemoney import __version__ as ftm_version
 from prometheus_client.core import GaugeMetricFamily, InfoMetricFamily
 from prometheus_client.registry import Collector
-from followthemoney import __version__ as ftm_version
+from sqlalchemy import func
 
 from aleph import __version__ as aleph_version
 from aleph.core import create_app as create_flask_app
-from aleph.queues import get_active_dataset_status
-from aleph.model import Role, Collection, EntitySet, Bookmark
+from aleph.model import Bookmark, Collection, EntitySet, Role
+from aleph.procrastinate.status import get_active_collections_status
 
 
 class InfoCollector(Collector):
@@ -137,7 +139,13 @@ class DatabaseCollector(Collector):
 
 class QueuesCollector(Collector):
     def collect(self):
-        status = get_active_dataset_status()
+        status: dict[str, Any] = {
+            "datasets": {
+                s["dataset"]: s
+                for s in get_active_collections_status(include_collection_data=False)
+            }
+        }
+        status["total"] = len(status["datasets"])
 
         yield GaugeMetricFamily(
             "aleph_active_datasets",

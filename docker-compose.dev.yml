@@ -31,8 +31,26 @@ services:
     volumes:
       - redis-data:/data
 
+  ftm-analyze:
+    image: ghcr.io/dataresearchcenter/ftm-analyze:latest
+    entrypoint: procrastinate worker -q analyze --concurrency 2
+    restart: on-failure
+    depends_on:
+      - postgres
+      - elasticsearch
+      - redis
+      - ingest-file
+    tmpfs:
+      - /tmp
+    volumes:
+      - archive-data:/data
+    env_file:
+      - aleph.env
+
+
   ingest-file:
-    image: ghcr.io/openaleph/ingest-file:latest
+    image: ghcr.io/openaleph/ingest-file:feat-procrastinate
+    command: procrastinate worker -q ingest --concurrency 2
     hostname: ingest
     tmpfs: /tmp
     volumes:
@@ -44,21 +62,6 @@ services:
     env_file:
       - aleph.env
 
-  # translate:
-  #   build:
-  #     context: services/translate
-  #   image: alephdata/translate:${ALEPH_TAG:-latest}
-  #   volumes:
-  #   - archive-data:/data
-  #   - "./services/translate/translate:/translate/translate"
-  #   - "/:/host"
-  #   restart: on-failure
-  #   environment:
-  #     GOOGLE_APPLICATION_CREDENTIALS: '/host/.../translate-service-account.json'
-  #     GOOGLE_PROJECT_ID: my-project
-  #   env_file:
-  #   - aleph.env
-
   app:
     build:
       context: .
@@ -69,7 +72,6 @@ services:
       - postgres
       - elasticsearch
       - redis
-      # - translate
       - ingest-file
     tmpfs: /tmp
     volumes:
@@ -82,8 +84,24 @@ services:
     cap_add:
       - SYS_PTRACE
     environment:
+      DEBUG: "false"
       ALEPH_DEBUG: "true"
       ALEPH_SECRET_KEY: "development"
+    env_file:
+      - aleph.env
+
+  procrastinate-worker:
+    # image: ghcr.io/openaleph/openaleph:latest
+    build:
+      context: .
+    command: procrastinate worker -q openaleph --concurrency 2
+    restart: on-failure
+    depends_on:
+      - postgres
+      - elasticsearch
+    volumes:
+      - "./aleph:/aleph/aleph"
+      - archive-data:/data
     env_file:
       - aleph.env
 
@@ -132,22 +150,6 @@ services:
     environment:
       PORT: "8080"
       CI: "true"
-    env_file:
-      - aleph.env
-
-  worker:
-    image: ghcr.io/openaleph/openaleph:latest
-    command: aleph worker
-    restart: on-failure
-    depends_on:
-      - postgres
-      - elasticsearch
-      - redis
-      - ingest-file
-    tmpfs:
-      - /tmp
-    volumes:
-      - archive-data:/data
     env_file:
       - aleph.env
 

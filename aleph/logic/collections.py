@@ -1,19 +1,28 @@
 import logging
-from datetime import datetime
 from collections import defaultdict
+from datetime import datetime
+
 from servicelayer.jobs import Job
 
-from aleph.core import db, cache
 from aleph.authz import Authz
-from aleph.queues import cancel_queue, ingest_entity, get_status
-from aleph.model import Collection, Entity, Document, Mapping
-from aleph.model import Permission, Events, EntitySet
+from aleph.core import cache, db
 from aleph.index import collections as index
-from aleph.index import xref as xref_index
 from aleph.index import entities as entities_index
-from aleph.logic.notifications import publish, flush_notifications
-from aleph.logic.documents import ingest_flush, MODEL_ORIGIN
+from aleph.index import xref as xref_index
 from aleph.logic.aggregator import get_aggregator
+from aleph.logic.documents import MODEL_ORIGIN, ingest_flush
+from aleph.logic.notifications import flush_notifications, publish
+from aleph.model import (
+    Collection,
+    Document,
+    Entity,
+    EntitySet,
+    Events,
+    Mapping,
+    Permission,
+)
+from aleph.procrastinate.queues import cancel_collection, queue_ingest
+from aleph.procrastinate.status import get_collection_status
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +63,7 @@ def get_deep_collection(collection):
     return {
         "statistics": index.get_collection_stats(collection.id),
         "counts": {"mappings": mappings, "entitysets": entitysets},
-        "status": get_status(collection),
+        "status": get_collection_status(collection),
         "shallow": False,
     }
 
@@ -102,7 +111,7 @@ def compute_collection(collection, force=False, sync=False):
 
 def aggregate_model(collection, aggregator):
     """Sync up the aggregator from the Aleph domain model."""
-    log.debug("[%s] Aggregating model...", collection)
+    log.debug(f"{collection} Aggregating model...")
     aggregator.delete(origin=MODEL_ORIGIN)
     writer = aggregator.bulk()
     for document in Document.by_collection(collection.id):
@@ -139,7 +148,7 @@ def reingest_collection(
         ingest_flush(collection, include_ingest=include_ingest)
     for document in Document.by_collection(collection.id):
         proxy = document.to_proxy(ns=collection.ns)
-        ingest_entity(collection, proxy, job_id=job_id, index=index)
+        queue_ingest(collection, proxy, job_id=job_id, namespace=collection.foreign_id)
 
 
 def reindex_collection(collection, skip_errors=True, sync=False, flush=False):
@@ -168,7 +177,7 @@ def reindex_collection(collection, skip_errors=True, sync=False, flush=False):
 
 def delete_collection(collection, keep_metadata=False, sync=False):
     deleted_at = collection.deleted_at or datetime.utcnow()
-    cancel_queue(collection)
+    cancel_collection(collection)
     aggregator = get_aggregator(collection)
     aggregator.delete()
     flush_notifications(collection, sync=sync)

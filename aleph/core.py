@@ -1,6 +1,7 @@
 import logging
 from urllib.parse import urlencode, urljoin
 
+import sentry_sdk
 from banal import clean_dict
 from elasticsearch import Elasticsearch, TransportError
 from flask import Flask, request
@@ -12,6 +13,7 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_talisman import Talisman
 from followthemoney import set_model_locale
+from sentry_sdk.integrations.flask import FlaskIntegration
 from servicelayer import settings as sls
 from servicelayer.archive import init_archive
 from servicelayer.cache import get_redis
@@ -22,15 +24,11 @@ from werkzeug.local import LocalProxy
 from werkzeug.middleware.profiler import ProfilerMiddleware
 
 from aleph import __version__ as aleph_version
-from aleph.settings import SETTINGS
 from aleph.cache import Cache
-from aleph.oauth import configure_oauth
-from aleph.util import LoggingTransport
 from aleph.metrics.flask import PrometheusExtension
-
-import sentry_sdk
-from sentry_sdk.integrations.flask import FlaskIntegration
-
+from aleph.oauth import configure_oauth
+from aleph.settings import SETTINGS
+from aleph.util import LoggingTransport
 
 NONE = "'none'"
 log = logging.getLogger(__name__)
@@ -54,11 +52,15 @@ def determine_locale():
     return locale
 
 
+def _remove_session(*args, **kwargs):
+    db.session.remove()
+
+
 def create_app(config=None):
     if config is None:
         config = {}
 
-    configure_logging(level=logging.DEBUG)
+    configure_logging(level=logging.DEBUG if SETTINGS.DEBUG else logging.INFO)
     logging.getLogger("watchdog").setLevel(logging.INFO)
 
     if SETTINGS.SENTRY_DSN:
@@ -130,6 +132,9 @@ def create_app(config=None):
     # applications can register their behaviour.
     for plugin in get_extensions("aleph.init"):
         plugin(app=app)
+
+    # ensure db session is removed after each request
+    app.teardown_appcontext_funcs = [_remove_session]
 
     return app
 
