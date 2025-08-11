@@ -63,6 +63,7 @@ def queue_analyze(collection: Collection, proxy: EntityProxy, **context: Any) ->
 def queue_index(
     collection: Collection, entities: list[EntityProxy], **context: Any
 ) -> None:
+    context = {**context, **get_context(collection)}
     dataset = get_aggregator_name(collection)
     with app.open():
         defer.index(app, dataset, entities, **context)
