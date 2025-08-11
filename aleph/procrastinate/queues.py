@@ -4,7 +4,7 @@ import structlog
 from followthemoney.proxy import EntityProxy
 from openaleph_procrastinate import defer
 from openaleph_procrastinate.app import make_app
-from openaleph_procrastinate.tasks import cancel_jobs_per_dataset
+from openaleph_procrastinate.tasks import Priorities, cancel_jobs_per_dataset
 
 from aleph.logic.aggregator import get_aggregator_name
 from aleph.model.collection import Collection
@@ -31,6 +31,7 @@ class Context(TypedDict):
     languages: list[str]
     ftmstore: str
     namespace: str
+    priority: int | None
 
 
 def get_context(collection: Collection) -> Context:
@@ -41,6 +42,7 @@ def get_context(collection: Collection) -> Context:
         "languages": [x for x in collection.languages if x],
         "ftmstore": get_aggregator_name(collection),
         "namespace": collection.foreign_id,
+        "priority": Priorities.USER if collection.casefile else None,
     }
 
 
@@ -113,6 +115,7 @@ def queue_export_search(**context: Any) -> None:
         defer.export_search(app, **context)
 
 
-def cancel_queue(collection: Collection | None = None) -> None:
-    dataset = get_aggregator_name(collection)
-    cancel_jobs_per_dataset(dataset)
+def cancel_collection(collection: Collection | None = None) -> None:
+    if collection is not None:
+        dataset = get_aggregator_name(collection)
+        cancel_jobs_per_dataset(dataset)

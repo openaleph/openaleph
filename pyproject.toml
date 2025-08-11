@@ -68,7 +68,7 @@ dependencies = [
     "sentry-sdk[flask] (==2.19.2)",
     "psycopg2-binary (>=2.9.10,<3.0.0)",
     "legacy-cgi; python_version >= '3.13'",
-    "openaleph-procrastinate (>=0.0.20,<0.0.21)",
+    "openaleph-procrastinate (>=0.0.23,<0.0.24)",
     "lxml[html-clean] (>=5.4.0,<6.0.0)"
 ]
 

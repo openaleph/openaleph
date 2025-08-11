@@ -21,7 +21,7 @@ from aleph.model import (
     Mapping,
     Permission,
 )
-from aleph.procrastinate.queues import cancel_queue, queue_ingest
+from aleph.procrastinate.queues import cancel_collection, queue_ingest
 from aleph.procrastinate.status import get_collection_status
 
 log = logging.getLogger(__name__)
@@ -177,7 +177,7 @@ def reindex_collection(collection, skip_errors=True, sync=False, flush=False):
 
 def delete_collection(collection, keep_metadata=False, sync=False):
     deleted_at = collection.deleted_at or datetime.utcnow()
-    cancel_queue(collection)
+    cancel_collection(collection)
     aggregator = get_aggregator(collection)
     aggregator.delete()
     flush_notifications(collection, sync=sync)

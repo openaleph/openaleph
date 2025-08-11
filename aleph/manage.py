@@ -42,7 +42,7 @@ from aleph.logic.roles import (
 from aleph.logic.xref import xref_collection
 from aleph.migration import cleanup_deleted, destroy_db, upgrade_system
 from aleph.model import Collection, EntitySet, Role
-from aleph.procrastinate.queues import cancel_queue
+from aleph.procrastinate.queues import cancel_collection
 from aleph.procrastinate.status import get_collection_status, get_status
 from aleph.util import JSONEncoder
 
@@ -353,14 +353,14 @@ def status(foreign_id=None):
 def cancel(foreign_id):
     """Cancel all queued tasks for the dataset."""
     collection = get_collection(foreign_id)
-    cancel_queue(collection)
+    cancel_collection(collection)
     update_collection(collection)
 
 
 @cli.command("cancel-user")
 def cancel_user():
     """Cancel all queued tasks not related to a dataset."""
-    cancel_queue(None)
+    cancel_collection(None)
 
 
 @cli.command("retry-exports")

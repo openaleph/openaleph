@@ -94,9 +94,11 @@ def get_active_collections_status(
     return results
 
 
-def get_collection_status(collection: Collection) -> dict[str, Any]:
+def get_collection_status(
+    collection: Collection, include_collection_data: bool | None = True
+) -> dict[str, Any]:
     dataset = get_aggregator_name(collection)
-    for collection_status in get_active_collections_status():
+    for collection_status in get_active_collections_status(include_collection_data):
         if collection_status["dataset"] == dataset:
             return collection_status
     return {"finished": 0, "running": 0, "pending": 0, "jobs": []}
