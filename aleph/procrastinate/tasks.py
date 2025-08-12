@@ -77,6 +77,12 @@ def xref_collection(job: DatasetJob, collection: Collection) -> None:
     collections.refresh_collection(collection.id)
 
 
+@aleph_task(retry=defer.tasks.cancel_dataset.max_retries)
+def cancel_dataset(job: DatasetJob, collection: Collection) -> None:
+    collections.cancel_collection(collection)
+    collections.refresh_collection(collection.id)
+
+
 @aleph_task(retry=defer.tasks.load_mapping.max_retries)
 def load_mapping(job: DatasetJob, collection: Collection) -> None:
     mapping_id = job.payload.get("context", {}).get("mapping_id", None)

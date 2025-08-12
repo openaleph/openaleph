@@ -3424,14 +3424,14 @@ files = [
 
 [[package]]
 name = "openaleph-procrastinate"
-version = "0.0.23"
+version = "0.0.24"
 description = "Task queue logic for OpenAleph built upon procrastinate"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "openaleph_procrastinate-0.0.23-py3-none-any.whl", hash = "sha256:fd1ce3e3a4f04c5df63c19ff448da6866f39f6c1e2fbcf5b8c6e6a2e66621f70"},
-    {file = "openaleph_procrastinate-0.0.23.tar.gz", hash = "sha256:90a6e0c0a3a9ef6457f5b964f2620b5f8e634b2d21aab5e5c8e21040584d32c4"},
+    {file = "openaleph_procrastinate-0.0.24-py3-none-any.whl", hash = "sha256:16f05809014f5e150bf0735799dafa184d3ccda5589528b4afe930eb8fcaa4be"},
+    {file = "openaleph_procrastinate-0.0.24.tar.gz", hash = "sha256:e3b3e45a1276a3301db8696e9c7484637f51f825f8bd69d6f950b21ee062ad91"},
 ]
 
 [package.dependencies]
@@ -6179,4 +6179,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.11, <4.0.0"
-content-hash = "59a10f28f00045005db999ec158f7a128215596252987cb4235a6f467ee22ddf"
+content-hash = "d1b21b7e8d281802ca27a22c6d26de40db95888231e8e978c885374908fa76fb"

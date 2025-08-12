@@ -2,6 +2,7 @@ import logging
 from collections import defaultdict
 from datetime import datetime
 
+from openaleph_procrastinate.tasks import cancel_jobs_per_dataset
 from servicelayer.jobs import Job
 
 from aleph.authz import Authz
@@ -9,7 +10,7 @@ from aleph.core import cache, db
 from aleph.index import collections as index
 from aleph.index import entities as entities_index
 from aleph.index import xref as xref_index
-from aleph.logic.aggregator import get_aggregator
+from aleph.logic.aggregator import get_aggregator, get_aggregator_name
 from aleph.logic.documents import MODEL_ORIGIN, ingest_flush
 from aleph.logic.notifications import flush_notifications, publish
 from aleph.model import (
@@ -21,7 +22,7 @@ from aleph.model import (
     Mapping,
     Permission,
 )
-from aleph.procrastinate.queues import cancel_collection, queue_ingest
+from aleph.procrastinate.queues import queue_cancel_collection, queue_ingest
 from aleph.procrastinate.status import get_collection_status
 
 log = logging.getLogger(__name__)
@@ -177,7 +178,7 @@ def reindex_collection(collection, skip_errors=True, sync=False, flush=False):
 
 def delete_collection(collection, keep_metadata=False, sync=False):
     deleted_at = collection.deleted_at or datetime.utcnow()
-    cancel_collection(collection)
+    queue_cancel_collection(collection)
     aggregator = get_aggregator(collection)
     aggregator.delete()
     flush_notifications(collection, sync=sync)
@@ -206,3 +207,9 @@ def upgrade_collections():
             compute_collection(collection, force=True)
     # update global cache:
     compute_collections()
+
+
+def cancel_collection(collection: Collection):
+    """Cancel current collection processing"""
+    dataset = get_aggregator_name(collection)
+    cancel_jobs_per_dataset(dataset)
