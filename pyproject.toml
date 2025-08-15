@@ -93,6 +93,7 @@ ruff = "^0.7.3"
 isort = "^5.13.2"
 ipdb = "^0.13.13"
 pytest-env = "^1.1.5"
+fakeredis = "<2.31"
 
 
 [build-system]
