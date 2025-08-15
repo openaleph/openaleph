@@ -14,7 +14,11 @@ from aleph.logic.collections import (
 )
 from aleph.logic.entitysets import save_entityset_item
 from aleph.logic.processing import bulk_write
-from aleph.procrastinate.queues import cancel_collection, queue_index, queue_reindex
+from aleph.procrastinate.queues import (
+    queue_cancel_collection,
+    queue_index,
+    queue_reindex,
+)
 from aleph.procrastinate.status import get_collection_status
 from aleph.search import CollectionsQuery
 from aleph.views.serializers import CollectionSerializer
@@ -379,7 +383,7 @@ def cancel(collection_id):
       - Collection
     """
     collection = get_db_collection(collection_id, request.authz.WRITE)
-    cancel_collection(collection)
+    queue_cancel_collection(collection)
     refresh_collection(collection_id)
     return ("", 204)
 
