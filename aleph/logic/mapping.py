@@ -1,15 +1,16 @@
 import logging
+
 from followthemoney import model
 from followthemoney.helpers import remove_checksums
 
-from aleph.core import db, archive
-from aleph.model import Mapping, Events, Status
+from aleph.core import archive, db
+from aleph.index.collections import delete_entities
 from aleph.index.entities import get_entity
 from aleph.logic.aggregator import get_aggregator
-from aleph.index.collections import delete_entities
-from aleph.logic.collections import update_collection, index_aggregator, aggregate_model
+from aleph.logic.collections import aggregate_model, index_aggregator, update_collection
 from aleph.logic.entitysets import save_entityset_item
 from aleph.logic.notifications import publish
+from aleph.model import Events, Mapping, Status
 
 log = logging.getLogger(__name__)
 
@@ -55,8 +56,7 @@ def map_to_aggregator(collection, mapping, aggregator):
             log.info("[%s] Mapped %s rows ...", mapping.id, idx)
         for entity in mapper.map(record).values():
             entity.context = mapping.get_proxy_context()
-            if entity.schema.is_a("Thing"):
-                entity.add("proof", mapping.table_id)
+            entity.add("proof", mapping.table_id)
             entity = collection.ns.apply(entity)
             entity = remove_checksums(entity)
             writer.put(entity, fragment=idx, origin=origin)

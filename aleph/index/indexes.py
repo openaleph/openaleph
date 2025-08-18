@@ -4,15 +4,16 @@ from copy import deepcopy
 from banal import ensure_list
 from followthemoney import model
 from followthemoney.exc import InvalidData
+from followthemoney.schema import Schema
 from followthemoney.types import registry
 
 from aleph.index.util import (
     GEOPOINT,
     KEYWORD,
-    LATIN_TEXT,
     NUMERIC,
     NUMERIC_TYPES,
     PARTIAL_DATE,
+    TEXT,
     configure_index,
     get_shard_weight,
     index_name,
@@ -77,7 +78,7 @@ def configure_entities():
                 configure_schema(schema, version)
 
 
-def configure_schema(schema, version):
+def configure_schema(schema: Schema, version):
     # Generate relevant type mappings for entity properties so that
     # we can do correct searches on each.
     schema_mapping = {}
@@ -112,15 +113,11 @@ def configure_schema(schema, version):
             registry.name.group: KEYWORD,
             "fingerprints": {
                 "type": "keyword",
-                "normalizer": "latin_index",
                 "copy_to": "text",
-                "fields": {"text": LATIN_TEXT},
+                "fields": {"text": TEXT},
             },
             "text": {
                 "type": "text",
-                "analyzer": "latin_index",
-                "search_analyzer": "latin_query",
-                "search_quote_analyzer": "latin_index",
                 "term_vector": "with_positions_offsets",
             },
             "properties": {"type": "object", "properties": schema_mapping},
@@ -135,7 +132,7 @@ def configure_schema(schema, version):
     }
 
     # Add geopoint field for Address or RealEstate schema
-    if schema.is_a("Address") or schema.is_a("RealEstate"):
+    if "longitude" in schema.properties:
         mapping["properties"]["geo_point"] = GEOPOINT
 
     index = schema_index(model.get(schema), version)
