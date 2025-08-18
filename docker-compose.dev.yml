@@ -94,7 +94,7 @@ services:
     # image: ghcr.io/openaleph/openaleph:latest
     build:
       context: .
-    command: procrastinate worker -q openaleph --concurrency 2
+    command: procrastinate worker -q openaleph,openaleph-management --concurrency 2
     restart: on-failure
     depends_on:
       - postgres

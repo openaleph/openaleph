@@ -33,6 +33,8 @@ class CollectionStatus extends Component {
   render() {
     const { className, intl, showCancel, collection } = this.props;
     const { status = {} } = collection;
+    // eslint-disable-next-line
+    console.log(status)
     if (!status.active) {
       return null;
     }

@@ -14,6 +14,7 @@ from flask import json
 from followthemoney import model
 from followthemoney.cli.util import read_entity
 from ftmq.store.fragments import get_store
+from openaleph_procrastinate.manage.db import get_db
 from servicelayer import env
 from servicelayer import settings as sls
 from sqlalchemy import text
@@ -239,6 +240,8 @@ class TestCase(unittest.TestCase):
             if not env.to_bool("TESTING_KEEP_INDEX"):
                 delete_index()
                 upgrade_search()
+            procrastinate_db = get_db()
+            procrastinate_db.configure()
         else:
             clear_index()
             for table in reversed(db.metadata.sorted_tables):

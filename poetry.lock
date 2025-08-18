@@ -276,14 +276,14 @@ trio = ["trio (>=0.26.1)"]
 
 [[package]]
 name = "anystore"
-version = "0.3.9"
+version = "0.3.10"
 description = "Store and cache things anywhere"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "anystore-0.3.9-py3-none-any.whl", hash = "sha256:4cdd00f877c009c11e54a1ea1800b2f616234dd5ea9f961712b65e561e2d8e9c"},
-    {file = "anystore-0.3.9.tar.gz", hash = "sha256:20ae0aaa2850e8c15c977bf394e57103ca919580f5c731175f8b5daeab811741"},
+    {file = "anystore-0.3.10-py3-none-any.whl", hash = "sha256:caf567b97f02c20b78d7c3bd79d1ffcb04286d5420f4b30c5e6087cc563d5423"},
+    {file = "anystore-0.3.10.tar.gz", hash = "sha256:c05723ae8ad53bab06d7eb1c0587a656d3603bf80d0f10aa80d3a19e0af764e0"},
 ]
 
 [package.dependencies]
@@ -1562,18 +1562,18 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "ftmq"
-version = "4.1.3"
+version = "4.1.4"
 description = "followthemoney query dsl and io helpers"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "ftmq-4.1.3-py3-none-any.whl", hash = "sha256:a4da4c4a87890069f290a3460fb1b8063fc5dc13e5cbb082759803640dab1efd"},
-    {file = "ftmq-4.1.3.tar.gz", hash = "sha256:691940dd7972b3d2b86efcec7f51d0aec348761647f91fe63e8a2a7f031c29ce"},
+    {file = "ftmq-4.1.4-py3-none-any.whl", hash = "sha256:422c99fb4f1bcd8496347e5b39b8615672f9190aef5ad4e4f4bce1b10f581c07"},
+    {file = "ftmq-4.1.4.tar.gz", hash = "sha256:80f41f6d366c51447f0c49a888f63bc2853856fc17c5d619fd0ac94f95729649"},
 ]
 
 [package.dependencies]
-anystore = ">=0.3.9,<0.4.0"
+anystore = ">=0.3.10,<0.4.0"
 click = ">=8.2.1,<9.0.0"
 click-default-group = ">=1.2.4,<2.0.0"
 followthemoney = ">=4.1.2,<5.0.0"
@@ -3423,21 +3423,22 @@ files = [
 
 [[package]]
 name = "openaleph-procrastinate"
-version = "0.0.25"
+version = "0.0.26"
 description = "Task queue logic for OpenAleph built upon procrastinate"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "openaleph_procrastinate-0.0.25-py3-none-any.whl", hash = "sha256:c391c0ffb8424922fba62b25ece411196e05adcc577c2ede1cf663926c4d6c6f"},
-    {file = "openaleph_procrastinate-0.0.25.tar.gz", hash = "sha256:8caa3e728368b18cf4aa21712ca5010507eafea3041c1814991a9cb3347e210d"},
+    {file = "openaleph_procrastinate-0.0.26-py3-none-any.whl", hash = "sha256:f8d33b504701deff8060b2950de62a665e513a14f1093bf7b3d2e6344078855f"},
+    {file = "openaleph_procrastinate-0.0.26.tar.gz", hash = "sha256:3a0bb1c87d4b687fe02d5d67190d4853c3da53b81d7c199548cad45c941e3c62"},
 ]
 
 [package.dependencies]
+anystore = ">=0.3.10,<0.4.0"
 followthemoney = ">=4.1.2,<5.0.0"
-ftmq = ">=4.1.1,<5.0.0"
-procrastinate = ">=3.2.2"
-psycopg2-binary = ">=2.9.10,<3.0.0"
+ftmq = ">=4.1.4,<5.0.0"
+procrastinate = ">=3.5.1,<4.0.0"
+psycopg = ">=3.2.9,<4.0.0"
 pydantic = ">=2.11.7,<3.0.0"
 pydantic-settings = ">=2.10.1,<3.0.0"
 
@@ -6180,4 +6181,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.11, <4.0.0"
-content-hash = "0c0aef005964da9cf7772b56fe8bbc265e5445591b69cd5b9cb5dd16ba6916a2"
+content-hash = "cff6aed623b8795a652eec738dbad17d09b227e82404641f595b6c6179cf19fa"

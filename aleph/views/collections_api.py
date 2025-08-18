@@ -353,7 +353,8 @@ def status(collection_id):
     """
     collection = get_db_collection(collection_id, request.authz.READ)
     request.rate_limit = None
-    return jsonify(get_collection_status(collection))
+    status = get_collection_status(collection)
+    return jsonify(status.model_dump(mode="json"))
 
 
 @blueprint.route("/<int:collection_id>/status", methods=["DELETE"])
