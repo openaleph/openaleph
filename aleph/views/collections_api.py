@@ -14,7 +14,11 @@ from aleph.logic.collections import (
 )
 from aleph.logic.entitysets import save_entityset_item
 from aleph.logic.processing import bulk_write
-from aleph.procrastinate.queues import cancel_collection, queue_index, queue_reindex
+from aleph.procrastinate.queues import (
+    queue_cancel_collection,
+    queue_index,
+    queue_reindex,
+)
 from aleph.procrastinate.status import get_collection_status
 from aleph.search import CollectionsQuery
 from aleph.views.serializers import CollectionSerializer
@@ -349,7 +353,8 @@ def status(collection_id):
     """
     collection = get_db_collection(collection_id, request.authz.READ)
     request.rate_limit = None
-    return jsonify(get_collection_status(collection))
+    status = get_collection_status(collection)
+    return jsonify(status.model_dump(mode="json"))
 
 
 @blueprint.route("/<int:collection_id>/status", methods=["DELETE"])
@@ -379,7 +384,7 @@ def cancel(collection_id):
       - Collection
     """
     collection = get_db_collection(collection_id, request.authz.WRITE)
-    cancel_collection(collection)
+    queue_cancel_collection(collection)
     refresh_collection(collection_id)
     return ("", 204)
 

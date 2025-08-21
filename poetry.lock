@@ -46,14 +46,14 @@ typing-extensions = {version = ">=4.6.0", markers = "python_version < \"3.12\""}
 
 [[package]]
 name = "aiobotocore"
-version = "2.24.0"
+version = "2.24.1"
 description = "Async client for aws services using botocore and aiohttp"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "aiobotocore-2.24.0-py3-none-any.whl", hash = "sha256:72bb1f8eb1b962779a95e1bcc9cf35bc33196ad763b622a40ae7fa9d2e95c87c"},
-    {file = "aiobotocore-2.24.0.tar.gz", hash = "sha256:b32c0c45d38c22a18ce395a0b5448606c5260603296a152895b5bdb40ab3139d"},
+    {file = "aiobotocore-2.24.1-py3-none-any.whl", hash = "sha256:557922823455ca65bbd065b363b54846f16b9c4b6bd0b61ecdfa01ca13a04531"},
+    {file = "aiobotocore-2.24.1.tar.gz", hash = "sha256:59237f1b2d4ff619f9a9e78360b691d59b92fdd4d03d054dbd2eeff8ada5667e"},
 ]
 
 [package.dependencies]
@@ -276,14 +276,14 @@ trio = ["trio (>=0.26.1)"]
 
 [[package]]
 name = "anystore"
-version = "0.3.9"
+version = "0.3.10"
 description = "Store and cache things anywhere"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "anystore-0.3.9-py3-none-any.whl", hash = "sha256:4cdd00f877c009c11e54a1ea1800b2f616234dd5ea9f961712b65e561e2d8e9c"},
-    {file = "anystore-0.3.9.tar.gz", hash = "sha256:20ae0aaa2850e8c15c977bf394e57103ca919580f5c731175f8b5daeab811741"},
+    {file = "anystore-0.3.10-py3-none-any.whl", hash = "sha256:caf567b97f02c20b78d7c3bd79d1ffcb04286d5420f4b30c5e6087cc563d5423"},
+    {file = "anystore-0.3.10.tar.gz", hash = "sha256:c05723ae8ad53bab06d7eb1c0587a656d3603bf80d0f10aa80d3a19e0af764e0"},
 ]
 
 [package.dependencies]
@@ -387,7 +387,7 @@ version = "5.0.1"
 description = "Timeout context manager for asyncio programs"
 optional = false
 python-versions = ">=3.8"
-groups = ["main"]
+groups = ["main", "dev"]
 markers = "python_version == \"3.11\" and python_full_version <= \"3.11.2\""
 files = [
     {file = "async_timeout-5.0.1-py3-none-any.whl", hash = "sha256:39e3809566ff85354557ec2398b55e096c8364bacac9405a7a1fa429e77fe76c"},
@@ -1193,14 +1193,14 @@ typing-extensions = "*"
 
 [[package]]
 name = "fakeredis"
-version = "2.31.0"
+version = "2.30.3"
 description = "Python implementation of redis API, can be used for testing purposes."
 optional = false
 python-versions = ">=3.7"
-groups = ["main"]
+groups = ["main", "dev"]
 files = [
-    {file = "fakeredis-2.31.0-py3-none-any.whl", hash = "sha256:2584e57d93df4eb8e87931b29279902826d3caf77d06911106df4e066c2ad198"},
-    {file = "fakeredis-2.31.0.tar.gz", hash = "sha256:2942a7e7900fd9076ff9e608b9190a87315ac5a325a9ab8bfe288a2d985ecd23"},
+    {file = "fakeredis-2.30.3-py3-none-any.whl", hash = "sha256:56a6b082e8ff17434a5ae22e4efd12ae2bb9b363b477d8f166a790407ba65a7e"},
+    {file = "fakeredis-2.30.3.tar.gz", hash = "sha256:eac5aaced57e7dbe3e005eb4f82032978a7f100273b26158cbbcfa7c386ca7ec"},
 ]
 
 [package.dependencies]
@@ -1562,18 +1562,18 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "ftmq"
-version = "4.1.3"
+version = "4.1.4"
 description = "followthemoney query dsl and io helpers"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "ftmq-4.1.3-py3-none-any.whl", hash = "sha256:a4da4c4a87890069f290a3460fb1b8063fc5dc13e5cbb082759803640dab1efd"},
-    {file = "ftmq-4.1.3.tar.gz", hash = "sha256:691940dd7972b3d2b86efcec7f51d0aec348761647f91fe63e8a2a7f031c29ce"},
+    {file = "ftmq-4.1.4-py3-none-any.whl", hash = "sha256:422c99fb4f1bcd8496347e5b39b8615672f9190aef5ad4e4f4bce1b10f581c07"},
+    {file = "ftmq-4.1.4.tar.gz", hash = "sha256:80f41f6d366c51447f0c49a888f63bc2853856fc17c5d619fd0ac94f95729649"},
 ]
 
 [package.dependencies]
-anystore = ">=0.3.9,<0.4.0"
+anystore = ">=0.3.10,<0.4.0"
 click = ">=8.2.1,<9.0.0"
 click-default-group = ">=1.2.4,<2.0.0"
 followthemoney = ">=4.1.2,<5.0.0"
@@ -3423,21 +3423,22 @@ files = [
 
 [[package]]
 name = "openaleph-procrastinate"
-version = "0.0.25"
+version = "0.0.26"
 description = "Task queue logic for OpenAleph built upon procrastinate"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "openaleph_procrastinate-0.0.25-py3-none-any.whl", hash = "sha256:c391c0ffb8424922fba62b25ece411196e05adcc577c2ede1cf663926c4d6c6f"},
-    {file = "openaleph_procrastinate-0.0.25.tar.gz", hash = "sha256:8caa3e728368b18cf4aa21712ca5010507eafea3041c1814991a9cb3347e210d"},
+    {file = "openaleph_procrastinate-0.0.26-py3-none-any.whl", hash = "sha256:f8d33b504701deff8060b2950de62a665e513a14f1093bf7b3d2e6344078855f"},
+    {file = "openaleph_procrastinate-0.0.26.tar.gz", hash = "sha256:3a0bb1c87d4b687fe02d5d67190d4853c3da53b81d7c199548cad45c941e3c62"},
 ]
 
 [package.dependencies]
+anystore = ">=0.3.10,<0.4.0"
 followthemoney = ">=4.1.2,<5.0.0"
-ftmq = ">=4.1.1,<5.0.0"
-procrastinate = ">=3.2.2"
-psycopg2-binary = ">=2.9.10,<3.0.0"
+ftmq = ">=4.1.4,<5.0.0"
+procrastinate = ">=3.5.1,<4.0.0"
+psycopg = ">=3.2.9,<4.0.0"
 pydantic = ">=2.11.7,<3.0.0"
 pydantic-settings = ">=2.10.1,<3.0.0"
 
@@ -3731,14 +3732,14 @@ ptyprocess = ">=0.5"
 
 [[package]]
 name = "phonenumbers"
-version = "9.0.11"
+version = "9.0.12"
 description = "Python version of Google's common library for parsing, formatting, storing and validating international phone numbers."
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "phonenumbers-9.0.11-py2.py3-none-any.whl", hash = "sha256:a8ebb2136f1f14dfdbadb98be01cb71b96f880dea011eb5e0921967fe3a23abf"},
-    {file = "phonenumbers-9.0.11.tar.gz", hash = "sha256:6573858dcf0a7a2753a071375e154d9fc11791546c699b575af95d2ba7d84a1d"},
+    {file = "phonenumbers-9.0.12-py2.py3-none-any.whl", hash = "sha256:900633afc3e12191458d710262df5efc117838bd1e2e613b64fa254a86bb20a1"},
+    {file = "phonenumbers-9.0.12.tar.gz", hash = "sha256:ccadff6b949494bd606836d8c9678bee5b55cb1cbad1e98bf7adae108e6fd0be"},
 ]
 
 [[package]]
@@ -3973,21 +3974,21 @@ testing = ["google-api-core (>=1.31.5)"]
 
 [[package]]
 name = "protobuf"
-version = "6.31.1"
+version = "6.32.0"
 description = ""
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "protobuf-6.31.1-cp310-abi3-win32.whl", hash = "sha256:7fa17d5a29c2e04b7d90e5e32388b8bfd0e7107cd8e616feef7ed3fa6bdab5c9"},
-    {file = "protobuf-6.31.1-cp310-abi3-win_amd64.whl", hash = "sha256:426f59d2964864a1a366254fa703b8632dcec0790d8862d30034d8245e1cd447"},
-    {file = "protobuf-6.31.1-cp39-abi3-macosx_10_9_universal2.whl", hash = "sha256:6f1227473dc43d44ed644425268eb7c2e488ae245d51c6866d19fe158e207402"},
-    {file = "protobuf-6.31.1-cp39-abi3-manylinux2014_aarch64.whl", hash = "sha256:a40fc12b84c154884d7d4c4ebd675d5b3b5283e155f324049ae396b95ddebc39"},
-    {file = "protobuf-6.31.1-cp39-abi3-manylinux2014_x86_64.whl", hash = "sha256:4ee898bf66f7a8b0bd21bce523814e6fbd8c6add948045ce958b73af7e8878c6"},
-    {file = "protobuf-6.31.1-cp39-cp39-win32.whl", hash = "sha256:0414e3aa5a5f3ff423828e1e6a6e907d6c65c1d5b7e6e975793d5590bdeecc16"},
-    {file = "protobuf-6.31.1-cp39-cp39-win_amd64.whl", hash = "sha256:8764cf4587791e7564051b35524b72844f845ad0bb011704c3736cce762d8fe9"},
-    {file = "protobuf-6.31.1-py3-none-any.whl", hash = "sha256:720a6c7e6b77288b85063569baae8536671b39f15cc22037ec7045658d80489e"},
-    {file = "protobuf-6.31.1.tar.gz", hash = "sha256:d8cac4c982f0b957a4dc73a80e2ea24fab08e679c0de9deb835f4a12d69aca9a"},
+    {file = "protobuf-6.32.0-cp310-abi3-win32.whl", hash = "sha256:84f9e3c1ff6fb0308dbacb0950d8aa90694b0d0ee68e75719cb044b7078fe741"},
+    {file = "protobuf-6.32.0-cp310-abi3-win_amd64.whl", hash = "sha256:a8bdbb2f009cfc22a36d031f22a625a38b615b5e19e558a7b756b3279723e68e"},
+    {file = "protobuf-6.32.0-cp39-abi3-macosx_10_9_universal2.whl", hash = "sha256:d52691e5bee6c860fff9a1c86ad26a13afbeb4b168cd4445c922b7e2cf85aaf0"},
+    {file = "protobuf-6.32.0-cp39-abi3-manylinux2014_aarch64.whl", hash = "sha256:501fe6372fd1c8ea2a30b4d9be8f87955a64d6be9c88a973996cef5ef6f0abf1"},
+    {file = "protobuf-6.32.0-cp39-abi3-manylinux2014_x86_64.whl", hash = "sha256:75a2aab2bd1aeb1f5dc7c5f33bcb11d82ea8c055c9becbb41c26a8c43fd7092c"},
+    {file = "protobuf-6.32.0-cp39-cp39-win32.whl", hash = "sha256:7db8ed09024f115ac877a1427557b838705359f047b2ff2f2b2364892d19dacb"},
+    {file = "protobuf-6.32.0-cp39-cp39-win_amd64.whl", hash = "sha256:15eba1b86f193a407607112ceb9ea0ba9569aed24f93333fe9a497cf2fda37d3"},
+    {file = "protobuf-6.32.0-py3-none-any.whl", hash = "sha256:ba377e5b67b908c8f3072a57b63e2c6a4cbd18aea4ed98d2584350dbf46f2783"},
+    {file = "protobuf-6.32.0.tar.gz", hash = "sha256:a81439049127067fc49ec1d36e25c6ee1d1a2b7be930675f919258d03c04e7d2"},
 ]
 
 [[package]]
@@ -4824,7 +4825,7 @@ version = "4.6.0"
 description = "Python client for Redis database and key-value store"
 optional = false
 python-versions = ">=3.7"
-groups = ["main"]
+groups = ["main", "dev"]
 files = [
     {file = "redis-4.6.0-py3-none-any.whl", hash = "sha256:e2b03db868160ee4591de3cb90d40ebb50a90dd302138775937f6a42b7ed183c"},
     {file = "redis-4.6.0.tar.gz", hash = "sha256:585dc516b9eb042a619ef0a39c3d7d55fe81bdb4df09a52c9cdde0d07bf1aa7d"},
@@ -4994,13 +4995,13 @@ jupyter = ["ipywidgets (>=7.5.1,<9)"]
 
 [[package]]
 name = "rigour"
-version = "1.2.5"
+version = "1.2.6"
 description = "Financial crime domain data validation and normalization library."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "rigour-1.2.5-py3-none-any.whl", hash = "sha256:923a4eff6ce407b7eaae756653c29a40984f1483037830834b983741e9825cb1"},
+    {file = "rigour-1.2.6-py3-none-any.whl", hash = "sha256:d17c29f658b674e124b5d557e96f2fb2aa685a50442b3a2b9d15dd4c9f9c0853"},
 ]
 
 [package.dependencies]
@@ -5536,7 +5537,7 @@ version = "2.4.0"
 description = "Sorted Containers -- Sorted List, Sorted Dict, Sorted Set"
 optional = false
 python-versions = "*"
-groups = ["main"]
+groups = ["main", "dev"]
 files = [
     {file = "sortedcontainers-2.4.0-py2.py3-none-any.whl", hash = "sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0"},
     {file = "sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88"},
@@ -6180,4 +6181,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.11, <4.0.0"
-content-hash = "63eb40096040f67bbba378937f3a49f70c4a9dfef87e1d4e3451e9694fe49785"
+content-hash = "cff6aed623b8795a652eec738dbad17d09b227e82404641f595b6c6179cf19fa"

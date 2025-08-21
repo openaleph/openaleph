@@ -1,6 +1,6 @@
 [project]
 name = "aleph"
-version = "5.0.0-rc3"
+version = "5.0.0-rc5"
 description = "Search and browse documents and data; find the people and companies you look for."
 authors = [
     { name = "Friedrich Lindenberg", email = "friedrich@pudo.org" },
@@ -68,7 +68,7 @@ dependencies = [
     "sentry-sdk[flask] (==2.19.2)",
     "psycopg2-binary (>=2.9.10,<3.0.0)",
     "legacy-cgi; python_version >= '3.13'",
-    "openaleph-procrastinate (>=0.0.25,<0.0.26)",
+    "openaleph-procrastinate (>=0.0.26,<0.0.27)",
     "lxml[html-clean] (>=5.4.0,<6.0.0)"
 ]
 
@@ -93,6 +93,7 @@ ruff = "^0.7.3"
 isort = "^5.13.2"
 ipdb = "^0.13.13"
 pytest-env = "^1.1.5"
+fakeredis = "<2.31"
 
 
 [build-system]

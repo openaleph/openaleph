@@ -1,5 +1,5 @@
 import flask_migrate
-from openaleph_procrastinate.app import init_db
+from openaleph_procrastinate.manage.db import get_db
 from sqlalchemy import MetaData, inspect, text
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.exc import InternalError
@@ -14,7 +14,9 @@ def upgrade_system():
     archive.upgrade()
     create_system_roles()
     upgrade_search()
-    init_db()
+    # openaleph-procrastinate:
+    db = get_db()
+    db.configure()
 
 
 def cleanup_deleted():

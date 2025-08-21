@@ -51,7 +51,7 @@ def crawl_directory(collection, path, parent=None, job_id=None):
             job_id = job_id or Job.random_id()
             proxy = document.to_proxy()
             ingest_flush(collection, entity_id=proxy.id)
-            queue_ingest(collection, proxy, job_id=job_id)
+            queue_ingest(collection, proxy, batch=job_id)
             log.info("Crawl [%s]: %s -> %s", collection.id, path, document.id)
 
         if path.is_dir():

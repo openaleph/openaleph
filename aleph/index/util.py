@@ -1,5 +1,5 @@
 import logging
-from pprint import pprint  # noqa
+
 from banal import ensure_list, is_mapping
 from elasticsearch import TransportError
 from elasticsearch.helpers import streaming_bulk
@@ -12,7 +12,7 @@ from aleph.settings import SETTINGS
 log = logging.getLogger(__name__)
 
 BULK_PAGE = 500
-# cf. https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-from-size.html  # noqa
+# cf. https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-from-size.html  # noqa: B950
 MAX_PAGE = 9999
 NUMERIC_TYPES = (
     registry.number,
@@ -22,12 +22,12 @@ MAX_TIMEOUT = "700m"
 MAX_REQUEST_TIMEOUT = 84600
 
 # Mapping shortcuts
-DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd||yyyy-MM||yyyy"
+DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd'T'HH:mm||yyyy-MM-dd||yyyy-MM||yyyy"
 PARTIAL_DATE = {"type": "date", "format": DATE_FORMAT}
-LATIN_TEXT = {
+TEXT = {
     "type": "text",
-    "analyzer": "latin_index",
-    "search_analyzer": "latin_query",
+    "analyzer": "default",
+    "search_analyzer": "default",
 }
 KEYWORD = {"type": "keyword"}
 KEYWORD_COPY = {"type": "keyword", "copy_to": "text"}
@@ -90,7 +90,7 @@ def unpack_result(res):
 
     if "highlight" in res:
         data["highlight"] = []
-        for key, value in res.get("highlight", {}).items():
+        for value in res.get("highlight", {}).values():
             data["highlight"].extend(value)
 
     data["_sort"] = ensure_list(res.get("sort"))
@@ -321,29 +321,5 @@ def index_settings(shards=5, replicas=SETTINGS.INDEX_REPLICAS):
             "number_of_shards": str(shards),
             "number_of_replicas": str(replicas),
             # "refresh_interval": refresh,
-            "analysis": {
-                "analyzer": {
-                    "latin_index": {"tokenizer": "standard", "filter": ["latinize"]},
-                    "icu_latin": {"tokenizer": "standard", "filter": ["latinize"]},
-                    "latin_query": {
-                        "tokenizer": "standard",
-                        "filter": ["latinize", "synonames"],
-                    },
-                },
-                "normalizer": {
-                    "latin_index": {"type": "custom", "filter": ["latinize"]}
-                },
-                "filter": {
-                    "latinize": {
-                        "type": "icu_transform",
-                        "id": "Any-Latin; NFKD; Lower(); [:Nonspacing Mark:] Remove; NFKC",  # noqa
-                    },
-                    "synonames": {
-                        "type": "synonym",
-                        "lenient": "true",
-                        "synonyms_path": "synonames.txt",
-                    },
-                },
-            },
         }
     }

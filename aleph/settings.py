@@ -35,7 +35,7 @@ class Settings:
         ###############################################################################
         # General instance information
 
-        self.APP_TITLE = env.get("ALEPH_APP_TITLE", lazy_gettext("Aleph"))
+        self.APP_TITLE = env.get("ALEPH_APP_TITLE", lazy_gettext("OpenAleph"))
         self.APP_NAME = env.get("ALEPH_APP_NAME", "aleph")
         self.APP_UI_URL = env.get("ALEPH_UI_URL", "http://localhost:8080/")
         self.APP_LOGO = env.get("ALEPH_LOGO", "/static/logo.svg")

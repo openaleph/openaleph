@@ -65,16 +65,16 @@ upgrade: build
 	@$(COMPOSE) exec elasticsearch timeout 30 bash -c "printf 'Waiting for elasticsearch'; until curl --silent --output /dev/null localhost:9200/_cat/health?h=st; do printf '.'; sleep 1; done; printf '\n'"
 	$(APPDOCKER) aleph upgrade
 
-upgrade-local: services
+upgrade-local: test-services
 	aleph upgrade
 
-update-local: services
+update-local: test-services
 	aleph update
 
 api: services
 	$(COMPOSE) up --abort-on-container-exit api
 
-api-local: services
+api-local: test-services
 	FLASK_APP=aleph.wsgi flask run -h 0.0.0.0 -p 5000 --with-threads --reload --debugger
 
 web: services
@@ -86,8 +86,8 @@ web-local:
 worker: services
 	$(COMPOSE) up procrastinate-worker
 
-worker-local:
-	procrastinate worker -q openaleph --concurrency 2
+worker-local: test-services
+	procrastinate worker -q openaleph,openaleph-management --concurrency 2
 
 tail:
 	$(COMPOSE) logs -f

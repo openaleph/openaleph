@@ -150,7 +150,7 @@ def ingest_upload(collection_id):
         if proxy.schema.is_a(Document.SCHEMA_FOLDER) and sync and index:
             index_proxy(collection, proxy, sync=sync)
         ingest_flush(collection, entity_id=proxy.id)
-        queue_ingest(collection, proxy, job_id=job_id, index=index)
+        queue_ingest(collection, proxy, batch=job_id, index=index)
         _notify(collection, proxy.id)
         return jsonify({"status": "ok", "id": proxy.id}, status=201)
     finally:
