@@ -1,22 +1,24 @@
 import logging
+
 from banal import ensure_dict
-from pprint import pformat  # noqa
 from flask_babel import gettext
 from followthemoney import model
-from followthemoney.types import registry
 from followthemoney.exc import InvalidData
+from followthemoney.types import registry
 
-from aleph.core import db, cache
-from aleph.model import Entity, Document, EntitySetItem, Mapping, Bookmark
+from aleph.core import cache, db
 from aleph.index import entities as index
-from aleph.queues import pipeline_entity, queue_task
-from aleph.queues import OP_UPDATE_ENTITY, OP_PRUNE_ENTITY
-from aleph.logic.notifications import flush_notifications
-from aleph.logic.collections import refresh_collection
-from aleph.logic.collections import MODEL_ORIGIN
-from aleph.logic.util import latin_alt
 from aleph.index import xref as xref_index
 from aleph.logic.aggregator import get_aggregator
+from aleph.logic.collections import MODEL_ORIGIN, refresh_collection
+from aleph.logic.notifications import flush_notifications
+from aleph.logic.util import latin_alt
+from aleph.model import Bookmark, Document, Entity, EntitySetItem, Mapping
+from aleph.procrastinate.queues import (
+    queue_analyze,
+    queue_prune_entity,
+    queue_update_entity,
+)
 
 log = logging.getLogger(__name__)
 
@@ -47,7 +49,7 @@ def upsert_entity(data, collection, authz=None, sync=False, sign=False, job_id=N
 
     index.index_proxy(collection, proxy, sync=sync)
     refresh_entity(collection, proxy.id)
-    queue_task(collection, OP_UPDATE_ENTITY, job_id=job_id, entity_id=proxy.id)
+    queue_update_entity(collection, entity_id=proxy.id, batch=job_id)
     return entity.id
 
 
@@ -57,8 +59,8 @@ def update_entity(collection, entity_id=None, job_id=None):
     inside the request cycle.
 
     Update xref and aggregator, trigger NER and re-index."""
-    from aleph.logic.xref import xref_entity
     from aleph.logic.profiles import profile_fragments
+    from aleph.logic.xref import xref_entity
 
     log.info("[%s] Update entity: %s", collection, entity_id)
     entity = index.get_entity(entity_id)
@@ -69,7 +71,7 @@ def update_entity(collection, entity_id=None, job_id=None):
     aggregator = get_aggregator(collection, origin=MODEL_ORIGIN)
     profile_fragments(collection, aggregator, entity_id=entity_id)
     inline_names(aggregator, proxy)
-    pipeline_entity(collection, proxy, job_id=job_id)
+    queue_analyze(collection, proxy, batch=job_id)
 
 
 def inline_names(aggregator, proxy):
@@ -142,7 +144,7 @@ def delete_entity(collection, entity, sync=False, job_id=None):
     entity_id = collection.ns.sign(entity.get("id"))
     index.delete_entity(entity_id, sync=sync)
     refresh_entity(collection, entity_id)
-    queue_task(collection, OP_PRUNE_ENTITY, job_id=job_id, entity_id=entity_id)
+    queue_prune_entity(collection, entity_id=entity_id, batch=job_id)
 
 
 def prune_entity(collection, entity_id=None, job_id=None):

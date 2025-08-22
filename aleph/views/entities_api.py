@@ -21,7 +21,7 @@ from aleph.logic.html import sanitize_html
 from aleph.logic.profiles import pairwise_judgements
 from aleph.model.bookmark import Bookmark
 from aleph.model.entityset import EntitySet, Judgement
-from aleph.queues import OP_EXPORT_SEARCH, queue_task
+from aleph.procrastinate.queues import OP_EXPORT_SEARCH, queue_export_search
 from aleph.search import (
     DatabaseQueryResult,
     EntitiesQuery,
@@ -198,8 +198,7 @@ def export():
         mime_type=ZIP,
         meta={"query": query.get_full_query(), "schemata": schemata},
     )
-    job_id = get_session_id()
-    queue_task(None, OP_EXPORT_SEARCH, job_id=job_id, export_id=export.id)
+    queue_export_search(export_id=export.id)
     return ("", 202)
 
 
