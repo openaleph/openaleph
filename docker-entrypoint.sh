@@ -41,7 +41,6 @@ file_env "ALEPH_ELASTICSEARCH_URI"
 file_env "ALEPH_OAUTH_SECRET"
 file_env "ALEPH_MAIL_PASSWORD"
 
-
 # extra entrypoints
 if [ "$1" = "gunicorn" ] || [ "$1" = "aleph" ]; then
     if /usr/bin/find "/docker-entrypoint.d/" -mindepth 1 -maxdepth 1 -type f -print -quit 2>/dev/null | read v; then

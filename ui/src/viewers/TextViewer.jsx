@@ -1,7 +1,7 @@
 import React, { PureComponent } from 'react';
 import { Pre } from '@blueprintjs/core';
 
-import { Skeleton } from 'components/common';
+import { ErrorSection, Skeleton } from 'components/common';
 import insertHighlights from 'util/insertHighlights';
 import convertHighlightsToReactElements from 'util/convertHighlightsToReactElements';
 import insertLineBreaksToExtraction from 'util/insertLineBreaksToExtraction';
@@ -16,10 +16,20 @@ class TextViewer extends PureComponent {
   }
 
   render() {
-    const { noStyle } = this.props;
+    const { noStyle, document } = this.props;
 
     if (noStyle) {
       return this.contents();
+    }
+
+    if (!document.isPending && !document.getFirst('bodyText')) {
+      return (
+        <ErrorSection
+          icon="issue"
+          title="No text available"
+          description="The system couldn't extract text from this document. Re-ingesting might help."
+        />
+      );
     }
 
     return (

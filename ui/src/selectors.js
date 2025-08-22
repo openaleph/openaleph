@@ -205,10 +205,10 @@ export function selectEntitySets(state) {
 export function selectCollection(state, collectionId) {
   const collection = selectObject(state, state.collections, collectionId);
   const status = collection.status || {};
-  status.pending = status.pending || 0;
-  status.running = status.running || 0;
+  status.todo = status.todo || 0;
+  status.doing = status.doing || 0;
   status.finished = status.finished || 0;
-  status.active = status.pending + status.running;
+  status.active = status.todo + status.doing;
   status.total = status.active + status.finished;
   status.progress = status.finished / status.total;
   status.percent = Math.round(status.progress * 100);

@@ -127,7 +127,7 @@ Run all entities from a dataset through [`jq`](https://jqlang.org/) and filter o
 ```bash
 curl -o us_ofac.json hhttps://data.opensanctions.org/datasets/latest/us_sanctions/entities.ftm.json
 cat us_ofac.json | ftm store write -d us_ofac
-ftm store iterate -d us_ofac | alephclient write-entities -f us_ofac
+ftm store iterate -d us_ofac | openaleph write-entities -f us_ofac
 ftm store delete -d us_ofac
 ```
 Downloading, aggregating, ingesting and cleaning up locally - all in a few lines of bash.

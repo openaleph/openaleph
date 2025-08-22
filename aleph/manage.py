@@ -1,48 +1,50 @@
-# coding: utf-8
-import sys
 import json
-import click
 import logging
-from pathlib import Path
-from pprint import pprint  # noqa
 from itertools import count
-from normality import slugify
-from tabulate import tabulate
+from pathlib import Path
+
+import click
 from flask.cli import FlaskGroup
 from followthemoney.cli.util import write_object
+from normality import slugify
+from tabulate import tabulate
 
-from aleph.core import create_app, cache, db
 from aleph.authz import Authz
-from aleph.model import Collection, Role, EntitySet
-from aleph.migration import upgrade_system, destroy_db, cleanup_deleted
-from aleph.worker import get_worker
-from aleph.queues import get_status, cancel_queue
-from aleph.queues import get_active_dataset_status
+from aleph.core import cache, create_app, db
 from aleph.index.admin import delete_index
+from aleph.index.collections import get_collection as _get_index_collection
+from aleph.index.entities import get_entity as _get_index_entity
 from aleph.index.entities import iter_proxies
-from aleph.logic.collections import create_collection, update_collection
-from aleph.logic.collections import delete_collection, reindex_collection
-from aleph.logic.collections import upgrade_collections, reingest_collection
-from aleph.logic.collections import compute_collection
-from aleph.logic.processing import bulk_write
-from aleph.logic.mapping import cleanup_mappings
-from aleph.logic.documents import crawl_directory
 from aleph.logic.archive import cleanup_archive
-from aleph.logic.xref import xref_collection
+from aleph.logic.collections import (
+    compute_collection,
+    create_collection,
+    delete_collection,
+    reindex_collection,
+    reingest_collection,
+    update_collection,
+    upgrade_collections,
+)
+from aleph.logic.documents import crawl_directory
 from aleph.logic.export import retry_exports
+from aleph.logic.mapping import cleanup_mappings
+from aleph.logic.permissions import update_permission
+from aleph.logic.processing import bulk_write
 from aleph.logic.roles import (
-    create_user,
     create_group,
+    create_user,
+    delete_role,
+    rename_user,
     update_roles,
     user_add,
     user_del,
-    delete_role,
-    rename_user,
 )
-from aleph.logic.permissions import update_permission
+from aleph.logic.xref import xref_collection
+from aleph.migration import cleanup_deleted, destroy_db, upgrade_system
+from aleph.model import Collection, EntitySet, Role
+from aleph.procrastinate.queues import queue_cancel_collection
+from aleph.procrastinate.status import get_collection_status, get_status
 from aleph.util import JSONEncoder
-from aleph.index.collections import get_collection as _get_index_collection
-from aleph.index.entities import get_entity as _get_index_entity
 
 log = logging.getLogger("aleph")
 
@@ -108,18 +110,6 @@ def collections(secret, casefile):
                 continue
         collections.append((coll.foreign_id, coll.id, coll.label))
     print(tabulate(collections, headers=["Foreign ID", "ID", "Label"]))
-
-
-@cli.command()
-@click.option(
-    "--blocking/--non-blocking", default=True, help="Wait for tasks indefinitely."
-)
-@click.option("--threads", required=False, type=int)
-def worker(blocking=True, threads=None):
-    """Run the queue-based worker service."""
-    worker = get_worker(num_threads=threads)
-    code = worker.run(blocking=blocking)
-    sys.exit(code)
 
 
 @cli.command()
@@ -326,10 +316,10 @@ def status(foreign_id=None):
     """Get the queue status (pending and finished tasks.)"""
     if foreign_id is not None:
         collection = get_collection(foreign_id)
-        status = get_status(collection)
+        status = get_collection_status(collection)
         status = {"datasets": {foreign_id: status}}
     else:
-        status = get_active_dataset_status()
+        status = get_status()
     headers = ["Collection", "Job", "Stage", "Pending", "Running", "Finished"]
     rows = []
     for foreign_id, dataset in status.get("datasets").items():
@@ -363,14 +353,8 @@ def status(foreign_id=None):
 def cancel(foreign_id):
     """Cancel all queued tasks for the dataset."""
     collection = get_collection(foreign_id)
-    cancel_queue(collection)
+    queue_cancel_collection(collection)
     update_collection(collection)
-
-
-@cli.command("cancel-user")
-def cancel_user():
-    """Cancel all queued tasks not related to a dataset."""
-    cancel_queue(None)
 
 
 @cli.command("retry-exports")

@@ -1,21 +1,27 @@
 import json
-import shutil
 import logging
+import shutil
+from tempfile import mkdtemp
+
 from banal import ensure_dict
 from flask import Blueprint, request
-from tempfile import mkdtemp
-from werkzeug.exceptions import BadRequest
 from normality import safe_filename, stringify
 from servicelayer.archive.util import ensure_path
+from werkzeug.exceptions import BadRequest
 
-from aleph.core import db, archive
-from aleph.model import Document, Entity, Events
-from aleph.queues import ingest_entity
+from aleph.core import archive, db
 from aleph.index.entities import index_proxy
 from aleph.logic.documents import ingest_flush
-from aleph.logic.notifications import publish, channel_tag
-from aleph.views.util import get_db_collection, get_flag
-from aleph.views.util import jsonify, validate, get_session_id
+from aleph.logic.notifications import channel_tag, publish
+from aleph.model import Document, Entity, Events
+from aleph.procrastinate.queues import queue_ingest
+from aleph.views.util import (
+    get_db_collection,
+    get_flag,
+    get_session_id,
+    jsonify,
+    validate,
+)
 
 log = logging.getLogger(__name__)
 blueprint = Blueprint("ingest_api", __name__)
@@ -144,7 +150,7 @@ def ingest_upload(collection_id):
         if proxy.schema.is_a(Document.SCHEMA_FOLDER) and sync and index:
             index_proxy(collection, proxy, sync=sync)
         ingest_flush(collection, entity_id=proxy.id)
-        ingest_entity(collection, proxy, job_id=job_id, index=index)
+        queue_ingest(collection, proxy, batch=job_id, index=index)
         _notify(collection, proxy.id)
         return jsonify({"status": "ok", "id": proxy.id}, status=201)
     finally:

@@ -22,8 +22,8 @@ services:
     volumes:
       - redis-data:/data
 
-  ingest-file:
-    image: ghcr.io/openaleph/ingest-file:latest
+  ingest:
+    image: ghcr.io/openaleph/ingest-file:${ALEPH_TAG:-ALEPH_TAG:-5.0.0-rc5}
     tmpfs:
       - /tmp:mode=777
     volumes:
@@ -36,14 +36,14 @@ services:
       - aleph.env
 
   worker:
-    image: ghcr.io/openaleph/openaleph:${ALEPH_TAG:-ALEPH_TAG:-3.19.0}
+    image: ghcr.io/openaleph/openaleph:${ALEPH_TAG:-ALEPH_TAG:-5.0.0-rc5}
     command: aleph worker
     restart: on-failure
     depends_on:
       - postgres
       - elasticsearch
       - redis
-      - ingest-file
+      - ingest
     tmpfs:
       - /tmp
     volumes:
@@ -52,13 +52,13 @@ services:
       - aleph.env
 
   shell:
-    image: ghcr.io/openaleph/openaleph:${ALEPH_TAG:-ALEPH_TAG:-3.19.0}
+    image: ghcr.io/openaleph/openaleph:${ALEPH_TAG:-ALEPH_TAG:-5.0.0-rc5}
     command: /bin/bash
     depends_on:
       - postgres
       - elasticsearch
       - redis
-      - ingest-file
+      - ingest
       - worker
     tmpfs:
       - /tmp
@@ -70,7 +70,7 @@ services:
       - aleph.env
 
   api:
-    image: ghcr.io/openaleph/openaleph:${ALEPH_TAG:-ALEPH_TAG:-3.19.0}
+    image: ghcr.io/openaleph/openaleph:${ALEPH_TAG:-ALEPH_TAG:-5.0.0-rc5}
     expose:
       - 8000
     depends_on:
@@ -78,7 +78,7 @@ services:
       - elasticsearch
       - redis
       - worker
-      - ingest-file
+      - ingest
     tmpfs:
       - /tmp
     volumes:
@@ -87,7 +87,7 @@ services:
       - aleph.env
 
   ui:
-    image: ghcr.io/openaleph/aleph-ui:${ALEPH_TAG:-ALEPH_TAG:-3.19.0}
+    image: ghcr.io/openaleph/aleph-ui:${ALEPH_TAG:-ALEPH_TAG:-5.0.0-rc5}
     depends_on:
       - api
     ports:

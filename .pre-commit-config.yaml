@@ -50,6 +50,12 @@ repos:
         args: ["--extend-ignore", "E203, E501, W503"]
         exclude: (test_[\w]+\.py|\.csv|\.json|\.lock)$
 
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.5
+    hooks:
+      - id: ruff
+        args: [ --fix ]
+
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
     hooks:
@@ -79,6 +85,6 @@ repos:
     hooks:
       - id: poetry-export
         args: ["--without-hashes", "-o", "requirements.txt"]
-      # - id: poetry-export
-      #   args:
-      #     ["--without-hashes", "--only", "dev", "-o", "requirements-dev.txt"]
+      - id: poetry-export
+        args:
+          ["--without-hashes", "--only", "dev", "-o", "requirements-dev.txt"]

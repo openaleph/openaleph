@@ -5,13 +5,12 @@ from rigour.mime.types import XLSX
 
 from aleph.logic.export import create_export
 from aleph.logic.profiles import pairwise_judgements
-from aleph.queues import OP_EXPORT_XREF, OP_XREF, queue_task
+from aleph.procrastinate.queues import OP_EXPORT_XREF, queue_export_xref, queue_xref
 from aleph.search import XrefQuery
 from aleph.views.serializers import XrefSerializer
 from aleph.views.util import (
     get_db_collection,
     get_index_collection,
-    get_session_id,
     jsonify,
 )
 
@@ -94,7 +93,7 @@ def generate(collection_id):
       - Collection
     """
     collection = get_db_collection(collection_id, request.authz.WRITE)
-    queue_task(collection, OP_XREF)
+    queue_xref(collection)
     return jsonify({"status": "accepted"}, status=202)
 
 
@@ -127,6 +126,5 @@ def export(collection_id):
         collection=collection,
         mime_type=XLSX,
     )
-    job_id = get_session_id()
-    queue_task(None, OP_EXPORT_XREF, job_id=job_id, export_id=export.id)
+    queue_export_xref(collection, export.id)
     return ("", 202)

@@ -3,19 +3,35 @@ from flask import Blueprint, request
 from werkzeug.exceptions import BadRequest
 
 from aleph.core import db
-from aleph.search import CollectionsQuery
-from aleph.queues import queue_task, get_status, cancel_queue
-from aleph.queues import OP_REINGEST, OP_REINDEX, OP_INDEX
-from aleph.logic.collections import create_collection, update_collection
-from aleph.logic.collections import delete_collection, refresh_collection
-from aleph.logic.collections import get_deep_collection
-from aleph.logic.entitysets import save_entityset_item
 from aleph.index.collections import update_collection_stats
+from aleph.logic.collections import (
+    create_collection,
+    delete_collection,
+    get_deep_collection,
+    refresh_collection,
+    reingest_collection,
+    update_collection,
+)
+from aleph.logic.entitysets import save_entityset_item
 from aleph.logic.processing import bulk_write
+from aleph.procrastinate.queues import (
+    queue_cancel_collection,
+    queue_index,
+    queue_reindex,
+)
+from aleph.procrastinate.status import get_collection_status
+from aleph.search import CollectionsQuery
 from aleph.views.serializers import CollectionSerializer
-from aleph.views.util import get_db_collection, get_index_collection, get_entityset
-from aleph.views.util import require, parse_request, jsonify
-from aleph.views.util import get_flag, get_session_id
+from aleph.views.util import (
+    get_db_collection,
+    get_entityset,
+    get_flag,
+    get_index_collection,
+    get_session_id,
+    jsonify,
+    parse_request,
+    require,
+)
 
 blueprint = Blueprint("collections_api", __name__)
 
@@ -180,7 +196,7 @@ def reingest(collection_id):
     """
     collection = get_db_collection(collection_id, request.authz.WRITE)
     index = get_flag("index", False)
-    queue_task(collection, OP_REINGEST, job_id=get_session_id(), index=index)
+    reingest_collection(collection, job_id=get_session_id(), index=index)
     return ("", 202)
 
 
@@ -212,8 +228,7 @@ def reindex(collection_id):
       - Collection
     """
     collection = get_db_collection(collection_id, request.authz.WRITE)
-    flush = get_flag("flush", False)
-    queue_task(collection, OP_REINDEX, job_id=get_session_id(), flush=flush)
+    queue_reindex(collection, flush=get_flag("flush", False))
     return ("", 202)
 
 
@@ -235,14 +250,16 @@ def bulk(collection_id):
           minimum: 1
           type: integer
       - description: >-
-          safe=True means that the data cannot be trusted and that file checksums should be removed.
+          safe=True means that the data cannot be trusted
+          and that file checksums should be removed.
           Flag is only available for admins. Default True.
         in: query
         name: safe
         schema:
           type: boolean
       - description: >-
-          clean=True means that the data cannot be trusted and that the data should be cleaned from invalid values.
+          clean=True means that the data cannot be trusted
+          and that the data should be cleaned from invalid values.
           Flag is only available for admins. Default True.
         in: query
         name: clean
@@ -264,7 +281,6 @@ def bulk(collection_id):
     """
     collection = get_db_collection(collection_id, request.authz.WRITE)
     require(request.authz.can_bulk_import())
-    job_id = get_session_id()
     entityset = request.args.get("entityset_id")
     if entityset is not None:
         entityset = get_entityset(entityset, request.authz.WRITE)
@@ -285,27 +301,27 @@ def bulk(collection_id):
 
     # Let UI tools change the entities created by this:
     mutable = get_flag("mutable", default=False)
-    entities = ensure_list(request.get_json(force=True))
-    entity_ids = list()
-    for entity_id in bulk_write(
+    entities_data = ensure_list(request.get_json(force=True))
+    entities = list()
+    for entity in bulk_write(
         collection,
-        entities,
+        entities_data,
         safe=safe,
         mutable=mutable,
         clean=clean,
         role_id=request.authz.id,
     ):
-        entity_ids.append(entity_id)
+        entities.append(entity)
         if entityset is not None:
             save_entityset_item(
                 entityset,
                 collection,
-                entity_id,
+                entity.id,
                 added_by_id=request.authz.id,
             )
     collection.touch()
     db.session.commit()
-    queue_task(collection, OP_INDEX, job_id=job_id, entity_ids=entity_ids)
+    queue_index(collection, entities)
     return ("", 204)
 
 
@@ -337,7 +353,8 @@ def status(collection_id):
     """
     collection = get_db_collection(collection_id, request.authz.READ)
     request.rate_limit = None
-    return jsonify(get_status(collection))
+    status = get_collection_status(collection)
+    return jsonify(status.model_dump(mode="json"))
 
 
 @blueprint.route("/<int:collection_id>/status", methods=["DELETE"])
@@ -367,7 +384,7 @@ def cancel(collection_id):
       - Collection
     """
     collection = get_db_collection(collection_id, request.authz.WRITE)
-    cancel_queue(collection)
+    queue_cancel_collection(collection)
     refresh_collection(collection_id)
     return ("", 204)
 
