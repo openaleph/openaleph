@@ -124,13 +124,13 @@ export class EntityMappingMode extends Component {
               values={{
                 link: (
                   <a
-                    href="https://docs.aleph.occrp.org/users/investigations/cross-referencing/#generating-entities-from-yourspreadsheet"
+                    href="https://openaleph.org/docs/user-guide/103/map-data/"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
                     <FormattedMessage
                       id="mapping.info.link"
-                      defaultMessage="Aleph user guide"
+                      defaultMessage="OpenAleph user guide"
                     />
                   </a>
                 ),

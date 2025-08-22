@@ -14,7 +14,7 @@ class AppItem extends PureComponent {
     const message = (
       <FormattedMessage
         id="footer.aleph"
-        defaultMessage="Aleph {version}"
+        defaultMessage="OpenAleph {version}"
         values={{
           version: app.version,
         }}
@@ -36,7 +36,7 @@ class AppItem extends PureComponent {
           className={Classes.TEXT_DISABLED}
           icon="code"
           text={message}
-          href="https://docs.aleph.occrp.org"
+          href="https://openaleph.org"
         />
         <MenuItem
           className={Classes.TEXT_DISABLED}

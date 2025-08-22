@@ -14,7 +14,7 @@ samples: ["Vladimir Putin", "TeliaSonera"]
       OpenAleph is an open source tool that's primarily developed by the <a
       href="https://darc.li">Data and Research Center</a>. It builds on the work
       of many excellent contributors that went into it's predecessor <a
-      href="https://aleph.occrp.org/">Aleph</a>.
+      href="https://github.com/alephdata">Aleph</a>.
     </p>
     <h3>More information</h3>
     <p>

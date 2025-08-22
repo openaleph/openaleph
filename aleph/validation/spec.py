@@ -1,13 +1,12 @@
 DESCRIPTION = """
-Aleph is a powerful tool for people who follow the money. It helps
-investigators to securely access and search large amounts of data - no
-matter whether they are a government database or a leaked email archive.
+OpenAleph - The open source platform that securely stores large amounts of 
+data and makes it searchable for easy collaboration.
 
 # General Overview
 
-The Aleph web interface is powered by a Flask HTTP API. Aleph supports an
+The OpenAleph web interface is powered by a Flask HTTP API. OpenAleph supports an
 extensive API for searching documents and entities. It can also be used to
-retrieve raw metadata, source documents and other useful details. Aleph's
+retrieve raw metadata, source documents and other useful details. OpenAleph's
 API tries to follow a pragmatic approach based on the following principles:
 
 - All API calls are prefixed with an API version; this version is `/api/2/`.
@@ -22,7 +21,7 @@ where convenient, but also has some procedural API calls.
 
 # Authentication and Authorization
 
-By default, any Aleph search will return only public documents in responses
+By default, any search will return only public documents in responses
 to API requests.
 
 If you want to access documents which are not marked public, you will need
@@ -39,26 +38,26 @@ Alternatively, the API key can also be sent as a query parameter under the
 `api_key` key.
 
 Similarly, a JWT can be sent in the Authorization header, after it has been
-returned by the login and/or OAuth processes. Aleph does not use session
+returned by the login and/or OAuth processes. OpenAleph does not use session
 cookies or any other type of stateful API.
 """
 
 spec_info = {
     "description": DESCRIPTION,
-    "contact": {"url": "https://github.com/alephdata/aleph"},
+    "contact": {"url": "https://github.com/openaleph/openaleph"},
     "license": {
         "name": "MIT",
-        "url": "https://github.com/alephdata/aleph/blob/master/LICENSE.txt",
+        "url": "https://github.com/openaleph/openaleph/blob/main/LICENSE.txt",
     },
     "x-logo": {
-        "altText": "Aleph logo",
-        "url": "https://avatars3.githubusercontent.com/u/26249985?s=200&v=4",
+        "altText": "OpenAleph logo",
+        "url": "https://avatars.githubusercontent.com/u/203699126?s=200&v=4",
     },
 }
 
 spec_docs = {
-    "description": "Find out more about Aleph, a suite of data analysis tools for investigators.",  # noqa
-    "url": "https://docs.aleph.occrp.org/",
+    "description": "Find out more about OpenAleph, the information search tool for investigators.",
+    "url": "https://openaleph.org/",
 }
 
 spec_tags = [
@@ -78,9 +77,9 @@ spec_tags = [
         "x-displayName": "Mappings API",
     },
     {
-        "description": "Create and manage VIS diagrams.",
+        "description": "Create and manage network diagrams.",
         "name": "Diagram",
-        "x-displayName": "VIS Diagrams API",
+        "x-displayName": "Network Diagrams API",
     },
     {
         "description": "Create and manage alerts.",
