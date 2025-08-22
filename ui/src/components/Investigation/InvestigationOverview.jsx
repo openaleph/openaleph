@@ -13,7 +13,7 @@ import { selectCollection, selectNotificationsResult } from 'selectors';
 
 import './InvestigationOverview.scss';
 
-const guidesURLPrefix = 'https://docs.aleph.occrp.org/users/investigations';
+const guidesURLPrefix = 'https://openaleph.org/docs/user-guide/103/';
 
 class InvestigationOverview extends React.Component {
   render() {
@@ -104,7 +104,7 @@ class InvestigationOverview extends React.Component {
                 alignText="left"
                 icon="upload"
                 target="_blank"
-                href={`${guidesURLPrefix}/uploading-documents/`}
+                href={`${guidesURLPrefix}/investigations/`}
               >
                 <FormattedMessage
                   id="investigation.overview.guides.documents"
@@ -130,7 +130,7 @@ class InvestigationOverview extends React.Component {
                 alignText="left"
                 icon="new-object"
                 target="_blank"
-                href={`${guidesURLPrefix}/entity-editor/`}
+                href={`${guidesURLPrefix}/investigations/`}
               >
                 <FormattedMessage
                   id="investigation.overview.guides.entities"
@@ -143,7 +143,7 @@ class InvestigationOverview extends React.Component {
                 alignText="left"
                 icon="table"
                 target="_blank"
-                href={`${guidesURLPrefix}/cross-referencing/`}
+                href={`${guidesURLPrefix}/cross-reference/`}
               >
                 <FormattedMessage
                   id="investigation.overview.guides.mappings"
