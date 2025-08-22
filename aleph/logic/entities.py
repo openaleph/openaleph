@@ -49,7 +49,7 @@ def upsert_entity(data, collection, authz=None, sync=False, sign=False, job_id=N
 
     index.index_proxy(collection, proxy, sync=sync)
     refresh_entity(collection, proxy.id)
-    queue_update_entity(collection, entity_id=proxy.id)
+    queue_update_entity(collection, entity_id=proxy.id, batch=job_id)
     return entity.id
 
 
@@ -71,7 +71,7 @@ def update_entity(collection, entity_id=None, job_id=None):
     aggregator = get_aggregator(collection, origin=MODEL_ORIGIN)
     profile_fragments(collection, aggregator, entity_id=entity_id)
     inline_names(aggregator, proxy)
-    queue_analyze(collection, proxy, job_id=job_id)
+    queue_analyze(collection, proxy, batch=job_id)
 
 
 def inline_names(aggregator, proxy):
@@ -144,7 +144,7 @@ def delete_entity(collection, entity, sync=False, job_id=None):
     entity_id = collection.ns.sign(entity.get("id"))
     index.delete_entity(entity_id, sync=sync)
     refresh_entity(collection, entity_id)
-    queue_prune_entity(collection, entity_id=entity_id)
+    queue_prune_entity(collection, entity_id=entity_id, batch=job_id)
 
 
 def prune_entity(collection, entity_id=None, job_id=None):

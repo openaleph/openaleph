@@ -1,7 +1,10 @@
-import logging
+import time
 from collections import defaultdict
 from datetime import datetime
 
+from anystore.logging import get_logger
+from openaleph_procrastinate.manage import cancel_jobs
+from openaleph_procrastinate.settings import OPENALEPH_MANAGEMENT_QUEUE
 from servicelayer.jobs import Job
 
 from aleph.authz import Authz
@@ -9,7 +12,7 @@ from aleph.core import cache, db
 from aleph.index import collections as index
 from aleph.index import entities as entities_index
 from aleph.index import xref as xref_index
-from aleph.logic.aggregator import get_aggregator
+from aleph.logic.aggregator import get_aggregator, get_aggregator_name
 from aleph.logic.documents import MODEL_ORIGIN, ingest_flush
 from aleph.logic.notifications import flush_notifications, publish
 from aleph.model import (
@@ -21,10 +24,10 @@ from aleph.model import (
     Mapping,
     Permission,
 )
-from aleph.procrastinate.queues import cancel_collection, queue_ingest
+from aleph.procrastinate.queues import queue_cancel_collection, queue_ingest
 from aleph.procrastinate.status import get_collection_status
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 def create_collection(data, authz, sync=False):
@@ -60,10 +63,13 @@ def refresh_collection(collection_id):
 def get_deep_collection(collection):
     mappings = Mapping.by_collection(collection.id).count()
     entitysets = EntitySet.type_counts(collection_id=collection.id)
+    status = get_collection_status(collection)
+    if status is not None:
+        status = status.model_dump(mode="json")
     return {
         "statistics": index.get_collection_stats(collection.id),
         "counts": {"mappings": mappings, "entitysets": entitysets},
-        "status": get_collection_status(collection),
+        "status": status,
         "shallow": False,
     }
 
@@ -98,20 +104,25 @@ def compute_collections():
     cache.set_complex(key, data, expires=cache.EXPIRE)
 
 
-def compute_collection(collection, force=False, sync=False):
+def compute_collection(collection: Collection, force=False, sync=False):
     key = cache.object_key(Collection, collection.id, "stats")
     if cache.get(key) is not None and not force:
         return
     refresh_collection(collection.id)
-    log.info("[%s] Computing statistics...", collection)
+    log.info(
+        f"[{collection.foreign_id}] Computing statistics...",
+        dataset=collection.foreign_id,
+    )
     index.update_collection_stats(collection.id)
     cache.set(key, datetime.utcnow().isoformat())
     index.index_collection(collection, sync=sync)
 
 
-def aggregate_model(collection, aggregator):
+def aggregate_model(collection: Collection, aggregator):
     """Sync up the aggregator from the Aleph domain model."""
-    log.debug(f"{collection} Aggregating model...")
+    log.debug(
+        f"[{collection.foreign_id}] Aggregating model...", dataset=collection.foreign_id
+    )
     aggregator.delete(origin=MODEL_ORIGIN)
     writer = aggregator.bulk()
     for document in Document.by_collection(collection.id):
@@ -125,16 +136,22 @@ def aggregate_model(collection, aggregator):
 
 
 def index_aggregator(
-    collection, aggregator, entity_ids=None, skip_errors=False, sync=False
+    collection: Collection, aggregator, entity_ids=None, skip_errors=False, sync=False
 ):
     def _generate():
         idx = 0
         entities = aggregator.iterate(entity_id=entity_ids, skip_errors=skip_errors)
         for idx, proxy in enumerate(entities, 1):
             if idx > 0 and idx % 1000 == 0:
-                log.debug("[%s] Index: %s...", collection, idx)
+                log.debug(
+                    "[%s] Index: %s..." % (collection, idx),
+                    dataset=collection.foreign_id,
+                )
             yield proxy
-        log.debug("[%s] Indexed %s entities", collection, idx)
+        log.debug(
+            "[%s] Indexed %s entities" % (collection, idx),
+            dataset=collection.foreign_id,
+        )
 
     entities_index.index_bulk(collection, _generate(), sync=sync)
 
@@ -142,16 +159,18 @@ def index_aggregator(
 def reingest_collection(
     collection, job_id=None, index=False, flush=True, include_ingest=False
 ):
-    """Trigger a re-ingest for all documents in the collection."""
+    """Trigger a re-ingest for all documents in the collection. This always indexes."""
     job_id = job_id or Job.random_id()
     if flush:
         ingest_flush(collection, include_ingest=include_ingest)
     for document in Document.by_collection(collection.id):
         proxy = document.to_proxy(ns=collection.ns)
-        queue_ingest(collection, proxy, job_id=job_id, namespace=collection.foreign_id)
+        queue_ingest(collection, proxy, batch=job_id, namespace=collection.foreign_id)
 
 
-def reindex_collection(collection, skip_errors=True, sync=False, flush=False):
+def reindex_collection(
+    collection: Collection, skip_errors=True, sync=False, flush=False
+):
     """Re-index all entities from the model, mappings and aggregator cache."""
     from aleph.logic.mapping import map_to_aggregator
     from aleph.logic.profiles import profile_fragments
@@ -159,17 +178,20 @@ def reindex_collection(collection, skip_errors=True, sync=False, flush=False):
     aggregator = get_aggregator(collection)
     for mapping in collection.mappings:
         if mapping.disabled:
-            log.debug("[%s] Skip mapping: %r", collection, mapping)
+            log.debug(
+                "[%s] Skip mapping: %r" % (collection, mapping),
+                dataset=collection.foreign_id,
+            )
             continue
         try:
             map_to_aggregator(collection, mapping, aggregator)
         except Exception:
             # More or less ignore broken models.
-            log.exception("Failed mapping: %r", mapping)
+            log.exception("Failed mapping: %r" % mapping, dataset=collection.foreign_id)
     aggregate_model(collection, aggregator)
     profile_fragments(collection, aggregator)
     if flush:
-        log.debug("[%s] Flushing...", collection)
+        log.debug("[%s] Flushing..." % collection, dataset=collection.foreign_id)
         index.delete_entities(collection.id, sync=True)
     index_aggregator(collection, aggregator, skip_errors=skip_errors, sync=sync)
     compute_collection(collection, force=True)
@@ -177,7 +199,7 @@ def reindex_collection(collection, skip_errors=True, sync=False, flush=False):
 
 def delete_collection(collection, keep_metadata=False, sync=False):
     deleted_at = collection.deleted_at or datetime.utcnow()
-    cancel_collection(collection)
+    queue_cancel_collection(collection)
     aggregator = get_aggregator(collection)
     aggregator.delete()
     flush_notifications(collection, sync=sync)
@@ -206,3 +228,27 @@ def upgrade_collections():
             compute_collection(collection, force=True)
     # update global cache:
     compute_collections()
+
+
+def collection_is_active(collection: Collection) -> bool:
+    status = get_collection_status(collection, include_collection_data=False)
+    if status is None:
+        return False
+    for batch in status.batches:
+        for queue in batch.queues:
+            if queue.name != OPENALEPH_MANAGEMENT_QUEUE and queue.active:
+                return True
+    return False
+
+
+def cancel_collection(collection: Collection):
+    """Cancel current collection processing and wait for all running tasks to
+    finish."""
+    dataset = get_aggregator_name(collection)
+    cancel_jobs(dataset=dataset)
+    while collection_is_active(collection):
+        log.info(
+            f"[{dataset}] Waiting for collection tasks to finish ...",
+            dataset=collection.foreign_id,
+        )
+        time.sleep(30)

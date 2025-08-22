@@ -9,6 +9,7 @@ from openaleph_procrastinate import defer
 from openaleph_procrastinate.app import make_app
 from openaleph_procrastinate.exceptions import InvalidJob
 from openaleph_procrastinate.model import DatasetJob, Job
+from openaleph_procrastinate.settings import OPENALEPH_MANAGEMENT_QUEUE
 from openaleph_procrastinate.tasks import task
 
 from aleph.core import create_app
@@ -77,6 +78,12 @@ def xref_collection(job: DatasetJob, collection: Collection) -> None:
     collections.refresh_collection(collection.id)
 
 
+@aleph_task(retry=defer.tasks.cancel_dataset.max_retries)
+def cancel_dataset(job: DatasetJob, collection: Collection) -> None:
+    collections.cancel_collection(collection)
+    collections.refresh_collection(collection.id)
+
+
 @aleph_task(retry=defer.tasks.load_mapping.max_retries)
 def load_mapping(job: DatasetJob, collection: Collection) -> None:
     mapping_id = job.payload.get("context", {}).get("mapping_id", None)
@@ -140,7 +147,7 @@ def export_xref(job: DatasetJob, collection: Collection) -> None:
 
 # every 5 minutes
 @app.periodic(cron="*/5 * * * *")
-@app.task(queue="openaleph", queueing_lock="periodic-clean-compute")
+@app.task(queue=OPENALEPH_MANAGEMENT_QUEUE, queueing_lock="periodic-clean-compute")
 def periodic_clean_and_compute(timestamp: int):
     with aleph_flask_app.app_context():
         collections.compute_collections()
@@ -148,7 +155,7 @@ def periodic_clean_and_compute(timestamp: int):
 
 # every 15 minutes
 @app.periodic(cron="*/15 * * * *")
-@app.task(queue="openaleph", queueing_lock="periodic-retry-stalled")
+@app.task(queue=OPENALEPH_MANAGEMENT_QUEUE, queueing_lock="periodic-retry-stalled")
 async def periodic_retry_stalled(timestamp: int):
     # https://procrastinate.readthedocs.io/en/stable/howto/production/retry_stalled_jobs.html
     stalled_jobs = await app.job_manager.get_stalled_jobs()
@@ -161,7 +168,7 @@ async def periodic_retry_stalled(timestamp: int):
 
 # every 24 hours
 @app.periodic(cron="0 0 * * *")
-@app.task(queue="openaleph", queueing_lock="periodic-daily")
+@app.task(queue=OPENALEPH_MANAGEMENT_QUEUE, queueing_lock="periodic-daily")
 def periodic_daily(timestamp: int):
     with aleph_flask_app.app_context():
         roles.update_roles()

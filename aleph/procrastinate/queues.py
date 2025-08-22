@@ -4,7 +4,7 @@ import structlog
 from followthemoney.proxy import EntityProxy
 from openaleph_procrastinate import defer
 from openaleph_procrastinate.app import make_app
-from openaleph_procrastinate.tasks import Priorities, cancel_jobs_per_dataset
+from openaleph_procrastinate.tasks import Priorities
 
 from aleph.logic.aggregator import get_aggregator_name
 from aleph.model.collection import Collection
@@ -63,6 +63,7 @@ def queue_analyze(collection: Collection, proxy: EntityProxy, **context: Any) ->
 def queue_index(
     collection: Collection, entities: list[EntityProxy], **context: Any
 ) -> None:
+    context = {**context, **get_context(collection)}
     dataset = get_aggregator_name(collection)
     with app.open():
         defer.index(app, dataset, entities, **context)
@@ -115,7 +116,7 @@ def queue_export_search(**context: Any) -> None:
         defer.export_search(app, **context)
 
 
-def cancel_collection(collection: Collection | None = None) -> None:
-    if collection is not None:
-        dataset = get_aggregator_name(collection)
-        cancel_jobs_per_dataset(dataset)
+def queue_cancel_collection(collection: Collection, **context: Any) -> None:
+    dataset = get_aggregator_name(collection)
+    with app.open():
+        defer.cancel_dataset(app, dataset, **context)

@@ -33,7 +33,7 @@ def status():
     results = []
     for collection_status in get_active_collections_status():
         # if the current user can read the current collection, add it to the result
-        if request.authz.can(collection_status["collection"]["id"], request.authz.READ):
-            results.append(collection_status)
+        if request.authz.can(collection_status.collection_id, request.authz.READ):
+            results.append(collection_status.model_dump(mode="json"))
 
     return jsonify({"results": results, "total": len(results)})

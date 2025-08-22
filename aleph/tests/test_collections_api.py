@@ -294,7 +294,7 @@ class CollectionsApiTestCase(TestCase):
 
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, res
-        assert 0 == res.json["pending"], res.json
+        assert 0 == res.json["todo"], res.json
 
         meta = {
             "countries": ["de", "us"],
@@ -315,7 +315,7 @@ class CollectionsApiTestCase(TestCase):
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, res
         # FIXME procrastinate status (see above)
-        # assert 1 == res.json["pending"], res.json
+        # assert 1 == res.json["todo"], res.json
         assert validate(res.json, "CollectionStatus")
 
         res = self.client.delete(url)
@@ -325,4 +325,4 @@ class CollectionsApiTestCase(TestCase):
         assert res.status_code == 204, res
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, res
-        assert 0 == res.json["pending"], res.json
+        assert 0 == res.json["todo"], res.json
