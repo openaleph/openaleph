@@ -13,7 +13,7 @@ services:
       POSTGRES_DATABASE: aleph
 
   elasticsearch:
-    image: ghcr.io/openaleph/aleph-elasticsearch:latest
+    image: ghcr.io/openaleph/elasticsearch:9.1.1
     restart: on-failure
     environment:
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
@@ -31,25 +31,20 @@ services:
     volumes:
       - redis-data:/data
 
-  ftm-analyze:
+  analyze:
     image: ghcr.io/dataresearchcenter/ftm-analyze:latest
     entrypoint: procrastinate worker -q analyze --concurrency 2
     restart: on-failure
     depends_on:
       - postgres
-      - elasticsearch
-      - redis
-      - ingest-file
     tmpfs:
       - /tmp
-    volumes:
-      - archive-data:/data
     env_file:
       - aleph.env
 
 
   ingest-file:
-    image: ghcr.io/openaleph/ingest-file:feat-procrastinate
+    image: ghcr.io/openaleph/ingest-file:latest
     command: procrastinate worker -q ingest --concurrency 2
     hostname: ingest
     tmpfs: /tmp

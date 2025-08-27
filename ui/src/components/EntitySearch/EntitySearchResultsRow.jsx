@@ -15,6 +15,7 @@ import {
   SearchHighlight,
   Skeleton,
 } from 'components/common';
+import { NamesHighlight } from 'components/common/SearchHighlight';
 
 class EntitySearchResultsRow extends Component {
   renderSkeleton() {
@@ -170,7 +171,7 @@ class EntitySearchResultsRow extends Component {
             );
           })}
         </tr>
-        {!!highlights.length && (
+        {!!Object.keys(highlights).length && (
           <tr key={`${entity.id}-hl`} className={highlightsClass}>
             <td colSpan="100%" className="highlights">
               <SearchHighlight highlight={highlights} />

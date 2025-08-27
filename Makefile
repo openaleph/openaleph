@@ -18,6 +18,8 @@ export ALEPH_DATABASE_URI := postgresql://aleph:aleph@localhost:5432/aleph
 export FTM_STORE_URI := postgresql://aleph:aleph@localhost:5432/aleph
 export REDIS_URL := redis://localhost:6379
 export PROCRASTINATE_APP := aleph.procrastinate.tasks.app
+export OPENALEPH_SEARCH_AUTH=1
+export OPENALEPH_SEARCH_AUTH_FIELD=collection_id
 
 all: build upgrade web
 

@@ -1,11 +1,14 @@
 import logging
-from pprint import pprint, pformat  # noqa
+
+from openaleph_search.index.admin import (
+    configure_entities,
+    entities_read_index,
+)
 
 from aleph.core import es
-from aleph.index.indexes import entities_read_index, configure_entities
 from aleph.index.collections import collections_index, configure_collections
-from aleph.index.notifications import notifications_index, configure_notifications
-from aleph.index.xref import xref_index, configure_xref
+from aleph.index.notifications import configure_notifications, notifications_index
+from aleph.index.xref import configure_xref, xref_index
 
 log = logging.getLogger(__name__)
 

@@ -3,11 +3,11 @@ import logging
 # from pprint import pformat
 from followthemoney import model
 
-from aleph.core import db
 from aleph.authz import Authz
-from aleph.model import EntitySet, EntitySetItem, Judgement
+from aleph.core import db
+from aleph.index.util import index_entity
 from aleph.logic.entitysets import save_entityset_item
-from aleph.index.entities import index_entity
+from aleph.model import EntitySet, EntitySetItem, Judgement
 from aleph.tests.util import TestCase
 
 log = logging.getLogger(__name__)

@@ -7,14 +7,14 @@ import click
 from flask.cli import FlaskGroup
 from followthemoney.cli.util import write_object
 from normality import slugify
+from openaleph_search.index.admin import delete_index
+from openaleph_search.index.entities import get_entity as _get_index_entity
+from openaleph_search.index.entities import iter_proxies
 from tabulate import tabulate
 
 from aleph.authz import Authz
 from aleph.core import cache, create_app, db
-from aleph.index.admin import delete_index
 from aleph.index.collections import get_collection as _get_index_collection
-from aleph.index.entities import get_entity as _get_index_entity
-from aleph.index.entities import iter_proxies
 from aleph.logic.archive import cleanup_archive
 from aleph.logic.collections import (
     compute_collection,
@@ -24,6 +24,7 @@ from aleph.logic.collections import (
     reingest_collection,
     update_collection,
     upgrade_collections,
+    validate_collection_foreign_ids,
 )
 from aleph.logic.documents import crawl_directory
 from aleph.logic.export import retry_exports
@@ -110,6 +111,44 @@ def collections(secret, casefile):
                 continue
         collections.append((coll.foreign_id, coll.id, coll.label))
     print(tabulate(collections, headers=["Foreign ID", "ID", "Label"]))
+
+
+@cli.command("validate-foreign-ids")
+@click.option(
+    "-o",
+    "--outfile",
+    type=click.File("w"),
+    default=None,
+    help="Output invalid collections to JSON file",
+)
+def validate_foreign_ids(outfile=None):
+    """Validate all collection foreign IDs using dataset_name_check."""
+    invalid_collections = validate_collection_foreign_ids()
+
+    if invalid_collections:
+        print(f"Found {len(invalid_collections)} collections with invalid foreign IDs:")
+        headers = ["ID", "Foreign ID", "Label", "Error"]
+        rows = []
+        for collection in invalid_collections:
+            rows.append(
+                [
+                    collection["id"],
+                    collection["foreign_id"],
+                    collection["label"],
+                    collection["error"],
+                ]
+            )
+        print(tabulate(rows, headers=headers))
+
+        if outfile:
+            encoder = JSONEncoder(indent=2)
+            outfile.write(encoder.encode(invalid_collections))
+            print(f"\nInvalid collections exported to {outfile.name}")
+
+        return 1  # Exit with error code
+    else:
+        print("All collection foreign IDs are valid.")
+        return 0
 
 
 @cli.command()

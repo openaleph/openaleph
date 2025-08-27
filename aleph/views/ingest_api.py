@@ -6,11 +6,11 @@ from tempfile import mkdtemp
 from banal import ensure_dict
 from flask import Blueprint, request
 from normality import safe_filename, stringify
+from openaleph_search.index.entities import index_proxy
 from servicelayer.archive.util import ensure_path
 from werkzeug.exceptions import BadRequest
 
 from aleph.core import archive, db
-from aleph.index.entities import index_proxy
 from aleph.logic.documents import ingest_flush
 from aleph.logic.notifications import channel_tag, publish
 from aleph.model import Document, Entity, Events

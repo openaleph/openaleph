@@ -1,20 +1,19 @@
 import json
 import logging
-from pprint import pprint  # noqa
-from flask import Blueprint, request
-from werkzeug.exceptions import BadRequest
-from followthemoney import model
 
-from aleph.settings import SETTINGS
-from aleph.core import url_for, talisman
-from aleph.model import Entity
-from aleph.search import SearchQueryParser
-from aleph.search import EntitiesQuery, MatchQuery
-from aleph.views.util import jsonify, get_index_collection, require
+from flask import Blueprint, request
+from followthemoney import model
+from openaleph_search.index.util import unpack_result
+from werkzeug.exceptions import BadRequest
+
+from aleph.core import talisman, url_for
 from aleph.index.collections import get_collection_things
 from aleph.logic.util import entity_url
-from aleph.index.util import unpack_result
+from aleph.model import Entity
+from aleph.search import EntitiesQuery, MatchQuery, SearchQueryParser
+from aleph.settings import SETTINGS
 from aleph.views.context import tag_request
+from aleph.views.util import get_index_collection, jsonify, require
 
 # See: https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API
 blueprint = Blueprint("reconcile_api", __name__)
@@ -163,7 +162,7 @@ def reconcile_op(query, collection=None):
     args = {"limit": query.get("limit", "5")}
     if collection is not None:
         args["filter:collection_id"] = collection.get("id")
-    parser = SearchQueryParser(args, request.authz)
+    parser = SearchQueryParser(args, request.authz.search_auth)
     schema = query.get("type") or Entity.LEGAL_ENTITY
     proxy = model.make_entity(schema)
     proxy.add("name", query.get("query"))
@@ -188,7 +187,7 @@ def suggest_entity():
         "filter:schemata": types,
         "filter:collection_id": request.args.getlist("filter:collection_id"),
     }
-    parser = SearchQueryParser(args, request.authz)
+    parser = SearchQueryParser(args, request.authz.search_auth)
     query = EntitiesQuery(parser)
     result = query.search()
     matches = list(entity_matches(result))

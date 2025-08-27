@@ -2,10 +2,10 @@ import logging
 
 from followthemoney import model
 from followthemoney.helpers import remove_checksums
+from openaleph_search.index.entities import get_entity
 
 from aleph.core import archive, db
 from aleph.index.collections import delete_entities
-from aleph.index.entities import get_entity
 from aleph.logic.aggregator import get_aggregator
 from aleph.logic.collections import aggregate_model, index_aggregator, update_collection
 from aleph.logic.entitysets import save_entityset_item

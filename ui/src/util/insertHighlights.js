@@ -7,7 +7,7 @@ export default function insertHighlights(text, highlights) {
   // would not get replaced.
   text = encode(text);
 
-  return highlights.reduce((text, highlight) => {
+  return Object.values(highlights).flat().reduce((text, highlight) => {
     // Highlights are enclosed with HTML `em` tags
     const withoutMarkup = highlight.replaceAll(/<\/?em>/g, '');
 

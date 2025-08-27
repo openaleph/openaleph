@@ -2,8 +2,6 @@ import logging
 from urllib.parse import urlencode, urljoin
 
 import sentry_sdk
-from banal import clean_dict
-from elasticsearch import Elasticsearch, TransportError
 from flask import Flask, request
 from flask import url_for as flask_url_for
 from flask_babel import Babel
@@ -13,13 +11,12 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_talisman import Talisman
 from followthemoney import set_model_locale
+from openaleph_search.core import get_es
 from sentry_sdk.integrations.flask import FlaskIntegration
-from servicelayer import settings as sls
 from servicelayer.archive import init_archive
 from servicelayer.cache import get_redis
 from servicelayer.extensions import get_extensions
-from servicelayer.logs import LOG_FORMAT_JSON, configure_logging
-from servicelayer.util import backoff, service_retries
+from servicelayer.logs import configure_logging
 from werkzeug.local import LocalProxy
 from werkzeug.middleware.profiler import ProfilerMiddleware
 
@@ -28,7 +25,6 @@ from aleph.cache import Cache
 from aleph.metrics.flask import PrometheusExtension
 from aleph.oauth import configure_oauth
 from aleph.settings import SETTINGS
-from aleph.util import LoggingTransport
 
 NONE = "'none'"
 log = logging.getLogger(__name__)
@@ -143,40 +139,6 @@ def create_app(config=None):
 def configure_alembic(config):
     config.set_main_option("sqlalchemy.url", SETTINGS.DATABASE_URI)
     return config
-
-
-def get_es():
-    url = SETTINGS.ELASTICSEARCH_URL
-    timeout = SETTINGS.ELASTICSEARCH_TIMEOUT
-    con_opts = clean_dict(
-        {
-            "ca_certs": SETTINGS.ELASTICSEARCH_TLS_CA_CERTS,
-            "verify_certs": SETTINGS.ELASTICSEARCH_TLS_VERIFY_CERTS,
-            "client_cert": SETTINGS.ELASTICSEARCH_TLS_CLIENT_CERT,
-            "client_key": SETTINGS.ELASTICSEARCH_TLS_CLIENT_KEY,
-        }
-    )
-    for attempt in service_retries():
-        try:
-            if not hasattr(SETTINGS, "_es_instance"):
-                # When logging structured logs, use a custom transport to log
-                # all es queries and their response time
-                if sls.LOG_FORMAT == LOG_FORMAT_JSON:
-                    es = Elasticsearch(
-                        url,
-                        transport_class=LoggingTransport,
-                        timeout=timeout,
-                        **con_opts,
-                    )
-                else:
-                    es = Elasticsearch(url, timeout=timeout, **con_opts)
-                es.info()
-                SETTINGS._es_instance = es
-            return SETTINGS._es_instance
-        except TransportError as exc:
-            log.exception("ElasticSearch error: %s", exc.error)
-            backoff(failures=attempt)
-    raise RuntimeError("Could not connect to ElasticSearch")
 
 
 def get_archive():

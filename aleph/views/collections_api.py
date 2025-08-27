@@ -21,6 +21,7 @@ from aleph.procrastinate.queues import (
 )
 from aleph.procrastinate.status import get_collection_status
 from aleph.search import CollectionsQuery
+from aleph.search.result import get_query_result
 from aleph.views.serializers import CollectionSerializer
 from aleph.views.util import (
     get_db_collection,
@@ -56,7 +57,7 @@ def index():
       - Collection
     """
     require(request.authz.can_browse_anonymous)
-    result = CollectionsQuery.handle(request)
+    result = get_query_result(CollectionsQuery, request)
     return CollectionSerializer.jsonify_result(result)
 
 

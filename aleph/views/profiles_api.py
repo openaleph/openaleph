@@ -9,6 +9,7 @@ from aleph.logic.profiles import decide_pairwise, get_profile
 from aleph.model import Judgement
 from aleph.procrastinate.queues import queue_update_entity
 from aleph.search import MatchQuery, QueryParser
+from aleph.search.result import get_query_result
 from aleph.settings import SETTINGS
 from aleph.views.context import tag_request
 from aleph.views.serializers import ProfileSerializer, SimilarSerializer
@@ -133,7 +134,9 @@ def similar(profile_id):
     require(request.authz.can(profile.get("collection_id"), request.authz.READ))
     tag_request(collection_id=profile.get("collection_id"))
     exclude = [item["entity_id"] for item in profile["items"]]
-    result = MatchQuery.handle(request, entity=profile["merged"], exclude=exclude)
+    result = get_query_result(
+        MatchQuery, request, entity=profile["merged"], exclude=exclude
+    )
     entities = list(result.results)
     result.results = []
     for obj in entities:

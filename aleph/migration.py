@@ -6,6 +6,7 @@ from sqlalchemy.exc import InternalError
 
 from aleph.core import archive, db
 from aleph.index.admin import upgrade_search
+from aleph.logic.collections import validate_collection_foreign_ids
 from aleph.logic.roles import create_system_roles
 
 
@@ -14,6 +15,9 @@ def upgrade_system():
     archive.upgrade()
     create_system_roles()
     upgrade_search()
+    # transition to OpenAleph 6
+    # this breaks and users have to manually fix foreign_ids in database
+    validate_collection_foreign_ids()
     # openaleph-procrastinate:
     db = get_db()
     db.configure()

@@ -1,22 +1,39 @@
 import logging
+from datetime import datetime, timedelta
+
 from banal import ensure_list
 from flask import render_template
-from datetime import datetime, timedelta
 from followthemoney import model
 from followthemoney.util import get_entity_id
+from openaleph_search.index.util import unpack_result
 
-from aleph.core import cache, es
-from aleph.settings import SETTINGS
 from aleph.authz import Authz
-from aleph.model import Collection, Entity, Role, Alert, EntitySet, Export
-from aleph.model import Event, Events
-from aleph.logic.mail import email_role
+from aleph.core import cache, es
+from aleph.index.notifications import (
+    delete_notifications,
+    index_notification,
+    notifications_index,
+)
 from aleph.logic.html import html_link
-from aleph.logic.util import collection_url, entity_url
-from aleph.logic.util import entityset_url, archive_url, ui_url
-from aleph.index.notifications import index_notification, delete_notifications
-from aleph.index.notifications import notifications_index
-from aleph.index.util import unpack_result
+from aleph.logic.mail import email_role
+from aleph.logic.util import (
+    archive_url,
+    collection_url,
+    entity_url,
+    entityset_url,
+    ui_url,
+)
+from aleph.model import (
+    Alert,
+    Collection,
+    Entity,
+    EntitySet,
+    Event,
+    Events,
+    Export,
+    Role,
+)
+from aleph.settings import SETTINGS
 
 log = logging.getLogger(__name__)
 GLOBAL = "Global"
@@ -57,22 +74,33 @@ def flush_notifications(obj, clazz=None, sync=False):
 def get_role_channels(role):
     """Generate the set of notification channels that the current
     user should listen to."""
-    key = cache.object_key(Role, role.id, "channels")
+    if role is None:
+        return [GLOBAL]
+
+    # Handle both Role objects and role ID strings
+    if isinstance(role, str):
+        role_id = role
+        role_obj = Role.by_id(role_id)
+    else:
+        role_obj = role
+        role_id = role.id
+
+    key = cache.object_key(Role, role_id, "channels")
     channels = cache.get_list(key)
     if len(channels):
         return channels
     channels = [GLOBAL]
-    if role.is_actor:
-        authz = Authz.from_role(role)
-        for role_id in authz.roles:
-            channels.append(channel_tag(role_id, Role))
+    if role_obj is not None and role_obj.is_actor:
+        authz = Authz.from_role(role_obj)
+        for auth_role_id in authz.roles:
+            channels.append(channel_tag(auth_role_id, Role))
         for coll_id in authz.collections(authz.READ):
             channels.append(channel_tag(coll_id, Collection))
         cache.set_list(key, channels)
     return channels
 
 
-def get_notifications(role, since=None):
+def get_notifications(role: Role, since=None):
     """Fetch a stream of notifications for the given role."""
     channels = get_role_channels(role)
     filters = [{"terms": {"channels": channels}}]
@@ -107,7 +135,7 @@ def render_notification(stub, notification):
     if event is None:
         return
 
-    for name, clazz, value in _iter_params(notification, event):
+    for _, clazz, value in _iter_params(notification, event):
         resolver.queue(stub, clazz, value)
     resolver.resolve(stub)
     plain = str(event.template)

@@ -1,14 +1,14 @@
-import json
 import datetime
+import json
 import logging
 from pprint import pformat
 
 from aleph.core import db
-from aleph.settings import SETTINGS
-from aleph.index.entities import index_entity
-from aleph.views.util import validate
-from aleph.tests.util import TestCase, get_caption, JSON
+from aleph.index.util import index_entity
 from aleph.model.bookmark import Bookmark
+from aleph.settings import SETTINGS
+from aleph.tests.util import JSON, TestCase, get_caption
+from aleph.views.util import validate
 
 log = logging.getLogger(__name__)
 

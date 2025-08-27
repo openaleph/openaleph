@@ -3,8 +3,8 @@ import logging
 from followthemoney import model
 from followthemoney.types import registry
 
-from aleph.model import Collection, Events, Entity
 from aleph.logic import resolver
+from aleph.model import Collection, Entity, Events
 
 log = logging.getLogger(__name__)
 
@@ -121,7 +121,7 @@ class CategoryFacet(Facet):
 class CollectionFacet(Facet):
     def expand(self, keys):
         for key in keys:
-            if self.parser.authz.can(key, self.parser.authz.READ):
+            if int(key) in self.parser.auth.collection_ids:
                 resolver.queue(self.parser, Collection, key)
         resolver.resolve(self.parser)
 

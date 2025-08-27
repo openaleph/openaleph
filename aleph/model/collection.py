@@ -1,20 +1,27 @@
 import logging
 from datetime import datetime
-from normality import stringify
+
+from anystore.functools import weakref_cache
+from banal import ensure_dict, ensure_list
 from flask_babel import lazy_gettext
-from sqlalchemy.orm import aliased
-from banal import ensure_list, ensure_dict
-from sqlalchemy.dialects.postgresql import ARRAY
+from followthemoney.dataset.util import dataset_name_check
 from followthemoney.namespace import Namespace
 from followthemoney.types import registry
+from normality import stringify
+from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.orm import aliased
 
 from aleph.core import db
-from aleph.model.role import Role
+from aleph.model.common import IdModel, SoftDeleteModel, make_textid
 from aleph.model.permission import Permission
-from aleph.model.common import IdModel, make_textid
-from aleph.model.common import SoftDeleteModel
+from aleph.model.role import Role
 
 log = logging.getLogger(__name__)
+
+
+@weakref_cache
+def cached_dataset_name_check(dataset: str) -> str:
+    return dataset_name_check(dataset)
 
 
 class Collection(db.Model, IdModel, SoftDeleteModel):
@@ -135,6 +142,11 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
         db.session.flush()
 
     @property
+    def name(self) -> str:
+        # migrate v5 -> v6, Collection will become dataset with name property
+        return cached_dataset_name_check(self.foreign_id)
+
+    @property
     def team_id(self):
         role = aliased(Role)
         perm = aliased(Permission)
@@ -142,8 +154,8 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
         q = q.filter(role.type != Role.SYSTEM)
         q = q.filter(role.id == perm.role_id)
         q = q.filter(perm.collection_id == self.id)
-        q = q.filter(perm.read == True)  # noqa
-        q = q.filter(role.deleted_at == None)  # noqa
+        q = q.filter(perm.read == True)  # noqa: E712
+        q = q.filter(role.deleted_at == None)  # noqa: E711
         return [stringify(i) for (i,) in q.all()]
 
     @property
@@ -151,7 +163,7 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
         q = db.session.query(Permission.id)
         q = q.filter(Permission.role_id.in_(Role.public_roles()))
         q = q.filter(Permission.collection_id == self.id)
-        q = q.filter(Permission.read == True)  # noqa
+        q = q.filter(Permission.read == True)  # noqa: E712
         return q.count() < 1
 
     @property
@@ -184,6 +196,7 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
         data.update(
             {
                 "id": stringify(self.id),
+                "name": self.name,
                 "collection_id": stringify(self.id),
                 "foreign_id": self.foreign_id,
                 "creator_id": stringify(self.creator_id),
@@ -216,7 +229,7 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
     def _apply_authz(cls, q, authz):
         if authz is not None and not authz.is_admin:
             q = q.join(Permission, cls.id == Permission.collection_id)
-            q = q.filter(Permission.read == True)  # noqa
+            q = q.filter(Permission.read == True)  # noqa: E712
             q = q.filter(Permission.role_id.in_(authz.roles))
         return q
 

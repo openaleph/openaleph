@@ -1,26 +1,33 @@
-import math
 import logging
-from pprint import pprint, pformat  # noqa
+import math
+from typing import Type
+
+from openaleph_search import (
+    Query,
+    QueryParser,
+    SearchQueryParser,
+    unpack_result,
+)
 
 from aleph.core import url_external
-from aleph.index.util import unpack_result
-from aleph.search.parser import QueryParser
 from aleph.search.facet import (
     CategoryFacet,
     CollectionFacet,
     CountryFacet,
-    LanguageFacet,
-    SchemaFacet,
+    EntityFacet,
     EventFacet,
     Facet,
-    EntityFacet,
+    LanguageFacet,
+    SchemaFacet,
 )
 
 log = logging.getLogger(__name__)
 
 
 class QueryResult(object):
-    def __init__(self, request, parser=None, results=None, total=None):
+    def __init__(
+        self, request, parser: QueryParser | None = None, results=None, total=None
+    ):
         self.request = request
         self.parser = parser or QueryParser(request.args, request.authz)
         self.results = results or []
@@ -95,7 +102,7 @@ class SearchQueryResult(QueryResult):
         "entity": EntityFacet,
     }
 
-    def __init__(self, request, query):
+    def __init__(self, request, query: Query):
         super(SearchQueryResult, self).__init__(request, parser=query.parser)
         self.query = query
         result = query.search()
@@ -127,3 +134,12 @@ class SearchQueryResult(QueryResult):
         data["facets"] = self.get_facets()
         data["query_text"] = self.query.to_text()
         return data
+
+
+def get_query_result(
+    cls: Type[Query], request, parser: SearchQueryParser | None = None, **kwargs
+) -> SearchQueryResult:
+    if parser is None:
+        parser = SearchQueryParser(request.args, auth=request.authz.search_auth)
+    query = cls(parser, **kwargs)
+    return SearchQueryResult(request, query)

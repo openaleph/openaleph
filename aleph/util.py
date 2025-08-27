@@ -1,11 +1,14 @@
+import functools
 import json
-import structlog
-from aleph.settings import SETTINGS
-from datetime import datetime, date
-from normality import stringify
-from flask_babel.speaklater import LazyString
-from elasticsearch import Transport
+import warnings
+from datetime import date, datetime
 
+import structlog
+from elastic_transport import Transport
+from flask_babel.speaklater import LazyString
+from normality import stringify
+
+from aleph.settings import SETTINGS
 
 log = structlog.get_logger(__name__)
 
@@ -88,3 +91,19 @@ class LoggingTransport(Transport):
 def is_auto_admin(email):
     auto_admins = [a.lower() for a in SETTINGS.ADMINS]
     return email is not None and email.lower() in auto_admins
+
+
+def deprecated(since: str, deleted: str, reason="This function is deprecated"):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            warnings.warn(
+                f"{func.__name__} is deprecated since v{since} and will be removed in v{deleted}. {reason}",  # noqa: B950
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
