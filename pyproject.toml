@@ -10,10 +10,10 @@ authors = [
 ]
 license = "MIT"
 readme = "README.md"
-requires-python = ">= 3.11, <4.0.0"
+requires-python = ">= 3.12, <4.0.0"
 dependencies = [
     "openaleph-procrastinate (>=0.0.26,<0.0.27)",
-    "openaleph-search (>=0.0.2,<0.0.3)",
+    "openaleph-search (>=0.0.3,<0.0.4)",
     "followthemoney (>=4.1.1,<5.0.0)",
     "ftmq[postgres] (>=4.2.0,<5.0.0)",
     "normality (>=3.0.1,<4.0.0)",

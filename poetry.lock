@@ -41,9 +41,6 @@ files = [
     {file = "ahocorasick_rs-0.22.2.tar.gz", hash = "sha256:87f27a6422dbf94ec0f9fe84ac0188d4a66b5c7b2f5f6deb165f0c5e3db9769c"},
 ]
 
-[package.dependencies]
-typing-extensions = {version = ">=4.6.0", markers = "python_version < \"3.12\""}
-
 [[package]]
 name = "aiobotocore"
 version = "2.24.1"
@@ -380,19 +377,6 @@ files = [
 [package.extras]
 astroid = ["astroid (>=2,<4)"]
 test = ["astroid (>=2,<4)", "pytest", "pytest-cov", "pytest-xdist"]
-
-[[package]]
-name = "async-timeout"
-version = "5.0.1"
-description = "Timeout context manager for asyncio programs"
-optional = false
-python-versions = ">=3.8"
-groups = ["main", "dev"]
-markers = "python_version == \"3.11\" and python_full_version < \"3.11.3\""
-files = [
-    {file = "async_timeout-5.0.1-py3-none-any.whl", hash = "sha256:39e3809566ff85354557ec2398b55e096c8364bacac9405a7a1fa429e77fe76c"},
-    {file = "async_timeout-5.0.1.tar.gz", hash = "sha256:d9321a7a3d5a6a5e187e824d2fa0793ce379a202935782d555d6e9d2735677d3"},
-]
 
 [[package]]
 name = "attrs"
@@ -2114,7 +2098,6 @@ prompt-toolkit = ">=3.0.41,<3.1.0"
 pygments = ">=2.4.0"
 stack-data = "*"
 traitlets = ">=5.13.0"
-typing-extensions = {version = ">=4.6", markers = "python_version < \"3.12\""}
 
 [package.extras]
 all = ["ipython[black,doc,kernel,matplotlib,nbconvert,nbformat,notebook,parallel,qtconsole]", "ipython[test,test-extra]"]
@@ -3471,14 +3454,14 @@ django = ["dj-database-url (>=2.3.0,<3.0.0)", "django (>=5.2,<6.0)", "procrastin
 
 [[package]]
 name = "openaleph-search"
-version = "0.0.2"
+version = "0.0.3"
 description = "OpenAleph index & search module"
 optional = false
-python-versions = "<4,>=3.11"
+python-versions = "<4,>=3.12"
 groups = ["main"]
 files = [
-    {file = "openaleph_search-0.0.2-py3-none-any.whl", hash = "sha256:4ed09f085baf79a74f91c2d7486c132d1d2e79433e10eb462bc10f2a0e032840"},
-    {file = "openaleph_search-0.0.2.tar.gz", hash = "sha256:e3b6917a6d4e9a08821d141bd3a7a6ad8921d9ff7b8627ab7157c0bdeef2091b"},
+    {file = "openaleph_search-0.0.3-py3-none-any.whl", hash = "sha256:642585199a98ab56ae490e00f291c5a47dd435f161e1dba06d324edb2117ae7f"},
+    {file = "openaleph_search-0.0.3.tar.gz", hash = "sha256:81b049c0ae52ef4fc577c5823ea6ba1667345a864a7a740beacd62abc8b52d32"},
 ]
 
 [package.dependencies]
@@ -3706,10 +3689,7 @@ files = [
 ]
 
 [package.dependencies]
-numpy = [
-    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
-    {version = ">=1.23.2", markers = "python_version == \"3.11\""},
-]
+numpy = {version = ">=1.26.0", markers = "python_version >= \"3.12\""}
 python-dateutil = ">=2.8.2"
 pytz = ">=2020.1"
 tzdata = ">=2022.7"
@@ -4900,9 +4880,6 @@ files = [
     {file = "redis-6.4.0-py3-none-any.whl", hash = "sha256:f0544fa9604264e9464cdf4814e7d4830f74b165d52f2a330a760a88dd248b7f"},
     {file = "redis-6.4.0.tar.gz", hash = "sha256:b01bc7282b8444e28ec36b261df5375183bb47a07eb9c603f284e89cbc5ef010"},
 ]
-
-[package.dependencies]
-async-timeout = {version = ">=4.0.3", markers = "python_full_version < \"3.11.3\""}
 
 [package.extras]
 hiredis = ["hiredis (>=3.2.0)"]
@@ -6221,5 +6198,5 @@ files = [
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">= 3.11, <4.0.0"
-content-hash = "53b1254574e892390da7dae1174225ba8b0c3fafbda6af3d6f6bf3f9a9ec5cf3"
+python-versions = ">= 3.12, <4.0.0"
+content-hash = "bd3bd636bb71b83e82743be1cfae274a9fcabe92272a265c60bd878753e8a436"
