@@ -181,7 +181,7 @@ class Settings:
         self.ALEMBIC_DIR = os.path.join(self.APP_DIR, "migrate")
 
         # SQLAlchemy connection pool settings
-        self.SQLALCHEMY_POOL_SIZE = env.to_int("ALEPH_SQLALCHEMY_POOL_SIZE", 10)
+        self.SQLALCHEMY_POOL_SIZE = env.to_int("ALEPH_SQLALCHEMY_POOL_SIZE", 5)
         self.SQLALCHEMY_POOL_RECYCLE = env.to_int("ALEPH_SQLALCHEMY_POOL_RECYCLE", 3600)
         self.SQLALCHEMY_POOL_TIMEOUT = env.to_int("ALEPH_SQLALCHEMY_POOL_TIMEOUT", 30)
         self.XREF_SCROLL = env.get("ALEPH_XREF_SCROLL", "5m")
