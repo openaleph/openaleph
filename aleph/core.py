@@ -77,9 +77,23 @@ def create_app(config=None):
     if "postgres" not in SETTINGS.DATABASE_URI:
         raise RuntimeError("aleph database must be PostgreSQL!")
 
+    # Convert postgresql:// to postgresql+psycopg:// to use psycopg3
+    database_uri = SETTINGS.DATABASE_URI
+    database_uri = database_uri.replace("postgresql://", "postgresql+psycopg://", 1)
+
     app.config.update(
         {
-            "SQLALCHEMY_DATABASE_URI": SETTINGS.DATABASE_URI,
+            "SQLALCHEMY_DATABASE_URI": database_uri,
+            "SQLALCHEMY_ENGINE_OPTIONS": {
+                "pool_pre_ping": True,
+                "pool_size": SETTINGS.SQLALCHEMY_POOL_SIZE,
+                "max_overflow": 0,
+                "pool_recycle": SETTINGS.SQLALCHEMY_POOL_RECYCLE,
+                "pool_timeout": SETTINGS.SQLALCHEMY_POOL_TIMEOUT,
+                "connect_args": {
+                    "prepare_threshold": 5,
+                },
+            },
             "FLASK_SKIP_DOTENV": True,
             "FLASK_DEBUG": SETTINGS.DEBUG,
             "BABEL_DOMAIN": "aleph",

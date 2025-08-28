@@ -180,16 +180,10 @@ class Settings:
         self.SQLALCHEMY_TRACK_MODIFICATIONS = False
         self.ALEMBIC_DIR = os.path.join(self.APP_DIR, "migrate")
 
-        self.ELASTICSEARCH_URL = env.get(
-            "ALEPH_ELASTICSEARCH_URI", "http://localhost:9200"
-        )
-        self.ELASTICSEARCH_TLS_CA_CERTS = env.get("ELASTICSEARCH_TLS_CA_CERTS")
-        self.ELASTICSEARCH_TLS_VERIFY_CERTS = env.to_bool(
-            "ELASTICSEARCH_TLS_VERIFY_CERTS"
-        )
-        self.ELASTICSEARCH_TLS_CLIENT_CERT = env.get("ELASTICSEARCH_TLS_CLIENT_CERT")
-        self.ELASTICSEARCH_TLS_CLIENT_KEY = env.get("ELASTICSEARCH_TLS_CLIENT_KEY")
-        self.ELASTICSEARCH_TIMEOUT = env.to_int("ELASTICSEARCH_TIMEOUT", 60)
+        # SQLAlchemy connection pool settings
+        self.SQLALCHEMY_POOL_SIZE = env.to_int("ALEPH_SQLALCHEMY_POOL_SIZE", 10)
+        self.SQLALCHEMY_POOL_RECYCLE = env.to_int("ALEPH_SQLALCHEMY_POOL_RECYCLE", 3600)
+        self.SQLALCHEMY_POOL_TIMEOUT = env.to_int("ALEPH_SQLALCHEMY_POOL_TIMEOUT", 30)
         self.XREF_SCROLL = env.get("ALEPH_XREF_SCROLL", "5m")
         self.XREF_SCROLL_SIZE = env.get("ALEPH_XREF_SCROLL_SIZE", "1000")
 
