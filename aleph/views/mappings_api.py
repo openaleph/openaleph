@@ -7,10 +7,10 @@ from werkzeug.exceptions import BadRequest, NotFound
 from aleph.core import db
 from aleph.model import Mapping, Status
 from aleph.search import QueryParser, DatabaseQueryResult
-from aleph.queues import queue_task, OP_FLUSH_MAPPING, OP_LOAD_MAPPING
 from aleph.views.serializers import MappingSerializer
 from aleph.views.util import get_db_collection, get_entityset, parse_request, get_nested
-from aleph.views.util import get_index_entity, get_session_id, require
+from aleph.views.util import get_index_entity, require
+from aleph.procrastinate.queues import queue_load_mapping, queue_flush_mapping
 
 
 blueprint = Blueprint("mappings_api", __name__)
@@ -281,8 +281,7 @@ def trigger(collection_id, mapping_id):
     mapping.disabled = False
     mapping.set_status(Status.PENDING)
     db.session.commit()
-    job_id = get_session_id()
-    queue_task(collection, OP_LOAD_MAPPING, job_id=job_id, mapping_id=mapping.id)
+    queue_load_mapping(collection, mapping_id=mapping.id)
     return MappingSerializer.jsonify(mapping, status=202)
 
 
@@ -326,12 +325,7 @@ def flush(collection_id, mapping_id):
     mapping.last_run_err_msg = None
     db.session.add(mapping)
     db.session.commit()
-    queue_task(
-        collection,
-        OP_FLUSH_MAPPING,
-        job_id=get_session_id(),
-        mapping_id=mapping_id,
-    )
+    queue_flush_mapping(collection, mapping_id=mapping.id)
     return ("", 202)
 
 
@@ -372,10 +366,5 @@ def delete(collection_id, mapping_id):
     mapping = get_mapping(mapping_id, collection)
     mapping.delete()
     db.session.commit()
-    queue_task(
-        collection,
-        OP_FLUSH_MAPPING,
-        job_id=get_session_id(),
-        mapping_id=mapping_id,
-    )
+    queue_flush_mapping(collection, mapping_id=mapping.id)
     return ("", 204)

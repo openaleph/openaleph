@@ -46,14 +46,14 @@ class CollectionContextLoader extends PureComponent {
     const { collection } = this.props;
     const { status } = collection;
     clearTimeout(this.state.timeout);
-    const staleDuration = status.active ? 3000 : 30000;
+    const staleDuration = status.active ? 10000 : 30000;
     const age = timestamp() - collection.loadedAt;
     const shouldRefresh = age > staleDuration && !collection.isPending;
     if (shouldRefresh) {
       // this.props.forceMutate();
       this.props.fetchCollection(collection);
     }
-    const timeout = setTimeout(this.fetchRefresh, 1000);
+    const timeout = setTimeout(this.fetchRefresh, 10000);
     this.setState({ timeout });
   }
 

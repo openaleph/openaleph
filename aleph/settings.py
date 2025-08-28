@@ -229,6 +229,10 @@ class Settings:
         self.PROMETHEUS_PORT = env.to_int("PROMETHEUS_PORT", 9100)
 
         ###############################################################################
+        # Procrastinate
+        self.PROCRASTINATE_TASKS = "aleph.procrastinate.tasks"
+
+        ###############################################################################
         # External services
         self.FTM_ASSETS_URL = env.get("FTM_ASSETS_URL")
 
