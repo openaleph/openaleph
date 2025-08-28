@@ -96,6 +96,8 @@ def index():
     q = q.order_by(EntitySet.updated_at.desc())
     collection_ids = ensure_list(parser.filters.get("collection_id"))
     if len(collection_ids):
+        # Convert string collection IDs to integers for psycopg3 compatibility
+        collection_ids = [int(cid) for cid in collection_ids]
         q = q.filter(EntitySet.collection_id.in_(collection_ids))
     result = DatabaseQueryResult(request, q, parser=parser)
     return EntitySetSerializer.jsonify_result(result)

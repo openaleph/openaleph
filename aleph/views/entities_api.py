@@ -692,7 +692,7 @@ def entitysets(entity_id):
 
     parser = QueryParser(request.args, request.authz)
     collection_ids = [
-        cid
+        int(cid)
         for cid in parser.filters.get("collection_id", [])
         if request.authz.can(cid, request.authz.READ)
     ]
