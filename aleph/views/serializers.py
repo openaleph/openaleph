@@ -105,7 +105,8 @@ class Serializer(object):
         total = data.get("total", 0)
         limit = data.get("limit", 0)
         offset = data.get("offset", 0)
-        if total > 0 and not data.get("results"):
+        # we have calls that doesn't include hits but aggregagtions, that's fine
+        if total > 0 and not data.get("results") and not data.get("facets"):
             if not (limit == 0 or offset >= total):
                 log.exception(f"Expected more results in the response: {data}")
                 data = {

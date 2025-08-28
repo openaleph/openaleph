@@ -4,8 +4,8 @@ import './SearchHighlight.scss';
 
 export const NamesHighlight = ({ names }) => (
   <span className="SearchHighlight__names">
-    {names.map((n) => (
-      <Tag key={n} minimal round>
+    {names.map((n, i) => (
+      <Tag key={`${n}-${i}`} minimal round>
         {n}
       </Tag>
     ))}
@@ -19,8 +19,6 @@ export const TextHighlight = ({ texts }) => (
 );
 
 export default function SearchHighlight({ highlight }) {
-  // eslint-disable-next-line
-  console.log(highlight);
   if (!highlight || Object.keys(highlight).length <= 0) {
     return null;
   }

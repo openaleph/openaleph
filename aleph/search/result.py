@@ -18,6 +18,7 @@ from aleph.search.facet import (
     EventFacet,
     Facet,
     LanguageFacet,
+    NameFacet,
     SchemaFacet,
 )
 
@@ -100,6 +101,7 @@ class SearchQueryResult(QueryResult):
         "schemata": SchemaFacet,
         "event": EventFacet,
         "entity": EntityFacet,
+        "names": NameFacet,
     }
 
     def __init__(self, request, query: Query):
@@ -127,12 +129,17 @@ class SearchQueryResult(QueryResult):
 
             facet_cls = self.FACETS.get(facet_type, Facet)
             facets[name] = facet_cls(name, self.aggregations, self.parser)
+        for name in self.parser.facet_significant_names:
+            name = f"{name}.significant_terms"
+            facets[name] = NameFacet(name, self.aggregations, self.parser)
+        log.info(facets)
         return facets
 
     def to_dict(self, serializer=None):
         data = super(SearchQueryResult, self).to_dict(serializer=serializer)
         data["facets"] = self.get_facets()
         data["query_text"] = self.query.to_text()
+        data["query_q"] = self.query.parser.text
         return data
 
 
