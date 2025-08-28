@@ -16,6 +16,11 @@ def ignore_autogen(obj, name, type_, reflexted, compare_to):
 
 def run_migrations_offline():
     url = config.get_main_option("sqlalchemy.url")
+    # Aleph requires PostgreSQL, fail if not
+    if not url or "postgres" not in url:
+        raise RuntimeError("aleph database must be PostgreSQL!")
+    # Convert postgresql:// to postgresql+psycopg:// to use psycopg3
+    url = url.replace("postgresql://", "postgresql+psycopg://", 1)
     context.configure(url=url, include_object=ignore_autogen)
 
     with context.begin_transaction():
@@ -23,8 +28,21 @@ def run_migrations_offline():
 
 
 def run_migrations_online():
+    config_section = config.get_section(config.config_ini_section) or {}
+
+    # Ensure PostgreSQL and convert to use psycopg3
+    url_key = "sqlalchemy.url"
+    if url_key in config_section:
+        url = config_section[url_key]
+        if not url or "postgres" not in url:
+            raise RuntimeError("aleph database must be PostgreSQL!")
+        # Convert postgresql:// to postgresql+psycopg:// to use psycopg3
+        config_section[url_key] = url.replace(
+            "postgresql://", "postgresql+psycopg://", 1
+        )
+
     engine = engine_from_config(
-        config.get_section(config.config_ini_section),
+        config_section,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
