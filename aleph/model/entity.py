@@ -1,15 +1,16 @@
 import logging
 from datetime import datetime
+
 from flask_babel import gettext
-from sqlalchemy.dialects.postgresql import JSONB
 from followthemoney import model
-from followthemoney.types import registry
 from followthemoney.exc import InvalidData
+from followthemoney.types import registry
+from sqlalchemy.dialects.postgresql import JSONB
 
 from aleph.core import db
 from aleph.model.collection import Collection
-from aleph.model.common import DatedModel
-from aleph.model.common import iso_text, make_textid, ENTITY_ID_LEN
+from aleph.model.common import ENTITY_ID_LEN, DatedModel, iso_text, make_textid
+from aleph.util import get_entity_proxy
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class Entity(db.Model, DatedModel):
     schema = db.Column(db.String(255), index=True)
     data = db.Column("data", JSONB)
 
-    role_id = db.Column(db.Integer, db.ForeignKey("role.id"), nullable=True)  # noqa
+    role_id = db.Column(db.Integer, db.ForeignKey("role.id"), nullable=True)
     collection_id = db.Column(db.Integer, db.ForeignKey("collection.id"), index=True)
     collection = db.relationship(
         Collection, backref=db.backref("entities", lazy="dynamic")
@@ -40,7 +41,7 @@ class Entity(db.Model, DatedModel):
         return model.get(self.schema)
 
     def update(self, data, collection, sign=True):
-        proxy = model.get_proxy(data, cleaned=False)
+        proxy = get_entity_proxy(data, cleaned=False)
         if sign:
             proxy = collection.ns.apply(proxy)
         self.schema = proxy.schema.name
@@ -65,7 +66,7 @@ class Entity(db.Model, DatedModel):
             "role_id": self.role_id,
             "mutable": True,
         }
-        return model.get_proxy(data, cleaned=False)
+        return get_entity_proxy(data, cleaned=False)
 
     @classmethod
     def create(cls, data, collection, sign=True, role_id=None):

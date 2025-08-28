@@ -11,12 +11,13 @@ from aleph.logic.collections import aggregate_model, index_aggregator, update_co
 from aleph.logic.entitysets import save_entityset_item
 from aleph.logic.notifications import publish
 from aleph.model import Events, Mapping, Status
+from aleph.util import get_entity_proxy
 
 log = logging.getLogger(__name__)
 
 
 def _get_table_csv_link(table):
-    proxy = model.get_proxy(table)
+    proxy = get_entity_proxy(table)
     csv_hash = proxy.first("csvHash")
     if csv_hash is None:
         raise RuntimeError("Source table doesn't have a CSV version")

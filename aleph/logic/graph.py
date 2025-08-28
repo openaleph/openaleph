@@ -1,10 +1,10 @@
 import logging
-from pprint import pprint  # noqa
-from followthemoney import model
-from followthemoney.types import registry
+
 from followthemoney.graph import Graph as FtMGraph
+from followthemoney.types import registry
 
 from aleph.model import Entity
+from aleph.util import get_entity_proxy
 
 log = logging.getLogger(__name__)
 
@@ -25,4 +25,4 @@ class Graph(FtMGraph):
         for id_ in self.queued:
             entity = resolver.get(self, Entity, id_)
             if entity is not None:
-                self.add(model.get_proxy(entity))
+                self.add(get_entity_proxy(entity))

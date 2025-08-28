@@ -148,7 +148,7 @@ def ingest_upload(collection_id):
         db.session.commit()
         proxy = document.to_proxy(ns=collection.ns)
         if proxy.schema.is_a(Document.SCHEMA_FOLDER) and sync and index:
-            index_proxy(collection, proxy, sync=sync)
+            index_proxy(collection.name, proxy, sync=sync, collection_id=collection.id)
         ingest_flush(collection, entity_id=proxy.id)
         queue_ingest(collection, proxy, batch=job_id, index=index)
         _notify(collection, proxy.id)

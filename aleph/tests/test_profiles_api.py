@@ -1,14 +1,15 @@
 import logging
 
-# from pprint import pformat
-from followthemoney import model
-
 from aleph.authz import Authz
 from aleph.core import db
 from aleph.index.util import index_entity
 from aleph.logic.entitysets import save_entityset_item
 from aleph.model import EntitySet, EntitySetItem, Judgement
 from aleph.tests.util import TestCase
+from aleph.util import get_entity_proxy
+
+# from pprint import pformat
+
 
 log = logging.getLogger(__name__)
 
@@ -81,7 +82,7 @@ class ProfilesApiTestCase(TestCase):
         _, headers = self.login(foreign_id="rolex")
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, res.json
-        merged = model.get_proxy(res.json.get("merged"))
+        merged = get_entity_proxy(res.json.get("merged"))
         assert merged.schema.name == "Person", merged.schema
         assert merged.id == self.profile.id
         assert "Fifth" in merged.first("address"), merged.to_dict()

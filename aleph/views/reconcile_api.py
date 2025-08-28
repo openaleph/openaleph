@@ -12,6 +12,7 @@ from aleph.logic.util import entity_url
 from aleph.model import Entity
 from aleph.search import EntitiesQuery, MatchQuery, SearchQueryParser
 from aleph.settings import SETTINGS
+from aleph.util import get_entity_proxy
 from aleph.views.context import tag_request
 from aleph.views.util import get_index_collection, jsonify, require
 
@@ -40,7 +41,7 @@ def get_freebase_type(schema):
 def entity_matches(result):
     for doc in result.get("hits").get("hits"):
         entity = unpack_result(doc)
-        proxy = model.get_proxy(entity)
+        proxy = get_entity_proxy(entity)
         yield {
             "id": proxy.id,
             "name": proxy.caption,

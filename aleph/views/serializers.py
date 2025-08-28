@@ -23,6 +23,7 @@ from aleph.model import (
     Export,
     Role,
 )
+from aleph.util import get_entity_proxy
 from aleph.views.util import clean_object, jsonify
 
 log = logging.getLogger(__name__)
@@ -208,7 +209,7 @@ class EntitySerializer(Serializer):
                 self.queue(Entity, value, schema=prop.range)
 
     def _serialize(self, obj):
-        proxy = model.get_proxy(dict(obj))
+        proxy = get_entity_proxy(dict(obj))
         properties = {}
         for prop, value in proxy.itervalues():
             properties.setdefault(prop.name, [])

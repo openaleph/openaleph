@@ -12,7 +12,6 @@ from tempfile import mkdtemp
 import flask_migrate
 from faker import Factory
 from flask import json
-from followthemoney import model
 from followthemoney.cli.util import read_entity
 from ftmq.store.fragments import get_store
 from openaleph_procrastinate.manage.db import get_db
@@ -32,6 +31,7 @@ from aleph.migration import destroy_db
 from aleph.model import Collection, Entity, Permission, Role
 from aleph.oauth import oauth
 from aleph.settings import SETTINGS
+from aleph.util import get_entity_proxy
 
 log = logging.getLogger(__name__)
 APP_NAME = "aleph-test"
@@ -52,7 +52,7 @@ def read_entities(file_name):
 
 
 def get_caption(entity):
-    proxy = model.get_proxy(entity, cleaned=False)
+    proxy = get_entity_proxy(entity, cleaned=False)
     return proxy.caption
 
 

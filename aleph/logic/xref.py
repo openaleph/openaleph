@@ -33,6 +33,7 @@ from aleph.logic.export import complete_export
 from aleph.logic.util import entity_url
 from aleph.model import Collection, Entity, EntitySet, Export, Role, Status
 from aleph.settings import SETTINGS
+from aleph.util import get_entity_proxy
 
 log = logging.getLogger(__name__)
 ORIGIN = "xref"
@@ -144,7 +145,7 @@ def _query_item(entity, entitysets=True):
         hit = unpack_result(hit)
         if hit is None:
             continue
-        candidate = model.get_proxy(hit)
+        candidate = get_entity_proxy(hit)
         candidates.append(candidate)
     log.debug(
         "Candidate [%s]: %s: %d possible matches",
@@ -307,8 +308,8 @@ def _iter_match_batch(stub, sheet, batch):
         collection = resolver.get(stub, Collection, collection_id)
         if entity is None or match is None or collection is None:
             continue
-        eproxy = model.get_proxy(entity)
-        mproxy = model.get_proxy(match)
+        eproxy = get_entity_proxy(entity)
+        mproxy = get_entity_proxy(match)
         sheet.append(
             [
                 obj.get("score"),

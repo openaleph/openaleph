@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 
 from banal import ensure_list
 from flask import render_template
-from followthemoney import model
 from followthemoney.util import get_entity_id
 from openaleph_search.index.util import unpack_result
 
@@ -34,6 +33,7 @@ from aleph.model import (
     Role,
 )
 from aleph.settings import SETTINGS
+from aleph.util import get_entity_proxy
 
 log = logging.getLogger(__name__)
 GLOBAL = "Global"
@@ -153,7 +153,7 @@ def render_notification(stub, notification):
             title = data.get("label")
             link = collection_url(value)
         elif clazz == Entity:
-            proxy = model.get_proxy(data)
+            proxy = get_entity_proxy(data)
             title = proxy.caption
             link = entity_url(value)
         elif clazz == EntitySet:

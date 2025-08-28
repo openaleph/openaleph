@@ -14,6 +14,7 @@ from aleph.core import es
 from aleph.logic.graph import Graph
 from aleph.model import Entity
 from aleph.settings import SETTINGS
+from aleph.util import get_entity_proxy
 
 log = logging.getLogger(__name__)
 DEFAULT_TAGS = set(registry.pivots)
@@ -76,7 +77,7 @@ def expand_proxies(proxies, authz, properties=None, limit=0):
 
     entities, counts = _counted_msearch(queries, authz, limit=limit)
     for entity in entities:
-        graph.add(model.get_proxy(entity))
+        graph.add(get_entity_proxy(entity))
 
     if limit > 0:
         graph.resolve()

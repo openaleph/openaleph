@@ -19,6 +19,7 @@ from aleph.procrastinate.queues import (
     queue_prune_entity,
     queue_update_entity,
 )
+from aleph.util import get_entity_proxy
 
 log = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ def update_entity(collection, entity_id=None, job_id=None):
 
     log.info("[%s] Update entity: %s", collection, entity_id)
     entity = index.get_entity(entity_id)
-    proxy = model.get_proxy(entity)
+    proxy = get_entity_proxy(entity)
     if collection.casefile:
         xref_entity(collection, proxy)
 
@@ -90,7 +91,7 @@ def inline_names(aggregator, proxy):
     entity_ids = proxy.get_type_values(registry.entity)
     names = set()
     for related in index.entities_by_ids(entity_ids):
-        related = model.get_proxy(related)
+        related = get_entity_proxy(related)
         names.update(related.get_type_values(registry.name))
 
     if len(names) > 0:
