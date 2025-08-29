@@ -257,9 +257,7 @@ class TestCase(unittest.TestCase):
 
         kv.flushall()
         settings = SearchSettings()
-        assert (
-            settings.search_auth is True
-        ), "OPENALEPH_SEARCH_AUTH setting must be true"
+        assert settings.auth is True, "OPENALEPH_SEARCH_AUTH setting must be true"
         create_system_roles()
 
     def tearDown(self):
