@@ -42,7 +42,7 @@ from aleph.logic.roles import (
 from aleph.logic.xref import xref_collection
 from aleph.migration import cleanup_deleted, destroy_db, upgrade_system
 from aleph.model import Collection, EntitySet, Role
-from aleph.procrastinate.queues import queue_cancel_collection
+from aleph.procrastinate.queues import queue_cancel_collection, queue_reindex
 from aleph.procrastinate.status import get_collection_status, get_status
 from aleph.util import JSONEncoder
 
@@ -176,18 +176,36 @@ def reindex(foreign_id, flush=False):
 
 @cli.command("reindex-full")
 @click.option("--flush", is_flag=True, default=False)
-def reindex_full(flush=False):
+@click.option(
+    "--queue",
+    is_flag=True,
+    default=False,
+    help="Queue the reindexing task for each collection, distribute them across workers.",
+)
+def reindex_full(flush=False, queue=False):
     """Re-index all collections."""
     for collection in Collection.all():
-        _reindex_collection(collection, flush=flush)
+        if queue:
+            queue_reindex(collection, flush=flush)
+        else:
+            _reindex_collection(collection, flush=flush)
 
 
 @cli.command("reindex-casefiles")
 @click.option("--flush", is_flag=True, default=False)
-def reindex_casefiles(flush=False):
+@click.option(
+    "--queue",
+    is_flag=True,
+    default=False,
+    help="Queue the reindexing task for each collection, distribute them across workers.",
+)
+def reindex_casefiles(flush=False, queue=False):
     """Re-index all the casefile collections."""
     for collection in Collection.all_casefiles():
-        _reindex_collection(collection, flush=flush)
+        if queue:
+            queue_reindex(collection, flush=flush)
+        else:
+            _reindex_collection(collection, flush=flush)
 
 
 @cli.command()

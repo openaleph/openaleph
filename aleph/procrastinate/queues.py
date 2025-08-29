@@ -70,6 +70,7 @@ def queue_index(
 
 
 def queue_reindex(collection: Collection, **context: Any) -> None:
+    context = {**context, **get_context(collection)}
     dataset = get_aggregator_name(collection)
     with app.open():
         defer.reindex(app, dataset, **context)
