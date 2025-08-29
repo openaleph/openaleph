@@ -46,7 +46,7 @@ RUN mkdir -p /opt/ftm-compare/word-frequencies/ && \
     curl -L -o "/opt/ftm-compare/model.pkl" "$ALEPH_FTM_COMPARE_MODEL_URI"
 
 # Configure some docker defaults:
-ENV OPENALEPH_ELASTICSEARCH_URI=http://elasticsearch:9200/ \
+ENV OPENALEPH_SEARCH_URI=http://elasticsearch:9200/ \
     ALEPH_DATABASE_URI=postgresql://aleph:aleph@postgres/aleph \
     FTM_FRAGMENTS_URI=postgresql://aleph:aleph@postgres/aleph \
     REDIS_URL=redis://redis:6379/0 \
