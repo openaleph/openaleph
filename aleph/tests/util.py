@@ -3,6 +3,7 @@ import logging
 import os
 import shutil
 import tempfile
+import time
 import unittest
 from datetime import datetime
 from pathlib import Path
@@ -11,10 +12,10 @@ from tempfile import mkdtemp
 import flask_migrate
 from faker import Factory
 from flask import json
-from followthemoney import model
 from followthemoney.cli.util import read_entity
 from ftmq.store.fragments import get_store
 from openaleph_procrastinate.manage.db import get_db
+from openaleph_search.settings import Settings as SearchSettings
 from servicelayer import env
 from servicelayer import settings as sls
 from sqlalchemy import text
@@ -30,6 +31,7 @@ from aleph.migration import destroy_db
 from aleph.model import Collection, Entity, Permission, Role
 from aleph.oauth import oauth
 from aleph.settings import SETTINGS
+from aleph.util import get_entity_proxy
 
 log = logging.getLogger(__name__)
 APP_NAME = "aleph-test"
@@ -50,7 +52,7 @@ def read_entities(file_name):
 
 
 def get_caption(entity):
-    proxy = model.get_proxy(entity, cleaned=False)
+    proxy = get_entity_proxy(entity, cleaned=False)
     return proxy.caption
 
 
@@ -221,6 +223,9 @@ class TestCase(unittest.TestCase):
             aggregator.put(sample, fragment="sample")
         reindex_collection(self.private_coll, sync=True)
 
+        # elastic async -.-
+        time.sleep(1)
+
     def init_app(self):
         self.app = self.create_app()
 
@@ -251,6 +256,10 @@ class TestCase(unittest.TestCase):
                     conn.commit()
 
         kv.flushall()
+        settings = SearchSettings()
+        assert (
+            settings.search_auth is True
+        ), "OPENALEPH_SEARCH_AUTH setting must be true"
         create_system_roles()
 
     def tearDown(self):

@@ -2,13 +2,12 @@ import logging
 
 from flask import Blueprint, request
 from flask_babel import gettext
-from followthemoney import model
 from followthemoney.compare import compare
+from openaleph_search.settings import MAX_PAGE
 from rigour.mime.types import ZIP
 from werkzeug.exceptions import NotFound
 
 from aleph.core import db, url_for
-from aleph.index.util import MAX_PAGE
 from aleph.logic.entities import (
     check_write_entity,
     delete_entity,
@@ -27,9 +26,12 @@ from aleph.search import (
     EntitiesQuery,
     GeoDistanceQuery,
     MatchQuery,
+    QueryParser,
+    SearchQueryParser,
 )
-from aleph.search.parser import QueryParser, SearchQueryParser
+from aleph.search.result import get_query_result
 from aleph.settings import SETTINGS
+from aleph.util import get_entity_proxy
 from aleph.views.context import enable_cache, tag_request
 from aleph.views.serializers import (
     EntitySerializer,
@@ -154,8 +156,8 @@ def index():
     """
     require(request.authz.can_browse_anonymous)
     # enable_cache(vary_user=True)
-    parser = SearchQueryParser(request.values, request.authz)
-    result = EntitiesQuery.handle(request, parser=parser)
+    parser = SearchQueryParser(request.values, request.authz.search_auth)
+    result = get_query_result(EntitiesQuery, request, parser=parser)
     tag_request(query=result.query.to_text(), prefix=parser.prefix)
     links = {}
     if request.authz.logged_in and result.total <= MAX_PAGE:
@@ -196,7 +198,7 @@ def export():
         role_id=request.authz.id,
         label=label,
         mime_type=ZIP,
-        meta={"query": query.get_full_query(), "schemata": schemata},
+        meta={"query": query.get_query(), "schemata": schemata},
     )
     queue_export_search(export_id=export.id)
     return ("", 202)
@@ -235,10 +237,12 @@ def match():
     """
     require(request.authz.can_browse_anonymous)
     entity = parse_request("EntityUpdate")
-    entity = model.get_proxy(entity, cleaned=False)
+    entity = get_entity_proxy(entity, cleaned=False)
     tag_request(schema=entity.schema.name, caption=entity.caption)
     collection_ids = request.args.getlist("collection_ids")
-    result = MatchQuery.handle(request, entity=entity, collection_ids=collection_ids)
+    result = get_query_result(
+        MatchQuery, request, entity=entity, collection_ids=collection_ids
+    )
     return EntitySerializer.jsonify_result(result)
 
 
@@ -323,7 +327,7 @@ def view(entity_id):
     excludes = ["text", "numeric.*"]
     entity = get_index_entity(entity_id, request.authz.READ, excludes=excludes)
     tag_request(collection_id=entity.get("collection_id"))
-    proxy = model.get_proxy(entity)
+    proxy = get_entity_proxy(entity)
     html = proxy.get("bodyHtml", quiet=True)
     source_url = proxy.first("sourceUrl", quiet=True)
     encoding = proxy.first("encoding", quiet=True)
@@ -371,9 +375,9 @@ def nearby(entity_id):
     # enable_cache()
     entity = get_index_entity(entity_id, request.authz.READ)
     tag_request(collection_id=entity.get("collection_id"))
-    proxy = model.get_proxy(entity)
+    proxy = get_entity_proxy(entity)
     parser = SearchQueryParser(request.values, request.authz)
-    result = GeoDistanceQuery.handle(request, entity=proxy, parser=parser)
+    result = get_query_result(GeoDistanceQuery, request, entity=proxy, parser=parser)
     return EntitySerializer.jsonify_result(result)
 
 
@@ -416,15 +420,15 @@ def similar(entity_id):
     # enable_cache()
     entity = get_index_entity(entity_id, request.authz.READ)
     tag_request(collection_id=entity.get("collection_id"))
-    proxy = model.get_proxy(entity)
-    result = MatchQuery.handle(request, entity=proxy)
+    proxy = get_entity_proxy(entity)
+    result = get_query_result(MatchQuery, request, entity=proxy)
     entities = list(result.results)
     pairs = [(entity_id, s.get("id")) for s in entities]
     judgements = pairwise_judgements(pairs, entity.get("collection_id"))
     result.results = []
     for obj in entities:
         item = {
-            "score": compare(proxy, model.get_proxy(obj)),
+            "score": compare(proxy, get_entity_proxy(obj)),
             "judgement": judgements.get((entity_id, obj.get("id"))),
             "collection_id": entity.get("collection_id"),
             "entity": obj,
@@ -467,7 +471,7 @@ def tags(entity_id):
     enable_cache()
     entity = get_index_entity(entity_id, request.authz.READ)
     tag_request(collection_id=entity.get("collection_id"))
-    results = entity_tags(model.get_proxy(entity), request.authz)
+    results = entity_tags(get_entity_proxy(entity), request.authz)
     return jsonify({"status": "ok", "total": len(results), "results": results})
 
 
@@ -603,7 +607,7 @@ def expand(entity_id):
       - Entity
     """
     entity = get_index_entity(entity_id, request.authz.READ)
-    proxy = model.get_proxy(entity)
+    proxy = get_entity_proxy(entity)
     collection_id = entity.get("collection_id")
     tag_request(collection_id=collection_id)
     parser = QueryParser(
@@ -688,7 +692,7 @@ def entitysets(entity_id):
 
     parser = QueryParser(request.args, request.authz)
     collection_ids = [
-        cid
+        int(cid)
         for cid in parser.filters.get("collection_id", [])
         if request.authz.can(cid, request.authz.READ)
     ]

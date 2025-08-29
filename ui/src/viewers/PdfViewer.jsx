@@ -80,7 +80,7 @@ export class PdfViewer extends Component {
 
   onDocumentLoad(pdf) {
     // Handle a resize event (to check document width) after loading
-    // Note: onDocumentLoad actualy happens *before* rendering, but the
+    // Note: onDocumentLoad actually happens *before* rendering, but the
     // rendering calls happen a bit too often as we don't have sophisticated
     // shouldComponentUpdate code in this component.
     this.onResize();
@@ -298,7 +298,7 @@ const mapStateToProps = (state, ownProps) => {
 
   const pageQuery = baseQuery
     .set('highlight', true)
-    .set('highlight_text', queryText)
+    // .set('highlight_text', queryText)
     .set('highlight_count', 15)
     .setFilter('properties.index', page)
     .set('limit', 1);

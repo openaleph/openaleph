@@ -1,17 +1,20 @@
 import logging
-from pprint import pformat  # noqa
+
 from banal import ensure_list
 from followthemoney import model
 from followthemoney.graph import Node
 from followthemoney.types import registry
+from openaleph_search.index.entities import ENTITY_SOURCE
+from openaleph_search.index.indexes import entities_read_index
+from openaleph_search.index.util import unpack_result
+from openaleph_search.query.util import field_filter_query
 
+from aleph.authz import Authz
 from aleph.core import es
-from aleph.settings import SETTINGS
-from aleph.model import Entity
 from aleph.logic.graph import Graph
-from aleph.index.entities import ENTITY_SOURCE
-from aleph.index.indexes import entities_read_index
-from aleph.index.util import field_filter_query, authz_query, unpack_result
+from aleph.model import Entity
+from aleph.settings import SETTINGS
+from aleph.util import get_entity_proxy
 
 log = logging.getLogger(__name__)
 DEFAULT_TAGS = set(registry.pivots)
@@ -74,7 +77,7 @@ def expand_proxies(proxies, authz, properties=None, limit=0):
 
     entities, counts = _counted_msearch(queries, authz, limit=limit)
     for entity in entities:
-        graph.add(model.get_proxy(entity))
+        graph.add(get_entity_proxy(entity))
 
     if limit > 0:
         graph.resolve()
@@ -89,7 +92,7 @@ def expand_proxies(proxies, authz, properties=None, limit=0):
         for proxy in proxies:
             entities.update(_expand_adjacent(graph, proxy, prop))
 
-        if count > 0:
+        if count > 0 and len(entities):  # FIXME why len(entities)
             item = {
                 "property": prop.name,
                 "count": count,
@@ -101,7 +104,7 @@ def expand_proxies(proxies, authz, properties=None, limit=0):
     return results
 
 
-def entity_tags(proxy, authz, prop_types=DEFAULT_TAGS):
+def entity_tags(proxy, authz: Authz, prop_types=DEFAULT_TAGS):
     """For a given proxy, determine how many other mentions exist for each
     property value associated, if it is one of a set of types."""
     queries = {}
@@ -144,7 +147,7 @@ def entity_tags(proxy, authz, prop_types=DEFAULT_TAGS):
     return results
 
 
-def _counted_msearch(queries, authz, limit=0):
+def _counted_msearch(queries, authz: Authz, limit=0):
     """Run batched queries to count or retrieve entities with certain
     property values."""
     # The default case for this is that we want to retrieve only the
@@ -152,6 +155,7 @@ def _counted_msearch(queries, authz, limit=0):
     # group the queries by the affected index.
     # In some cases, the expand API wants to actually retrieve entities.
     # Then, we need to make one query per filter.
+    search_auth = authz.search_auth
     grouped = {}
     for (index, key), query in sorted(queries.items()):
         group = index if limit == 0 else (index, key)
@@ -185,7 +189,7 @@ def _counted_msearch(queries, authz, limit=0):
                 filters_batch = [
                     {"bool": {"should": filters_batch, "minimum_should_match": 1}}
                 ]
-            filters_batch.append(authz_query(authz))
+            filters_batch.append(search_auth.datasets_query())
             query = {
                 "size": limit,
                 "query": {"bool": {"filter": filters_batch}},

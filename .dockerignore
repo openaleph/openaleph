@@ -1,4 +1,7 @@
 build
+data
+site
+htmlcov
 ui
 helm
 aleph.env

@@ -7,7 +7,7 @@ its own collection: this then becomes its "primary" profile. This means that an
 entity can only be positively linked to one profile in its own collection, adding
 it to a second would merge both profiles.
 
-In the UI, a primary profile is shown instead of the original entity whereever
+In the UI, a primary profile is shown instead of the original entity wherever
 available. In order to render profiles in a view similar to entities, some of the
 APIs designed for entities have to be re-implemented for profiles.
 
@@ -15,17 +15,17 @@ Outside of its own collection, any entity can be linked to any number of profile
 """
 
 import logging
-from sqlalchemy import or_
-from sqlalchemy.orm import aliased
+
 from followthemoney import model
 from followthemoney.helpers import name_entity
+from sqlalchemy import or_
+from sqlalchemy.orm import aliased
 
-from aleph.core import db, cache
-from aleph.logic.entitysets import get_entityset
+from aleph.core import cache, db
 from aleph.logic import resolver
-from aleph.logic.entitysets import save_entityset_item
+from aleph.logic.entitysets import get_entityset, save_entityset_item
 from aleph.model import Entity, EntitySet, EntitySetItem, Judgement
-from aleph.util import Stub
+from aleph.util import Stub, get_entity_proxy
 
 log = logging.getLogger(__name__)
 ORIGIN = "profile"
@@ -66,7 +66,7 @@ def get_profile(entityset_id, authz=None):
     for item in data["items"]:
         item["entity"] = resolver.get(stub, Entity, item.get("entity_id"))
         if item["entity"] is not None:
-            proxy = model.get_proxy(item["entity"])
+            proxy = get_entity_proxy(item["entity"])
             proxy.context = {}
             data["proxies"].append(proxy)
             if merged is None:
@@ -95,11 +95,11 @@ def profile_fragments(collection, aggregator, entity_id=None):
     aggregator.delete(origin=ORIGIN)
     writer = aggregator.bulk()
     profile_id = None
-    for profile_id, entity_id in EntitySet.all_profiles(
+    for profile_id, entity_id in EntitySet.all_profiles(  # noqa: B020
         collection.id, entity_id=entity_id
     ):
         data = {"id": entity_id, "schema": Entity.THING, "profile_id": profile_id}
-        writer.put(model.get_proxy(data), origin=ORIGIN)
+        writer.put(get_entity_proxy(data), origin=ORIGIN)
     writer.flush()
     return profile_id
 
@@ -119,7 +119,7 @@ def pairwise_judgements(pairs, collection_id):
     right = aliased(EntitySetItem)
 
     q = db.session.query(left, right)
-    q = q.filter(left.deleted_at == None, right.deleted_at == None)  # noqa
+    q = q.filter(left.deleted_at == None, right.deleted_at == None)  # noqa: E711
     q = q.filter(EntitySet.collection_id == collection_id)
     q = q.filter(EntitySet.type == EntitySet.PROFILE)
     q = q.filter(EntitySet.id == left.entityset_id)

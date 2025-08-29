@@ -1,9 +1,10 @@
 import logging
+
 from banal import ensure_list
 from flask import Blueprint, request
+from openaleph_search.index.entities import PROXY_INCLUDES, iter_entities
 from prometheus_client import Counter
 
-from aleph.index.entities import iter_entities, PROXY_INCLUDES
 from aleph.views.util import require, stream_ijson
 
 log = logging.getLogger(__name__)
@@ -59,7 +60,7 @@ def entities(collection_id=None):
     includes = includes or PROXY_INCLUDES
     log.debug("Stream entities [%r] begins... (coll: %s)", request.authz, collection_id)
     entities = iter_entities(
-        authz=request.authz,
+        auth=request.authz.search_auth,
         collection_id=collection_id,
         schemata=schemata,
         includes=includes,

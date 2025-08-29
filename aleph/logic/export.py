@@ -10,11 +10,11 @@ from followthemoney.helpers import entity_filename
 from normality import safe_filename
 from openaleph_procrastinate import defer
 from openaleph_procrastinate.app import make_app
+from openaleph_search.index.entities import checksums_count, iter_proxies
 from servicelayer.archive.util import checksum, ensure_path
 
 from aleph.core import archive, db
 from aleph.index.collections import get_collection
-from aleph.index.entities import checksums_count, iter_proxies
 from aleph.logic.aggregator import get_aggregator_name
 from aleph.logic.mail import email_role
 from aleph.logic.notifications import publish

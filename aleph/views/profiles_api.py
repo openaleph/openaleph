@@ -1,7 +1,6 @@
 import logging
 
 from flask import Blueprint, request
-from followthemoney import model
 from followthemoney.compare import compare
 
 from aleph.logic.expand import entity_tags, expand_proxies
@@ -9,7 +8,9 @@ from aleph.logic.profiles import decide_pairwise, get_profile
 from aleph.model import Judgement
 from aleph.procrastinate.queues import queue_update_entity
 from aleph.search import MatchQuery, QueryParser
+from aleph.search.result import get_query_result
 from aleph.settings import SETTINGS
+from aleph.util import get_entity_proxy
 from aleph.views.context import tag_request
 from aleph.views.serializers import ProfileSerializer, SimilarSerializer
 from aleph.views.util import (
@@ -133,12 +134,14 @@ def similar(profile_id):
     require(request.authz.can(profile.get("collection_id"), request.authz.READ))
     tag_request(collection_id=profile.get("collection_id"))
     exclude = [item["entity_id"] for item in profile["items"]]
-    result = MatchQuery.handle(request, entity=profile["merged"], exclude=exclude)
+    result = get_query_result(
+        MatchQuery, request, entity=profile["merged"], exclude=exclude
+    )
     entities = list(result.results)
     result.results = []
     for obj in entities:
         item = {
-            "score": compare(profile["merged"], model.get_proxy(obj)),
+            "score": compare(profile["merged"], get_entity_proxy(obj)),
             "judgement": Judgement.NO_JUDGEMENT,
             "collection_id": profile.get("collection_id"),
             "entity": obj,

@@ -7,7 +7,7 @@ from rigour.mime.types import HTML
 
 from aleph import settings
 from aleph.core import archive
-from aleph.index.entities import entities_by_ids
+from aleph.logic.resolver import cached_entities_by_ids
 
 log = logging.getLogger(__name__)
 FIELDS = ["id", "schema", "properties"]
@@ -28,7 +28,7 @@ def render_diagram(entityset):
     """Generate an HTML snippet from a diagram object."""
     entity_ids = entityset.entities
     entities = []
-    for entity in entities_by_ids(entity_ids, cached=True):
+    for entity in cached_entities_by_ids(entity_ids):
         for field in list(entity.keys()):
             if field not in FIELDS:
                 entity.pop(field)

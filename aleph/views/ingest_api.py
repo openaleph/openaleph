@@ -6,11 +6,11 @@ from tempfile import mkdtemp
 from banal import ensure_dict
 from flask import Blueprint, request
 from normality import safe_filename, stringify
+from openaleph_search.index.entities import index_proxy
 from servicelayer.archive.util import ensure_path
 from werkzeug.exceptions import BadRequest
 
 from aleph.core import archive, db
-from aleph.index.entities import index_proxy
 from aleph.logic.documents import ingest_flush
 from aleph.logic.notifications import channel_tag, publish
 from aleph.model import Document, Entity, Events
@@ -148,7 +148,7 @@ def ingest_upload(collection_id):
         db.session.commit()
         proxy = document.to_proxy(ns=collection.ns)
         if proxy.schema.is_a(Document.SCHEMA_FOLDER) and sync and index:
-            index_proxy(collection, proxy, sync=sync)
+            index_proxy(collection.name, proxy, sync=sync, collection_id=collection.id)
         ingest_flush(collection, entity_id=proxy.id)
         queue_ingest(collection, proxy, batch=job_id, index=index)
         _notify(collection, proxy.id)

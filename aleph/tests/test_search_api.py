@@ -1,4 +1,4 @@
-from pprint import pprint, pformat  # noqa
+from pprint import pformat, pprint  # noqa
 
 from aleph.tests.util import TestCase
 
@@ -26,7 +26,7 @@ class SearchApiTestCase(TestCase):
         assert b"Banana" in res.data, res.json
 
     def test_post_search(self):
-        query = {"q": "kwazulu", "filter:schema": "Thing", "facet": "collection_id"}
+        query = {"q": "kwazulu", "filter:schemata": "Thing", "facet": "collection_id"}
         res = self.client.post("/api/2/search", data=query)
         assert res.status_code == 200, res.json
         assert res.json["total"] == 1, res.json
@@ -37,7 +37,7 @@ class SearchApiTestCase(TestCase):
         res = self.client.get(self.url + "&facet=names")
         assert res.status_code == 200, res
         facet = res.json["facets"]["names"]
-        assert len(facet["values"]) == 2, facet["values"]
+        assert len(facet["values"]) == 1, facet["values"]
 
     def test_facet_counts(self):
         res = self.client.get(self.url + "&facet=names&facet_total:names=true")
@@ -51,7 +51,7 @@ class SearchApiTestCase(TestCase):
         )
         assert res.status_code == 200, res
         facet = res.json["facets"]["names"]
-        assert facet["total"] == 5, facet["total"]
+        assert facet["total"] == 4, facet["total"]
         res = self.client.get(
             self.url + "&facet=banana&facet_total:banana=true", headers=headers
         )

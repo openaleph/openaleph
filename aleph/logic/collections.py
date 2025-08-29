@@ -3,14 +3,15 @@ from collections import defaultdict
 from datetime import datetime
 
 from anystore.logging import get_logger
+from followthemoney.dataset.util import dataset_name_check
 from openaleph_procrastinate.manage import cancel_jobs
 from openaleph_procrastinate.settings import OPENALEPH_MANAGEMENT_QUEUE
+from openaleph_search.index import entities as entities_index
 from servicelayer.jobs import Job
 
 from aleph.authz import Authz
 from aleph.core import cache, db
 from aleph.index import collections as index
-from aleph.index import entities as entities_index
 from aleph.index import xref as xref_index
 from aleph.logic.aggregator import get_aggregator, get_aggregator_name
 from aleph.logic.documents import MODEL_ORIGIN, ingest_flush
@@ -145,15 +146,17 @@ def index_aggregator(
             if idx > 0 and idx % 1000 == 0:
                 log.debug(
                     "[%s] Index: %s..." % (collection, idx),
-                    dataset=collection.foreign_id,
+                    dataset=collection.name,
                 )
             yield proxy
         log.debug(
             "[%s] Indexed %s entities" % (collection, idx),
-            dataset=collection.foreign_id,
+            dataset=collection.name,
         )
 
-    entities_index.index_bulk(collection, _generate(), sync=sync)
+    entities_index.index_bulk(
+        collection.name, _generate(), sync=sync, collection_id=collection.id
+    )
 
 
 def reingest_collection(
@@ -246,9 +249,50 @@ def cancel_collection(collection: Collection):
     finish."""
     dataset = get_aggregator_name(collection)
     cancel_jobs(dataset=dataset)
+    start = time.time()
     while collection_is_active(collection):
+        if time.time() - start > 3600:
+            log.warn(
+                f"[{dataset}] Giving up waiting for finish after 1 hour.",
+                dataset=collection.foreign_id,
+            )
+            return
         log.info(
             f"[{dataset}] Waiting for collection tasks to finish ...",
             dataset=collection.foreign_id,
         )
         time.sleep(30)
+
+
+def validate_collection_foreign_ids():
+    """Validate that all Collection foreign_ids are valid dataset names using
+    dataset_name_check from followthemoney.dataset.util. This is used during
+    transition phase from OpenAleph 4/5 to 6."""
+
+    invalid_collections = []
+
+    for collection in Collection.all():
+        try:
+            dataset_name_check(collection.foreign_id)
+        except Exception as e:
+            invalid_collections.append(
+                {
+                    "id": collection.id,
+                    "foreign_id": collection.foreign_id,
+                    "label": collection.label,
+                    "error": str(e),
+                }
+            )
+            log.warning(
+                f"Invalid foreign_id for collection {collection.id}: {collection.foreign_id} - {e}",  # noqa: B950
+                dataset=collection.foreign_id,
+            )
+
+    if invalid_collections:
+        log.error(
+            f"Found {len(invalid_collections)} collections with invalid foreign_ids"
+        )
+        return invalid_collections
+    else:
+        log.info("All collection foreign_ids are valid")
+        return []

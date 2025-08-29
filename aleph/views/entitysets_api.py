@@ -1,27 +1,46 @@
 import logging
+
 from banal import ensure_list
+from flask import Blueprint, redirect, request
 from flask_babel import gettext
-from flask import Blueprint, request, redirect
-from werkzeug.exceptions import NotFound, BadRequest
+from werkzeug.exceptions import BadRequest, NotFound
 
 from aleph.core import db, url_for
+from aleph.logic.diagrams import publish_diagram
+from aleph.logic.entities import check_write_entity, upsert_entity, validate_entity
+from aleph.logic.entitysets import (
+    create_entityset,
+    refresh_entityset,
+    save_entityset_item,
+)
 from aleph.model import EntitySet, Judgement
 from aleph.model.common import make_textid
-from aleph.logic.entitysets import create_entityset, refresh_entityset
-from aleph.logic.entitysets import save_entityset_item
-from aleph.logic.diagrams import publish_diagram
-from aleph.logic.entities import upsert_entity, validate_entity, check_write_entity
-from aleph.search import EntitySetItemsQuery, SearchQueryParser
-from aleph.search import QueryParser, DatabaseQueryResult
+from aleph.procrastinate.queues import queue_update_entity
+from aleph.search import (
+    DatabaseQueryResult,
+    EntitySetItemsQuery,
+    QueryParser,
+    SearchQueryParser,
+)
+from aleph.search.result import get_query_result
 from aleph.views.context import tag_request
 from aleph.views.entities_api import view as entity_view
-from aleph.views.serializers import EntitySerializer, EntitySetSerializer
-from aleph.views.serializers import EntitySetItemSerializer
-from aleph.views.util import jsonify, get_flag, get_session_id, require
-from aleph.views.util import get_nested_collection, get_index_entity, get_entityset
-from aleph.views.util import parse_request, get_db_collection
-from aleph.procrastinate.queues import queue_update_entity
-
+from aleph.views.serializers import (
+    EntitySerializer,
+    EntitySetItemSerializer,
+    EntitySetSerializer,
+)
+from aleph.views.util import (
+    get_db_collection,
+    get_entityset,
+    get_flag,
+    get_index_entity,
+    get_nested_collection,
+    get_session_id,
+    jsonify,
+    parse_request,
+    require,
+)
 
 blueprint = Blueprint("entitysets_api", __name__)
 log = logging.getLogger(__name__)
@@ -77,6 +96,8 @@ def index():
     q = q.order_by(EntitySet.updated_at.desc())
     collection_ids = ensure_list(parser.filters.get("collection_id"))
     if len(collection_ids):
+        # Convert string collection IDs to integers for psycopg3 compatibility
+        collection_ids = [int(cid) for cid in collection_ids]
         q = q.filter(EntitySet.collection_id.in_(collection_ids))
     result = DatabaseQueryResult(request, q, parser=parser)
     return EntitySetSerializer.jsonify_result(result)
@@ -265,7 +286,7 @@ def entities_index(entityset_id):
         example: 3a0d91ece2dce88ad3259594c7b642485235a048
       responses:
         '200':
-          description: Resturns a list of entities in result
+          description: Returns a list of entities in result
           content:
             application/json:
               schema:
@@ -276,7 +297,9 @@ def entities_index(entityset_id):
     entityset = get_entityset(entityset_id, request.authz.READ)
     parser = SearchQueryParser(request.args, request.authz)
     tag_request(query=parser.text, prefix=parser.prefix)
-    result = EntitySetItemsQuery.handle(request, parser=parser, entityset=entityset)
+    result = get_query_result(
+        EntitySetItemsQuery, request, parser=parser, entityset=entityset
+    )
     return EntitySerializer.jsonify_result(result)
 
 
@@ -292,7 +315,7 @@ def entities_update(entityset_id):
         to the entity set. New entities are always created in the collection of
         the entity set.
 
-        Aside from these idiosyncracies, this is the same as `/api/2/entities/<id>`,
+        Aside from these idiosyncrasies, this is the same as `/api/2/entities/<id>`,
         but handles entity set membership transparently.
       parameters:
       - description: The entityset id.

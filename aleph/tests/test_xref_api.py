@@ -1,5 +1,5 @@
 from aleph.core import db
-from aleph.index.entities import index_entity
+from aleph.index.util import index_entity
 from aleph.logic import xref
 from aleph.tests.util import TestCase, get_caption
 

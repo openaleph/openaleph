@@ -2,19 +2,20 @@ import logging
 
 from followthemoney import model
 from normality import normalize
-
-from aleph.core import cache, es
-from aleph.index.indexes import entities_read_index
-from aleph.index.util import (
-    KEYWORD,
-    KEYWORD_COPY,
+from openaleph_search.index.indexer import (
     configure_index,
     delete_safe,
-    index_name,
     index_safe,
-    index_settings,
     query_delete,
 )
+from openaleph_search.index.indexes import entities_read_index
+from openaleph_search.index.mapping import FieldType
+from openaleph_search.index.util import (
+    index_name,
+    index_settings,
+)
+
+from aleph.core import cache, es
 from aleph.model import Collection, Entity
 
 STATS_FACETS = [
@@ -25,7 +26,6 @@ STATS_FACETS = [
     "emails",
     "countries",
     "languages",
-    "ibans",
 ]
 log = logging.getLogger(__name__)
 
@@ -48,21 +48,21 @@ def configure_collections():
                 "type": "text",
                 "copy_to": "text",
                 "analyzer": "default",
-                "fields": {"kw": KEYWORD},
+                "fields": {"kw": FieldType.KEYWORD},
             },
-            "collection_id": KEYWORD,
-            "foreign_id": KEYWORD_COPY,
-            "languages": KEYWORD_COPY,
-            "countries": KEYWORD_COPY,
-            "category": KEYWORD_COPY,
-            "frequency": KEYWORD_COPY,
+            "collection_id": FieldType.KEYWORD,
+            "foreign_id": FieldType.KEYWORD_COPY,
+            "languages": FieldType.KEYWORD_COPY,
+            "countries": FieldType.KEYWORD_COPY,
+            "category": FieldType.KEYWORD_COPY,
+            "frequency": FieldType.KEYWORD_COPY,
             "summary": {"type": "text", "copy_to": "text", "index": False},
-            "publisher": KEYWORD_COPY,
-            "publisher_url": KEYWORD_COPY,
-            "data_url": KEYWORD_COPY,
-            "info_url": KEYWORD_COPY,
-            "creator_id": KEYWORD,
-            "team_id": KEYWORD,
+            "publisher": FieldType.KEYWORD_COPY,
+            "publisher_url": FieldType.KEYWORD_COPY,
+            "data_url": FieldType.KEYWORD_COPY,
+            "info_url": FieldType.KEYWORD_COPY,
+            "creator_id": FieldType.KEYWORD,
+            "team_id": FieldType.KEYWORD,
             "text": {
                 "type": "text",
                 "analyzer": "default",

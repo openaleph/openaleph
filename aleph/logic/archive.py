@@ -1,8 +1,9 @@
 import logging
 
+from openaleph_search.index.entities import checksums_count
+
 from aleph.core import archive
 from aleph.model import Document, Export
-from aleph.index.entities import checksums_count
 
 log = logging.getLogger(__name__)
 

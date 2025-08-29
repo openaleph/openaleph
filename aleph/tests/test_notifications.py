@@ -3,10 +3,15 @@ import datetime
 from lxml.html import document_fromstring
 
 from aleph.core import db, mail
-from aleph.model import Events
-from aleph.logic.notifications import publish, generate_digest, render_notification
-from aleph.logic.notifications import GLOBAL, get_notifications
+from aleph.logic.notifications import (
+    GLOBAL,
+    generate_digest,
+    get_notifications,
+    publish,
+    render_notification,
+)
 from aleph.logic.roles import update_role
+from aleph.model import Events
 from aleph.tests.util import TestCase
 
 
@@ -31,7 +36,7 @@ class NotificationsTestCase(TestCase):
         label = "So public"
         recipient = self.create_user(foreign_id="rolex", email=email)
         update_role(recipient)
-        collection = self.create_collection(foreign_id="NoNoNo", label=label)
+        collection = self.create_collection(foreign_id="nonono", label=label)
         event = Events.PUBLISH_COLLECTION
         publish(event, role.id, params={"collection": collection}, channels=[GLOBAL])
         db.session.commit()

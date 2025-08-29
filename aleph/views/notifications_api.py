@@ -1,9 +1,9 @@
 from flask import Blueprint, request
 
 from aleph.search import NotificationsQuery
+from aleph.search.result import get_query_result
 from aleph.views.serializers import NotificationSerializer
 from aleph.views.util import require
-
 
 blueprint = Blueprint("notifications_api", __name__)
 
@@ -33,5 +33,5 @@ def index():
       - Notification
     """
     require(request.authz.logged_in)
-    result = NotificationsQuery.handle(request)
+    result = get_query_result(NotificationsQuery, request)
     return NotificationSerializer.jsonify_result(result)
