@@ -1,9 +1,10 @@
-import uuid
-import secrets
 import logging
-from sqlalchemy import false
-from datetime import datetime, date
+import secrets
+import uuid
+from datetime import date, datetime
+
 from flask_babel import lazy_gettext
+from sqlalchemy import false
 
 from aleph.core import db
 
@@ -53,12 +54,22 @@ class DatedModel(object):
 
     @classmethod
     def all_by_ids(cls, ids, deleted=False):
+        # Convert all ids to int for compatibility with psycopg3
+        try:
+            ids = [int(id) for id in ids if id is not None]
+        except (ValueError, TypeError):
+            ids = []
         return cls.all(deleted=deleted).filter(cls.id.in_(ids))
 
     @classmethod
     def by_id(cls, id, deleted=False):
         if id is None:
             return
+        # Explicitly convert to int for compatibility with psycopg3
+        try:
+            id = int(id)
+        except (ValueError, TypeError):
+            return None
         return cls.all(deleted=deleted).filter_by(id=id).first()
 
     def delete(self):
@@ -86,20 +97,20 @@ class SoftDeleteModel(DatedModel):
     def all(cls, deleted=False):
         q = super(SoftDeleteModel, cls).all()
         if not deleted:
-            q = q.filter(cls.deleted_at == None)  # noqa
+            q = q.filter(cls.deleted_at == None)  # noqa: E711
         return q
 
     @classmethod
     def all_ids(cls, deleted=False):
         q = super(SoftDeleteModel, cls).all_ids()
         if not deleted:
-            q = q.filter(cls.deleted_at == None)  # noqa
+            q = q.filter(cls.deleted_at == None)  # noqa: E711
         return q
 
     @classmethod
     def cleanup_deleted(cls):
         pq = db.session.query(cls)
-        pq = pq.filter(cls.deleted_at != None)  # noqa
+        pq = pq.filter(cls.deleted_at != None)  # noqa: E711
         log.info("[%s]: %d deleted objects", cls.__name__, pq.count())
         pq.delete(synchronize_session=False)
 

@@ -1,8 +1,8 @@
 from werkzeug.exceptions import Unauthorized
 
+from aleph.authz import Authz
 from aleph.core import db
 from aleph.settings import SETTINGS
-from aleph.authz import Authz
 from aleph.tests.util import TestCase
 
 
@@ -25,6 +25,12 @@ class AuthzTestCase(TestCase):
         assert authz.id is None, authz.id
         assert authz.role is None, authz.role
         assert len(authz.roles) == 1, authz.roles
+
+        search_auth = authz.search_auth
+        assert not search_auth.is_admin
+        assert not search_auth.logged_in
+        # assert search_auth.datasets == {self.public.name}
+        assert search_auth.collection_ids == {self.public.id}
 
     def test_require_logged_in(self):
         authz = Authz.from_role(None)
@@ -50,6 +56,11 @@ class AuthzTestCase(TestCase):
         assert authz.can(self.private, authz.READ) is True, authz._collections
         assert authz.can(self.private, authz.WRITE) is False, authz._collections
 
+        search_auth = authz.search_auth
+        assert search_auth.logged_in
+        # assert search_auth.datasets == {self.public.name, self.private.name}
+        assert search_auth.collection_ids == {self.public.id, self.private.id}
+
     def test_admin(self):
         authz = Authz.from_role(self.admin)
         assert authz.logged_in is True, authz
@@ -61,6 +72,12 @@ class AuthzTestCase(TestCase):
         assert authz.can(self.public, authz.WRITE) is True, authz._collections
         assert authz.can(self.private, authz.READ) is True, authz._collections
         assert authz.can(self.private, authz.WRITE) is True, authz._collections
+
+        search_auth = authz.search_auth
+        assert search_auth.is_admin
+        assert search_auth.logged_in
+        # assert search_auth.datasets == {self.public.name, self.private.name}
+        assert search_auth.collection_ids == {self.public.id, self.private.id}
 
     def test_maintenance(self):
         SETTINGS.MAINTENANCE = True

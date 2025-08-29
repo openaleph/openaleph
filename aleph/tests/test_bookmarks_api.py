@@ -1,10 +1,11 @@
-from unittest import skip
-import json
 import datetime
-from aleph.index.entities import index_entity
-from aleph.tests.util import TestCase, JSON
-from aleph.model import Bookmark
+import json
+from unittest import skip
+
 from aleph.core import db
+from aleph.index.util import index_entity
+from aleph.model import Bookmark
+from aleph.tests.util import JSON, TestCase
 
 
 class BookmarksApiTestCase(TestCase):

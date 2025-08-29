@@ -23,6 +23,7 @@ from aleph.model import (
     Export,
     Role,
 )
+from aleph.util import get_entity_proxy
 from aleph.views.util import clean_object, jsonify
 
 log = logging.getLogger(__name__)
@@ -104,7 +105,8 @@ class Serializer(object):
         total = data.get("total", 0)
         limit = data.get("limit", 0)
         offset = data.get("offset", 0)
-        if total > 0 and not data.get("results"):
+        # we have calls that doesn't include hits but aggregagtions, that's fine
+        if total > 0 and not data.get("results") and not data.get("facets"):
             if not (limit == 0 or offset >= total):
                 log.exception(f"Expected more results in the response: {data}")
                 data = {
@@ -208,14 +210,7 @@ class EntitySerializer(Serializer):
                 self.queue(Entity, value, schema=prop.range)
 
     def _serialize(self, obj):
-        proxy = model.get_proxy(dict(obj))
-        # FIXME
-        # a hack to display text previews in search for `Pages` `bodyText` property
-        # will be removed again in `views.serializers.EntitySerializer` to reduce
-        # api response size
-        if proxy.schema.name == "Pages":
-            proxy.pop("bodyText")
-
+        proxy = get_entity_proxy(dict(obj))
         properties = {}
         for prop, value in proxy.itervalues():
             properties.setdefault(prop.name, [])

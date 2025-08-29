@@ -1,6 +1,6 @@
 [project]
 name = "aleph"
-version = "5.0.0-rc5"
+version = "5.0.0-rc7"
 description = "Search and browse documents and data; find the people and companies you look for."
 authors = [
     { name = "Friedrich Lindenberg", email = "friedrich@pudo.org" },
@@ -10,13 +10,15 @@ authors = [
 ]
 license = "MIT"
 readme = "README.md"
-requires-python = ">= 3.11, <4.0.0"
+requires-python = ">= 3.12, <4.0.0"
 dependencies = [
-    "banal (>=1.0.6,<2.0.0)",
-    "followthemoney (>=4.1.1,<5.0.0)",
-    "ftmq[postgres] (>=4.1.1,<5.0.0)",
+    "openaleph-procrastinate (>=0.0.30,<0.0.31)",
+    "openaleph-search (>=0.0.4,<0.0.5)",
+    "followthemoney (>=4.2.0,<5.0.0)",
+    "ftmq[postgres] (>=4.2.3,<5.0.0)",
     "normality (>=3.0.1,<4.0.0)",
     "pydantic (>=2.10.6,<3.0.0)",
+    "banal (>=1.0.6,<2.0.0)",
     "pantomime (==0.6.1)",
     "Flask (<3.0)",
     "Flask-SQLAlchemy (==3.1.1)",
@@ -28,7 +30,6 @@ dependencies = [
     "SQLAlchemy (==2.0.36)",
     "alembic (==1.14.0)",
     "Authlib (==0.15.5)",
-    "elasticsearch (==7.17.0)",
     "marshmallow (==3.23.1)",
     "gunicorn[eventlet] (==23.0.0)",
     "jsonschema (==4.23.0)",
@@ -43,10 +44,10 @@ dependencies = [
     "requests[security] (==2.32.3)",
     "tabulate (==0.9.0)",
     "zipstream-new (==1.1.8)",
-    "prometheus-client (==0.17.1)",
+    "prometheus-client (>=0.17.1)",
     "followthemoney-compare (==0.4.4)",
     # servicelayer extras requirements
-    "servicelayer @ git+https://github.com/openaleph/servicelayer",
+    "openaleph-servicelayer (>=1.23.3,<2.0.0)",
     "boto3 (>=1.11.9,<2.0.0)",
     "grpcio (>=1.32.0,<2.0.0)",
     "google-cloud-storage (>=1.31.0,<3.0.0)",
@@ -66,10 +67,8 @@ dependencies = [
     "mkdocs-material (==9.6.11)",
     # TODO - remove sentry eventually
     "sentry-sdk[flask] (==2.19.2)",
-    "psycopg2-binary (>=2.9.10,<3.0.0)",
     "legacy-cgi; python_version >= '3.13'",
-    "openaleph-procrastinate (>=0.0.26,<0.0.27)",
-    "lxml[html-clean] (>=5.4.0,<6.0.0)"
+    "lxml[html-clean] (>=5.4.0,<6.0.0)",
 ]
 
 [project.scripts]
@@ -107,5 +106,7 @@ poetry-plugin-export = ">=1.8"
 DEBUG = 1
 OPENALEPH_INGEST_DEFER = 0
 OPENALEPH_ANALYZE_DEFER = 0
+OPENALEPH_SEARCH_AUTH = 1
+OPENALEPH_SEARCH_AUTH_FIELD = "collection_id"
 PROCRASTINATE_SYNC = 1
 PROCRASTINATE_APP = "aleph.procrastinate.tasks.app"

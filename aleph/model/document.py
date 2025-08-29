@@ -1,17 +1,19 @@
 import cgi
 import logging
-from banal import is_mapping, ensure_list
-from normality import slugify
+
+from banal import ensure_list, is_mapping
 from followthemoney import model
-from followthemoney.types import registry
 from followthemoney.namespace import Namespace
+from followthemoney.types import registry
 from followthemoney.util import sanitize_text
+from normality import slugify
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm.attributes import flag_modified
 
-from aleph.core import db, cache
+from aleph.core import cache, db
 from aleph.model.collection import Collection
 from aleph.model.common import DatedModel, iso_text
+from aleph.util import get_entity_proxy
 
 log = logging.getLogger(__name__)
 
@@ -180,7 +182,7 @@ class Document(db.Model, DatedModel):
 
     def to_proxy(self, ns=None):
         ns = ns or self.collection.ns
-        proxy = model.get_proxy(
+        proxy = get_entity_proxy(
             {
                 "id": ns.sign(self.id),
                 "schema": self.model,

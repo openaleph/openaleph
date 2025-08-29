@@ -6,7 +6,8 @@ from rigour.mime.types import XLSX
 from aleph.logic.export import create_export
 from aleph.logic.profiles import pairwise_judgements
 from aleph.procrastinate.queues import OP_EXPORT_XREF, queue_export_xref, queue_xref
-from aleph.search import XrefQuery
+from aleph.search.query import XrefQuery
+from aleph.search.result import get_query_result
 from aleph.views.serializers import XrefSerializer
 from aleph.views.util import (
     get_db_collection,
@@ -52,7 +53,7 @@ def index(collection_id):
       - Collection
     """
     get_index_collection(collection_id, request.authz.READ)
-    result = XrefQuery.handle(request, collection_id=collection_id)
+    result = get_query_result(XrefQuery, request, collection_id=collection_id)
     pairs = []
     for xref in result.results:
         pairs.append((xref.get("entity_id"), xref.get("match_id")))

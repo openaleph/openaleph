@@ -2,21 +2,22 @@ import logging
 
 from followthemoney import model
 from followthemoney.helpers import remove_checksums
+from openaleph_search.index.entities import get_entity
 
 from aleph.core import archive, db
 from aleph.index.collections import delete_entities
-from aleph.index.entities import get_entity
 from aleph.logic.aggregator import get_aggregator
 from aleph.logic.collections import aggregate_model, index_aggregator, update_collection
 from aleph.logic.entitysets import save_entityset_item
 from aleph.logic.notifications import publish
 from aleph.model import Events, Mapping, Status
+from aleph.util import get_entity_proxy
 
 log = logging.getLogger(__name__)
 
 
 def _get_table_csv_link(table):
-    proxy = model.get_proxy(table)
+    proxy = get_entity_proxy(table)
     csv_hash = proxy.first("csvHash")
     if csv_hash is None:
         raise RuntimeError("Source table doesn't have a CSV version")

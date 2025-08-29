@@ -1,14 +1,14 @@
 import logging
+
 from flask import Blueprint, request
-from werkzeug.exceptions import NotFound, Forbidden, BadRequest
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
+from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
 from aleph.core import db
-from aleph.search import DatabaseQueryResult
-from aleph.views.util import jsonify, require, parse_request, get_index_entity
-from aleph.views.serializers import BookmarkSerializer
 from aleph.model import Bookmark
-
+from aleph.search import DatabaseQueryResult
+from aleph.views.serializers import BookmarkSerializer
+from aleph.views.util import get_index_entity, jsonify, parse_request, require
 
 log = logging.getLogger(__name__)
 blueprint = Blueprint("bookmarks_api", __name__)
@@ -78,7 +78,8 @@ def create():
         entity = get_index_entity(entity_id, request.authz.READ)
     except (NotFound, Forbidden):
         raise BadRequest(
-            "Could not bookmark the given entity as the entity does not exist or you do not have access."
+            "Could not bookmark the given entity as the entity does not exist or "
+            "you do not have access."
         )
 
     query = Bookmark.query.filter_by(entity_id=entity_id, role_id=request.authz.id)
@@ -87,7 +88,7 @@ def create():
     if not bookmark:
         bookmark = Bookmark(
             entity_id=entity_id,
-            collection_id=entity.get("collection_id"),
+            collection_id=int(entity.get("collection_id")),
             role_id=request.authz.id,
         )
 
@@ -109,7 +110,7 @@ def delete(entity_id):
       parameters:
         - in: path
           name: entity_id
-          description: ID of the bookmarked entitiy
+          description: ID of the bookmarked entity
           required: true
           schema:
             type: string
@@ -166,7 +167,7 @@ def migrate():
             {
                 "role_id": request.authz.id,
                 "entity_id": bookmark.get("entity_id"),
-                "collection_id": entity.get("collection_id"),
+                "collection_id": int(entity.get("collection_id")),
                 "created_at": bookmark.get("created_at"),
             }
         )

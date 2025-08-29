@@ -43,6 +43,8 @@ const LABELS = {
   index_entities: 'Index entities',
   transcribe: 'Speech to text',
   geocode: 'Geocode addresses',
+  xref_collection: 'Cross-referencing',
+  reindex_collection: 'Reindexing all data',
 };
 
 const ICONS = {
@@ -51,6 +53,8 @@ const ICONS = {
   index_entities: 'database',
   transcribe: 'volume-up',
   geocode: 'geosearch',
+  xref_collection: 'comparison',
+  reindex_collection: 'database',
 };
 
 export class SystemStatusScreen extends React.Component {

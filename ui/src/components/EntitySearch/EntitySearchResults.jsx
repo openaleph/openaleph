@@ -4,6 +4,7 @@ import { compose } from 'redux';
 
 import withRouter from 'app/withRouter';
 import EntitySearchResultsRow from './EntitySearchResultsRow';
+import EntitySearchDiscovery from './EntitySearchDiscovery';
 import { ErrorSection, SortableTH } from 'components/common';
 import SearchField from 'components/SearchField/SearchField';
 
@@ -70,6 +71,7 @@ class EntitySearchResults extends Component {
 
     return (
       <div className="EntitySearchResults-outer-container">
+        <EntitySearchDiscovery result={result} />
         <div className="EntitySearchResults-inner-container">
           <table className="EntitySearchResults data-table">
             <thead>

@@ -29,15 +29,14 @@ RUN python3 -m zipfile --extract /opt/ftm-compare/word-frequencies/word-frequenc
 
 # Install Python dependencies
 RUN pip3 install --no-cache-dir -q -U pip setuptools six lxml lxml_html_clean
-RUN pip3 install --no-cache-dir -q -U git+https://github.com/openaleph/servicelayer.git
 RUN pip3 install --no-binary=:pyicu: pyicu
 
 # Install aleph
 COPY . /aleph
 WORKDIR /aleph
 ENV PYTHONPATH /aleph
-RUN pip install --no-cache-dir -q -r /aleph/requirements.txt
-RUN pip install --no-cache-dir -q /aleph
+RUN pip install --no-deps --no-cache-dir -q -r /aleph/requirements.txt
+RUN pip install --no-deps --no-cache-dir -q /aleph
 
 ENV ALEPH_WORD_FREQUENCY_URI=https://public.data.occrp.org/develop/models/word-frequencies/word_frequencies-v0.4.1.zip
 ENV ALEPH_FTM_COMPARE_MODEL_URI=https://public.data.occrp.org/develop/models/xref/glm_bernoulli_2e_wf-v0.4.1.pkl
@@ -47,7 +46,7 @@ RUN mkdir -p /opt/ftm-compare/word-frequencies/ && \
     curl -L -o "/opt/ftm-compare/model.pkl" "$ALEPH_FTM_COMPARE_MODEL_URI"
 
 # Configure some docker defaults:
-ENV ALEPH_ELASTICSEARCH_URI=http://elasticsearch:9200/ \
+ENV OPENALEPH_ELASTICSEARCH_URI=http://elasticsearch:9200/ \
     ALEPH_DATABASE_URI=postgresql://aleph:aleph@postgres/aleph \
     FTM_FRAGMENTS_URI=postgresql://aleph:aleph@postgres/aleph \
     REDIS_URL=redis://redis:6379/0 \
@@ -55,7 +54,9 @@ ENV ALEPH_ELASTICSEARCH_URI=http://elasticsearch:9200/ \
     ARCHIVE_PATH=/data \
     FTM_COMPARE_FREQUENCIES_DIR=/opt/ftm-compare/word-frequencies/ \
     FTM_COMPARE_MODEL=/opt/ftm-compare/model.pkl \
-    PROCRASTINATE_APP=aleph.procrastinate.tasks.app
+    PROCRASTINATE_APP=aleph.procrastinate.tasks.app \
+    OPENALEPH_SEARCH_AUTH=1 \
+    OPENALEPH_SEARCH_AUTH_FIELD=collection_id
 
 
 RUN mkdir /run/prometheus

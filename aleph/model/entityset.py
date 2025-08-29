@@ -1,15 +1,15 @@
 import logging
-from enum import Enum
 from datetime import datetime
+from enum import Enum
+
+from banal import ensure_list
 from normality import stringify
 from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import JSONB
-from banal import ensure_list
 
 from aleph.core import db
-from aleph.model import Role, Collection, Permission
-from aleph.model.common import SoftDeleteModel
-from aleph.model.common import ENTITY_ID_LEN, make_textid, query_like
+from aleph.model import Collection, Permission, Role
+from aleph.model.common import ENTITY_ID_LEN, SoftDeleteModel, make_textid, query_like
 
 log = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ class EntitySet(db.Model, SoftDeleteModel):
         q = db.session.query(EntitySetItem.entity_id)
         q = q.filter(EntitySetItem.entityset_id == self.id)
         q = q.filter(EntitySetItem.judgement == Judgement.POSITIVE)
-        q = q.filter(EntitySetItem.deleted_at == None)  # noqa
+        q = q.filter(EntitySetItem.deleted_at == None)  # noqa: E711
         return [entity_id for entity_id, in q.all()]
 
     @classmethod
@@ -94,7 +94,7 @@ class EntitySet(db.Model, SoftDeleteModel):
 
     @classmethod
     def by_type(cls, types, deleted=False):
-        """Retuns EntitySets of a particular type"""
+        """Returns EntitySets of a particular type"""
         q = EntitySet.all(deleted=deleted)
         types = ensure_list(types)
         if len(types) and types != cls.TYPES:
@@ -103,7 +103,7 @@ class EntitySet(db.Model, SoftDeleteModel):
 
     @classmethod
     def by_collection_id(cls, collection_id, types=None):
-        """Retuns EntitySets within a given collection_id"""
+        """Returns EntitySets within a given collection_id"""
         q = cls.by_type(types)
         q = q.filter(EntitySet.collection_id == collection_id)
         return q
@@ -112,7 +112,7 @@ class EntitySet(db.Model, SoftDeleteModel):
     def by_entity_id(
         cls, entity_id, collection_ids=None, judgements=None, types=None, labels=None
     ):
-        """Retuns EntitySets that include EntitySetItems with the provided entity_id.
+        """Returns EntitySets that include EntitySetItems with the provided entity_id.
 
         NOTE: This only considers EntitySetItems who haven't been deleted
         """
@@ -120,9 +120,13 @@ class EntitySet(db.Model, SoftDeleteModel):
         if labels is not None:
             q = q.filter(EntitySet.label.in_(ensure_list(labels)))
         q = q.join(EntitySetItem)
-        q = q.filter(EntitySetItem.deleted_at == None)  # NOQA
+        q = q.filter(EntitySetItem.deleted_at == None)  # noqa: E711
         q = q.filter(EntitySetItem.entity_id == entity_id)
         if collection_ids:
+            # Ensure collection_ids are integers for psycopg3 compatibility
+            collection_ids = [
+                int(cid) if isinstance(cid, str) else cid for cid in collection_ids
+            ]
             q = q.filter(EntitySet.collection_id.in_(collection_ids))
         if judgements is not None:
             q = q.filter(EntitySetItem.judgement.in_(ensure_list(judgements)))
@@ -130,11 +134,11 @@ class EntitySet(db.Model, SoftDeleteModel):
 
     @classmethod
     def entity_entitysets(cls, entity_id, collection_id=None):
-        """Retuns EntitySets linked positive to entity_id."""
+        """Returns EntitySets linked positive to entity_id."""
         q = db.session.query(cls.id)
         q = q.join(EntitySetItem)
-        q = q.filter(cls.deleted_at == None)  # NOQA
-        q = q.filter(EntitySetItem.deleted_at == None)  # NOQA
+        q = q.filter(cls.deleted_at == None)  # noqa: E711
+        q = q.filter(EntitySetItem.deleted_at == None)  # noqa: E711
         q = q.filter(EntitySetItem.entity_id == entity_id)
         q = q.filter(EntitySetItem.judgement == Judgement.POSITIVE)
         if collection_id:
@@ -147,7 +151,7 @@ class EntitySet(db.Model, SoftDeleteModel):
         q = q.filter(EntitySet.type == EntitySet.PROFILE)
         q = q.filter(EntitySet.collection_id == collection_id)
         q = q.join(EntitySetItem)
-        q = q.filter(EntitySetItem.deleted_at == None)  # NOQA
+        q = q.filter(EntitySetItem.deleted_at == None)  # noqa: E711
         q = q.filter(EntitySetItem.judgement == Judgement.POSITIVE)
         q = q.filter(EntitySetItem.collection_id == collection_id)
         if entity_id is not None:
@@ -161,18 +165,18 @@ class EntitySet(db.Model, SoftDeleteModel):
 
         pq = db.session.query(cls)
         pq = pq.filter(cls.collection_id == collection_id)
-        pq = pq.filter(cls.deleted_at == None)  # noqa
+        pq = pq.filter(cls.deleted_at == None)  # noqa: E711
         pq.update({cls.deleted_at: deleted_at}, synchronize_session=False)
 
     @classmethod
     def type_counts(cls, authz=None, collection_id=None):
         q = db.session.query(cls.type, func.count(cls.id))
-        q = q.filter(cls.deleted_at == None)  # noqa
+        q = q.filter(cls.deleted_at == None)  # noqa: E711
         if collection_id is not None:
             q = q.filter(cls.collection_id == collection_id)
         elif authz is not None and not authz.is_admin:
             q = q.join(Permission, cls.collection_id == Permission.collection_id)
-            q = q.filter(Permission.read == True)  # noqa
+            q = q.filter(Permission.read == True)  # noqa: E712
             q = q.filter(Permission.role_id.in_(authz.roles))
         q = q.group_by(cls.type)
         return dict(q.all())
@@ -246,7 +250,7 @@ class EntitySet(db.Model, SoftDeleteModel):
     def delete(self, deleted_at=None):
         pq = db.session.query(EntitySetItem)
         pq = pq.filter(EntitySetItem.entityset_id == self.id)
-        pq = pq.filter(EntitySetItem.deleted_at == None)  # noqa
+        pq = pq.filter(EntitySetItem.deleted_at == None)  # noqa: E711
         pq.update({EntitySetItem.deleted_at: deleted_at}, synchronize_session=False)
 
         for mapping in self.mappings:

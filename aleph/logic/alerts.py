@@ -1,13 +1,14 @@
 import logging
-from pprint import pprint  # noqa
+
 from elasticsearch import RequestError
+from openaleph_search.index.indexes import entities_read_index
+from openaleph_search.index.mapping import FULLTEXTS
+from openaleph_search.index.util import unpack_result
 
 from aleph.authz import Authz
 from aleph.core import db, es
-from aleph.model import Alert, Events, Entity
-from aleph.index.indexes import entities_read_index
-from aleph.index.util import unpack_result, authz_query
 from aleph.logic.notifications import publish
+from aleph.model import Alert, Entity, Events
 
 log = logging.getLogger(__name__)
 
@@ -40,8 +41,8 @@ def check_alert(alert):
         alert.delete()
         return
 
-    for result in result.get("hits").get("hits", []):
-        entity = unpack_result(result)
+    for res in result.get("hits").get("hits", []):
+        entity = unpack_result(res)
         if entity is None:
             continue
         log.info("Alert [%s]: %s", alert.query, entity.get("id"))
@@ -65,7 +66,8 @@ def alert_query(alert, authz):
     latest known result."""
     # Many users have bookmarked complex queries, otherwise we'd use a
     # precise match query.
-    filters = [authz_query(authz)]
+    search_auth = authz.search_auth
+    filters = [search_auth.datasets_query()]
     if alert.notified_at is not None:
         notified_at = alert.notified_at.isoformat()
         filters.append({"range": {"updated_at": {"gt": notified_at}}})
@@ -79,7 +81,7 @@ def alert_query(alert, authz):
                         "query_string": {
                             "query": alert.query,
                             "lenient": True,
-                            "fields": ["text"],
+                            "fields": FULLTEXTS,
                             "default_operator": "AND",
                             "minimum_should_match": "66%",
                         }

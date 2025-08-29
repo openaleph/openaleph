@@ -5,9 +5,9 @@ from flask_babel import gettext
 from followthemoney import model
 from followthemoney.exc import InvalidData
 from followthemoney.types import registry
+from openaleph_search.index import entities as index
 
 from aleph.core import cache, db
-from aleph.index import entities as index
 from aleph.index import xref as xref_index
 from aleph.logic.aggregator import get_aggregator
 from aleph.logic.collections import MODEL_ORIGIN, refresh_collection
@@ -19,6 +19,7 @@ from aleph.procrastinate.queues import (
     queue_prune_entity,
     queue_update_entity,
 )
+from aleph.util import get_entity_proxy
 
 log = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ def upsert_entity(data, collection, authz=None, sync=False, sign=False, job_id=N
     aggregator.put(proxy, origin=MODEL_ORIGIN)
     profile_fragments(collection, aggregator, entity_id=proxy.id)
 
-    index.index_proxy(collection, proxy, sync=sync)
+    index.index_proxy(collection.name, proxy, sync=sync, collection_id=collection.id)
     refresh_entity(collection, proxy.id)
     queue_update_entity(collection, entity_id=proxy.id, batch=job_id)
     return entity.id
@@ -64,7 +65,7 @@ def update_entity(collection, entity_id=None, job_id=None):
 
     log.info("[%s] Update entity: %s", collection, entity_id)
     entity = index.get_entity(entity_id)
-    proxy = model.get_proxy(entity)
+    proxy = get_entity_proxy(entity)
     if collection.casefile:
         xref_entity(collection, proxy)
 
@@ -90,7 +91,7 @@ def inline_names(aggregator, proxy):
     entity_ids = proxy.get_type_values(registry.entity)
     names = set()
     for related in index.entities_by_ids(entity_ids):
-        related = model.get_proxy(related)
+        related = get_entity_proxy(related)
         names.update(related.get_type_values(registry.name))
 
     if len(names) > 0:
@@ -156,7 +157,7 @@ def prune_entity(collection, entity_id=None, job_id=None):
     # documents, or directoships referencing a person. It's a pretty
     # dangerous operation, though.
     log.info("[%s] Prune entity: %s", collection, entity_id)
-    for adjacent in index.iter_adjacent(collection.id, entity_id):
+    for adjacent in index.iter_adjacent(collection.name, entity_id):
         log.warning("Recursive delete: %s", adjacent.get("id"))
         delete_entity(collection, adjacent, job_id=job_id)
     flush_notifications(entity_id, clazz=Entity)

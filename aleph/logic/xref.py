@@ -13,24 +13,27 @@ from followthemoney.helpers import name_entity
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
 from followthemoney_compare.models import GLMBernoulli2EEvaluator
+from openaleph_search.index.entities import ENTITY_SOURCE, iter_proxies
+from openaleph_search.index.indexes import entities_read_index
+from openaleph_search.index.util import unpack_result
+from openaleph_search.query import none_query
+from openaleph_search.query.matching import match_query
+from openaleph_search.settings import BULK_PAGE
 from prometheus_client import Counter, Histogram
 from servicelayer.archive.util import ensure_path
 
 from aleph.authz import Authz
 from aleph.core import db, es
 from aleph.index.collections import delete_entities
-from aleph.index.entities import ENTITY_SOURCE, entities_by_ids, iter_proxies
-from aleph.index.indexes import entities_read_index
-from aleph.index.util import BULK_PAGE, none_query, unpack_result
 from aleph.index.xref import delete_xref, index_matches, iter_matches
 from aleph.logic import resolver
 from aleph.logic.aggregator import get_aggregator
 from aleph.logic.collections import reindex_collection
 from aleph.logic.export import complete_export
-from aleph.logic.matching import match_query
 from aleph.logic.util import entity_url
 from aleph.model import Collection, Entity, EntitySet, Export, Role, Status
 from aleph.settings import SETTINGS
+from aleph.util import get_entity_proxy
 
 log = logging.getLogger(__name__)
 ORIGIN = "xref"
@@ -142,7 +145,7 @@ def _query_item(entity, entitysets=True):
         hit = unpack_result(hit)
         if hit is None:
             continue
-        candidate = model.get_proxy(hit)
+        candidate = get_entity_proxy(hit)
         candidates.append(candidate)
     log.debug(
         "Candidate [%s]: %s: %d possible matches",
@@ -240,7 +243,7 @@ def _query_mentions(collection):
 def _query_entities(collection):
     """Generate matches for indexing."""
     log.info("[%s] Generating entity-based xref...", collection)
-    matchable = [s for s in model if s.matchable]
+    matchable = [s.name for s in model if s.matchable]
     for proxy in iter_proxies(
         collection_id=collection.id,
         schemata=matchable,
@@ -295,7 +298,7 @@ def _iter_match_batch(stub, sheet, batch):
         resolver.queue(stub, Collection, match.get("match_collection_id"))
 
     resolver.resolve(stub)
-    entities = entities_by_ids(list(entities), schemata=matchable)
+    entities = resolver.cached_entities_by_ids(list(entities), schemata=matchable)
     entities = {e.get("id"): e for e in entities}
 
     for obj in batch:
@@ -305,8 +308,8 @@ def _iter_match_batch(stub, sheet, batch):
         collection = resolver.get(stub, Collection, collection_id)
         if entity is None or match is None or collection is None:
             continue
-        eproxy = model.get_proxy(entity)
-        mproxy = model.get_proxy(match)
+        eproxy = get_entity_proxy(entity)
+        mproxy = get_entity_proxy(match)
         sheet.append(
             [
                 obj.get("score"),
@@ -352,7 +355,7 @@ def export_matches(export_id):
         sheet = excel.make_sheet("Cross-reference", headers)
         batch = []
 
-        for match in iter_matches(collection, authz):
+        for match in iter_matches(collection.name, authz.search_auth):
             batch.append(match)
             if len(batch) >= BULK_PAGE:
                 _iter_match_batch(excel, sheet, batch)

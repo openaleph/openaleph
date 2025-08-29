@@ -1,17 +1,17 @@
-from unittest import skip  # noqa
 import json
 import logging
 from pprint import pprint  # noqa
+from unittest import skip  # noqa
 
 from banal import ensure_list
 from followthemoney import model
-from followthemoney.util import get_entity_id
-from followthemoney.types import registry
 from followthemoney.exc import InvalidData
+from followthemoney.types import registry
+from followthemoney.util import get_entity_id
 
+from aleph.logic.collections import delete_collection
 from aleph.tests.util import TestCase
 from aleph.views.util import validate
-from aleph.logic.collections import delete_collection
 
 log = logging.getLogger(__name__)
 
@@ -134,7 +134,7 @@ class EntitySetAPITest(TestCase):
         assert res.status_code == 200, res
         facet = res.json["facets"]["names"]
         assert len(facet["values"]) == 3, facet["values"]
-        assert "Elizabeth" in str(facet["values"]), facet["values"]
+        assert "elizabeth" in str(facet["values"]), facet["values"]
 
         url = query_url % (entityset_id, "Interval")
         res = self.client.get(url, headers=self.headers)

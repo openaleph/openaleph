@@ -7,14 +7,14 @@ import click
 from flask.cli import FlaskGroup
 from followthemoney.cli.util import write_object
 from normality import slugify
+from openaleph_search.index.admin import delete_index
+from openaleph_search.index.entities import get_entity as _get_index_entity
+from openaleph_search.index.entities import iter_proxies
 from tabulate import tabulate
 
 from aleph.authz import Authz
 from aleph.core import cache, create_app, db
-from aleph.index.admin import delete_index
 from aleph.index.collections import get_collection as _get_index_collection
-from aleph.index.entities import get_entity as _get_index_entity
-from aleph.index.entities import iter_proxies
 from aleph.logic.archive import cleanup_archive
 from aleph.logic.collections import (
     compute_collection,
@@ -24,6 +24,7 @@ from aleph.logic.collections import (
     reingest_collection,
     update_collection,
     upgrade_collections,
+    validate_collection_foreign_ids,
 )
 from aleph.logic.documents import crawl_directory
 from aleph.logic.export import retry_exports
@@ -42,7 +43,7 @@ from aleph.logic.roles import (
 from aleph.logic.xref import xref_collection
 from aleph.migration import cleanup_deleted, destroy_db, upgrade_system
 from aleph.model import Collection, EntitySet, Role
-from aleph.procrastinate.queues import queue_cancel_collection
+from aleph.procrastinate.queues import queue_cancel_collection, queue_reindex
 from aleph.procrastinate.status import get_collection_status, get_status
 from aleph.util import JSONEncoder
 
@@ -112,6 +113,44 @@ def collections(secret, casefile):
     print(tabulate(collections, headers=["Foreign ID", "ID", "Label"]))
 
 
+@cli.command("validate-foreign-ids")
+@click.option(
+    "-o",
+    "--outfile",
+    type=click.File("w"),
+    default=None,
+    help="Output invalid collections to JSON file",
+)
+def validate_foreign_ids(outfile=None):
+    """Validate all collection foreign IDs using dataset_name_check."""
+    invalid_collections = validate_collection_foreign_ids()
+
+    if invalid_collections:
+        print(f"Found {len(invalid_collections)} collections with invalid foreign IDs:")
+        headers = ["ID", "Foreign ID", "Label", "Error"]
+        rows = []
+        for collection in invalid_collections:
+            rows.append(
+                [
+                    collection["id"],
+                    collection["foreign_id"],
+                    collection["label"],
+                    collection["error"],
+                ]
+            )
+        print(tabulate(rows, headers=headers))
+
+        if outfile:
+            encoder = JSONEncoder(indent=2)
+            outfile.write(encoder.encode(invalid_collections))
+            print(f"\nInvalid collections exported to {outfile.name}")
+
+        return 1  # Exit with error code
+    else:
+        print("All collection foreign IDs are valid.")
+        return 0
+
+
 @cli.command()
 @click.argument("path", type=click.Path(exists=True))
 @click.option("-l", "--language", multiple=True, help="ISO language codes for OCR")
@@ -176,18 +215,36 @@ def reindex(foreign_id, flush=False):
 
 @cli.command("reindex-full")
 @click.option("--flush", is_flag=True, default=False)
-def reindex_full(flush=False):
+@click.option(
+    "--queue",
+    is_flag=True,
+    default=False,
+    help="Queue the reindexing task for each collection, distribute them across workers.",
+)
+def reindex_full(flush=False, queue=False):
     """Re-index all collections."""
     for collection in Collection.all():
-        _reindex_collection(collection, flush=flush)
+        if queue:
+            queue_reindex(collection, flush=flush)
+        else:
+            _reindex_collection(collection, flush=flush)
 
 
 @cli.command("reindex-casefiles")
 @click.option("--flush", is_flag=True, default=False)
-def reindex_casefiles(flush=False):
+@click.option(
+    "--queue",
+    is_flag=True,
+    default=False,
+    help="Queue the reindexing task for each collection, distribute them across workers.",
+)
+def reindex_casefiles(flush=False, queue=False):
     """Re-index all the casefile collections."""
     for collection in Collection.all_casefiles():
-        _reindex_collection(collection, flush=flush)
+        if queue:
+            queue_reindex(collection, flush=flush)
+        else:
+            _reindex_collection(collection, flush=flush)
 
 
 @cli.command()

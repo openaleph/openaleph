@@ -1,12 +1,11 @@
 import logging
-from pprint import pprint  # noqa
-from banal import hash_data
 from datetime import datetime
-from followthemoney.util import get_entity_id
 
-from aleph.index.util import index_name, index_settings, configure_index
-from aleph.index.util import query_delete, index_safe
-from aleph.index.util import KEYWORD
+from banal import hash_data
+from followthemoney.util import get_entity_id
+from openaleph_search.index.indexer import configure_index, index_safe, query_delete
+from openaleph_search.index.mapping import FieldType
+from openaleph_search.index.util import index_name, index_settings
 
 log = logging.getLogger(__name__)
 
@@ -20,9 +19,9 @@ def configure_notifications():
         "date_detection": False,
         "dynamic": False,
         "properties": {
-            "event": KEYWORD,
-            "actor_id": KEYWORD,
-            "channels": KEYWORD,
+            "event": FieldType.KEYWORD,
+            "actor_id": FieldType.KEYWORD,
+            "channels": FieldType.KEYWORD,
             "created_at": {"type": "date"},
             "params": {"dynamic": True, "type": "object"},
         },

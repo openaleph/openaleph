@@ -246,6 +246,7 @@ export function selectEntity(state, entityId) {
   result.lastViewed = lastViewed;
   result.writeable = entity.writeable;
   result.bookmarked = entity.bookmarked;
+  result.caption = entity.caption
 
   return result;
 }

@@ -1,12 +1,15 @@
 import json
 import logging
+from functools import cached_property
+
 from banal import ensure_list
+from openaleph_search.model import SearchAuth
 from werkzeug.exceptions import Unauthorized
 
-from aleph.core import db, cache
-from aleph.settings import SETTINGS
-from aleph.model import Collection, Role, Permission
+from aleph.core import cache, db
+from aleph.model import Collection, Permission, Role
 from aleph.model.common import make_token
+from aleph.settings import SETTINGS
 
 log = logging.getLogger(__name__)
 
@@ -34,12 +37,12 @@ class Authz(object):
         self.can_browse_anonymous = not SETTINGS.REQUIRE_LOGGED_IN or self.logged_in
         self._collections = {}
 
-    def collections(self, action):
+    def collections(self, action) -> list[int]:
         if self.is_admin:
             return [c for (c,) in Collection.all_ids()]
 
         if action in self._collections:
-            return self._collections.get(action)
+            return self._collections.get(action, [])
         key = self.id or "anonymous"
         collections = cache.kv.hget(self.ACCESS, key)
         if collections:
@@ -178,3 +181,15 @@ class Authz(object):
             # End all user sessions.
             prefix = cache.key(cls.TOKENS, "%s." % role.id)
             cache.flush(prefix=prefix)
+
+    @cached_property
+    def search_auth(self) -> SearchAuth:
+        # migration v5->v6
+        collection_ids = self.collections(Authz.READ)
+        role = str(self.role.id) if self.role else None
+        return SearchAuth(
+            is_admin=self.is_admin,
+            logged_in=self.logged_in,
+            collection_ids=set(collection_ids),
+            role=role,
+        )

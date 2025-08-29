@@ -1,9 +1,9 @@
 import logging
 
 from followthemoney.proxy import EntityProxy
+from openaleph_search.index.entities import index_proxy
 
 from aleph.core import archive, db
-from aleph.index.entities import index_proxy
 from aleph.model import Mapping
 from aleph.tests.util import TestCase
 from aleph.views.util import validate
@@ -43,7 +43,7 @@ class MappingAPITest(TestCase):
 
         table = EntityProxy.from_dict(data, cleaned=False)
         table.id = collection.ns.sign(table.id)
-        index_proxy(collection=collection, proxy=table)
+        index_proxy(dataset=collection.name, collection_id=collection.id, proxy=table)
 
         return table
 
@@ -293,7 +293,7 @@ class MappingAPITest(TestCase):
             },
         )
         person.id = self.col.ns.sign(person.id)
-        index_proxy(collection=self.col, proxy=person)
+        index_proxy(dataset=self.col.name, collection_id=self.col.id, proxy=person)
 
         entities_url = "/api/2/entities"
         entities_query_string = {
