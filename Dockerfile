@@ -35,8 +35,8 @@ RUN pip3 install --no-binary=:pyicu: pyicu
 COPY . /aleph
 WORKDIR /aleph
 ENV PYTHONPATH /aleph
-RUN pip install --no-cache-dir --no-deps -q -r /aleph/requirements.txt
-RUN pip install --no-cache-dir --no-deps -q /aleph
+RUN pip install --no-deps --no-cache-dir -q -r /aleph/requirements.txt
+RUN pip install --no-deps --no-cache-dir -q /aleph
 
 ENV ALEPH_WORD_FREQUENCY_URI=https://public.data.occrp.org/develop/models/word-frequencies/word_frequencies-v0.4.1.zip
 ENV ALEPH_FTM_COMPARE_MODEL_URI=https://public.data.occrp.org/develop/models/xref/glm_bernoulli_2e_wf-v0.4.1.pkl
