@@ -6,6 +6,7 @@ import { endpoint } from 'app/api';
 interface EntitySearchDiscoveryProps {
   result: {
     query_q?: string;
+    filters?: Record<string, string[]>;
   };
 }
 
@@ -123,12 +124,19 @@ const EntitySearchDiscovery: React.FC<EntitySearchDiscoveryProps> = ({
       setDiscoveryResult({ loading: true });
 
       try {
+        const params: Record<string, any> = {
+          q: result.query_q,
+          limit: 5,
+          facet_significant: 'names',
+        };
+
+        // Add collection_id filter if it exists in the result filters
+        if (result.filters?.collection_id?.length) {
+          params['filter:collection_id'] = result.filters.collection_id;
+        }
+
         const response = await endpoint.get('entities', {
-          params: {
-            q: result.query_q,
-            limit: 5,
-            facet_significant: 'names',
-          },
+          params,
         });
 
         const significantTerms =

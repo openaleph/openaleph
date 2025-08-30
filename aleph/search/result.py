@@ -140,6 +140,9 @@ class SearchQueryResult(QueryResult):
         data["facets"] = self.get_facets()
         data["query_text"] = self.query.to_text()
         data["query_q"] = self.query.parser.text
+        data["filters"] = {
+            key: list(values) for key, values in self.parser.filters.items()
+        }
         return data
 
 
