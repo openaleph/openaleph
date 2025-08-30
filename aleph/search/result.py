@@ -132,7 +132,6 @@ class SearchQueryResult(QueryResult):
         for name in self.parser.facet_significant_names:
             name = f"{name}.significant_terms"
             facets[name] = NameFacet(name, self.aggregations, self.parser)
-        log.info(facets)
         return facets
 
     def to_dict(self, serializer=None):
