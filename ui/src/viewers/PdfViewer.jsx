@@ -231,6 +231,7 @@ export class PdfViewer extends Component {
       page,
       numPages,
       shouldRenderSearch,
+      location: routerLocation,
     } = this.props;
 
     if (document.isPending || numPages === undefined || numPages === null) {
@@ -255,6 +256,7 @@ export class PdfViewer extends Component {
                   dir={dir}
                   activeMode={activeMode}
                   query={searchQuery}
+                  location={routerLocation}
                 />
               )}
               {activeMode === 'text' && !shouldRenderSearch && (
