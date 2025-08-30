@@ -27,6 +27,7 @@ export {
   fetchEntityTags,
   queryEntities,
   querySimilar,
+  queryMoreLikeThis,
   queryNearby,
   queryEntityExpand,
   updateEntity,

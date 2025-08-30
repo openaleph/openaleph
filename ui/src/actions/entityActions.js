@@ -12,6 +12,11 @@ export const querySimilar = asyncActionCreator(
   { name: 'QUERY_SIMILAR' }
 );
 
+export const queryMoreLikeThis = asyncActionCreator(
+  (query) => async () => queryEndpoint(query),
+  { name: 'QUERY_MORE_LIKE_THIS' }
+);
+
 export const queryNearby = asyncActionCreator(
   (query) => async () => queryEndpoint(query),
   { name: 'QUERY_NEARBY' }

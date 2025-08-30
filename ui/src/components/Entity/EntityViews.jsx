@@ -19,6 +19,7 @@ import {
   entityNearbyQuery,
   entityReferenceQuery,
   entitySimilarQuery,
+  entityMoreLikeThisQuery,
   folderDocumentsQuery,
 } from 'queries';
 import {
@@ -27,12 +28,14 @@ import {
   selectEntityTags,
   selectEntityReference,
   selectSimilarResult,
+  selectMoreLikeThisResult,
   selectNearbyResult,
 } from 'selectors';
 import EntityProperties from 'components/Entity/EntityProperties';
 import EntityReferencesMode from 'components/Entity/EntityReferencesMode';
 import EntityTagsMode from 'components/Entity/EntityTagsMode';
 import EntitySimilarMode from 'components/Entity/EntitySimilarMode';
+import EntityMoreLikeThisMode from 'components/Entity/EntityMoreLikeThisMode';
 import EntityMappingMode from 'components/Entity/EntityMappingMode';
 import EntityNearbyMode from 'components/Entity/EntityNearbyMode';
 import DocumentViewMode from 'components/Document/DocumentViewMode';
@@ -68,6 +71,7 @@ class EntityViews extends React.Component {
       references,
       tags,
       similar,
+      moreLikeThis,
       nearby,
       children,
       reference,
@@ -284,6 +288,23 @@ class EntityViews extends React.Component {
               panel={<EntitySimilarMode entity={entity} />}
             />
           )}
+          {entity.schema.isDocument() && !isPreview && (
+            <Tab
+              id="more-like-this"
+              disabled={moreLikeThis.total === 0}
+              title={
+                <TextLoading loading={moreLikeThis.total === undefined}>
+                  <Icon icon="search-text" className="left-icon" />
+                  <FormattedMessage
+                    id="entity.info.more_like_this"
+                    defaultMessage="More like this"
+                  />
+                  <ResultCount result={moreLikeThis} />
+                </TextLoading>
+              }
+              panel={<EntityMoreLikeThisMode entity={entity} />}
+            />
+          )}
           {entity?.collection?.writeable && entity.schema.isA('Table') && (
             <Tab
               id="mapping"
@@ -317,6 +338,10 @@ const mapStateToProps = (state, ownProps) => {
     similar: selectSimilarResult(
       state,
       entitySimilarQuery(location, entity.id)
+    ),
+    moreLikeThis: selectMoreLikeThisResult(
+      state,
+      entityMoreLikeThisQuery(location, entity.id)
     ),
     nearby: selectNearbyResult(state, entityNearbyQuery(location, entity.id)),
     nearbyQuery: entityNearbyQuery(location, entity.id),

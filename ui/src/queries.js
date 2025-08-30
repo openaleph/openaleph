@@ -149,6 +149,13 @@ export function entitySimilarQuery(location, entityId) {
   );
 }
 
+export function entityMoreLikeThisQuery(location, entityId) {
+  const path = entityId ? `entities/${entityId}/more_like_this` : undefined;
+  return Query.fromLocation(path, location, {}, 'more_like_this')
+    .defaultFacet('collection_id', true)
+    .limit(10);
+}
+
 export function entityNearbyQuery(location, entityId) {
   const path = entityId ? `entities/${entityId}/nearby` : undefined;
   return Query.fromLocation(path, location, {}, 'nearby').defaultFacet(

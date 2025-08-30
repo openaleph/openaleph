@@ -3,6 +3,7 @@ import { createReducer } from 'redux-act';
 import {
   queryEntities,
   querySimilar,
+  queryMoreLikeThis,
   queryNearby,
   queryCollectionXref,
   queryEntitySetEntities,
@@ -76,6 +77,9 @@ export default createReducer(
       objectLoadComplete(state, id, data),
 
     [queryEntities.COMPLETE]: (state, { result }) =>
+      resultObjects(state, result),
+
+    [queryMoreLikeThis.COMPLETE]: (state, { result }) =>
       resultObjects(state, result),
 
     [querySimilar.COMPLETE]: (state, { result }) =>

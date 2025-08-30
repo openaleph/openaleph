@@ -2,6 +2,7 @@ from openaleph_search import (
     EntitiesQuery,
     GeoDistanceQuery,
     MatchQuery,
+    MoreLikeThisQuery,
     QueryParser,
     SearchQueryParser,
 )
@@ -19,4 +20,5 @@ __all__ = [
     "EntitiesQuery",
     "GeoDistanceQuery",
     "MatchQuery",
+    "MoreLikeThisQuery",
 ]

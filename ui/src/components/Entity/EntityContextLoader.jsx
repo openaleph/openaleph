@@ -8,6 +8,7 @@ import {
   fetchEntityTags,
   queryEntities,
   querySimilar,
+  queryMoreLikeThis,
   queryNearby,
   queryEntityExpand,
 } from 'actions';
@@ -16,11 +17,13 @@ import {
   selectEntityTags,
   selectEntitiesResult,
   selectSimilarResult,
+  selectMoreLikeThisResult,
   selectNearbyResult,
   selectEntityExpandResult,
 } from 'selectors';
 import {
   entitySimilarQuery,
+  entityMoreLikeThisQuery,
   entityNearbyQuery,
   folderDocumentsQuery,
   entityReferencesQuery,
@@ -56,6 +59,12 @@ class EntityContextLoader extends PureComponent {
       this.props.querySimilar({ query: similarQuery });
     }
 
+    const { moreLikeThisQuery, moreLikeThisResult } = this.props;
+    const showMoreLikeThis = entity?.schema?.isDocument() && !isPreview;
+    if (showMoreLikeThis && moreLikeThisResult.shouldLoad) {
+      this.props.queryMoreLikeThis({ query: moreLikeThisQuery });
+    }
+
     const { nearbyQuery, nearbyResult } = this.props;
     const showNearby = entity?.schema?.isA('Address') && !isPreview;
     if (showNearby && nearbyResult.shouldLoad) {
@@ -76,6 +85,7 @@ class EntityContextLoader extends PureComponent {
 const mapStateToProps = (state, ownProps) => {
   const { entityId, location } = ownProps;
   const similarQuery = entitySimilarQuery(location, entityId);
+  const moreLikeThisQuery = entityMoreLikeThisQuery(location, entityId);
   const nearbyQuery = entityNearbyQuery(location, entityId);
   const childrenQuery = folderDocumentsQuery(location, entityId, undefined);
   const expandQuery = entityReferencesQuery(entityId);
@@ -84,6 +94,8 @@ const mapStateToProps = (state, ownProps) => {
     tagsResult: selectEntityTags(state, entityId),
     similarQuery,
     similarResult: selectSimilarResult(state, similarQuery),
+    moreLikeThisQuery,
+    moreLikeThisResult: selectMoreLikeThisResult(state, moreLikeThisQuery),
     nearbyQuery,
     nearbyResult: selectNearbyResult(state, nearbyQuery),
     expandQuery,
@@ -96,6 +108,7 @@ const mapStateToProps = (state, ownProps) => {
 const mapDispatchToProps = {
   queryEntities,
   querySimilar,
+  queryMoreLikeThis,
   queryNearby,
   queryEntityExpand,
   fetchEntity,

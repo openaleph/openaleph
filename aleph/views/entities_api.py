@@ -26,6 +26,7 @@ from aleph.search import (
     EntitiesQuery,
     GeoDistanceQuery,
     MatchQuery,
+    MoreLikeThisQuery,
     QueryParser,
     SearchQueryParser,
 )
@@ -435,6 +436,51 @@ def similar(entity_id):
         }
         result.results.append(item)
     return SimilarSerializer.jsonify_result(result)
+
+
+@blueprint.route("/api/2/entities/<entity_id>/more_like_this", methods=["GET"])
+def more_like_this(entity_id):
+    """
+    ---
+    get:
+      summary: Get more like this entities
+      description: >
+        Get a list of entities similar to the entity with id `entity_id`
+        using Elasticsearch more_like_this query for text similarity
+      parameters:
+      - in: path
+        name: entity_id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: 'filter:schema'
+        schema:
+          items:
+            type: string
+          type: array
+      - in: query
+        name: 'filter:schemata'
+        schema:
+          items:
+            type: string
+          type: array
+      responses:
+        '200':
+          description: Returns a list of entities in result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntitiesResponse'
+      tags:
+      - Entity
+    """
+    # enable_cache()
+    entity = get_index_entity(entity_id, request.authz.READ)
+    tag_request(collection_id=entity.get("collection_id"))
+    proxy = get_entity_proxy(entity)
+    result = get_query_result(MoreLikeThisQuery, request, entity=proxy)
+    return EntitySerializer.jsonify_result(result)
 
 
 @blueprint.route("/api/2/entities/<entity_id>/tags", methods=["GET"])

@@ -457,6 +457,11 @@ export function selectSimilarResult(state, query) {
   return result;
 }
 
+export function selectMoreLikeThisResult(state, query) {
+  const result = selectResult(state, query, selectEntity);
+  return result;
+}
+
 export function selectNearbyResult(state, query) {
   const result = selectResult(state, query, undefined);
   result.results.forEach((obj) => {
