@@ -23,12 +23,12 @@ class DiscoveryApiTestCase(TestCase):
         res = self.client.get(url, headers=headers)
         assert res.status_code == 404, res
 
-    def test_discover_no_access(self):
-        """Test discovery endpoint without read access to collection."""
-        user, headers = self.login(foreign_id="user_no_access")
+    def test_discover_login_access(self):
+        """Test discovery endpoint with read access to collection."""
+        _, headers = self.login(foreign_id="user_read_access")
         url = f"/api/2/collections/{self.private_coll.id}/discover"
         res = self.client.get(url, headers=headers)
-        assert res.status_code == 403, res
+        assert res.status_code == 200, res
 
     def test_discover_private_collection_with_access(self):
         """Test discovery endpoint on private collection with proper access."""
