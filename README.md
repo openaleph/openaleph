@@ -1,6 +1,6 @@
 > "Truth cannot penetrate a closed mind. If all places in the universe are in the Aleph, then all stars, all lamps, all sources of light are in it, too."
 >
-> — Jorge Luis Borges, [*The Aleph*](http://www.phinnweb.org/links/literature/borges/Aleph.html)
+> — Jorge Luis Borges, [_The Aleph_](http://www.phinnweb.org/links/literature/borges/Aleph.html)
 
 # OpenAleph: Empowering Investigative Research
 
@@ -15,9 +15,15 @@
 
 ## Get Started
 
-Discover how to install, use, and contribute to OpenAleph through our friendly documentation:
+Discover how to install, use, and contribute to OpenAleph through our [documentation](https://openaleph.org/docs/).
 
-[Visit our documentation](https://openaleph.org/docs/)
+OpenAleph can run be deployed locally with Docker, for testing purposes:
+
+1. Run `cp aleph.env.tmpl aleph.env` and then edit `aleph.env`. Assign a value to `ALEPH_SECRET_KEY`. You can also set `ALEPH_SINGLE_USER=true` or create an admit user following the instructions [in the documentation](https://docs.aleph.occrp.org/developers/getting-started/development-environment/#create-an-admin-user).
+2. Run `make build; make upgrade; make web`.
+3. Navigate to `http://localhost:8080/`.
+
+This deployment method should not be used for production environments. The technical documentation details [different ways](https://docs.aleph.occrp.org/developers/getting-started/production-deployment/) to run OpenAleph in production.
 
 ## Join the Conversation
 
@@ -36,4 +42,5 @@ If you need help using OpenAleph, we encourage you to consult our documentation 
 OpenAleph is open source software. See the [LICENSE](LICENSE.txt) file for details.
 
 ---
-_Standing on the shoulders of giants_: OpenAleph builds on the brillant work of the many contributors of the [Aleph](https://github.com/alephdata/aleph) project, it's predecessor. We've published a blog post about the decision to fork and continue the OpenAleph open source project [here](https://openaleph.org/blog/2025/03/OpenAleph-commits-to-the-commons/3510138e-16b3-4b5d-a06c-41af0aa2d517/).
+
+_Standing on the shoulders of giants_: OpenAleph builds on the brilliant work of the many contributors of the [Aleph](https://github.com/alephdata/aleph) project, it's predecessor. We've published a blog post about the decision to fork and continue the OpenAleph open source project [here](https://openaleph.org/blog/2025/03/OpenAleph-commits-to-the-commons/3510138e-16b3-4b5d-a06c-41af0aa2d517/).
