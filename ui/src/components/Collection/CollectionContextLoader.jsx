@@ -4,8 +4,8 @@ import { connect } from 'react-redux';
 
 import withRouter from 'app/withRouter';
 import { collectionXrefFacetsQuery } from 'queries';
-import { fetchCollection, queryCollectionXref, forceMutate } from 'actions';
-import { selectCollection, selectCollectionXrefResult } from 'selectors';
+import { fetchCollection, queryCollectionXref, fetchCollectionDiscovery, forceMutate } from 'actions';
+import { selectCollection, selectCollectionXrefResult, selectCollectionDiscovery } from 'selectors';
 import timestamp from 'util/timestamp';
 
 class CollectionContextLoader extends PureComponent {
@@ -40,6 +40,11 @@ class CollectionContextLoader extends PureComponent {
     if (xrefResult.shouldLoad) {
       this.props.queryCollectionXref({ query: xrefQuery, result: xrefResult });
     }
+
+    const { discoveryResult } = this.props;
+    if (discoveryResult.shouldLoad) {
+      this.props.fetchCollectionDiscovery({ id: collectionId });
+    }
   }
 
   fetchRefresh() {
@@ -69,6 +74,7 @@ const mapStateToProps = (state, ownProps) => {
     collection: selectCollection(state, collectionId),
     xrefQuery,
     xrefResult: selectCollectionXrefResult(state, xrefQuery),
+    discoveryResult: selectCollectionDiscovery(state, collectionId),
   };
 };
 
@@ -76,6 +82,7 @@ const mapDispatchToProps = {
   forceMutate,
   fetchCollection,
   queryCollectionXref,
+  fetchCollectionDiscovery,
 };
 
 export default compose(

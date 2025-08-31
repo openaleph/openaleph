@@ -7,6 +7,7 @@ import withRouter from 'app/withRouter';
 import CollectionDocumentsMode from 'components/Collection/CollectionDocumentsMode';
 import CollectionOverviewMode from 'components/Collection/CollectionOverviewMode';
 import CollectionXrefMode from 'components/Collection/CollectionXrefMode';
+import CollectionDiscoveryMode from 'components/Collection/CollectionDiscoveryMode';
 import FacetedEntitySearch from 'components/EntitySearch/FacetedEntitySearch';
 import collectionViewIds from 'components/Collection/collectionViewIds';
 import CollectionView from 'components/Collection/CollectionView';
@@ -99,6 +100,12 @@ class CollectionViews extends React.Component {
             </>
           }
           panel={<CollectionXrefMode collectionId={collectionId} />}
+        />
+        <Tab
+          id={collectionViewIds.DISCOVERY}
+          className="CollectionViews__tab"
+          title={<CollectionView.Label id={collectionViewIds.DISCOVERY} icon />}
+          panel={<CollectionDiscoveryMode collectionId={collectionId} />}
         />
         <Tab
           id={collectionViewIds.SEARCH}

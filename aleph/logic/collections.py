@@ -14,6 +14,7 @@ from aleph.core import cache, db
 from aleph.index import collections as index
 from aleph.index import xref as xref_index
 from aleph.logic.aggregator import get_aggregator, get_aggregator_name
+from aleph.logic.discover import update_collection_discovery
 from aleph.logic.documents import MODEL_ORIGIN, ingest_flush
 from aleph.logic.notifications import flush_notifications, publish
 from aleph.model import (
@@ -58,6 +59,7 @@ def refresh_collection(collection_id):
     cache.kv.delete(
         cache.object_key(Collection, collection_id),
         cache.object_key(Collection, collection_id, "stats"),
+        cache.object_key(Collection, collection_id, "discovery"),
     )
 
 
@@ -115,6 +117,8 @@ def compute_collection(collection: Collection, force=False, sync=False):
         dataset=collection.foreign_id,
     )
     index.update_collection_stats(collection.id)
+    update_collection_discovery(collection.id, collection.name)
+
     cache.set(key, datetime.utcnow().isoformat())
     index.index_collection(collection, sync=sync)
 

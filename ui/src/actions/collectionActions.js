@@ -126,3 +126,11 @@ export const triggerCollectionCancel = asyncActionCreator(
   },
   { name: 'TRIGGER_COLLECTION_CANCEL' }
 );
+
+export const fetchCollectionDiscovery = asyncActionCreator(
+  ({ id }) => async () => {
+    const response = await endpoint.get(`collections/${id}/discover`);
+    return { id, data: response.data };
+  },
+  { name: 'FETCH_COLLECTION_DISCOVERY' }
+);

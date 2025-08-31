@@ -90,6 +90,15 @@ const messages = defineMessages({
     id: 'collection.info.overview',
     defaultMessage: 'Overview',
   },
+  discovery: {
+    id: 'collection.info.discovery',
+    defaultMessage: 'Discovery',
+  },
+  discovery_description: {
+    id: 'collection.info.discovery_description',
+    defaultMessage:
+      'Discovery analysis shows significant terms and their relationships within the dataset, helping you identify key patterns and connections.',
+  },
 });
 
 const icons = {
@@ -103,6 +112,7 @@ const icons = {
   lists: 'list',
   timelines: 'gantt-chart',
   mentions: 'tag',
+  discovery: 'lightbulb',
 };
 
 const CollectionViewIcon = ({ id, className }) => {

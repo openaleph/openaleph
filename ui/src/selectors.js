@@ -440,6 +440,10 @@ export function selectCollectionXref(state, xrefId) {
   return selectObject(state, state.collectionXref, xrefId);
 }
 
+export function selectCollectionDiscovery(state, collectionId) {
+  return selectObject(state, state.collectionDiscovery, collectionId);
+}
+
 export function selectCollectionXrefResult(state, query) {
   const result = selectResult(state, query, undefined);
   result.results.forEach((xref) => {

@@ -12,6 +12,7 @@ from aleph.logic.collections import (
     reingest_collection,
     update_collection,
 )
+from aleph.logic.discover import get_collection_discovery, update_collection_discovery
 from aleph.logic.entitysets import save_entityset_item
 from aleph.logic.processing import bulk_write
 from aleph.procrastinate.queues import (
@@ -388,6 +389,45 @@ def cancel(collection_id):
     queue_cancel_collection(collection)
     refresh_collection(collection_id)
     return ("", 204)
+
+
+@blueprint.route("/<int:collection_id>/discover", methods=["GET"])
+def discover(collection_id):
+    """
+    ---
+    get:
+      summary: Get dataset discovery analysis for a collection
+      description: >
+        Return cached dataset discovery analysis with significant terms and mentioned entities
+        for the collection with id `collection_id`
+      parameters:
+      - description: The collection ID.
+        in: path
+        name: collection_id
+        required: true
+        schema:
+          minimum: 1
+          type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetDiscovery'
+      tags:
+      - Collection
+    """
+    collection = get_db_collection(collection_id, request.authz.READ)
+
+    # Return cached discovery analysis
+    discovery = get_collection_discovery(collection_id, collection.foreign_id)
+
+    # If not cached, compute and cache
+    if discovery is None:
+        discovery = update_collection_discovery(collection_id, collection.foreign_id)
+
+    return jsonify(discovery.model_dump(mode="json"))
 
 
 @blueprint.route("/<int:collection_id>", methods=["DELETE"])

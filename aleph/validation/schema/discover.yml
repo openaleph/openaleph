@@ -1,0 +1,68 @@
+Term:
+  type: object
+  properties:
+    name:
+      type: string
+    count:
+      type: integer
+      default: 0
+    label:
+      type: string
+      readOnly: true
+  required: ["name"]
+
+MentionedTerms:
+  type: object
+  properties:
+    peopleMentioned:
+      type: array
+      items:
+        $ref: "#/components/schemas/Term"
+    companiesMentioned:
+      type: array
+      items:
+        $ref: "#/components/schemas/Term"
+    locationMentioned:
+      type: array
+      items:
+        $ref: "#/components/schemas/Term"
+    namesMentioned:
+      type: array
+      items:
+        $ref: "#/components/schemas/Term"
+
+SignificantTerms:
+  type: object
+  allOf:
+    - $ref: "#/components/schemas/MentionedTerms"
+  properties:
+    term:
+      $ref: "#/components/schemas/Term"
+
+DatasetDiscovery:
+  type: object
+  properties:
+    name:
+      type: string
+      description: Collection foreign_id
+    peopleMentioned:
+      type: array
+      items:
+        $ref: "#/components/schemas/SignificantTerms"
+      default: []
+    companiesMentioned:
+      type: array
+      items:
+        $ref: "#/components/schemas/SignificantTerms"
+      default: []
+    locationMentioned:
+      type: array
+      items:
+        $ref: "#/components/schemas/SignificantTerms"
+      default: []
+    namesMentioned:
+      type: array
+      items:
+        $ref: "#/components/schemas/SignificantTerms"
+      default: []
+  required: ["name"]

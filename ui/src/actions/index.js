@@ -9,6 +9,7 @@ export {
   createCollection,
   deleteCollection,
   fetchCollection,
+  fetchCollectionDiscovery,
   fetchCollectionPermissions,
   queryCollections,
   queryCollectionXref,

@@ -9,6 +9,7 @@ const viewIds = {
   SEARCH: 'search',
   LISTS: 'lists',
   TIMELINES: 'timelines',
+  DISCOVERY: 'discovery',
 };
 
 export default viewIds;
