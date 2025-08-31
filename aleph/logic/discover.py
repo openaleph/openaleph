@@ -64,7 +64,7 @@ def update_collection_discovery(collection_id: int, dataset: str) -> DatasetDisc
         (f"facet_size:properties.{prop.name}", MAX_TERMS) for prop in PROPS
     ]
     base_args = [
-        ("filter:dataset", dataset),
+        ("filter:collection_id", collection_id),
         ("limit", 0),
     ]
 
