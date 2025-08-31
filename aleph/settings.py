@@ -176,7 +176,9 @@ class Settings:
         ###############################################################################
         # Database and search index
 
-        self.DATABASE_URI = env.get("ALEPH_DATABASE_URI")
+        self.DATABASE_URI = env.get(
+            "OPENALEPH_DATABASE_URI", env.get("ALEPH_DATABASE_URI")
+        )
         self.SQLALCHEMY_TRACK_MODIFICATIONS = False
         self.ALEMBIC_DIR = os.path.join(self.APP_DIR, "migrate")
 
