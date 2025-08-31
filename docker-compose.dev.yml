@@ -31,7 +31,7 @@ services:
     volumes:
       - redis-data:/data
 
-  analyze:
+  ftm-analyze:
     image: ghcr.io/dataresearchcenter/ftm-analyze:latest
     entrypoint: procrastinate worker -q analyze --concurrency 2
     restart: on-failure
@@ -41,7 +41,6 @@ services:
       - /tmp
     env_file:
       - aleph.env
-
 
   ingest-file:
     image: ghcr.io/openaleph/ingest-file:latest

@@ -25,7 +25,7 @@ all: build upgrade web
 
 services:
 	$(COMPOSE) up -d --remove-orphans redis postgres elasticsearch \
-		ingest-file ftm-analyze
+		ingest-file ftm-analyze procrastinate-worker
 
 shell: services
 	$(APPDOCKER) /bin/bash
