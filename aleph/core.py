@@ -86,8 +86,8 @@ def create_app(config=None):
             "SQLALCHEMY_DATABASE_URI": database_uri,
             "SQLALCHEMY_ENGINE_OPTIONS": {
                 "pool_pre_ping": True,
-                "pool_size": SETTINGS.SQLALCHEMY_POOL_SIZE,
-                "max_overflow": SETTINGS.SQLALCHEMY_MAX_OVERFLOW,
+                "pool_size": 1,
+                "max_overflow": SETTINGS.SQLALCHEMY_MAX_POOL_SIZE,
                 "pool_recycle": SETTINGS.SQLALCHEMY_POOL_RECYCLE,
                 "pool_timeout": SETTINGS.SQLALCHEMY_POOL_TIMEOUT,
                 "connect_args": {
