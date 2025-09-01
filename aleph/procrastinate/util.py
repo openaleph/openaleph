@@ -11,7 +11,7 @@ from aleph.model.role import Role
 def ensure_collection(dataset: str) -> Collection:
     if dataset.startswith("collection_"):
         collection_id = int(dataset.split("_")[-1])
-        collection = Collection.by_id(collection_id)
+        collection = Collection.by_id(collection_id, deleted=True)
         assert collection is not None, f"Invalid collection: `{dataset}`"
         return collection
     collection = Collection.by_foreign_id(dataset, deleted=True)
