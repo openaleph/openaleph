@@ -64,7 +64,7 @@ const CollectionDiscoveryMode: React.FC<CollectionDiscoveryModeProps> = ({
       case 'people':
         return 'Person';
       case 'companies':
-        return 'Company';
+        return 'Organization';
       case 'locations':
         return 'Address';
       default:
@@ -94,10 +94,24 @@ const CollectionDiscoveryMode: React.FC<CollectionDiscoveryModeProps> = ({
     });
   };
 
+  const renderIcon = (schemaName: string) => {
+    if (schemaName === 'Address')
+      return (
+        <Icon icon="home" className="CollectionDiscoveryMode__term-icon" />
+      );
+    const schema = model?.getSchema(schemaName);
+    return (
+      schema && (
+        <Schema.Icon
+          schema={schema}
+          className="CollectionDiscoveryMode__term-icon"
+        />
+      )
+    );
+  };
+
   const renderTermCard = (term: Term, category: string, parentTerm?: Term) => {
     const schemaName = getSchemaForCategory(category);
-    const schema = model?.getSchema(schemaName);
-    const isLocation = category.split('-')[0] === 'locations';
 
     return (
       <div
@@ -108,16 +122,7 @@ const CollectionDiscoveryMode: React.FC<CollectionDiscoveryModeProps> = ({
           className="CollectionDiscoveryMode__term-item"
           onClick={() => handleTermClick(term.label, parentTerm)}
         >
-          {isLocation ? (
-            <Icon icon="home" className="CollectionDiscoveryMode__term-icon" />
-          ) : (
-            schema && (
-              <Schema.Icon
-                schema={schema}
-                className="CollectionDiscoveryMode__term-icon"
-              />
-            )
-          )}
+          {renderIcon(schemaName)}
           <span className="CollectionDiscoveryMode__term-name">
             {term.label}
           </span>
@@ -176,9 +181,16 @@ const CollectionDiscoveryMode: React.FC<CollectionDiscoveryModeProps> = ({
       return null;
     }
 
+    const schemaName = getSchemaForCategory(category);
+
     return (
       <Card className="CollectionDiscoveryMode__section">
-        <H3 className="CollectionDiscoveryMode__section-title">{title}</H3>
+        <H3 className="CollectionDiscoveryMode__section-title">
+          <span className="CollectionDiscoveryMode__section-title-icon">
+            {renderIcon(schemaName)}
+          </span>
+          {title}
+        </H3>
         <div className="CollectionDiscoveryMode__significant-terms">
           {significantTerms.map(
             (sigTerm, index) =>

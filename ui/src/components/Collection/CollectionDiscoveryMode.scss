@@ -39,6 +39,13 @@
     padding-bottom: $pt-grid-size;
   }
 
+  &__section-title-icon {
+    padding: $pt-grid-size;
+    align-items: center;
+    display: inline-flex;
+    transform: scale(1.5);
+  }
+
   &__significant-terms {
     display: flex;
     flex-direction: column;
