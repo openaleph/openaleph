@@ -275,7 +275,7 @@ def validate_collection_foreign_ids():
 
     invalid_collections = []
 
-    for collection in Collection.all():
+    for collection in Collection.all(deleted=True):
         try:
             dataset_name_check(collection.foreign_id)
         except Exception as e:
@@ -285,6 +285,7 @@ def validate_collection_foreign_ids():
                     "foreign_id": collection.foreign_id,
                     "label": collection.label,
                     "error": str(e),
+                    "deleted_at": collection.deleted_at,
                 }
             )
             log.warning(

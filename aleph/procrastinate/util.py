@@ -4,7 +4,7 @@ Utilities to map (legacy) Aleph logic to new procrastinate logic
 
 from aleph.authz import Authz
 from aleph.logic.collections import create_collection
-from aleph.model.collection import Collection
+from aleph.model.collection import Collection, cached_dataset_name_check
 from aleph.model.role import Role
 
 
@@ -17,10 +17,11 @@ def ensure_collection(dataset: str) -> Collection:
     collection = Collection.by_foreign_id(dataset, deleted=True)
     if collection is None:
         authz = Authz.from_role(Role.load_cli_user())
+        foreign_id = cached_dataset_name_check(dataset)
         config = {
-            "foreign_id": dataset,
+            "foreign_id": foreign_id,
             "label": dataset,
         }
         create_collection(config, authz)
-        return Collection.by_foreign_id(dataset)
+        return Collection.by_foreign_id(foreign_id)
     return collection
