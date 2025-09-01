@@ -4,7 +4,7 @@ on:
   workflow_dispatch: {}
   push:
     paths:
-      - ui/*
+      - ui/**
       - .github/workflows/build-ui.yml
 
 permissions:
