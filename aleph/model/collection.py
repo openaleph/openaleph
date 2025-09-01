@@ -196,7 +196,7 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
         data.update(
             {
                 "id": stringify(self.id),
-                "name": self.name,
+                # "name": self.name,
                 "collection_id": stringify(self.id),
                 "foreign_id": self.foreign_id,
                 "creator_id": stringify(self.creator_id),
