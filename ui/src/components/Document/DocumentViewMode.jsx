@@ -15,6 +15,7 @@ import ArticleViewer from 'viewers/ArticleViewer';
 import withRouter from 'app/withRouter';
 import { SectionLoading } from 'components/common';
 import { selectEntityDirectionality } from 'selectors';
+import queryString from 'query-string';
 
 import './DocumentViewMode.scss';
 
@@ -23,8 +24,24 @@ const PdfViewer = lazy(() =>
 );
 
 export class DocumentViewMode extends React.Component {
+  shouldDisableSearch() {
+    const { activeMode, textMode, location } = this.props;
+    
+    // Only disable search for view mode (not text mode) when in search preview
+    if (activeMode === 'view' && !textMode && location) {
+      const parsedHash = queryString.parse(location.hash);
+      const parsedSearch = queryString.parse(location.search);
+      
+      // Check if we're in a search preview
+      return !!(parsedHash['preview:id'] && parsedHash.q && (parsedSearch.q || parsedSearch.csq));
+    }
+    
+    return false;
+  }
+
   renderContent() {
     const { document, activeMode, dir, textMode } = this.props;
+    const disableSearch = this.shouldDisableSearch();
     const processingError = document.getProperty('processingError');
 
     if (processingError && processingError.length) {
@@ -75,7 +92,12 @@ export class DocumentViewMode extends React.Component {
     if (document.schema.isA('Pages')) {
       return (
         <Suspense fallback={<SectionLoading />}>
-          <PdfViewer document={document} activeMode={activeMode} dir={dir} />
+          <PdfViewer 
+            document={document} 
+            activeMode={activeMode} 
+            dir={dir}
+            disableSearch={disableSearch}
+          />
         </Suspense>
       );
     }

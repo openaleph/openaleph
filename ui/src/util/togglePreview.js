@@ -1,20 +1,41 @@
 import queryString from 'query-string';
 
 export default function togglePreview(navigate, location, entity, profile) {
-  const parsed = queryString.parse(location.hash);
-  parsed['preview:mode'] = undefined;
+  const parsedHash = queryString.parse(location.hash);
+  const parsedSearch = queryString.parse(location.search);
+
+  parsedHash['preview:mode'] = undefined;
+
   if (entity) {
-    parsed['preview:id'] =
-      parsed['preview:id'] === entity.id ? undefined : entity.id;
-    parsed['preview:profile'] = profile;
+    const isOpening = parsedHash['preview:id'] !== entity.id;
+    parsedHash['preview:id'] = isOpening ? entity.id : undefined;
+    parsedHash['preview:profile'] = profile;
+
+    // If opening a Document from search results, copy the search term into the hash as #q=...
+    const isDocument =
+      entity.schema === 'Document' ||
+      (entity.schema &&
+        (entity.schema.name === 'Document' ||
+          (typeof entity.schema.isDocument === 'function' &&
+            entity.schema.isDocument())));
+    if (isOpening && isDocument) {
+      const searchTerm = parsedSearch.q || parsedSearch.csq;
+      parsedHash.q = searchTerm || undefined;
+    }
+    // If closing, remove q from hash to avoid stale terms lingering
+    if (!isOpening) {
+      parsedHash.q = undefined;
+    }
   } else {
-    parsed['preview:id'] = undefined;
-    parsed['preview:profile'] = undefined;
-    parsed.page = undefined;
+    parsedHash['preview:id'] = undefined;
+    parsedHash['preview:profile'] = undefined;
+    parsedHash.page = undefined;
+    parsedHash.q = undefined;
   }
+
   navigate({
     pathname: location.pathname,
     search: location.search,
-    hash: queryString.stringify(parsed),
+    hash: queryString.stringify(parsedHash),
   });
 }

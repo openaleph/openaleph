@@ -28,7 +28,7 @@ class PdfViewerSearch extends Component {
   }
 
   getResultLink(result) {
-    const { activeMode, query } = this.props;
+    const { activeMode, query, document, location } = this.props;
     const page = result.getProperty('index').toString();
 
     const hashQuery = {
@@ -36,6 +36,17 @@ class PdfViewerSearch extends Component {
       mode: activeMode,
       q: query.getString('q'),
     };
+
+    // Check if we're in a preview from search results
+    if (location) {
+      const parsedHash = queryString.parse(location.hash);
+      const parsedSearch = queryString.parse(location.search);
+      const isPreviewFromSearch = parsedHash['preview:id'] && (parsedSearch.q || parsedSearch.csq);
+      
+      if (isPreviewFromSearch && document) {
+        return `/entities/${document.id}#${queryString.stringify(hashQuery)}`;
+      }
+    }
 
     return `#${queryString.stringify(hashQuery)}`;
   }
