@@ -19,7 +19,7 @@ export default function togglePreview(navigate, location, entity, profile) {
           (typeof entity.schema.isDocument === 'function' &&
             entity.schema.isDocument())));
     if (isOpening && isDocument) {
-      const searchTerm = parsedSearch.q;
+      const searchTerm = parsedSearch.q || parsedSearch.csq;
       parsedHash.q = searchTerm || undefined;
     }
     // If closing, remove q from hash to avoid stale terms lingering

@@ -41,7 +41,7 @@ class PdfViewerSearch extends Component {
     if (location) {
       const parsedHash = queryString.parse(location.hash);
       const parsedSearch = queryString.parse(location.search);
-      const isPreviewFromSearch = parsedHash['preview:id'] && parsedSearch.q;
+      const isPreviewFromSearch = parsedHash['preview:id'] && (parsedSearch.q || parsedSearch.csq);
       
       if (isPreviewFromSearch && document) {
         return `/entities/${document.id}#${queryString.stringify(hashQuery)}`;
