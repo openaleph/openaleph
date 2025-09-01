@@ -273,14 +273,14 @@ trio = ["trio (>=0.26.1)"]
 
 [[package]]
 name = "anystore"
-version = "0.3.10"
+version = "0.3.11"
 description = "Store and cache things anywhere"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "anystore-0.3.10-py3-none-any.whl", hash = "sha256:caf567b97f02c20b78d7c3bd79d1ffcb04286d5420f4b30c5e6087cc563d5423"},
-    {file = "anystore-0.3.10.tar.gz", hash = "sha256:c05723ae8ad53bab06d7eb1c0587a656d3603bf80d0f10aa80d3a19e0af764e0"},
+    {file = "anystore-0.3.11-py3-none-any.whl", hash = "sha256:e90f5d92efedc8109f0ccab45ff8f339ecf358656cda91c53403d8b3a6e7bcf9"},
+    {file = "anystore-0.3.11.tar.gz", hash = "sha256:57c01d3cfb4c55c87bd1c921685372d486c6b3b60af22c70b6d2f9062cce87bb"},
 ]
 
 [package.dependencies]
@@ -298,7 +298,7 @@ rigour = ">=1.0.0,<2.0.0"
 s3fs = ">2023.10,<2026"
 structlog = ">=22.0.0,<26.0.0"
 tqdm = ">=4.67.1,<5.0.0"
-typer = ">=0.16.0,<0.17.0"
+typer = ">=0.17"
 uuid7 = ">=0.1.0,<0.2.0"
 
 [package.extras]
@@ -1569,18 +1569,18 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "ftmq"
-version = "4.2.3"
+version = "4.2.4"
 description = "followthemoney query dsl and io helpers"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "ftmq-4.2.3-py3-none-any.whl", hash = "sha256:a4647bd91e6ecf70f13b8bb51c877e25b0b3be2c11f6c675fcf3e1c4b0401e7f"},
-    {file = "ftmq-4.2.3.tar.gz", hash = "sha256:a779a3fa31847f997addbfdafd004ac70ccb97d90171232a91e078a6849beada"},
+    {file = "ftmq-4.2.4-py3-none-any.whl", hash = "sha256:19b1ab7a4e9f9dca6439302d3bdf7a41b243a69939a20e9aed4d520da9d93d6a"},
+    {file = "ftmq-4.2.4.tar.gz", hash = "sha256:42d1774ac9678753e2882e727368f00ac8464723277e8df9f3571d8a6859bb3c"},
 ]
 
 [package.dependencies]
-anystore = ">=0.3.10,<0.4.0"
+anystore = ">=0.3.11,<0.4.0"
 click = ">=8.2.1,<9.0.0"
 click-default-group = ">=1.2.4,<2.0.0"
 followthemoney = ">=4.2.0,<5.0.0"
@@ -3430,21 +3430,21 @@ files = [
 
 [[package]]
 name = "openaleph-procrastinate"
-version = "0.0.30"
+version = "5.0.0"
 description = "Task queue logic for OpenAleph built upon procrastinate"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "openaleph_procrastinate-0.0.30-py3-none-any.whl", hash = "sha256:0e547f5a021095632c7361023a35b9ced38fc82fca4f9df9b998947e5cb47f00"},
-    {file = "openaleph_procrastinate-0.0.30.tar.gz", hash = "sha256:36fd3bd53de38c7e19ea17a08c6f1c539d226aa2bc1470455a175b2d9649e13c"},
+    {file = "openaleph_procrastinate-5.0.0-py3-none-any.whl", hash = "sha256:f56939aa8b57fbdd64d7391f13bfd14a267f41803abdd28e8acc8e831f153204"},
+    {file = "openaleph_procrastinate-5.0.0.tar.gz", hash = "sha256:69cb7aaac5e580f4e1293c0842c1a5f47903626b808fade1b531a9ea036aaadd"},
 ]
 
 [package.dependencies]
-anystore = ">=0.3.10,<0.4.0"
+anystore = ">=0.3.11,<0.4.0"
 cachetools = "<6"
 followthemoney = ">=4.2.0,<5.0.0"
-ftmq = ">=4.2.3,<5.0.0"
+ftmq = ">=4.2.4,<5.0.0"
 procrastinate = ">=3.5.2,<4.0.0"
 psycopg = ">=3.2.9,<4.0.0"
 pydantic = ">=2.11.7,<3.0.0"
@@ -3455,14 +3455,14 @@ django = ["dj-database-url (>=2.3.0,<3.0.0)", "django (>=5.2,<6.0)", "procrastin
 
 [[package]]
 name = "openaleph-search"
-version = "0.0.7"
+version = "0.0.8"
 description = "OpenAleph index & search module"
 optional = false
 python-versions = "<4,>=3.12"
 groups = ["main"]
 files = [
-    {file = "openaleph_search-0.0.7-py3-none-any.whl", hash = "sha256:f873b33c9ba1b01609843d2637504885918bc884bf0178ee85e695d532387517"},
-    {file = "openaleph_search-0.0.7.tar.gz", hash = "sha256:482fa32855dd209adc4182627582a514594e1232414e7a4478bc9f847884f244"},
+    {file = "openaleph_search-0.0.8-py3-none-any.whl", hash = "sha256:4d25b5570d0868607a12f2d07d4262841ba2e6c6b06868d6c355e84de787f382"},
+    {file = "openaleph_search-0.0.8.tar.gz", hash = "sha256:ba05ba7452c04a91e835525784666789f7d576a391f4f12df17d85e45cd7486e"},
 ]
 
 [package.dependencies]
@@ -5686,14 +5686,14 @@ test = ["argcomplete (>=3.0.3)", "mypy (>=1.7.0)", "pre-commit", "pytest (>=7.0,
 
 [[package]]
 name = "typer"
-version = "0.16.1"
+version = "0.17.3"
 description = "Typer, build great CLIs. Easy to code. Based on Python type hints."
 optional = false
 python-versions = ">=3.7"
 groups = ["main"]
 files = [
-    {file = "typer-0.16.1-py3-none-any.whl", hash = "sha256:90ee01cb02d9b8395ae21ee3368421faf21fa138cb2a541ed369c08cec5237c9"},
-    {file = "typer-0.16.1.tar.gz", hash = "sha256:d358c65a464a7a90f338e3bb7ff0c74ac081449e53884b12ba658cbd72990614"},
+    {file = "typer-0.17.3-py3-none-any.whl", hash = "sha256:643919a79182ab7ac7581056d93c6a2b865b026adf2872c4d02c72758e6f095b"},
+    {file = "typer-0.17.3.tar.gz", hash = "sha256:0c600503d472bcf98d29914d4dcd67f80c24cc245395e2e00ba3603c9332e8ba"},
 ]
 
 [package.dependencies]
@@ -6102,4 +6102,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.12, <4.0.0"
-content-hash = "80b58a01b1b0cb37916fd6c5387578e645949ba223e3ff2b3045d9a8e526aa95"
+content-hash = "8be14ef9c1f212233b33174121c2783eee55020ea4b67420bac990938ade3a97"
