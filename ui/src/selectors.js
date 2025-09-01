@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import { isEntityRtl } from 'react-ftm';
 import { Model } from '@alephdata/followthemoney';
+import queryString from 'query-string';
 
 import { loadState } from 'reducers/util';
 import { entityReferencesQuery, profileReferencesQuery } from 'queries';
@@ -397,11 +398,23 @@ export function selectValueCount(state, prop, value) {
   return state.values[`${prop.type.group}:${value}`] || null;
 }
 
-export function selectEntityView(state, entityId, mode, isPreview) {
+export function selectEntityView(state, entityId, mode, isPreview, location) {
   if (mode) {
     return mode;
   }
   const { schema } = selectEntity(state, entityId);
+  
+  // If we're in a preview with a search query, default to 'text' tab for documents
+  if (isPreview && location && schema && schema.isDocument()) {
+    const parsedHash = queryString.parse(location.hash);
+    const parsedSearch = queryString.parse(location.search);
+    const isSearchPreview = !!(parsedHash['preview:id'] && parsedHash.q && (parsedSearch.q || parsedSearch.csq));
+    
+    if (isSearchPreview) {
+      return 'text';
+    }
+  }
+  
   if (
     schema &&
     schema.isAny(['Email', 'HyperText', 'Image', 'Pages', 'Table'])

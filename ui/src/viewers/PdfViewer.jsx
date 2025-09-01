@@ -278,7 +278,7 @@ export class PdfViewer extends Component {
 }
 
 const mapStateToProps = (state, ownProps) => {
-  const { document, location } = ownProps;
+  const { document, location, disableSearch } = ownProps;
   const hashQuery = queryString.parse(location.hash);
   const page = parseInt(hashQuery.page, 10) || 1;
   const rotate = hashQuery.rotate && parseInt(hashQuery.rotate, 10);
@@ -307,7 +307,7 @@ const mapStateToProps = (state, ownProps) => {
 
   const countResult = selectEntitiesResult(state, countQuery);
   const pdfUrl = document.links?.pdf || document.links?.file;
-  const shouldRenderSearch = queryText && !hashQuery.page;
+  const shouldRenderSearch = queryText && !hashQuery.page && !disableSearch;
 
   return {
     page,

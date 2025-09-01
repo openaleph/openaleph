@@ -117,7 +117,7 @@ const mapStateToProps = (state, ownProps) => {
     profile,
     parsedHash,
     entity: selectEntity(state, entityId),
-    activeMode: selectEntityView(state, entityId, activeMode, true),
+    activeMode: selectEntityView(state, entityId, activeMode, true, ownProps.location),
     locale: selectLocale(state),
     ftmAssetsApi: selectServiceUrl(state, 'ftm_assets'),
   };
