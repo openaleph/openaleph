@@ -11,6 +11,7 @@ import CollectionMappingsMode from 'components/Collection/CollectionMappingsMode
 import CollectionEntitiesMode from 'components/Collection/CollectionEntitiesMode';
 import CollectionXrefMode from 'components/Collection/CollectionXrefMode';
 import CollectionEntitySetsIndexMode from 'components/Collection/CollectionEntitySetsIndexMode';
+import CollectionDiscoveryMode from 'components/Collection/CollectionDiscoveryMode';
 import CollectionView from 'components/Collection/CollectionView';
 import CollectionViewIds from 'components/Collection/collectionViewIds';
 import FacetedEntitySearch from 'components/EntitySearch/FacetedEntitySearch';
@@ -77,6 +78,8 @@ class InvestigationViews extends React.Component {
         );
       case 'xref':
         return <CollectionXrefMode collectionId={collectionId} />;
+      case 'discovery':
+        return <CollectionDiscoveryMode collectionId={collectionId} />;
       default:
         return (
           <CollectionOverviewMode collectionId={collectionId} isCasefile />

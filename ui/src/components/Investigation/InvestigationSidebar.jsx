@@ -52,6 +52,7 @@ class InvestigationSidebar extends React.Component {
       collectionViewIds.DOCUMENTS,
       collectionViewIds.MAPPINGS,
       collectionViewIds.MENTIONS,
+      collectionViewIds.DISCOVERY,
     ];
 
     return (
