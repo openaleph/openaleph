@@ -116,7 +116,7 @@ const EntitySearchDiscovery: React.FC<EntitySearchDiscoveryProps> = ({
 
   useEffect(() => {
     const fetchDiscoveryData = async () => {
-      if (!result.query_q?.trim()) {
+      if (!result.query_q?.trim() && !result.filters?.names?.length) {
         setDiscoveryResult({ loading: false });
         return;
       }
@@ -133,6 +133,11 @@ const EntitySearchDiscovery: React.FC<EntitySearchDiscoveryProps> = ({
         // Add collection_id filter if it exists in the result filters
         if (result.filters?.collection_id?.length) {
           params['filter:collection_id'] = result.filters.collection_id;
+        }
+
+        // Add names filter if it exists in the result filters
+        if (result.filters?.names?.length) {
+          params['filter:names'] = result.filters.names;
         }
 
         const response = await endpoint.get('entities', {
@@ -156,9 +161,9 @@ const EntitySearchDiscovery: React.FC<EntitySearchDiscoveryProps> = ({
     };
 
     fetchDiscoveryData();
-  }, [result.query_q]);
+  }, [result.query_q, result.filters?.names, result.filters?.collection_id]);
 
-  if (!result.query_q?.trim()) {
+  if (!result.query_q?.trim() && !result.filters?.names?.length) {
     return null;
   }
 
