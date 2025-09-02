@@ -6,7 +6,7 @@ colorama==0.4.6 ; python_version >= "3.12" and python_full_version < "4.0.0" and
 coverage==7.6.4 ; python_version >= "3.12" and python_full_version < "4.0.0"
 debugpy==1.8.8 ; python_version >= "3.12" and python_full_version < "4.0.0"
 decorator==5.2.1 ; python_version >= "3.12" and python_full_version < "4.0.0"
-executing==2.2.0 ; python_version >= "3.12" and python_full_version < "4.0.0"
+executing==2.2.1 ; python_version >= "3.12" and python_full_version < "4.0.0"
 factory-boy==3.3.1 ; python_version >= "3.12" and python_full_version < "4.0.0"
 faker==30.8.2 ; python_version >= "3.12" and python_full_version < "4.0.0"
 fakeredis==2.30.3 ; python_version >= "3.12" and python_full_version < "4.0.0"
