@@ -1,7 +1,11 @@
 import Map, { Marker } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import * as _ from 'lodash';
 
 import { Entity } from '@alephdata/followthemoney';
+
+// Make lodash available globally for MapLibre GL JS
+(window as any)._ = _;
 
 interface IComponent {
   readonly entity: Entity;
