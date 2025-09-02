@@ -188,7 +188,7 @@ def export():
       - Entity
     """
     require(request.authz.logged_in)
-    parser = SearchQueryParser(request.args, request.authz)
+    parser = SearchQueryParser(request.args, request.authz.search_auth)
     tag_request(query=parser.text, prefix=parser.prefix)
     query = EntitiesQuery(parser)
     schemata = parser.getlist("filter:schema")
@@ -378,7 +378,7 @@ def nearby(entity_id):
     entity = get_index_entity(entity_id, request.authz.READ)
     tag_request(collection_id=entity.get("collection_id"))
     proxy = get_entity_proxy(entity)
-    parser = SearchQueryParser(request.values, request.authz)
+    parser = SearchQueryParser(request.values, request.authz.search_auth)
     result = get_query_result(GeoDistanceQuery, request, entity=proxy, parser=parser)
     return EntitySerializer.jsonify_result(result)
 
@@ -660,7 +660,7 @@ def expand(entity_id):
     collection_id = entity.get("collection_id")
     tag_request(collection_id=collection_id)
     parser = QueryParser(
-        request.args, request.authz, max_limit=SETTINGS.MAX_EXPAND_ENTITIES
+        request.args, request.authz.search_auth, max_limit=SETTINGS.MAX_EXPAND_ENTITIES
     )
     properties = parser.filters.get("property")
     results = expand_proxies(
@@ -739,7 +739,7 @@ def entitysets(entity_id):
     """
     entity = get_index_entity(entity_id, request.authz.READ)
 
-    parser = QueryParser(request.args, request.authz)
+    parser = QueryParser(request.args, request.authz.search_auth)
     collection_ids = [
         int(cid)
         for cid in parser.filters.get("collection_id", [])
