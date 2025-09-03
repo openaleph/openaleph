@@ -3455,14 +3455,14 @@ django = ["dj-database-url (>=2.3.0,<3.0.0)", "django (>=5.2,<6.0)", "procrastin
 
 [[package]]
 name = "openaleph-search"
-version = "5.0.2"
+version = "5.0.3"
 description = "OpenAleph index & search module"
 optional = false
 python-versions = "<4,>=3.12"
 groups = ["main"]
 files = [
-    {file = "openaleph_search-5.0.2-py3-none-any.whl", hash = "sha256:adeea5631aebb9592831d833d66a8502b731c635e9ff0a248ed72957f0f8e9bb"},
-    {file = "openaleph_search-5.0.2.tar.gz", hash = "sha256:a83d3c7eef3c94c31670dbcc7be3b44feaf550127a5ff266181b53da0bf8ad3e"},
+    {file = "openaleph_search-5.0.3-py3-none-any.whl", hash = "sha256:f185823df536e8f898c4286b454559f0f60d5fcbc583b55615606d2e509dc0c0"},
+    {file = "openaleph_search-5.0.3.tar.gz", hash = "sha256:0d8ca43fadacb8a60a5d077aa60a42b8e0a6473b469c54f992083d2108465546"},
 ]
 
 [package.dependencies]
@@ -6101,4 +6101,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.12, <4.0.0"
-content-hash = "7d4a36954ba64e306463f78b505e690c9d8f9f40af85089fa5d2b1471bf7d964"
+content-hash = "242f313ff6a6e45189fd91812bf381a17341a61f5335f2b440de280bd69cc40f"
