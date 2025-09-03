@@ -67,11 +67,13 @@ const webpack = require('webpack');
 
 module.exports = {
   webpack: {
-    plugins: [
-      new webpack.ProvidePlugin({
-        _: 'lodash',
-      }),
-    ],
+    plugins: {
+      add: [
+        new webpack.ProvidePlugin({
+          _: 'lodash',
+        }),
+      ],
+    },
   },
   style: {
     sass: {
