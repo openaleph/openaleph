@@ -11,6 +11,7 @@ from openaleph_procrastinate.exceptions import InvalidJob
 from openaleph_procrastinate.model import DatasetJob, Job
 from openaleph_procrastinate.settings import OPENALEPH_MANAGEMENT_QUEUE
 from openaleph_procrastinate.tasks import task
+from procrastinate import builtin_tasks
 
 from aleph.core import create_app
 from aleph.logic import (
@@ -176,3 +177,16 @@ def periodic_daily(timestamp: int):
         notifications.generate_digest()
         notifications.delete_old_notifications()
         export.delete_expired_exports()
+
+
+# every 24 hours
+@app.periodic(cron="0 1 * * *")
+@app.task(queueing_lock="remove_old_jobs", pass_context=True)
+async def remove_old_jobs(context, timestamp):
+    return await builtin_tasks.remove_old_jobs(
+        context,
+        max_hours=24,
+        remove_failed=True,
+        remove_cancelled=True,
+        remove_aborted=True,
+    )
