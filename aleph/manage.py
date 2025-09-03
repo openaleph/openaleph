@@ -414,6 +414,14 @@ def cancel(foreign_id):
     update_collection(collection)
 
 
+@cli.command()
+def cancel_all():
+    """Cancel all queued tasks for all dataset."""
+    for collection in Collection.all():
+        queue_cancel_collection(collection)
+        update_collection(collection)
+
+
 @cli.command("retry-exports")
 def retry_exports_():
     """Cancel all queued tasks not related to a dataset."""
