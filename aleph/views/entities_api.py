@@ -659,8 +659,9 @@ def expand(entity_id):
     proxy = get_entity_proxy(entity)
     collection_id = entity.get("collection_id")
     tag_request(collection_id=collection_id)
+    log.critical(f"args: {request.args}")
     parser = QueryParser(
-        request.args, request.authz.search_auth, max_limit=SETTINGS.MAX_EXPAND_ENTITIES
+        request.args, request.authz.search_auth, limit=SETTINGS.MAX_EXPAND_ENTITIES
     )
     properties = parser.filters.get("property")
     results = expand_proxies(
