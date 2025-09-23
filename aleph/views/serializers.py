@@ -430,3 +430,15 @@ class BookmarkSerializer(Serializer):
         obj.pop("collection_id", None)
         obj.pop("writeable", None)
         return obj
+
+
+class TagSerializer(Serializer):
+    def collect(self, obj):
+        self.queue(Entity, obj.get("entity_id"))
+        self.queue(Role, obj.get("role_id"))
+
+    def _serialize(self, obj):
+        obj["entity"] = self.resolve(Entity, obj.get("entity_id"), EntitySerializer)
+        obj["role"] = self.resolve(Role, obj.get("role_id"), RoleSerializer)
+
+        return obj
