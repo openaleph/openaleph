@@ -2,7 +2,8 @@ import _ from 'lodash';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import queryString from 'query-string';
-import { Checkbox } from '@blueprintjs/core';
+import { Checkbox, Tag } from '@blueprintjs/core';
+import { Link } from 'react-router-dom';
 import c from 'classnames';
 
 import { selectModel } from 'selectors';
@@ -45,7 +46,12 @@ class EntitySearchResultsRow extends Component {
     const { isProperty, name, type } = column;
 
     if (name === 'caption') {
-      return <Entity.Link preview={showPreview} entity={entity} icon />;
+      return (
+        <div>
+          {this.renderTags()}
+          <Entity.Link preview={showPreview} entity={entity} icon />
+        </div>
+      );
     } else if (name === 'collection_id') {
       return (
         <Collection.Link
@@ -113,6 +119,36 @@ class EntitySearchResultsRow extends Component {
         />
       );
     }
+  }
+
+  renderTags() {
+    const { entity } = this.props;
+    const tags = entity.tags || [];
+
+    if (!tags.length) {
+      return null;
+    }
+
+    return (
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.15rem', marginBottom: '0.25rem' }}>
+        {tags.map((tag) => (
+          <Link
+            key={tag}
+            to={`/search?filter:tags=${encodeURIComponent(tag)}`}
+            style={{ textDecoration: 'none' }}
+          >
+            <Tag
+              minimal
+              intent="primary"
+              icon="tag"
+              style={{ fontSize: '0.65rem', padding: '0.1rem 0.3rem', fontWeight: 300 }}
+            >
+              {tag}
+            </Tag>
+          </Link>
+        ))}
+      </div>
+    );
   }
 
   render() {

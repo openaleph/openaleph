@@ -401,6 +401,15 @@ export class CollectionEditDialog extends Component {
               />
             </div>
           </div>
+          <div className={Classes.FORM_GROUP}>
+            <div className={Classes.FILL}>
+              <Checkbox
+                checked={collection.taggable}
+                label={intl.formatMessage(messages.check_taggable)}
+                onChange={this.onToggleTaggable}
+              />
+            </div>
+          </div>
           {!isCasefile && (
             <>
               <div className={Classes.FORM_GROUP}>
@@ -425,15 +434,6 @@ export class CollectionEditDialog extends Component {
                     checked={collection.restricted}
                     label={intl.formatMessage(messages.check_restricted)}
                     onChange={this.onToggleRestricted}
-                  />
-                </div>
-              </div>
-              <div className={Classes.FORM_GROUP}>
-                <div className={Classes.FILL}>
-                  <Checkbox
-                    checked={collection.taggable}
-                    label={intl.formatMessage(messages.check_taggable)}
-                    onChange={this.onToggleTaggable}
                   />
                 </div>
               </div>

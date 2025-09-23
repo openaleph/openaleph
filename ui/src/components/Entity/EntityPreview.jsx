@@ -1,7 +1,8 @@
 import React from 'react';
 import { compose } from 'redux';
 import { connect } from 'react-redux';
-import { Drawer, Position } from '@blueprintjs/core';
+import { Drawer, Position, Tag } from '@blueprintjs/core';
+import { Link } from 'react-router-dom';
 import { isLangRtl } from 'react-ftm';
 
 import withRouter from 'app/withRouter';
@@ -51,6 +52,36 @@ export class EntityPreview extends React.Component {
     togglePreview(navigate, location, null);
   }
 
+  renderTags() {
+    const { entity } = this.props;
+    const tags = entity.tags || [];
+
+    if (!tags.length) {
+      return null;
+    }
+
+    return (
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.15rem', marginBottom: '0.25rem' }}>
+        {tags.map((tag) => (
+          <Link
+            key={tag}
+            to={`/search?filter:tags=${encodeURIComponent(tag)}`}
+            style={{ textDecoration: 'none' }}
+          >
+            <Tag
+              minimal
+              intent="primary"
+              icon="tag"
+              style={{ fontSize: '0.65rem', padding: '0.1rem 0.3rem', fontWeight: 300 }}
+            >
+              {tag}
+            </Tag>
+          </Link>
+        ))}
+      </div>
+    );
+  }
+
   renderContext() {
     const { entity, activeMode, profile, ftmAssetsApi } = this.props;
     if (entity.isError) {
@@ -64,6 +95,7 @@ export class EntityPreview extends React.Component {
         <div className="ItemOverview__heading">
           <EntityImage api={ftmAssetsApi} entity={entity} thumbnail />
           <span>
+            {this.renderTags()}
             <EntityHeading entity={entity} isPreview />
           </span>
         </div>
