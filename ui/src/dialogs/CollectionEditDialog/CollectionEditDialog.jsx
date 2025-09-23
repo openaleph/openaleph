@@ -51,6 +51,10 @@ const messages = defineMessages({
     id: 'collection.edit.info.contains_ai',
     defaultMessage: 'This dataset contains AI generated content.',
   },
+  check_taggable: {
+    id: 'collection.edit.info.taggable',
+    defaultMessage: 'Allow entity tagging in this collection.',
+  },
   placeholder_contains_ai_comment: {
     id: 'collection.edit.info.placeholder_contains_ai_comment',
     defaultMessage:
@@ -97,6 +101,7 @@ export class CollectionEditDialog extends Component {
     this.onSelectCreator = this.onSelectCreator.bind(this);
     this.onFieldChange = this.onFieldChange.bind(this);
     this.onToggleContainsAi = this.onToggleContainsAi.bind(this);
+    this.onToggleTaggable = this.onToggleTaggable.bind(this);
   }
 
   static getDerivedStateFromProps(props, state) {
@@ -121,6 +126,12 @@ export class CollectionEditDialog extends Component {
   onToggleContainsAi() {
     const { collection } = this.state;
     collection.contains_ai = !collection.contains_ai;
+    this.setState({ collection, changed: true });
+  }
+
+  onToggleTaggable() {
+    const { collection } = this.state;
+    collection.taggable = !collection.taggable;
     this.setState({ collection, changed: true });
   }
 
@@ -414,6 +425,15 @@ export class CollectionEditDialog extends Component {
                     checked={collection.restricted}
                     label={intl.formatMessage(messages.check_restricted)}
                     onChange={this.onToggleRestricted}
+                  />
+                </div>
+              </div>
+              <div className={Classes.FORM_GROUP}>
+                <div className={Classes.FILL}>
+                  <Checkbox
+                    checked={collection.taggable}
+                    label={intl.formatMessage(messages.check_taggable)}
+                    onChange={this.onToggleTaggable}
                   />
                 </div>
               </div>
