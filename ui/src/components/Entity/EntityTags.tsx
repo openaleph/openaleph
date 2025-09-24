@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Tag, Intent, Button, InputGroup } from '@blueprintjs/core';
+import { Tag, Button, InputGroup } from '@blueprintjs/core';
 import { Entity } from '@alephdata/followthemoney';
 import { endpoint } from 'app/api';
 import { showErrorToast, showSuccessToast } from 'app/toast';

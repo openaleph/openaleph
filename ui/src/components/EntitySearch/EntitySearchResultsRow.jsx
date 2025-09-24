@@ -16,7 +16,6 @@ import {
   SearchHighlight,
   Skeleton,
 } from 'components/common';
-import { NamesHighlight } from 'components/common/SearchHighlight';
 
 class EntitySearchResultsRow extends Component {
   renderSkeleton() {

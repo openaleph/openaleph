@@ -2,7 +2,7 @@ import { Tag } from '@blueprintjs/core';
 import convertHighlightsToReactElements from 'util/convertHighlightsToReactElements';
 import './SearchHighlight.scss';
 
-export const NamesHighlight = ({ names }) => (
+const NamesHighlight = ({ names }) => (
   <span className="SearchHighlight__names">
     {names.map((n, i) => (
       <Tag key={`${n}-${i}`} minimal round>
@@ -12,7 +12,7 @@ export const NamesHighlight = ({ names }) => (
   </span>
 );
 
-export const TextHighlight = ({ texts }) => (
+const TextHighlight = ({ texts }) => (
   <span className="SearchHighligh__fragment">
     {texts.map(convertHighlightsToReactElements)}
   </span>
