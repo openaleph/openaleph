@@ -125,7 +125,7 @@ class TagsApiTestCase(TestCase):
 
         # includes resolved role and entity
         tag = results[0]
-        assert tag["role"]["name"] == "tester"
+        assert tag["role"]["id"] == "4"
 
     def test_tags_index_access_control(self):
         other_role = self.create_user(foreign_id="other")
