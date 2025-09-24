@@ -181,7 +181,9 @@ def periodic_daily(timestamp: int):
 
 # every 24 hours
 @app.periodic(cron="0 1 * * *")
-@app.task(queueing_lock="remove_old_jobs", pass_context=True)
+@app.task(
+    queue=OPENALEPH_MANAGEMENT_QUEUE, queueing_lock="remove_old_jobs", pass_context=True
+)
 async def remove_old_jobs(context, timestamp):
     return await builtin_tasks.remove_old_jobs(
         context,
