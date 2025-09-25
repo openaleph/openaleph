@@ -717,3 +717,63 @@ class EntitiesApiTestCase(TestCase):
             assert prop == "holder", prop
             assert res["count"] == 1, pformat(res)
             assert len(res["entities"]) == 1, pformat(res)
+
+        # Test that Membership and Directorship counts are not mixed up when using the same organization."""
+        _, headers = self.login(is_admin=True)
+        url = "/api/2/entities"
+
+        # Create a company/organization
+        data = {
+            "schema": "Company",
+            "collection_id": self.col_id,
+            "properties": {
+                "name": "ACME Corp",
+            },
+        }
+        company = self.client.post(
+            url, data=json.dumps(data), headers=headers, content_type=JSON
+        )
+
+        # Create a person
+        data = {
+            "schema": "Person",
+            "collection_id": self.col_id,
+            "properties": {
+                "name": "John Smith",
+            },
+        }
+        person = self.client.post(
+            url, data=json.dumps(data), headers=headers, content_type=JSON
+        )
+
+        # Create only Directorship (no Membership)
+        data = {
+            "schema": "Directorship",
+            "collection_id": self.col_id,
+            "properties": {
+                "director": person.json["id"],
+                "organization": company.json["id"],
+            },
+        }
+        self.client.post(url, data=json.dumps(data), headers=headers, content_type=JSON)
+
+        # Expand the company - should show directorshipOrganization but NOT membershipOrganization
+        expand_url = "/api/2/entities/%s/expand?limit=0" % (company.json["id"])
+        res = self.client.get(expand_url, headers=headers)
+        assert res.status_code == 200, (res.status_code, res.json)
+        validate(res.json, "EntityExpand")
+
+        results = res.json["results"]
+        property_counts = {r["property"]: r["count"] for r in results}
+
+        # Should have directorshipOrganization with count 1
+        assert "directorshipOrganization" in property_counts
+        assert (
+            property_counts["directorshipOrganization"] == 1
+        ), f"Expected 1, got {property_counts.get('directorshipOrganization')}"
+
+        # Should NOT have membershipOrganization, or if it exists, it should be 0
+        membership_count = property_counts.get("membershipOrganization", 0)
+        assert (
+            membership_count == 0
+        ), f"Expected 0 for membershipOrganization, got {membership_count}"

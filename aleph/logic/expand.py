@@ -163,7 +163,7 @@ def _counted_msearch(queries, authz: Authz, limit=0):
     grouped = {}
     for (schema, key), query in sorted(queries.items()):
         index = entities_read_index(schema)
-        group_key = index if limit == 0 else (index, key)
+        group_key = (index, key)
 
         if group_key not in grouped:
             grouped[group_key] = {
@@ -202,7 +202,7 @@ def _counted_msearch(queries, authz: Authz, limit=0):
             # Build the filter query with auth, schema and property constraints
             query_filters = [
                 search_auth.datasets_query(),
-                schema_query(list(schemas), include_descendants=True),
+                schema_query(schemas, include_descendants=True),
             ]
 
             if len(filters_batch) > 1:
