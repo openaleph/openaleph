@@ -68,6 +68,7 @@ def suggest():
         )
     # this only returns users, not groups
     exclude = ensure_list(parser.excludes.get("id"))
+    exclude = [int(role_id) for role_id in exclude]
     q = Role.by_prefix(parser.prefix, exclude=exclude)
     result = DatabaseQueryResult(request, q, parser=parser)
     return RoleSerializer.jsonify_result(result)
