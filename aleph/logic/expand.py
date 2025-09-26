@@ -7,7 +7,7 @@ from followthemoney.types import registry
 from openaleph_search.index.entities import ENTITY_SOURCE
 from openaleph_search.index.indexes import entities_read_index
 from openaleph_search.index.util import unpack_result
-from openaleph_search.query.util import field_filter_query
+from openaleph_search.query.util import field_filter_query, schema_query
 
 from aleph.authz import Authz
 from aleph.core import es
@@ -71,9 +71,10 @@ def expand_proxies(proxies, authz, properties=None, limit=0):
     for prop in _expand_properties(proxies, properties):
         if not prop.stub:
             continue
-        index = entities_read_index(prop.reverse.schema)
         field = "properties.%s" % prop.reverse.name
-        queries[(index, prop.qname)] = field_filter_query(field, entity_ids)
+        queries[(prop.reverse.schema, prop.qname)] = field_filter_query(
+            field, entity_ids
+        )
 
     entities, counts = _counted_msearch(queries, authz, limit=limit)
     for entity in entities:
@@ -84,15 +85,21 @@ def expand_proxies(proxies, authz, properties=None, limit=0):
 
     results = []
     for prop in _expand_properties(proxies, properties):
-        count = counts.get(prop.qname, 0)
-        if not prop.stub:
+        # For stub properties, we need to sum counts across all schemas for this property
+        count = 0
+        if prop.stub:
+            # Sum counts from all relevant schemas
+            for schema_key, schema_count in counts.items():
+                if schema_key == prop.qname:
+                    count += schema_count
+        else:
             count = sum(len(p.get(prop)) for p in proxies)
 
         entities = set()
         for proxy in proxies:
             entities.update(_expand_adjacent(graph, proxy, prop))
 
-        if count > 0 and len(entities):  # FIXME why len(entities)
+        if count > 0:
             item = {
                 "property": prop.name,
                 "count": count,
@@ -123,11 +130,11 @@ def entity_tags(proxy, authz: Authz, prop_types=DEFAULT_TAGS):
     for type_, value in values:
         key = type_.node_id(value)
         lookup[key] = (type_, value)
-        # Determine which indexes may contain further mentions (only things).
+        # Determine which schemata may contain further mentions (only things).
         schemata = model.get_type_schemata(type_)
         schemata = [s for s in schemata if s.is_a(Entity.THING)]
-        index = entities_read_index(schemata)
-        queries[(index, key)] = field_filter_query(type_.group, value)
+        for schema in schemata:
+            queries[(schema, key)] = field_filter_query(type_.group, value)
 
     _, counts = _counted_msearch(queries, authz)
     results = []
@@ -148,32 +155,34 @@ def entity_tags(proxy, authz: Authz, prop_types=DEFAULT_TAGS):
 
 
 def _counted_msearch(queries, authz: Authz, limit=0):
-    """Run batched queries to count or retrieve entities with certain
-    property values."""
-    # The default case for this is that we want to retrieve only the
-    # counts for a bunch of filtered sub-queries. In this case, we can
-    # group the queries by the affected index.
-    # In some cases, the expand API wants to actually retrieve entities.
-    # Then, we need to make one query per filter.
+    """Run batched queries to count or retrieve entities with certain property values.
+    Groups queries by Elasticsearch index to optimize performance."""
     search_auth = authz.search_auth
+
+    # Group queries by index since multiple schemas share the same index
     grouped = {}
-    for (index, key), query in sorted(queries.items()):
-        group = index if limit == 0 else (index, key)
-        if group not in grouped:
-            grouped[group] = {
+    for (schema, key), query in sorted(queries.items()):
+        index = entities_read_index(schema)
+        group_key = (index, key)
+
+        if group_key not in grouped:
+            grouped[group_key] = {
                 "index": index,
+                "schemas": {schema},
                 "filters": [query],
                 "counts": {key: query},
             }
         else:
-            grouped[group]["filters"].append(query)
-            grouped[group]["counts"][key] = query
+            grouped[group_key]["schemas"].add(schema)
+            grouped[group_key]["filters"].append(query)
+            grouped[group_key]["counts"][key] = query
 
     log.debug("Counts: %s queries, %s groups", len(queries), len(grouped))
 
     body = []
     for group in grouped.values():
         index = {"index": group.get("index")}
+        schemas = group.get("schemas")
         filters = group.get("filters")
         counts = list(group.get("counts").items())
 
@@ -185,14 +194,29 @@ def _counted_msearch(queries, authz: Authz, limit=0):
             filters = filters[FILTERS_COUNT_LIMIT:]
             counts_batch = dict(counts[:FILTERS_COUNT_LIMIT])
             counts = counts[FILTERS_COUNT_LIMIT:]
-            if limit == 0 and len(filters_batch) > 1:
-                filters_batch = [
+
+            # Skip this batch if there are no counts to aggregate
+            if not counts_batch:
+                continue
+
+            # Build the filter query with auth, schema and property constraints
+            query_filters = [
+                search_auth.datasets_query(),
+                schema_query(schemas, include_descendants=True),
+            ]
+
+            if len(filters_batch) > 1:
+                # Multiple property filters should be OR'd together
+                query_filters.append(
                     {"bool": {"should": filters_batch, "minimum_should_match": 1}}
-                ]
-            filters_batch.append(search_auth.datasets_query())
+                )
+            else:
+                # Single filter can be added directly
+                query_filters.extend(filters_batch)
+
             query = {
                 "size": limit,
-                "query": {"bool": {"filter": filters_batch}},
+                "query": {"bool": {"filter": query_filters}},
                 "aggs": {"counts": {"filters": {"filters": counts_batch}}},
                 "_source": ENTITY_SOURCE,
             }
@@ -201,22 +225,23 @@ def _counted_msearch(queries, authz: Authz, limit=0):
 
     log.debug("Counts: %s grouped queries", len(body) // 2)
 
-    counts = {}
-    # FIXME: This doesn't actually retain context on which query a particular
-    # entity is a result from. Doesn't matter if all we do in the end is stuff
-    # everything into an FtMGraph and then traverse for adjacency.
-    entities = []
+    if not body:
+        return [], {}
 
-    if not len(body):
-        return entities, counts
-
-    # log.debug(pformat(body))
     response = es.msearch(body=body)
-    # log.debug(pformat(response))
+
+    # Note: We don't track which query each entity came from. This is fine for current
+    # usage since expand_proxies uses graph traversal to find relationships, and
+    # entity_tags only needs the aggregation counts.
+    counts = {}
+    entities = []
     for resp in response.get("responses", []):
         for result in resp.get("hits", {}).get("hits", []):
             entities.append(unpack_result(result))
         buckets = resp.get("aggregations", {}).get("counts", {}).get("buckets", {})
         for key, count in buckets.items():
-            counts[key] = count.get("doc_count", 0)
+            doc_count = count.get("doc_count", 0)
+            # Don't overwrite existing positive counts with zeros from other schema batches
+            if key not in counts or doc_count > 0:
+                counts[key] = doc_count
     return entities, counts

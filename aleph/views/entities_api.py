@@ -18,7 +18,6 @@ from aleph.logic.expand import entity_tags, expand_proxies
 from aleph.logic.export import create_export
 from aleph.logic.html import sanitize_html
 from aleph.logic.profiles import pairwise_judgements
-from aleph.logic.xref import SCORE_CUTOFF
 from aleph.model.bookmark import Bookmark
 from aleph.model.entityset import EntitySet, Judgement
 from aleph.procrastinate.queues import OP_EXPORT_SEARCH, queue_export_search
@@ -430,14 +429,13 @@ def similar(entity_id):
     result.results = []
     for obj in entities:
         score = compare(proxy, get_entity_proxy(obj))
-        if score > SCORE_CUTOFF:
-            item = {
-                "score": score,
-                "judgement": judgements.get((entity_id, obj.get("id"))),
-                "collection_id": entity.get("collection_id"),
-                "entity": obj,
-            }
-            result.results.append(item)
+        item = {
+            "score": score,
+            "judgement": judgements.get((entity_id, obj.get("id"))),
+            "collection_id": entity.get("collection_id"),
+            "entity": obj,
+        }
+        result.results.append(item)
     return SimilarSerializer.jsonify_result(result)
 
 
@@ -659,9 +657,8 @@ def expand(entity_id):
     proxy = get_entity_proxy(entity)
     collection_id = entity.get("collection_id")
     tag_request(collection_id=collection_id)
-    log.critical(f"args: {request.args}")
     parser = QueryParser(
-        request.args, request.authz.search_auth, limit=SETTINGS.MAX_EXPAND_ENTITIES
+        request.args, request.authz.search_auth, max_limit=SETTINGS.MAX_EXPAND_ENTITIES
     )
     properties = parser.filters.get("property")
     results = expand_proxies(
