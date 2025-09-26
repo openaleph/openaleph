@@ -48,7 +48,7 @@ repos:
       - id: pyproject-flake8
         additional_dependencies: [flake8-bugbear]
         args: ["--extend-ignore", "E203, E501, W503"]
-        exclude: (test_[\w]+\.py|\.csv|\.json|\.lock)$
+        exclude: (test_[\w]+\.py|\.csv|\.json|\.lock|migrate/versions/[\w]+\.py)$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.12.5

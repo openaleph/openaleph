@@ -515,6 +515,9 @@ def tags(entity_id):
       tags:
       - Entity
     """
+    # DO NOT BE FOOLED: this endpoint is for mentions and other "tagged" values
+    # (ibans, emails, ...) and has nothing to do with the new entity tagging
+    # feature found in tags_api.py
     enable_cache()
     entity = get_index_entity(entity_id, request.authz.READ)
     tag_request(collection_id=entity.get("collection_id"))

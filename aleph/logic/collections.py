@@ -25,6 +25,7 @@ from aleph.model import (
     Events,
     Mapping,
     Permission,
+    Tag,
 )
 from aleph.procrastinate.queues import queue_cancel_collection, queue_ingest
 from aleph.procrastinate.status import get_collection_status
@@ -146,12 +147,30 @@ def index_aggregator(
     def _generate():
         idx = 0
         entities = aggregator.iterate(entity_id=entity_ids, skip_errors=skip_errors)
+
+        # Batch fetch all tags for all entities at once
+        tags_map = {}
+        if entity_ids:
+            tags_query = db.session.query(Tag).filter(
+                Tag.entity_id.in_(entity_ids), Tag.collection_id == collection.id
+            )
+            for tag in tags_query.all():
+                if tag.entity_id not in tags_map:
+                    tags_map[tag.entity_id] = []
+                tags_map[tag.entity_id].append(tag.tag)
+
+        # Now iterate through entities and add tags
         for idx, proxy in enumerate(entities, 1):
             if idx > 0 and idx % 1000 == 0:
                 log.debug(
                     "[%s] Index: %s..." % (collection, idx),
                     dataset=collection.name,
                 )
+
+            # Add tags to entity context if any exist
+            if proxy.id in tags_map:
+                proxy.context["tags"] = tags_map[proxy.id]
+
             yield proxy
         log.debug(
             "[%s] Indexed %s entities" % (collection, idx),

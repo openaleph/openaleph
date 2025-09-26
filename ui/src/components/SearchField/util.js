@@ -10,6 +10,7 @@ export const GROUP_FIELDS = [
   'names',
   'addresses',
   'mimetypes',
+  'tags',
 ];
 
 const messages = defineMessages({
@@ -65,6 +66,10 @@ const messages = defineMessages({
   facet_category: {
     id: 'facet.category',
     defaultMessage: '{count, plural, one {Category} other {Categories}}',
+  },
+  facet_tags: {
+    id: 'facet.tags',
+    defaultMessage: '{count, plural, one {Tag} other {Tags}}',
   },
 });
 
@@ -143,6 +148,12 @@ const configs = {
     label: messages.facet_schema,
     icon: 'layout-grid',
     defaultSize: 1000,
+  },
+  tags: {
+    name: 'tags',
+    label: messages.facet_tags,
+    icon: 'tag',
+    defaultSize: 100,
   },
 };
 

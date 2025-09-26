@@ -326,3 +326,40 @@ class CollectionsApiTestCase(TestCase):
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, res
         assert 0 == res.json["todo"], res.json
+
+    def test_collection_taggable_field(self):
+        _, headers = self.login(is_admin=True)
+
+        # Test that collection has taggable field in response
+        url = "/api/2/collections/%s" % self.col.id
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res
+        assert "taggable" in res.json
+        assert res.json["taggable"] is False  # Default should be False
+
+        # Test creating a collection with taggable=True
+        create_data = {
+            "label": "Taggable Collection",
+            "foreign_id": "taggable_test",
+            "taggable": True,
+        }
+        res = self.client.post("/api/2/collections", json=create_data, headers=headers)
+        assert res.status_code == 200, res
+        assert res.json["taggable"] is True
+        collection_id = res.json["id"]
+
+        # Test updating taggable field
+        update_url = "/api/2/collections/%s" % collection_id
+        res = self.client.get(update_url, headers=headers)
+        data = res.json
+        assert data["taggable"] is True
+        data["taggable"] = False
+
+        res = self.client.post(update_url, json=data, headers=headers)
+        assert res.status_code == 200, res
+        assert res.json["taggable"] is False
+
+        # Verify the change persisted
+        res = self.client.get(update_url, headers=headers)
+        assert res.status_code == 200, res
+        assert res.json["taggable"] is False
