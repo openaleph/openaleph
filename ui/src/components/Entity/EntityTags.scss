@@ -5,10 +5,12 @@
     align-items: center;
     gap: 0.5rem;
     margin: 0;
+    max-width: 100%; // Ensure list doesn't exceed parent width
   }
 
   &__tag-wrapper {
     display: inline-flex;
+    max-width: 220px; // Ensure wrapper also has max width
   }
 
   &__tag-link {
@@ -22,20 +24,31 @@
   &__tag {
     margin: 0 !important;
     cursor: pointer;
-    max-width: 200px; // Limit tag width to prevent overflow
+    max-width: 200px !important; // Limit tag width to prevent overflow
+    display: inline-flex !important;
 
-    // Truncate tag text content
-    .bp4-tag-text {
+    // Apply truncation directly to the tag's text content
+    & > .bp4-fill {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      max-width: calc(200px - 40px); // Account for icon and delete button space
+      display: block;
     }
 
     &--deleting {
       opacity: 0.6;
       cursor: not-allowed;
     }
+  }
+
+  // Custom class for truncated tag content
+  &__tag-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    max-width: 150px; // Adjust based on your needs
+    vertical-align: middle;
   }
 
   &__delete-button {

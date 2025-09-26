@@ -192,7 +192,7 @@ const EntityTags: React.FC<IEntityTagsProps> = ({ entity }) => {
                     ) : undefined
                   }
                 >
-                  <span className="bp4-tag-text">{tag.tag}</span>
+                  <span className="EntityTags__tag-label">{tag.tag}</span>
                 </Tag>
               </Link>
             </div>
