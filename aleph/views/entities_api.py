@@ -187,7 +187,7 @@ def export():
       tags:
       - Entity
     """
-    require(request.authz.logged_in)
+    require(request.authz.session_write)
     parser = SearchQueryParser(request.args, request.authz.search_auth)
     tag_request(query=parser.text, prefix=parser.prefix)
     query = EntitiesQuery(parser)
