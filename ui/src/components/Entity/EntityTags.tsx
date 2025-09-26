@@ -174,6 +174,7 @@ const EntityTags: React.FC<IEntityTagsProps> = ({ entity }) => {
                   className={`EntityTags__tag ${
                     isDeleting ? 'EntityTags__tag--deleting' : ''
                   }`}
+                  title={tag.tag} // Show full tag text on hover
                   rightIcon={
                     !isDeleting ? (
                       <Button
@@ -191,7 +192,7 @@ const EntityTags: React.FC<IEntityTagsProps> = ({ entity }) => {
                     ) : undefined
                   }
                 >
-                  {tag.tag}
+                  <span className="bp4-tag-text">{tag.tag}</span>
                 </Tag>
               </Link>
             </div>

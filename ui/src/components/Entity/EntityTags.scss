@@ -22,6 +22,15 @@
   &__tag {
     margin: 0 !important;
     cursor: pointer;
+    max-width: 200px; // Limit tag width to prevent overflow
+
+    // Truncate tag text content
+    .bp4-tag-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: calc(200px - 40px); // Account for icon and delete button space
+    }
 
     &--deleting {
       opacity: 0.6;
