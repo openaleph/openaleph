@@ -1,0 +1,58 @@
+TagsResponse:
+  type: object
+  allOf:
+    - $ref: "#/components/schemas/QueryResponse"
+  properties:
+    results:
+      type: array
+      items:
+        $ref: "#/components/schemas/Tag"
+
+Tag:
+  type: object
+  properties:
+    id:
+      type: string
+      description: Unique identifier for the tag
+    tag:
+      type: string
+      description: The tag text/value
+    created_at:
+      type: string
+      format: date-time
+      description: When the tag was created
+    entity_id:
+      type: string
+      format: entity-id
+      description: ID of the tagged entity
+    collection_id:
+      type: integer
+      description: ID of the collection containing the entity
+    role_id:
+      type: string
+      description: ID of the user who created the tag
+    entity:
+      $ref: "#/components/schemas/Entity"
+      description: The tagged entity (resolved)
+    role:
+      $ref: "#/components/schemas/Role"
+      description: The user who created the tag (resolved)
+    count:
+      type: integer
+      description: Number of times this tag appears (for aggregated results)
+
+TagCreate:
+  type: object
+  properties:
+    entity_id:
+      type: string
+      format: entity-id
+      description: ID of the entity to tag
+    tag:
+      type: string
+      minLength: 1
+      maxLength: 128
+      description: The tag text/value
+  required:
+    - entity_id
+    - tag

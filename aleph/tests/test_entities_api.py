@@ -190,6 +190,43 @@ class EntitiesApiTestCase(TestCase):
         )
         assert res.status_code == 400, res.json
 
+        # Test non-admin user
+        user, non_admin_headers = self.login("non_admin")
+        res = self.client.get(url, headers=non_admin_headers)
+        assert res.status_code == 403, res
+
+        data = self.data.copy()
+        data["properties"] = {"name": ["Non-admin test"]}
+        res = self.client.post(
+            url, data=json.dumps(data), headers=non_admin_headers, content_type=JSON
+        )
+        assert res.status_code == 403, res.json
+
+        # create & change your own data
+        col = self.create_collection(creator=user)
+        url = "/api/2/entities"
+        data = {
+            "schema": "Person",
+            "collection_id": str(col.id),
+            "properties": {
+                "name": "Jane Doe",
+            },
+        }
+        res = self.client.post(
+            url, data=json.dumps(data), headers=non_admin_headers, content_type=JSON
+        )
+        assert res.status_code == 200, res.json
+        # now change
+        data = res.json
+        url = url + "/" + data["id"]
+        data["properties"]["name"] = ["John Doe"]
+        res = self.client.post(
+            url, data=json.dumps(data), headers=headers, content_type=JSON
+        )
+        assert res.status_code == 200, res.json
+        validate(res.json, "Entity")
+        assert "John Doe" in get_caption(res.json), res.json
+
     def test_create(self):
         _, headers = self.login(is_admin=True)
         url = "/api/2/entities"
@@ -207,6 +244,36 @@ class EntitiesApiTestCase(TestCase):
         assert res.status_code == 200, res.json
         assert "middle" in res.json["properties"]["summary"][0], res.json
         validate(res.json, "Entity")
+
+        # Test non-admin user
+        user, non_admin_headers = self.login("non_admin")
+        data = {
+            "schema": "RealEstate",
+            "collection_id": self.col_id,
+            "properties": {
+                "name": "Non-admin house",
+                "summary": "Should be forbidden",
+            },
+        }
+        res = self.client.post(
+            url, data=json.dumps(data), headers=non_admin_headers, content_type=JSON
+        )
+        assert res.status_code == 403, res.json
+
+        # use your own collection
+        col = self.create_collection(creator=user)
+        data = {
+            "schema": "RealEstate",
+            "collection_id": str(col.id),
+            "properties": {
+                "name": "Non-admin house",
+                "summary": "This works",
+            },
+        }
+        res = self.client.post(
+            url, data=json.dumps(data), headers=non_admin_headers, content_type=JSON
+        )
+        assert res.status_code == 200, res.json
 
     def test_create_collection_object(self):
         _, headers = self.login(is_admin=True)
@@ -717,3 +784,63 @@ class EntitiesApiTestCase(TestCase):
             assert prop == "holder", prop
             assert res["count"] == 1, pformat(res)
             assert len(res["entities"]) == 1, pformat(res)
+
+        # Test that Membership and Directorship counts are not mixed up when using the same organization."""
+        _, headers = self.login(is_admin=True)
+        url = "/api/2/entities"
+
+        # Create a company/organization
+        data = {
+            "schema": "Company",
+            "collection_id": self.col_id,
+            "properties": {
+                "name": "ACME Corp",
+            },
+        }
+        company = self.client.post(
+            url, data=json.dumps(data), headers=headers, content_type=JSON
+        )
+
+        # Create a person
+        data = {
+            "schema": "Person",
+            "collection_id": self.col_id,
+            "properties": {
+                "name": "John Smith",
+            },
+        }
+        person = self.client.post(
+            url, data=json.dumps(data), headers=headers, content_type=JSON
+        )
+
+        # Create only Directorship (no Membership)
+        data = {
+            "schema": "Directorship",
+            "collection_id": self.col_id,
+            "properties": {
+                "director": person.json["id"],
+                "organization": company.json["id"],
+            },
+        }
+        self.client.post(url, data=json.dumps(data), headers=headers, content_type=JSON)
+
+        # Expand the company - should show directorshipOrganization but NOT membershipOrganization
+        expand_url = "/api/2/entities/%s/expand?limit=0" % (company.json["id"])
+        res = self.client.get(expand_url, headers=headers)
+        assert res.status_code == 200, (res.status_code, res.json)
+        validate(res.json, "EntityExpand")
+
+        results = res.json["results"]
+        property_counts = {r["property"]: r["count"] for r in results}
+
+        # Should have directorshipOrganization with count 1
+        assert "directorshipOrganization" in property_counts
+        assert (
+            property_counts["directorshipOrganization"] == 1
+        ), f"Expected 1, got {property_counts.get('directorshipOrganization')}"
+
+        # Should NOT have membershipOrganization, or if it exists, it should be 0
+        membership_count = property_counts.get("membershipOrganization", 0)
+        assert (
+            membership_count == 0
+        ), f"Expected 0 for membershipOrganization, got {membership_count}"

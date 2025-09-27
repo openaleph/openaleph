@@ -2,12 +2,13 @@ import logging
 from datetime import datetime, timedelta
 
 from normality import stringify
-from sqlalchemy.dialects.postgresql import JSONB
 from servicelayer.cache import make_key
+from sqlalchemy.dialects.postgresql import JSONB
 
 from aleph.core import db
-from aleph.model import Role, Collection
-from aleph.model.common import IdModel, DatedModel, Status
+from aleph.model.collection import Collection
+from aleph.model.common import DatedModel, IdModel, Status
+from aleph.model.role import Role
 
 log = logging.getLogger(__name__)
 
@@ -112,7 +113,7 @@ class Export(db.Model, IdModel, DatedModel):
     def get_pending(cls):
         q = cls.all()
         q = q.filter(cls.status == Status.PENDING)
-        q = q.filter(cls.deleted == False)  # noqa
+        q = q.filter(cls.deleted == False)  # noqa: E712
         return q
 
     @classmethod
@@ -121,7 +122,7 @@ class Export(db.Model, IdModel, DatedModel):
         if role_id is not None:
             q = q.filter(cls.creator_id == role_id)
         if not deleted:
-            q = q.filter(cls.deleted == False)  # noqa
+            q = q.filter(cls.deleted == False)  # noqa: E712
         return q.first()
 
     @classmethod
@@ -129,7 +130,7 @@ class Export(db.Model, IdModel, DatedModel):
         q = cls.all()
         q = q.filter(cls.creator_id == role_id)
         if not deleted:
-            q = q.filter(cls.deleted == False)  # noqa
+            q = q.filter(cls.deleted == False)  # noqa: E712
             q = q.filter(cls.expires_at > datetime.utcnow())
         q = q.order_by(cls.created_at.desc())
         return q
@@ -139,7 +140,7 @@ class Export(db.Model, IdModel, DatedModel):
         q = cls.all()
         q = q.filter(cls.content_hash == content_hash)
         if not deleted:
-            q = q.filter(cls.deleted == False)  # noqa
+            q = q.filter(cls.deleted == False)  # noqa: E712
         return q
 
     def __repr__(self):

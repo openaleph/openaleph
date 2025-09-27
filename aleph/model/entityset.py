@@ -8,8 +8,10 @@ from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import JSONB
 
 from aleph.core import db
-from aleph.model import Collection, Permission, Role
+from aleph.model.collection import Collection
 from aleph.model.common import ENTITY_ID_LEN, SoftDeleteModel, make_textid, query_like
+from aleph.model.permission import Permission
+from aleph.model.role import Role
 
 log = logging.getLogger(__name__)
 

@@ -45,7 +45,7 @@ class CollectionManageMenu extends React.Component {
 
   toggleDialog(name) {
     const isOpen = this.state[name];
-    this.setState({ [name]: !!!isOpen });
+    this.setState({ [name]: !isOpen });
   }
 
   render() {

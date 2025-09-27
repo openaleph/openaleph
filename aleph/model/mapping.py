@@ -1,14 +1,14 @@
 import logging
 from datetime import datetime
+
 from normality import stringify
 from sqlalchemy.dialects.postgresql import JSONB
 
 from aleph.core import db
-from aleph.model import Role, Collection
+from aleph.model.collection import Collection
+from aleph.model.common import ENTITY_ID_LEN, DatedModel, Status, iso_text
 from aleph.model.entityset import EntitySet
-from aleph.model.common import iso_text, DatedModel, Status
-from aleph.model.common import ENTITY_ID_LEN
-
+from aleph.model.role import Role
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class Mapping(db.Model, DatedModel):
     query = db.Column("query", JSONB)
 
     role_id = db.Column(db.Integer, db.ForeignKey("role.id"), index=True)
-    role = db.relationship(Role, backref=db.backref("mappings", lazy="dynamic"))  # noqa
+    role = db.relationship(Role, backref=db.backref("mappings", lazy="dynamic"))
 
     collection_id = db.Column(db.Integer, db.ForeignKey("collection.id"), index=True)
     collection = db.relationship(

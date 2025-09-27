@@ -39,6 +39,7 @@ const defaultFacets = [
   'phones',
   'names',
   'addresses',
+  'tags',
 ];
 const defaultColumns = ['countries', 'dates'];
 

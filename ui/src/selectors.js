@@ -247,7 +247,8 @@ export function selectEntity(state, entityId) {
   result.lastViewed = lastViewed;
   result.writeable = entity.writeable;
   result.bookmarked = entity.bookmarked;
-  result.caption = entity.caption
+  result.caption = entity.caption;
+  result.tags = entity.tags;
 
   return result;
 }
@@ -403,18 +404,18 @@ export function selectEntityView(state, entityId, mode, isPreview, location) {
     return mode;
   }
   const { schema } = selectEntity(state, entityId);
-  
+
   // If we're in a preview with a search query, default to 'text' tab for documents
   if (isPreview && location && schema && schema.isDocument()) {
     const parsedHash = queryString.parse(location.hash);
     const parsedSearch = queryString.parse(location.search);
     const isSearchPreview = !!(parsedHash['preview:id'] && parsedHash.q && (parsedSearch.q || parsedSearch.csq));
-    
+
     if (isSearchPreview) {
       return 'text';
     }
   }
-  
+
   if (
     schema &&
     schema.isAny(['Email', 'HyperText', 'Image', 'Pages', 'Table'])

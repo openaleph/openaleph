@@ -90,7 +90,7 @@ def index():
         - EntitySet
     """
     require(request.authz.can_browse_anonymous)
-    parser = QueryParser(request.args, request.authz)
+    parser = QueryParser(request.args, request.authz.search_auth)
     types = parser.filters.get("type")
     q = EntitySet.by_authz(request.authz, types=types, prefix=parser.prefix)
     q = q.order_by(EntitySet.updated_at.desc())
@@ -295,7 +295,7 @@ def entities_index(entityset_id):
       - EntitySet
     """
     entityset = get_entityset(entityset_id, request.authz.READ)
-    parser = SearchQueryParser(request.args, request.authz)
+    parser = SearchQueryParser(request.args, request.authz.search_auth)
     tag_request(query=parser.text, prefix=parser.prefix)
     result = get_query_result(
         EntitySetItemsQuery, request, parser=parser, entityset=entityset

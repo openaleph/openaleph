@@ -1,0 +1,110 @@
+.EntityTags {
+  &__list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    max-width: 100%; // Ensure list doesn't exceed parent width
+  }
+
+  &__tag-wrapper {
+    display: inline-flex;
+    max-width: 220px; // Ensure wrapper also has max width
+  }
+
+  &__tag-link {
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: none;
+    }
+  }
+
+  &__tag {
+    margin: 0 !important;
+    cursor: pointer;
+    max-width: 200px !important; // Limit tag width to prevent overflow
+    display: inline-flex !important;
+
+    // Apply truncation directly to the tag's text content
+    & > .bp4-fill {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: block;
+    }
+
+    &--deleting {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  // Custom class for truncated tag content
+  &__tag-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    max-width: 150px; // Adjust based on your needs
+    vertical-align: middle;
+  }
+
+  &__delete-button {
+    width: 12px;
+    height: 12px;
+    min-width: 12px;
+    min-height: 12px;
+    padding: 0;
+    margin-left: 2px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      opacity: 1;
+    }
+
+    .bp4-icon {
+      font-size: 6px;
+    }
+  }
+
+  &__add-button {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    min-height: auto;
+    height: auto;
+  }
+
+  &__input {
+    display: inline-flex;
+    max-width: 200px;
+
+    .bp4-input-group {
+      font-size: 0.75rem;
+
+      .bp4-input {
+        padding: 0.25rem 0.5rem;
+        height: auto;
+        min-height: auto;
+      }
+
+      .bp4-button {
+        padding: 0.25rem;
+        min-height: auto;
+        height: auto;
+      }
+    }
+  }
+
+  &__empty,
+  &__loading {
+    opacity: 0.7;
+  }
+
+  &__empty .bp4-tag,
+  &__loading .bp4-tag {
+    color: var(--bp4-text-color-muted);
+  }
+}

@@ -14,6 +14,7 @@ import EntityViews from 'components/Entity/EntityViews';
 import EntityImage from 'components/Entity/EntityImage';
 import EntityDeleteButton from 'components/Toolbar/EntityDeleteButton';
 import EntityMap from 'components/Entity/EntityMap';
+import EntityTags from 'components/Entity/EntityTags';
 import LoadingScreen from 'components/Screen/LoadingScreen';
 import ErrorScreen from 'components/Screen/ErrorScreen';
 import EntitySetSelector from 'components/EntitySet/EntitySetSelector';
@@ -168,6 +169,11 @@ class EntityScreen extends Component {
                 {entity.profileId && (
                   <div className="ItemOverview__callout">
                     <ProfileCallout entity={entity} />
+                  </div>
+                )}
+                {entity.collection?.taggable && entity.schema?.isDocument() && (
+                  <div className="ItemOverview__tags">
+                    <EntityTags entity={entity} />
                   </div>
                 )}
                 {ftmAssetsApi && (

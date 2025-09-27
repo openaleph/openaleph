@@ -1,7 +1,7 @@
 asttokens==3.0.0 ; python_version >= "3.12" and python_full_version < "4.0.0"
 black==24.10.0 ; python_version >= "3.12" and python_full_version < "4.0.0"
 bump2version==1.0.1 ; python_version >= "3.12" and python_full_version < "4.0.0"
-click==8.2.1 ; python_version >= "3.12" and python_full_version < "4.0.0"
+click==8.3.0 ; python_version >= "3.12" and python_full_version < "4.0.0"
 colorama==0.4.6 ; python_version >= "3.12" and python_full_version < "4.0.0" and (platform_system == "Windows" or sys_platform == "win32")
 coverage==7.6.4 ; python_version >= "3.12" and python_full_version < "4.0.0"
 debugpy==1.8.8 ; python_version >= "3.12" and python_full_version < "4.0.0"
@@ -39,4 +39,4 @@ sortedcontainers==2.4.0 ; python_version >= "3.12" and python_full_version < "4.
 stack-data==0.6.3 ; python_version >= "3.12" and python_full_version < "4.0.0"
 traitlets==5.14.3 ; python_version >= "3.12" and python_full_version < "4.0.0"
 typing-extensions==4.15.0 ; python_version >= "3.12" and python_full_version < "4.0.0"
-wcwidth==0.2.13 ; python_version >= "3.12" and python_full_version < "4.0.0"
+wcwidth==0.2.14 ; python_version >= "3.12" and python_full_version < "4.0.0"

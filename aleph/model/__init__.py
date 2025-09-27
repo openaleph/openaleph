@@ -1,13 +1,14 @@
-from aleph.core import db  # noqa
-from aleph.model.role import Role  # noqa
-from aleph.model.alert import Alert  # noqa
-from aleph.model.permission import Permission  # noqa
-from aleph.model.entity import Entity  # noqa
-from aleph.model.collection import Collection  # noqa
-from aleph.model.document import Document  # noqa
-from aleph.model.event import Event, Events  # noqa
-from aleph.model.mapping import Mapping  # noqa
-from aleph.model.entityset import EntitySet, EntitySetItem, Judgement  # noqa
-from aleph.model.export import Export  # noqa
-from aleph.model.bookmark import Bookmark  # noqa
-from aleph.model.common import Status, make_token  # noqa
+from aleph.core import db  # noqa: F401
+from aleph.model.alert import Alert  # noqa: F401
+from aleph.model.bookmark import Bookmark  # noqa: F401
+from aleph.model.collection import Collection  # noqa: F401
+from aleph.model.common import Status, make_token  # noqa: F401
+from aleph.model.document import Document  # noqa: F401
+from aleph.model.entity import Entity  # noqa: F401
+from aleph.model.entityset import EntitySet, EntitySetItem, Judgement  # noqa: F401
+from aleph.model.event import Event, Events  # noqa: F401
+from aleph.model.export import Export  # noqa: F401
+from aleph.model.mapping import Mapping  # noqa: F401
+from aleph.model.permission import Permission  # noqa: F401
+from aleph.model.role import Role  # noqa: F401
+from aleph.model.tag import Tag  # noqa: F401
