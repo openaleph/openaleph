@@ -68,6 +68,7 @@ nav:
           - Creating Investigations: user-guide/103/investigations.md
           - Map Data: user-guide/103/map-data.md
           - Network Diagrams: user-guide/103/network-diagrams.md
+          - Understand Permissions: user-guide/103/permissions.md
           - Manage Access: user-guide/103/manage-access.md
           - Cross-Referencing: user-guide/103/cross-reference.md
       - The CLI and Python library:
