@@ -76,7 +76,7 @@ The streaming API requires write access to collections, even for read-only opera
 
 ### Group Management UI
 
-There is no built-in user interface for creating and managing groups. In production deployments, groups should be managed by the SSO solution used wit OpenAleph.
+There is no built-in user interface for creating and managing groups. In production deployments, groups should be managed by the SSO solution used with OpenAleph.
 
 ## Best Practices
 
