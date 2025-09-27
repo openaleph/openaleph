@@ -13,6 +13,9 @@ This section covers the tools available in OpenAleph for organizing, analyzing, 
 - [Network Diagrams](network-diagrams.md)
   Explore relationships between entities using OpenAleph’s built-in network graph tool.
 
+- [Understanding Permissions](permissions.md)
+  Learn how OpenAleph's permission system works, including access levels, limitations, and best practices for secure collaboration.
+
 - [Managing Access](manage-access.md)
   Share investigations with colleagues or teams while maintaining control over who can view or edit your data.
 
