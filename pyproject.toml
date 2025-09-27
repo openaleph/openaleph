@@ -12,7 +12,7 @@ license = "MIT"
 readme = "README.md"
 requires-python = ">= 3.12, <4.0.0"
 dependencies = [
-    "openaleph-procrastinate (>=5.0.0,<6.0.0)",
+    "openaleph-procrastinate @ git+https://github.com/openaleph/openaleph-procrastinate.git",
     "openaleph-search @ git+https://github.com/openaleph/openaleph-search.git",
     "followthemoney (>=4.2.2,<5.0.0)",
     "ftmq[postgres] @ git+https://github.com/dataresearchcenter/ftmq.git",

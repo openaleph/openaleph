@@ -273,14 +273,14 @@ trio = ["trio (>=0.26.1)"]
 
 [[package]]
 name = "anystore"
-version = "0.3.11"
+version = "0.4.0"
 description = "Store and cache things anywhere"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "anystore-0.3.11-py3-none-any.whl", hash = "sha256:e90f5d92efedc8109f0ccab45ff8f339ecf358656cda91c53403d8b3a6e7bcf9"},
-    {file = "anystore-0.3.11.tar.gz", hash = "sha256:57c01d3cfb4c55c87bd1c921685372d486c6b3b60af22c70b6d2f9062cce87bb"},
+    {file = "anystore-0.4.0-py3-none-any.whl", hash = "sha256:e152d7b4f244cbe37d40b3cdc75c9d65bf8f8395256b5d04243ed28fe28798a8"},
+    {file = "anystore-0.4.0.tar.gz", hash = "sha256:08b6240b62e989f770b7becc7c929fd22350e35399104ece44f295af37ac3d8d"},
 ]
 
 [package.dependencies]
@@ -1578,7 +1578,7 @@ files = []
 develop = false
 
 [package.dependencies]
-anystore = ">=0.3.11,<0.4.0"
+anystore = ">=0.4.0,<0.5.0"
 click = ">=8.2.1,<9.0.0"
 click-default-group = ">=1.2.4,<2.0.0"
 followthemoney = ">=4.2.2,<5.0.0"
@@ -1593,7 +1593,7 @@ sqlalchemy = {version = ">=2.0.36,<3.0.0", optional = true}
 
 [package.extras]
 aleph = ["alephclient (>=2.6.0,<3.0.0)", "furl (>=2.1.4,<3.0.0)"]
-lake = ["deltalake (>=1.1.4,<2.0.0)", "duckdb (>=1.3.2,<2.0.0)", "pandas (>=2.3.2,<3.0.0)", "pyarrow (>=21.0.0,<22.0.0)"]
+lake = ["deltalake (>=1.1.4,<2.0.0)", "duckdb (>=1.4.0,<2.0.0)", "pandas (>=2.3.2,<3.0.0)", "pyarrow (>=21.0.0,<22.0.0)"]
 level = ["plyvel (>=1.5.1,<2.0.0)"]
 postgres = ["psycopg[pool] (>=3.2.9,<4.0.0)", "sqlalchemy (>=2.0.36,<3.0.0)"]
 redis = ["fakeredis (>=2.26.2,<3.0.0)", "redis (>=5.2.1,<6.0.0)"]
@@ -1603,7 +1603,7 @@ sql = ["sqlalchemy (>=2.0.36,<3.0.0)"]
 type = "git"
 url = "https://github.com/dataresearchcenter/ftmq.git"
 reference = "HEAD"
-resolved_reference = "f47177316418d695e5bac1af03afdb66e6508412"
+resolved_reference = "135d89e26298c9dc5956b9d7ebaebc4acee9d827"
 
 [[package]]
 name = "fuzzywuzzy"
@@ -3437,18 +3437,16 @@ name = "openaleph-procrastinate"
 version = "5.0.0"
 description = "Task queue logic for OpenAleph built upon procrastinate"
 optional = false
-python-versions = "<4,>=3.11"
+python-versions = ">=3.11,<4"
 groups = ["main"]
-files = [
-    {file = "openaleph_procrastinate-5.0.0-py3-none-any.whl", hash = "sha256:f56939aa8b57fbdd64d7391f13bfd14a267f41803abdd28e8acc8e831f153204"},
-    {file = "openaleph_procrastinate-5.0.0.tar.gz", hash = "sha256:69cb7aaac5e580f4e1293c0842c1a5f47903626b808fade1b531a9ea036aaadd"},
-]
+files = []
+develop = false
 
 [package.dependencies]
-anystore = ">=0.3.11,<0.4.0"
+anystore = ">=0.4.0,<0.5.0"
 cachetools = "<6"
 followthemoney = ">=4.2.0,<5.0.0"
-ftmq = ">=4.2.4,<5.0.0"
+ftmq = {git = "https://github.com/dataresearchcenter/ftmq.git"}
 procrastinate = ">=3.5.2,<4.0.0"
 psycopg = ">=3.2.9,<4.0.0"
 pydantic = ">=2.11.7,<3.0.0"
@@ -3456,6 +3454,12 @@ pydantic-settings = ">=2.10.1,<3.0.0"
 
 [package.extras]
 django = ["dj-database-url (>=2.3.0,<3.0.0)", "django (>=5.2,<6.0)", "procrastinate[django] (>=3.1.0,<4.0.0)"]
+
+[package.source]
+type = "git"
+url = "https://github.com/openaleph/openaleph-procrastinate.git"
+reference = "HEAD"
+resolved_reference = "770e1732646f5b93a4f20e490b880d617489d0ba"
 
 [[package]]
 name = "openaleph-search"
@@ -3481,7 +3485,7 @@ werkzeug = ">=3.1.3,<4.0.0"
 type = "git"
 url = "https://github.com/openaleph/openaleph-search.git"
 reference = "HEAD"
-resolved_reference = "84535d43b38cebd0641b73f051b9c68625282789"
+resolved_reference = "5cb6f6af19e60229b94012acf18dfc5e11bf653b"
 
 [[package]]
 name = "openaleph-servicelayer"
@@ -6114,4 +6118,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.12, <4.0.0"
-content-hash = "24b34be7241709c1fa02291a07750eacb2dc27e54963299ed7d265d1460f1d6e"
+content-hash = "9dddf598ba2a6d4c5b11605bcb062593f9eb2aefaebc41104252f621e37a14e1"
