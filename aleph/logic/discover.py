@@ -3,8 +3,8 @@ from typing import Any
 
 from followthemoney import Property, model
 from openaleph_search import EntitiesQuery, SearchQueryParser
+from openaleph_search.model import SearchAuth
 
-from aleph.authz import Authz
 from aleph.core import cache
 from aleph.model import Collection
 from aleph.model.discover import (
@@ -13,7 +13,6 @@ from aleph.model.discover import (
     SignificantTerms,
     Term,
 )
-from aleph.model.role import Role
 
 ANALYZABLE = model["Analyzable"]
 PROPS = (
@@ -69,10 +68,14 @@ def update_collection_discovery(collection_id: int, dataset: str) -> DatasetDisc
         ("limit", 0),
     ]
 
-    authz = Authz.from_role(Role.load_cli_user())
+    # authz = Authz.from_role(Role.load_cli_user())
+    # we avoid the db call here (due to potential transaction timeout after very
+    # long running tasks) and assume that the permission check is already done
+    # somewhere up in the context before calling `update_collections_discovery`
+    search_auth = SearchAuth(is_admin=True)
 
     # get most mentioned thingy names
-    parser = SearchQueryParser([*base_args, *q_facets], auth=authz.search_auth)
+    parser = SearchQueryParser([*base_args, *q_facets], auth=search_auth)
     query = EntitiesQuery(parser)
     result = query.search()
     aggregations = result.get("aggregations", {})
@@ -86,7 +89,7 @@ def update_collection_discovery(collection_id: int, dataset: str) -> DatasetDisc
             for bucket in aggregations.get(key, {}).get("buckets", []):
                 sub_parser = SearchQueryParser(
                     [*base_args, *q_terms, ("filter:names", bucket["key"])],
-                    auth=authz.search_auth,
+                    auth=search_auth,
                 )
                 sub_result = EntitiesQuery(sub_parser).search()
                 mentioned_terms = _unpack_buckets(
