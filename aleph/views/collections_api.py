@@ -12,7 +12,7 @@ from aleph.logic.collections import (
     reingest_collection,
     update_collection,
 )
-from aleph.logic.discover import get_collection_discovery, update_collection_discovery
+from aleph.logic.discover import get_collection_discovery
 from aleph.logic.entitysets import save_entityset_item
 from aleph.logic.processing import bulk_write
 from aleph.procrastinate.queues import (
@@ -422,11 +422,6 @@ def discover(collection_id):
 
     # Return cached discovery analysis
     discovery = get_collection_discovery(collection_id, collection.foreign_id)
-
-    # If not cached, compute and cache
-    if discovery is None:
-        discovery = update_collection_discovery(collection_id, collection.foreign_id)
-
     return jsonify(discovery.model_dump(mode="json"))
 
 

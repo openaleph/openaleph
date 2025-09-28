@@ -52,7 +52,8 @@ def get_collection_discovery(collection_id: int, dataset: str) -> DatasetDiscove
     data = cache.get_complex(key)
     if data is not None:
         return DatasetDiscovery(**data)
-    return DatasetDiscovery(name=dataset)
+    # regenerate and update cache
+    return update_collection_discovery(collection_id, dataset)
 
 
 def update_collection_discovery(collection_id: int, dataset: str) -> DatasetDiscovery:
