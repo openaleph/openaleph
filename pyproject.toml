@@ -45,7 +45,7 @@ dependencies = [
     "tabulate (==0.9.0)",
     "zipstream-new (==1.1.8)",
     "prometheus-client (>=0.17.1)",
-    "followthemoney-compare (==0.4.4)",
+    "followthemoney-compare @ git+https://github.com/dataresearchcenter/followthemoney-compare.git",
     # servicelayer extras requirements
     "openaleph-servicelayer (>=1.23.3,<2.0.0)",
     "boto3 (>=1.11.9,<2.0.0)",
