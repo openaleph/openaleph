@@ -15,7 +15,7 @@ dependencies = [
     "openaleph-procrastinate @ git+https://github.com/openaleph/openaleph-procrastinate.git",
     "openaleph-search @ git+https://github.com/openaleph/openaleph-search.git",
     "followthemoney (>=4.2.2,<5.0.0)",
-    "ftmq[postgres] @ git+https://github.com/dataresearchcenter/ftmq.git",
+    "ftmq (>=4.2.5,<5.0.0)",
     "normality (>=3.0.1,<4.0.0)",
     "pydantic (>=2.10.6,<3.0.0)",
     "banal (>=1.0.6,<2.0.0)",
