@@ -70,6 +70,9 @@ upgrade: build
 upgrade-local: test-services
 	aleph upgrade
 
+update: test-services
+	$(APPDOCKER) aleph update
+
 update-local: test-services
 	aleph update
 
