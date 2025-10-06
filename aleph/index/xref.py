@@ -79,7 +79,7 @@ def _index_form(collection, matches):
 
 def index_matches(collection, matches, sync=False):
     """Index cross-referencing matches."""
-    bulk_actions(_index_form(collection, matches), sync=sync, max_concurrency=1)
+    bulk_actions(_index_form(collection, matches), sync=sync)
 
 
 def iter_matches(collection, authz):
