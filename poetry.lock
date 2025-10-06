@@ -3567,7 +3567,7 @@ werkzeug = ">=3.1.3,<4.0.0"
 type = "git"
 url = "https://github.com/openaleph/openaleph-search.git"
 reference = "HEAD"
-resolved_reference = "87eef9c7c1127753777654f20de6bc3f34aecc80"
+resolved_reference = "a868fe9012324a2953db260727690a5b6de601fb"
 
 [[package]]
 name = "openaleph-servicelayer"
