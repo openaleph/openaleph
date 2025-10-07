@@ -4,6 +4,9 @@ from followthemoney.proxy import EntityProxy
 from openaleph_search.index.entities import index_proxy
 
 from aleph.core import archive, db
+from aleph.index.collections import delete_entities
+from aleph.logic.aggregator import get_aggregator
+from aleph.logic.collections import index_aggregator
 from aleph.model import Mapping
 from aleph.tests.util import TestCase
 from aleph.views.util import validate
@@ -535,3 +538,58 @@ class MappingAPITest(TestCase):
         # Update the mapping with a table that is part of the collection
         data["table_id"] = table.id
         res = self.client.post(url, json=data, headers=self.headers)
+        assert res.status_code == 200
+
+    def test_mappings_survive_reindexing(self):
+        """Test that mappings are re-executed when entities are deleted and reindexed"""
+        table = self.create_table_entity(collection=self.col, entity_id="foo")
+        mapping = self.create_mapping(collection=self.col, table=table, role=self.role)
+
+        # Trigger mapping to generate entities
+        trigger_url = f"/api/2/collections/{self.col.id}/mappings/{mapping.id}/trigger"
+        res = self.client.post(trigger_url, headers=self.headers)
+        assert res.status_code == 202
+
+        entities_url = "/api/2/entities"
+        entities_query_string = {
+            "filter:schema": "Person",
+            "filter:collection_id": self.col.id,
+            "filter:origin": f"mapping:{mapping.id}",
+        }
+
+        # Verify entities were generated from mapping
+        res = self.client.get(
+            entities_url,
+            query_string=entities_query_string,
+            headers=self.headers,
+        )
+        assert res.status_code == 200
+        assert len(res.json["results"]) == 14
+        assert res.json["results"][0]["schema"] == "Person"
+        assert res.json["results"][0]["properties"]["proof"][0]["id"] == table.id
+
+        # Delete all entities from the index
+        delete_entities(self.col.id, sync=True)
+
+        # Verify entities are gone from the index
+        res = self.client.get(
+            f"/api/2/entities?filter:collection_id={self.col.id}",
+            headers=self.headers,
+        )
+        assert res.status_code == 200
+        assert res.json["total"] == 0
+
+        # Reindex using index_aggregator
+        aggregator = get_aggregator(self.col)
+        index_aggregator(self.col, aggregator, sync=True)
+
+        # Verify mapped entities are regenerated after reindex
+        res = self.client.get(
+            entities_url,
+            query_string=entities_query_string,
+            headers=self.headers,
+        )
+        assert res.status_code == 200
+        assert len(res.json["results"]) == 14
+        assert res.json["results"][0]["schema"] == "Person"
+        assert res.json["results"][0]["properties"]["proof"][0]["id"] == table.id
