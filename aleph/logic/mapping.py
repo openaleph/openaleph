@@ -2,6 +2,7 @@ import logging
 
 from followthemoney import model
 from followthemoney.helpers import remove_checksums
+from followthemoney.proxy import EntityProxy
 from openaleph_search.index.entities import get_entity
 
 from aleph.core import archive, db
@@ -11,14 +12,12 @@ from aleph.logic.collections import aggregate_model, index_aggregator, update_co
 from aleph.logic.entitysets import save_entityset_item
 from aleph.logic.notifications import publish
 from aleph.model import Events, Mapping, Status
-from aleph.util import get_entity_proxy
 
 log = logging.getLogger(__name__)
 
 
-def _get_table_csv_link(table):
-    proxy = get_entity_proxy(table)
-    csv_hash = proxy.first("csvHash")
+def _get_table_csv_link(table: EntityProxy):
+    csv_hash = table.first("csvHash")
     if csv_hash is None:
         raise RuntimeError("Source table doesn't have a CSV version")
     url = archive.generate_url(csv_hash)
