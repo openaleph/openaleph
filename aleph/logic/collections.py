@@ -149,15 +149,20 @@ def index_aggregator(
         entities = aggregator.iterate(entity_id=entity_ids, skip_errors=skip_errors)
 
         # Batch fetch all tags for all entities at once
-        tags_map = {}
+        tags_map = defaultdict(set)
         if entity_ids:
             tags_query = db.session.query(Tag).filter(
                 Tag.entity_id.in_(entity_ids), Tag.collection_id == collection.id
             )
             for tag in tags_query.all():
-                if tag.entity_id not in tags_map:
-                    tags_map[tag.entity_id] = []
-                tags_map[tag.entity_id].append(tag.tag)
+                tags_map[tag.entity_id].add(tag.tag)
+        else:
+            # If no specific entity_ids, prefetch all tags for the collection
+            tags_query = db.session.query(Tag).filter(
+                Tag.collection_id == collection.id
+            )
+            for tag in tags_query.all():
+                tags_map[tag.entity_id].add(tag.tag)
 
         # Now iterate through entities and add tags
         for idx, proxy in enumerate(entities, 1):
@@ -169,7 +174,7 @@ def index_aggregator(
 
             # Add tags to entity context if any exist
             if proxy.id in tags_map:
-                proxy.context["tags"] = tags_map[proxy.id]
+                proxy.context["tags"] = list(tags_map[proxy.id])
 
             yield proxy
         log.debug(

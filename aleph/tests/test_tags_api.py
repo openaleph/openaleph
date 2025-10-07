@@ -2,6 +2,9 @@ import datetime
 import json
 
 from aleph.core import db
+from aleph.index.collections import delete_entities
+from aleph.logic.aggregator import get_aggregator
+from aleph.logic.collections import index_aggregator
 from aleph.logic.entities import upsert_entity
 from aleph.model.tag import Tag
 from aleph.tests.util import JSON, TestCase
@@ -638,5 +641,82 @@ class TagsApiTestCase(TestCase):
         )
         assert res.status_code == 200, res
         # Should return only Angela Merkel (entity with "politician" tag and matching name)
+        assert res.json["total"] == 1, res.json
+        assert res.json["results"][0]["id"] == self.entity.id
+
+    def test_tags_survive_reindexing(self):
+        """Test that tags are preserved when entities are deleted and reindexed"""
+        # Create tags for entities
+        res = self.client.post(
+            "/api/2/tags",
+            headers=self.headers,
+            data=json.dumps({"entity_id": self.entity.id, "tag": "politician"}),
+            content_type=JSON,
+        )
+        assert res.status_code == 201, res
+
+        res = self.client.post(
+            "/api/2/tags",
+            headers=self.headers,
+            data=json.dumps({"entity_id": self.entity.id, "tag": "german"}),
+            content_type=JSON,
+        )
+        assert res.status_code == 201, res
+
+        res = self.client.post(
+            "/api/2/tags",
+            headers=self.headers,
+            data=json.dumps({"entity_id": self.entity2.id, "tag": "politician"}),
+            content_type=JSON,
+        )
+        assert res.status_code == 201, res
+
+        # Verify tags are in the index
+        res = self.client.get(
+            f"/api/2/entities?filter:tags=politician&filter:collection_id={self.collection.id}",
+            headers=self.headers,
+        )
+        assert res.status_code == 200, res
+        assert res.json["total"] == 2, res.json
+
+        res = self.client.get(
+            f"/api/2/entities?filter:tags=german&filter:collection_id={self.collection.id}",
+            headers=self.headers,
+        )
+        assert res.status_code == 200, res
+        assert res.json["total"] == 1, res.json
+
+        # Delete all entities from the index
+        delete_entities(self.collection.id, sync=True)
+
+        # Verify entities are gone from the index
+        res = self.client.get(
+            f"/api/2/entities?filter:collection_id={self.collection.id}",
+            headers=self.headers,
+        )
+        assert res.status_code == 200, res
+        assert res.json["total"] == 0, res.json
+
+        # Reindex using index_aggregator
+        aggregator = get_aggregator(self.collection)
+        index_aggregator(self.collection, aggregator, sync=True)
+
+        # Verify tags are back in the entities
+        res = self.client.get(
+            f"/api/2/entities?filter:tags=politician&filter:collection_id={self.collection.id}",
+            headers=self.headers,
+        )
+        assert res.status_code == 200, res
+        assert res.json["total"] == 2, res.json
+
+        entity_ids = [entity["id"] for entity in res.json["results"]]
+        assert self.entity.id in entity_ids
+        assert self.entity2.id in entity_ids
+
+        res = self.client.get(
+            f"/api/2/entities?filter:tags=german&filter:collection_id={self.collection.id}",
+            headers=self.headers,
+        )
+        assert res.status_code == 200, res
         assert res.json["total"] == 1, res.json
         assert res.json["results"][0]["id"] == self.entity.id
