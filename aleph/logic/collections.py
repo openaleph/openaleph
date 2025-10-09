@@ -8,6 +8,7 @@ from openaleph_procrastinate.manage import cancel_jobs
 from openaleph_procrastinate.settings import OPENALEPH_MANAGEMENT_QUEUE
 from openaleph_search.index import entities as entities_index
 from servicelayer.jobs import Job
+from sqlalchemy import distinct, select
 
 from aleph.authz import Authz
 from aleph.core import cache, db
@@ -200,9 +201,17 @@ def reingest_collection(
 
 
 def reindex_collection(
-    collection: Collection, skip_errors=True, sync=False, flush=False
+    collection: Collection, skip_errors=True, sync=False, flush=False, diff_only=False
 ):
-    """Re-index all entities from the model, mappings and aggregator cache."""
+    """Re-index all entities from the model, mappings and aggregator cache.
+
+    Args:
+        collection: The collection to reindex
+        skip_errors: Skip entities that fail to index
+        sync: Wait for index operations to complete
+        flush: Delete all existing entities from index before reindexing
+        diff_only: Only reindex entities that are in aggregator but not in index
+    """
     from aleph.logic.mapping import map_to_aggregator
     from aleph.logic.profiles import profile_fragments
 
@@ -221,10 +230,63 @@ def reindex_collection(
             log.exception("Failed mapping: %r" % mapping, dataset=collection.foreign_id)
     aggregate_model(collection, aggregator)
     profile_fragments(collection, aggregator)
+
     if flush:
         log.debug("[%s] Flushing..." % collection, dataset=collection.foreign_id)
         index.delete_entities(collection.id, sync=True)
-    index_aggregator(collection, aggregator, skip_errors=skip_errors, sync=sync)
+
+    # Determine which entities to index
+    entity_ids = None
+    if diff_only:
+        diff = index_diff(collection)
+        entity_ids = list(diff["only_in_aggregator"])
+        if entity_ids:
+            log.info(
+                "[%s] Diff-only mode: reindexing %d entities missing from index",
+                collection,
+                len(entity_ids),
+            )
+        else:
+            log.info("[%s] Diff-only mode: no entities to reindex", collection)
+            compute_collection(collection, force=True)
+            return
+
+    # Batch entity_ids to avoid large SQL IN clauses (PostgreSQL best practice: ~10k items)
+    if entity_ids and len(entity_ids) > 10000:
+        batch_size = 10000
+        total_batches = (len(entity_ids) + batch_size - 1) // batch_size
+        log.info(
+            "[%s] Batching %d entities into %d batches of %d",
+            collection,
+            len(entity_ids),
+            total_batches,
+            batch_size,
+        )
+        for i in range(0, len(entity_ids), batch_size):
+            batch = entity_ids[i : i + batch_size]
+            batch_num = (i // batch_size) + 1
+            log.info(
+                "[%s] Processing batch %d/%d (%d entities)",
+                collection,
+                batch_num,
+                total_batches,
+                len(batch),
+            )
+            index_aggregator(
+                collection,
+                aggregator,
+                entity_ids=batch,
+                skip_errors=skip_errors,
+                sync=sync,
+            )
+    else:
+        index_aggregator(
+            collection,
+            aggregator,
+            entity_ids=entity_ids,
+            skip_errors=skip_errors,
+            sync=sync,
+        )
     compute_collection(collection, force=True)
 
 
@@ -325,3 +387,40 @@ def validate_collection_foreign_ids():
     else:
         log.info("All collection foreign_ids are valid")
         return []
+
+
+def index_diff(collection):
+    """Compare entity IDs between aggregator and search index.
+
+    Returns a dictionary with the following keys:
+    - aggregator_ids: set of entity IDs in the aggregator
+    - index_ids: set of entity IDs in the index
+    - only_in_aggregator: set of entity IDs only in aggregator
+    - only_in_index: set of entity IDs only in index
+    - in_both: set of entity IDs in both
+    """
+    log.info("[%s] Fetching entity IDs from aggregator...", collection)
+    aggregator = get_aggregator(collection)
+    # Use direct SQL query to fetch distinct entity IDs efficiently
+    query = select(distinct(aggregator.table.c.id))
+    with aggregator.store.engine.connect() as conn:
+        result = conn.execute(query)
+        aggregator_ids = {row[0] for row in result}
+    log.info("[%s] Found %d entities in aggregator", collection, len(aggregator_ids))
+
+    log.info("[%s] Fetching entity IDs from search index...", collection)
+    index_ids = set(entities_index.iter_entity_ids(collection_id=collection.id))
+    log.info("[%s] Found %d entities in index", collection, len(index_ids))
+
+    # Calculate differences
+    only_in_aggregator = aggregator_ids - index_ids
+    only_in_index = index_ids - aggregator_ids
+    in_both = aggregator_ids & index_ids
+
+    return {
+        "aggregator_ids": aggregator_ids,
+        "index_ids": index_ids,
+        "only_in_aggregator": only_in_aggregator,
+        "only_in_index": only_in_index,
+        "in_both": in_both,
+    }

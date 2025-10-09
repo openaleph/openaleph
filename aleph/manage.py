@@ -20,6 +20,9 @@ from aleph.logic.collections import (
     compute_collection,
     create_collection,
     delete_collection,
+)
+from aleph.logic.collections import index_diff as _index_diff
+from aleph.logic.collections import (
     reindex_collection,
     reingest_collection,
     update_collection,
@@ -196,10 +199,10 @@ def flush(foreign_id, sync=False):
     delete_collection(collection, keep_metadata=True, sync=sync)
 
 
-def _reindex_collection(collection, flush=False):
+def _reindex_collection(collection, flush=False, diff_only=False):
     log.info("[%s] Starting to re-index", collection)
     try:
-        reindex_collection(collection, flush=flush)
+        reindex_collection(collection, flush=flush, diff_only=diff_only)
     except Exception:
         log.exception("Failed to re-index: %s", collection)
 
@@ -207,44 +210,240 @@ def _reindex_collection(collection, flush=False):
 @cli.command()
 @click.argument("foreign_id")
 @click.option("--flush", is_flag=True, default=False)
-def reindex(foreign_id, flush=False):
+@click.option(
+    "--diff-only",
+    is_flag=True,
+    default=False,
+    help="Only reindex entities that are in aggregator but not in index",
+)
+def reindex(foreign_id, flush=False, diff_only=False):
     """Index all the aggregator contents for a collection."""
     collection = get_collection(foreign_id)
-    _reindex_collection(collection, flush=flush)
+    _reindex_collection(collection, flush=flush, diff_only=diff_only)
+
+
+def _write_entity_ids(entity_ids, output_file, description):
+    """Write entity IDs to file, sorted one per line."""
+    sorted_ids = sorted(entity_ids)
+    for entity_id in sorted_ids:
+        output_file.write(f"{entity_id}\n")
+    log.info("Wrote %d %s to %s", len(sorted_ids), description, output_file.name)
+
+
+@cli.command("index-diff")
+@click.argument("foreign_id")
+@click.option(
+    "--aggregator-ids",
+    type=click.File("w"),
+    default=None,
+    help="Output file for all aggregator IDs (sorted, one per line)",
+)
+@click.option(
+    "--index-ids",
+    type=click.File("w"),
+    default=None,
+    help="Output file for all index IDs (sorted, one per line)",
+)
+@click.option(
+    "--only-aggregator",
+    type=click.File("w"),
+    default=None,
+    help="Output file for IDs only in aggregator (sorted, one per line)",
+)
+@click.option(
+    "--only-index",
+    type=click.File("w"),
+    default=None,
+    help="Output file for IDs only in index (sorted, one per line)",
+)
+def index_diff(
+    foreign_id,
+    aggregator_ids=None,
+    index_ids=None,
+    only_aggregator=None,
+    only_index=None,
+):
+    """Compare entity IDs between aggregator and search index."""
+    collection = get_collection(foreign_id)
+    diff = _index_diff(collection)
+
+    # Write outputs if requested
+    outputs = [
+        (aggregator_ids, diff["aggregator_ids"], "aggregator IDs"),
+        (index_ids, diff["index_ids"], "index IDs"),
+        (only_aggregator, diff["only_in_aggregator"], "only-in-aggregator IDs"),
+        (only_index, diff["only_in_index"], "only-in-index IDs"),
+    ]
+    for output_file, entity_ids, description in outputs:
+        if output_file:
+            _write_entity_ids(entity_ids, output_file, description)
+
+    # Display results
+    print("\n" + "=" * 60)
+    print(f"Index Diff Report for: {collection.label} ({foreign_id})")
+    print("=" * 60)
+    print(f"Total in aggregator:        {len(diff['aggregator_ids']):>10}")
+    print(f"Total in index:             {len(diff['index_ids']):>10}")
+    print(f"In both:                    {len(diff['in_both']):>10}")
+    print(f"Only in aggregator:         {len(diff['only_in_aggregator']):>10}")
+    print(f"Only in index:              {len(diff['only_in_index']):>10}")
+    print("=" * 60)
+
+    if diff["only_in_aggregator"]:
+        print("\nFirst 10 entities only in aggregator:")
+        for entity_id in list(diff["only_in_aggregator"])[:10]:
+            print(f"  - {entity_id}")
+        if len(diff["only_in_aggregator"]) > 10:
+            print(f"  ... and {len(diff['only_in_aggregator']) - 10} more")
+
+    if diff["only_in_index"]:
+        print("\nFirst 10 entities only in index:")
+        for entity_id in list(diff["only_in_index"])[:10]:
+            print(f"  - {entity_id}")
+        if len(diff["only_in_index"]) > 10:
+            print(f"  ... and {len(diff['only_in_index']) - 10} more")
+
+
+@cli.command("index-diff-all")
+@click.option(
+    "--casefile",
+    type=bool,
+    default=None,
+    help="Filter by casefiles (None means all)",
+)
+def index_diff_all(casefile=None):
+    """Compare entity IDs between aggregator and search index for all collections."""
+    collections_list = []
+
+    for collection in Collection.all():
+        if casefile is not None and collection.casefile != casefile:
+            continue
+
+        try:
+            diff = _index_diff(collection)
+            collections_list.append(
+                {
+                    "foreign_id": collection.foreign_id,
+                    "label": collection.label,
+                    "aggregator": len(diff["aggregator_ids"]),
+                    "index": len(diff["index_ids"]),
+                    "in_both": len(diff["in_both"]),
+                    "only_aggregator": len(diff["only_in_aggregator"]),
+                    "only_index": len(diff["only_in_index"]),
+                }
+            )
+        except Exception as e:
+            log.error("[%s] Failed to compute diff: %s", collection, e)
+            collections_list.append(
+                {
+                    "foreign_id": collection.foreign_id,
+                    "label": collection.label,
+                    "aggregator": "ERROR",
+                    "index": "ERROR",
+                    "in_both": "ERROR",
+                    "only_aggregator": "ERROR",
+                    "only_index": "ERROR",
+                }
+            )
+
+    # Display summary table
+    print("\n" + "=" * 100)
+    print("Index Diff Summary for All Collections")
+    print("=" * 100)
+
+    headers = [
+        "Foreign ID",
+        "Label",
+        "Aggregator",
+        "Index",
+        "In Both",
+        "Missing from Index",
+        "Orphaned in Index",
+    ]
+    rows = []
+    for coll in collections_list:
+        rows.append(
+            [
+                coll["foreign_id"],
+                coll["label"][:30],  # Truncate long labels
+                coll["aggregator"],
+                coll["index"],
+                coll["in_both"],
+                coll["only_aggregator"],
+                coll["only_index"],
+            ]
+        )
+
+    print(tabulate(rows, headers=headers, tablefmt="simple"))
+    print("=" * 100)
+
+    # Show totals
+    total_aggregator = sum(
+        c["aggregator"] for c in collections_list if isinstance(c["aggregator"], int)
+    )
+    total_index = sum(
+        c["index"] for c in collections_list if isinstance(c["index"], int)
+    )
+    total_only_aggregator = sum(
+        c["only_aggregator"]
+        for c in collections_list
+        if isinstance(c["only_aggregator"], int)
+    )
+    total_only_index = sum(
+        c["only_index"] for c in collections_list if isinstance(c["only_index"], int)
+    )
+
+    print(f"\nTotals across {len(collections_list)} collections:")
+    print(f"  Total entities in aggregator:      {total_aggregator:>10}")
+    print(f"  Total entities in index:           {total_index:>10}")
+    print(f"  Total missing from index:          {total_only_aggregator:>10}")
+    print(f"  Total orphaned in index:           {total_only_index:>10}")
 
 
 @cli.command("reindex-full")
 @click.option("--flush", is_flag=True, default=False)
 @click.option(
-    "--queue",
+    "--diff-only",
     is_flag=True,
     default=False,
-    help="Queue the reindexing task for each collection, distribute them across workers.",
+    help="Only reindex entities that are in aggregator but not in index",
 )
-def reindex_full(flush=False, queue=False):
-    """Re-index all collections."""
-    for collection in Collection.all():
-        if queue:
-            queue_reindex(collection, flush=flush)
-        else:
-            _reindex_collection(collection, flush=flush)
-
-
-@cli.command("reindex-casefiles")
-@click.option("--flush", is_flag=True, default=False)
 @click.option(
     "--queue",
     is_flag=True,
     default=False,
     help="Queue the reindexing task for each collection, distribute them across workers.",
 )
-def reindex_casefiles(flush=False, queue=False):
+def reindex_full(flush=False, diff_only=False, queue=False):
+    """Re-index all collections."""
+    for collection in Collection.all():
+        if queue:
+            queue_reindex(collection, flush=flush, diff_only=diff_only)
+        else:
+            _reindex_collection(collection, flush=flush, diff_only=diff_only)
+
+
+@cli.command("reindex-casefiles")
+@click.option("--flush", is_flag=True, default=False)
+@click.option(
+    "--diff-only",
+    is_flag=True,
+    default=False,
+    help="Only reindex entities that are in aggregator but not in index",
+)
+@click.option(
+    "--queue",
+    is_flag=True,
+    default=False,
+    help="Queue the reindexing task for each collection, distribute them across workers.",
+)
+def reindex_casefiles(flush=False, diff_only=False, queue=False):
     """Re-index all the casefile collections."""
     for collection in Collection.all_casefiles():
         if queue:
-            queue_reindex(collection, flush=flush)
+            queue_reindex(collection, flush=flush, diff_only=diff_only)
         else:
-            _reindex_collection(collection, flush=flush)
+            _reindex_collection(collection, flush=flush, diff_only=diff_only)
 
 
 @cli.command()
