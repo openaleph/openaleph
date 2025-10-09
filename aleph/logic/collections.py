@@ -116,7 +116,7 @@ def compute_collection(collection: Collection, force=False, sync=False):
     refresh_collection(collection.id)
     log.info(
         f"[{collection.foreign_id}] Computing statistics...",
-        dataset=collection.foreign_id,
+        dataset=collection.name,
     )
     index.update_collection_stats(collection.id)
     update_collection_discovery(collection.id, collection.name)
@@ -128,7 +128,7 @@ def compute_collection(collection: Collection, force=False, sync=False):
 def aggregate_model(collection: Collection, aggregator):
     """Sync up the aggregator from the Aleph domain model."""
     log.debug(
-        f"[{collection.foreign_id}] Aggregating model...", dataset=collection.foreign_id
+        f"[{collection.foreign_id}] Aggregating model...", dataset=collection.name
     )
     aggregator.delete(origin=MODEL_ORIGIN)
     writer = aggregator.bulk()
@@ -169,7 +169,7 @@ def index_aggregator(
         for idx, proxy in enumerate(entities, 1):
             if idx > 0 and idx % 1000 == 0:
                 log.debug(
-                    "[%s] Index: %s..." % (collection, idx),
+                    f"[{collection}] Index: {idx}...",
                     dataset=collection.name,
                 )
 
@@ -179,7 +179,7 @@ def index_aggregator(
 
             yield proxy
         log.debug(
-            "[%s] Indexed %s entities" % (collection, idx),
+            f"[{collection}] Indexed {idx} entities",
             dataset=collection.name,
         )
 
@@ -219,20 +219,20 @@ def reindex_collection(
     for mapping in collection.mappings:
         if mapping.disabled:
             log.debug(
-                "[%s] Skip mapping: %r" % (collection, mapping),
-                dataset=collection.foreign_id,
+                f"[{collection}] Skip mapping: {mapping!r}",
+                dataset=collection.name,
             )
             continue
         try:
             map_to_aggregator(collection, mapping, aggregator)
         except Exception:
             # More or less ignore broken models.
-            log.exception("Failed mapping: %r" % mapping, dataset=collection.foreign_id)
+            log.exception(f"Failed mapping: {mapping!r}", dataset=collection.name)
     aggregate_model(collection, aggregator)
     profile_fragments(collection, aggregator)
 
     if flush:
-        log.debug("[%s] Flushing..." % collection, dataset=collection.foreign_id)
+        log.debug(f"[{collection}] Flushing...", dataset=collection.name)
         index.delete_entities(collection.id, sync=True)
 
     # Determine which entities to index
@@ -242,12 +242,15 @@ def reindex_collection(
         entity_ids = list(diff["only_in_aggregator"])
         if entity_ids:
             log.info(
-                "[%s] Diff-only mode: reindexing %d entities missing from index",
-                collection,
-                len(entity_ids),
+                f"[{collection}] Diff-only mode: reindexing {len(entity_ids)} "
+                f"entities missing from index",
+                dataset=collection.name,
             )
         else:
-            log.info("[%s] Diff-only mode: no entities to reindex", collection)
+            log.info(
+                f"[{collection}] Diff-only mode: no entities to reindex",
+                dataset=collection.name,
+            )
             compute_collection(collection, force=True)
             return
 
@@ -256,21 +259,17 @@ def reindex_collection(
         batch_size = 10000
         total_batches = (len(entity_ids) + batch_size - 1) // batch_size
         log.info(
-            "[%s] Batching %d entities into %d batches of %d",
-            collection,
-            len(entity_ids),
-            total_batches,
-            batch_size,
+            f"[{collection}] Batching {len(entity_ids)} entities into "
+            f"{total_batches} batches of {batch_size}",
+            dataset=collection.name,
         )
         for i in range(0, len(entity_ids), batch_size):
             batch = entity_ids[i : i + batch_size]
             batch_num = (i // batch_size) + 1
             log.info(
-                "[%s] Processing batch %d/%d (%d entities)",
-                collection,
-                batch_num,
-                total_batches,
-                len(batch),
+                f"[{collection}] Processing batch {batch_num}/{total_batches} "
+                f"({len(batch)} entities)",
+                dataset=collection.name,
             )
             index_aggregator(
                 collection,
@@ -344,12 +343,12 @@ def cancel_collection(collection: Collection):
         if time.time() - start > 3600:
             log.warn(
                 f"[{dataset}] Giving up waiting for finish after 1 hour.",
-                dataset=collection.foreign_id,
+                dataset=collection.name,
             )
             return
         log.info(
             f"[{dataset}] Waiting for collection tasks to finish ...",
-            dataset=collection.foreign_id,
+            dataset=collection.name,
         )
         time.sleep(30)
 
@@ -376,7 +375,7 @@ def validate_collection_foreign_ids():
             )
             log.warning(
                 f"Invalid foreign_id for collection {collection.id}: {collection.foreign_id} - {e}",  # noqa: B950
-                dataset=collection.foreign_id,
+                dataset=collection.name,
             )
 
     if invalid_collections:
@@ -399,18 +398,30 @@ def index_diff(collection):
     - only_in_index: set of entity IDs only in index
     - in_both: set of entity IDs in both
     """
-    log.info("[%s] Fetching entity IDs from aggregator...", collection)
+    log.info(
+        f"[{collection}] Fetching entity IDs from aggregator...",
+        dataset=collection.name,
+    )
     aggregator = get_aggregator(collection)
     # Use direct SQL query to fetch distinct entity IDs efficiently
     query = select(distinct(aggregator.table.c.id))
     with aggregator.store.engine.connect() as conn:
         result = conn.execute(query)
         aggregator_ids = {row[0] for row in result}
-    log.info("[%s] Found %d entities in aggregator", collection, len(aggregator_ids))
+    log.info(
+        f"[{collection}] Found {len(aggregator_ids)} entities in aggregator",
+        dataset=collection.name,
+    )
 
-    log.info("[%s] Fetching entity IDs from search index...", collection)
+    log.info(
+        f"[{collection}] Fetching entity IDs from search index...",
+        dataset=collection.name,
+    )
     index_ids = set(entities_index.iter_entity_ids(collection_id=collection.id))
-    log.info("[%s] Found %d entities in index", collection, len(index_ids))
+    log.info(
+        f"[{collection}] Found {len(index_ids)} entities in index",
+        dataset=collection.name,
+    )
 
     # Calculate differences
     only_in_aggregator = aggregator_ids - index_ids
