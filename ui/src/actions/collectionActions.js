@@ -94,13 +94,8 @@ export const triggerCollectionXrefDownload = asyncActionCreator(
 );
 
 export const triggerCollectionReingest = asyncActionCreator(
-  (id, index) => async () => {
-    const config = { params: { index } };
-    const response = await endpoint.post(
-      `collections/${id}/reingest`,
-      null,
-      config
-    );
+  (id) => async () => {
+    const response = await endpoint.post(`collections/${id}/reingest`, null);
     return { data: response.data };
   },
   { name: 'TRIGGER_COLLECTION_REINGEST' }
@@ -128,9 +123,10 @@ export const triggerCollectionCancel = asyncActionCreator(
 );
 
 export const fetchCollectionDiscovery = asyncActionCreator(
-  ({ id }) => async () => {
-    const response = await endpoint.get(`collections/${id}/discover`);
-    return { id, data: response.data };
-  },
+  ({ id }) =>
+    async () => {
+      const response = await endpoint.get(`collections/${id}/discover`);
+      return { id, data: response.data };
+    },
   { name: 'FETCH_COLLECTION_DISCOVERY' }
 );

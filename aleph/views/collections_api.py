@@ -185,11 +185,6 @@ def reingest(collection_id):
         schema:
           minimum: 1
           type: integer
-      - in: query
-        name: index
-        description: Index documents while they're being processed.
-        schema:
-          type: boolean
       responses:
         '202':
           description: Accepted
@@ -197,8 +192,7 @@ def reingest(collection_id):
       - Collection
     """
     collection = get_db_collection(collection_id, request.authz.WRITE)
-    index = get_flag("index", False)
-    reingest_collection(collection, job_id=get_session_id(), index=index)
+    reingest_collection(collection, job_id=get_session_id())
     return ("", 202)
 
 

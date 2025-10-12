@@ -448,24 +448,30 @@ def reindex_casefiles(flush=False, diff_only=False, queue=False):
 
 @cli.command()
 @click.argument("foreign_id")
-@click.option("--index", is_flag=True, default=False)
-@click.option("--include_ingest", is_flag=True, default=False)
-@click.option("--flush/--no-flush", default=True)
-def reingest(foreign_id, index=False, flush=True, include_ingest=False):
+@click.option("--index-flush/--no-index-flush", is_flag=True, default=True)
+@click.option("--ingest-flush/--no-ingest-flush", is_flag=True, default=True)
+def reingest(foreign_id, index_flush=True, ingest_flush=True):
     """Process documents and database entities and index them."""
     collection = get_collection(foreign_id)
     reingest_collection(
-        collection, index=index, flush=flush, include_ingest=include_ingest
+        collection,
+        index_flush=index_flush,
+        ingest_flush=ingest_flush,
     )
 
 
 @cli.command("reingest-casefiles")
-@click.option("--index", is_flag=True, default=False)
-def reingest_casefiles(index=False):
+@click.option("--index-flush/--no-index-flush", is_flag=True, default=True)
+@click.option("--ingest-flush/--no-ingest-flush", is_flag=True, default=True)
+def reingest_casefiles(index_flush=True, ingest_flush=True):
     """Re-ingest all the casefile collections."""
     for collection in Collection.all_casefiles():
         log.info("[%s] Starting to re-ingest", collection)
-        reingest_collection(collection, index=index)
+        reingest_collection(
+            collection,
+            index_flush=index_flush,
+            ingest_flush=ingest_flush,
+        )
 
 
 @cli.command()

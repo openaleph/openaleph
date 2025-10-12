@@ -16,7 +16,11 @@ from aleph.index import collections as index
 from aleph.index import xref as xref_index
 from aleph.logic.aggregator import get_aggregator, get_aggregator_name
 from aleph.logic.discover import update_collection_discovery
-from aleph.logic.documents import MODEL_ORIGIN, ingest_flush
+from aleph.logic.documents import (
+    MODEL_ORIGIN,
+)
+from aleph.logic.documents import index_flush as _index_flush
+from aleph.logic.documents import ingest_flush as _ingest_flush
 from aleph.logic.notifications import flush_notifications, publish
 from aleph.model import (
     Collection,
@@ -188,13 +192,15 @@ def index_aggregator(
     )
 
 
-def reingest_collection(
-    collection, job_id=None, index=False, flush=True, include_ingest=False
-):
-    """Trigger a re-ingest for all documents in the collection. This always indexes."""
+def reingest_collection(collection, job_id=None, index_flush=True, ingest_flush=True):
+    """Trigger a re-ingest for all documents in the collection. By default, this
+    flushes ingested entities from ftm store, flushes the index (with origin
+    "ingest,analyze") and (always) indexes the new ingested entities."""
     job_id = job_id or Job.random_id()
-    if flush:
-        ingest_flush(collection, include_ingest=include_ingest)
+    if ingest_flush:
+        _ingest_flush(collection)
+    if index_flush:
+        _index_flush(collection)
     for document in Document.by_collection(collection.id):
         proxy = document.to_proxy(ns=collection.ns)
         queue_ingest(collection, proxy, batch=job_id, namespace=collection.foreign_id)
@@ -239,20 +245,27 @@ def reindex_collection(
     entity_ids = None
     if diff_only:
         diff = index_diff(collection)
-        entity_ids = list(diff["only_in_aggregator"])
-        if entity_ids:
+        # If index is empty, just do a full reindex
+        if not diff["index_ids"]:
             log.info(
-                f"[{collection}] Diff-only mode: reindexing {len(entity_ids)} "
-                f"entities missing from index",
+                f"[{collection}] Diff-only mode: index is empty, doing full reindex",
                 dataset=collection.name,
             )
         else:
-            log.info(
-                f"[{collection}] Diff-only mode: no entities to reindex",
-                dataset=collection.name,
-            )
-            compute_collection(collection, force=True)
-            return
+            entity_ids = list(diff["only_in_aggregator"])
+            if entity_ids:
+                log.info(
+                    f"[{collection}] Diff-only mode: reindexing {len(entity_ids)} "
+                    f"entities missing from index",
+                    dataset=collection.name,
+                )
+            else:
+                log.info(
+                    f"[{collection}] Diff-only mode: no entities to reindex",
+                    dataset=collection.name,
+                )
+                compute_collection(collection, force=True)
+                return
 
     # Batch entity_ids to avoid large SQL IN clauses (PostgreSQL best practice: ~10k items)
     if entity_ids and len(entity_ids) > 10000:
