@@ -3625,14 +3625,14 @@ followthemoney = ">=4.2.2,<5.0.0"
 ftmq = ">=4.2.5,<5.0.0"
 pydantic = ">=2.11.9,<3.0.0"
 pydantic-settings = ">=2.10.1,<3.0.0"
-rigour = ">=1.3.10,<2.0.0"
+rigour = ">=1.3.11,<2.0.0"
 werkzeug = ">=3.1.3,<4.0.0"
 
 [package.source]
 type = "git"
 url = "https://github.com/openaleph/openaleph-search.git"
 reference = "HEAD"
-resolved_reference = "3add40a09bd1a2253a8a8a19773c005784a06885"
+resolved_reference = "9c0fc1ce54bd26855bb5b8369d1bb30cd5b07041"
 
 [[package]]
 name = "openaleph-servicelayer"
