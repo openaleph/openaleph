@@ -8,13 +8,16 @@ from openaleph_procrastinate.manage import cancel_jobs
 from openaleph_procrastinate.settings import OPENALEPH_MANAGEMENT_QUEUE
 from openaleph_search.index import entities as entities_index
 from servicelayer.jobs import Job
-from sqlalchemy import distinct, select
 
 from aleph.authz import Authz
 from aleph.core import cache, db
 from aleph.index import collections as index
 from aleph.index import xref as xref_index
-from aleph.logic.aggregator import get_aggregator, get_aggregator_name
+from aleph.logic.aggregator import (
+    get_aggregator,
+    get_aggregator_ids,
+    get_aggregator_name,
+)
 from aleph.logic.discover import update_collection_discovery
 from aleph.logic.documents import (
     MODEL_ORIGIN,
@@ -416,11 +419,8 @@ def index_diff(collection):
         dataset=collection.name,
     )
     aggregator = get_aggregator(collection)
-    # Use direct SQL query to fetch distinct entity IDs efficiently
-    query = select(distinct(aggregator.table.c.id))
-    with aggregator.store.engine.connect() as conn:
-        result = conn.execute(query)
-        aggregator_ids = {row[0] for row in result}
+    # Use batched approach for memory efficiency with large tables
+    aggregator_ids = set(get_aggregator_ids(aggregator))
     log.info(
         f"[{collection}] Found {len(aggregator_ids)} entities in aggregator",
         dataset=collection.name,
