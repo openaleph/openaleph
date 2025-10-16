@@ -210,7 +210,7 @@ def _reindex_collection(collection, flush=False, diff_only=False, model=True):
 @cli.command()
 @click.argument("foreign_id")
 @click.option("--flush", is_flag=True, default=False)
-@click.option("--model", is_flag=True, default=True)
+@click.option("--model/--no-model", is_flag=True, default=True)
 @click.option(
     "--diff-only",
     is_flag=True,
@@ -403,7 +403,7 @@ def index_diff_all(casefile=None):
 
 @cli.command("reindex-full")
 @click.option("--flush", is_flag=True, default=False)
-@click.option("--model", is_flag=True, default=True)
+@click.option("--model/--no-model", is_flag=True, default=True)
 @click.option(
     "--diff-only",
     is_flag=True,
@@ -429,7 +429,7 @@ def reindex_full(flush=False, diff_only=False, queue=False, model=True):
 
 @cli.command("reindex-casefiles")
 @click.option("--flush", is_flag=True, default=False)
-@click.option("--model", is_flag=True, default=True)
+@click.option("--model/--no-model", is_flag=True, default=True)
 @click.option(
     "--diff-only",
     is_flag=True,
