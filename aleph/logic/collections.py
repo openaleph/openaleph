@@ -134,15 +134,17 @@ def compute_collection(collection: Collection, force=False, sync=False):
 
 def aggregate_model(collection: Collection, aggregator):
     """Sync up the aggregator from the Aleph domain model."""
-    log.debug(
-        f"[{collection.foreign_id}] Aggregating model...", dataset=collection.name
-    )
+    log.info(f"[{collection.foreign_id}] Aggregating model...", dataset=collection.name)
     aggregator.delete(origin=MODEL_ORIGIN)
     writer = aggregator.bulk()
-    for document in Document.by_collection(collection.id):
+    for ix, document in enumerate(Document.by_collection(collection.id), 1):
+        if ix % 10_000 == 0:
+            log.info(f"[model aggregate] Document {ix} ...")
         proxy = document.to_proxy(ns=collection.ns)
         writer.put(proxy, fragment="db", origin=MODEL_ORIGIN)
-    for entity in Entity.by_collection(collection.id):
+    for ix, entity in enumerate(Entity.by_collection(collection.id), 1):
+        if ix % 10_000 == 0:
+            log.info(f"[model aggregate] Entity {ix} ...")
         proxy = entity.to_proxy()
         aggregator.delete(entity_id=proxy.id)
         writer.put(proxy, fragment="db", origin=MODEL_ORIGIN)
@@ -191,7 +193,11 @@ def index_aggregator(
         )
 
     entities_index.index_bulk(
-        collection.name, _generate(), sync=sync, collection_id=collection.id
+        collection.name,
+        _generate(),
+        sync=sync,
+        collection_id=collection.id,
+        namespace=collection.name,
     )
 
 
@@ -210,7 +216,12 @@ def reingest_collection(collection, job_id=None, index_flush=True, ingest_flush=
 
 
 def reindex_collection(
-    collection: Collection, skip_errors=True, sync=False, flush=False, diff_only=False
+    collection: Collection,
+    skip_errors=True,
+    sync=False,
+    flush=False,
+    diff_only=False,
+    model=True,
 ):
     """Re-index all entities from the model, mappings and aggregator cache.
 
@@ -237,7 +248,8 @@ def reindex_collection(
         except Exception:
             # More or less ignore broken models.
             log.exception(f"Failed mapping: {mapping!r}", dataset=collection.name)
-    aggregate_model(collection, aggregator)
+    if model:
+        aggregate_model(collection, aggregator)
     profile_fragments(collection, aggregator)
 
     if flush:

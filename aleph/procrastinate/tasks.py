@@ -68,10 +68,12 @@ def index_entities(job: DatasetJob, collection: Collection) -> None:
 
 @aleph_task(retry=defer.tasks.reindex.max_retries)
 def reindex_collection(job: DatasetJob, collection: Collection) -> None:
-    flush = job.payload.get("context", {}).get("flush", False)
-    diff_only = job.payload.get("context", {}).get("diff_only", False)
+    ctx = job.payload.get("context", {})
+    flush = ctx.get("flush", False)
+    diff_only = ctx.get("diff_only", False)
+    model = ctx.get("model", True)
     collections.reindex_collection(
-        collection, flush=bool(flush), diff_only=bool(diff_only)
+        collection, flush=bool(flush), diff_only=bool(diff_only), model=bool(model)
     )
     collections.refresh_collection(collection.id)
 
