@@ -35,7 +35,11 @@ from aleph.model import (
     Permission,
     Tag,
 )
-from aleph.procrastinate.queues import queue_cancel_collection, queue_ingest
+from aleph.procrastinate.queues import (
+    queue_cancel_collection,
+    queue_index_batch,
+    queue_ingest,
+)
 from aleph.procrastinate.status import get_collection_status
 
 log = get_logger(__name__)
@@ -215,27 +219,10 @@ def reingest_collection(collection, job_id=None, index_flush=True, ingest_flush=
         queue_ingest(collection, proxy, batch=job_id, namespace=collection.foreign_id)
 
 
-def reindex_collection(
-    collection: Collection,
-    skip_errors=True,
-    sync=False,
-    flush=False,
-    diff_only=False,
-    model=True,
-):
-    """Re-index all entities from the model, mappings and aggregator cache.
-
-    Args:
-        collection: The collection to reindex
-        skip_errors: Skip entities that fail to index
-        sync: Wait for index operations to complete
-        flush: Delete all existing entities from index before reindexing
-        diff_only: Only reindex entities that are in aggregator but not in index
-    """
+def _process_mappings(collection: Collection, aggregator):
+    """Process collection mappings and aggregate to the aggregator."""
     from aleph.logic.mapping import map_to_aggregator
-    from aleph.logic.profiles import profile_fragments
 
-    aggregator = get_aggregator(collection)
     for mapping in collection.mappings:
         if mapping.disabled:
             log.debug(
@@ -248,6 +235,114 @@ def reindex_collection(
         except Exception:
             # More or less ignore broken models.
             log.exception(f"Failed mapping: {mapping!r}", dataset=collection.name)
+
+
+def _get_diff_entity_ids(collection: Collection):
+    """Get entity IDs that need reindexing in diff-only mode.
+
+    Returns:
+        list of entity IDs to reindex, or None to skip reindexing entirely
+    """
+    diff = index_diff(collection)
+    # If index is empty, just do a full reindex
+    if not diff["index_ids"]:
+        log.info(
+            f"[{collection}] Diff-only mode: index is empty, doing full reindex",
+            dataset=collection.name,
+        )
+        return []
+
+    entity_ids = list(diff["only_in_aggregator"])
+    if entity_ids:
+        log.info(
+            f"[{collection}] Diff-only mode: reindexing {len(entity_ids)} "
+            f"entities missing from index",
+            dataset=collection.name,
+        )
+        return entity_ids
+    else:
+        log.info(
+            f"[{collection}] Diff-only mode: no entities to reindex",
+            dataset=collection.name,
+        )
+        return None
+
+
+def _index_batch(
+    collection: Collection,
+    entity_ids: list[str],
+    queue_batches: bool | None = False,
+    skip_errors: bool | None = True,
+    sync: bool | None = False,
+) -> None:
+    aggregator = get_aggregator(collection)
+    if queue_batches:
+        log.info(
+            f"[{collection}] Queuing batch ({len(entity_ids)} entities)",
+            dataset=collection.name,
+        )
+        queue_index_batch(collection, entity_ids)
+    else:
+        log.info(
+            f"[{collection}] Processing batch ({len(entity_ids)} entities)",
+            dataset=collection.name,
+        )
+        index_aggregator(
+            collection,
+            aggregator,
+            entity_ids=entity_ids,
+            skip_errors=bool(skip_errors),
+            sync=bool(sync),
+        )
+
+
+def _process_batches(
+    collection: Collection,
+    entity_ids: list[str] | None,
+    batch_size: int,
+    queue_batches: bool,
+    skip_errors: bool,
+    sync: bool,
+):
+    """Process entities in batches."""
+    aggregator = get_aggregator(collection)
+    if entity_ids:
+        batches = (
+            entity_ids[i : i + batch_size]
+            for i in range(0, len(entity_ids), batch_size)
+        )
+    else:
+        batches = aggregator.get_sorted_id_batches(batch_size)
+
+    for batch in batches:
+        _index_batch(collection, batch, queue_batches, skip_errors, sync)
+
+
+def reindex_collection(
+    collection: Collection,
+    skip_errors=True,
+    sync=False,
+    flush=False,
+    diff_only=False,
+    model=True,
+    queue_batches=False,
+    batch_size=10_000,
+):
+    """Re-index all entities from the model, mappings and aggregator cache.
+
+    Args:
+        collection: The collection to reindex
+        skip_errors: Skip entities that fail to index
+        sync: Wait for index operations to complete
+        flush: Delete all existing entities from index before reindexing
+        diff_only: Only reindex entities that are in aggregator but not in index
+        model: Aggregate model from database (Entities, Documents) before indexing
+        queue_batches: Queue batches for parallelization
+    """
+    from aleph.logic.profiles import profile_fragments
+
+    aggregator = get_aggregator(collection)
+    _process_mappings(collection, aggregator)
     if model:
         aggregate_model(collection, aggregator)
     profile_fragments(collection, aggregator)
@@ -259,62 +354,17 @@ def reindex_collection(
     # Determine which entities to index
     entity_ids = None
     if diff_only:
-        diff = index_diff(collection)
-        # If index is empty, just do a full reindex
-        if not diff["index_ids"]:
-            log.info(
-                f"[{collection}] Diff-only mode: index is empty, doing full reindex",
-                dataset=collection.name,
-            )
-        else:
-            entity_ids = list(diff["only_in_aggregator"])
-            if entity_ids:
-                log.info(
-                    f"[{collection}] Diff-only mode: reindexing {len(entity_ids)} "
-                    f"entities missing from index",
-                    dataset=collection.name,
-                )
-            else:
-                log.info(
-                    f"[{collection}] Diff-only mode: no entities to reindex",
-                    dataset=collection.name,
-                )
-                compute_collection(collection, force=True)
-                return
+        entity_ids = _get_diff_entity_ids(collection)
+        if entity_ids is None:
+            # No entities to reindex
+            compute_collection(collection, force=True)
+            return
 
-    # Batch entity_ids to avoid large SQL IN clauses (PostgreSQL best practice: ~10k items)
-    if entity_ids and len(entity_ids) > 10000:
-        batch_size = 10000
-        total_batches = (len(entity_ids) + batch_size - 1) // batch_size
-        log.info(
-            f"[{collection}] Batching {len(entity_ids)} entities into "
-            f"{total_batches} batches of {batch_size}",
-            dataset=collection.name,
-        )
-        for i in range(0, len(entity_ids), batch_size):
-            batch = entity_ids[i : i + batch_size]
-            batch_num = (i // batch_size) + 1
-            log.info(
-                f"[{collection}] Processing batch {batch_num}/{total_batches} "
-                f"({len(batch)} entities)",
-                dataset=collection.name,
-            )
-            index_aggregator(
-                collection,
-                aggregator,
-                entity_ids=batch,
-                skip_errors=skip_errors,
-                sync=sync,
-            )
-    else:
-        index_aggregator(
-            collection,
-            aggregator,
-            entity_ids=entity_ids,
-            skip_errors=skip_errors,
-            sync=sync,
-        )
-    compute_collection(collection, force=True)
+    _process_batches(
+        collection, entity_ids, batch_size, queue_batches, skip_errors, sync
+    )
+    if not queue_batches:
+        compute_collection(collection, force=True)
 
 
 def delete_collection(collection, keep_metadata=False, sync=False):
