@@ -80,12 +80,14 @@ def reindex_collection(job: DatasetJob, collection: Collection) -> None:
     flush = job.context.get("flush", False)
     diff_only = job.context.get("diff_only", False)
     model = job.context.get("model", True)
+    mappings = job.context.get("mappings", True)
     queue_batches = job.context.get("queue_batches", False)
     collections.reindex_collection(
         collection,
         flush=bool(flush),
         diff_only=bool(diff_only),
         model=bool(model),
+        mappings=bool(mappings),
         queue_batches=bool(queue_batches),
     )
     collections.refresh_collection(collection.id)

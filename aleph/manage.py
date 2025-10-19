@@ -199,10 +199,14 @@ def flush(foreign_id, sync=False):
     delete_collection(collection, keep_metadata=True, sync=sync)
 
 
-def _reindex_collection(collection, flush=False, diff_only=False, model=True):
+def _reindex_collection(
+    collection, flush=False, diff_only=False, model=True, mappings=True
+):
     log.info("[%s] Starting to re-index", collection)
     try:
-        reindex_collection(collection, flush=flush, diff_only=diff_only, model=model)
+        reindex_collection(
+            collection, flush=flush, diff_only=diff_only, model=model, mappings=mappings
+        )
     except Exception:
         log.exception("Failed to re-index: %s", collection)
 
@@ -211,16 +215,19 @@ def _reindex_collection(collection, flush=False, diff_only=False, model=True):
 @click.argument("foreign_id")
 @click.option("--flush", is_flag=True, default=False)
 @click.option("--model/--no-model", is_flag=True, default=True)
+@click.option("--mappings/--no-mappings", is_flag=True, default=True)
 @click.option(
     "--diff-only",
     is_flag=True,
     default=False,
     help="Only reindex entities that are in aggregator but not in index",
 )
-def reindex(foreign_id, flush=False, diff_only=False, model=True):
+def reindex(foreign_id, flush=False, diff_only=False, model=True, mappings=True):
     """Index all the aggregator contents for a collection."""
     collection = get_collection(foreign_id)
-    _reindex_collection(collection, flush=flush, diff_only=diff_only, model=model)
+    _reindex_collection(
+        collection, flush=flush, diff_only=diff_only, model=model, mappings=mappings
+    )
 
 
 def _write_entity_ids(entity_ids, output_file, description):
@@ -404,6 +411,7 @@ def index_diff_all(casefile=None):
 @cli.command("reindex-full")
 @click.option("--flush", is_flag=True, default=False)
 @click.option("--model/--no-model", is_flag=True, default=True)
+@click.option("--mappings/--no-mappings", is_flag=True, default=True)
 @click.option(
     "--diff-only",
     is_flag=True,
@@ -416,20 +424,25 @@ def index_diff_all(casefile=None):
     default=False,
     help="Queue the reindexing task for each collection, distribute them across workers.",
 )
-def reindex_full(flush=False, diff_only=False, queue=False, model=True):
+def reindex_full(flush=False, diff_only=False, queue=False, model=True, mappings=True):
     """Re-index all collections."""
     for collection in Collection.all():
         if queue:
             queue_reindex(collection, flush=flush, diff_only=diff_only)
         else:
             _reindex_collection(
-                collection, flush=flush, diff_only=diff_only, model=model
+                collection,
+                flush=flush,
+                diff_only=diff_only,
+                model=model,
+                mappings=mappings,
             )
 
 
 @cli.command("reindex-casefiles")
 @click.option("--flush", is_flag=True, default=False)
 @click.option("--model/--no-model", is_flag=True, default=True)
+@click.option("--mappings/--no-mappings", is_flag=True, default=True)
 @click.option(
     "--diff-only",
     is_flag=True,
@@ -442,14 +455,20 @@ def reindex_full(flush=False, diff_only=False, queue=False, model=True):
     default=False,
     help="Queue the reindexing task for each collection, distribute them across workers.",
 )
-def reindex_casefiles(flush=False, diff_only=False, queue=False, model=True):
+def reindex_casefiles(
+    flush=False, diff_only=False, queue=False, model=True, mappings=True
+):
     """Re-index all the casefile collections."""
     for collection in Collection.all_casefiles():
         if queue:
             queue_reindex(collection, flush=flush, diff_only=diff_only)
         else:
             _reindex_collection(
-                collection, flush=flush, diff_only=diff_only, model=model
+                collection,
+                flush=flush,
+                diff_only=diff_only,
+                model=model,
+                mappings=mappings,
             )
 
 

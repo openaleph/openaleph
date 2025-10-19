@@ -325,6 +325,7 @@ def reindex_collection(
     flush=False,
     diff_only=False,
     model=True,
+    mappings=True,
     queue_batches=False,
     batch_size=10_000,
 ):
@@ -337,12 +338,14 @@ def reindex_collection(
         flush: Delete all existing entities from index before reindexing
         diff_only: Only reindex entities that are in aggregator but not in index
         model: Aggregate model from database (Entities, Documents) before indexing
+        mappings: Process collection mappings and aggregate to the aggregator
         queue_batches: Queue batches for parallelization
     """
     from aleph.logic.profiles import profile_fragments
 
     aggregator = get_aggregator(collection)
-    _process_mappings(collection, aggregator)
+    if mappings:
+        _process_mappings(collection, aggregator)
     if model:
         aggregate_model(collection, aggregator)
     profile_fragments(collection, aggregator)
