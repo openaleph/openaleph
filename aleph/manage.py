@@ -200,12 +200,24 @@ def flush(foreign_id, sync=False):
 
 
 def _reindex_collection(
-    collection, flush=False, diff_only=False, model=True, mappings=True
+    collection,
+    flush=False,
+    diff_only=False,
+    model=True,
+    mappings=True,
+    queue_batches=False,
+    batch_size=10_000,
 ):
     log.info("[%s] Starting to re-index", collection)
     try:
         reindex_collection(
-            collection, flush=flush, diff_only=diff_only, model=model, mappings=mappings
+            collection,
+            flush=flush,
+            diff_only=diff_only,
+            model=model,
+            mappings=mappings,
+            queue_batches=queue_batches,
+            batch_size=batch_size,
         )
     except Exception:
         log.exception("Failed to re-index: %s", collection)
@@ -222,11 +234,37 @@ def _reindex_collection(
     default=False,
     help="Only reindex entities that are in aggregator but not in index",
 )
-def reindex(foreign_id, flush=False, diff_only=False, model=True, mappings=True):
+@click.option(
+    "--queue-batches",
+    is_flag=True,
+    default=False,
+    help="Queue batches for parallel processing",
+)
+@click.option(
+    "--batch-size",
+    type=int,
+    default=10_000,
+    help="Batch size for processing entities (default: 10000)",
+)
+def reindex(
+    foreign_id,
+    flush=False,
+    diff_only=False,
+    model=True,
+    mappings=True,
+    queue_batches=False,
+    batch_size=10_000,
+):
     """Index all the aggregator contents for a collection."""
     collection = get_collection(foreign_id)
     _reindex_collection(
-        collection, flush=flush, diff_only=diff_only, model=model, mappings=mappings
+        collection,
+        flush=flush,
+        diff_only=diff_only,
+        model=model,
+        mappings=mappings,
+        queue_batches=queue_batches,
+        batch_size=batch_size,
     )
 
 
@@ -424,7 +462,27 @@ def index_diff_all(casefile=None):
     default=False,
     help="Queue the reindexing task for each collection, distribute them across workers.",
 )
-def reindex_full(flush=False, diff_only=False, queue=False, model=True, mappings=True):
+@click.option(
+    "--queue-batches",
+    is_flag=True,
+    default=False,
+    help="Queue batches for parallel processing",
+)
+@click.option(
+    "--batch-size",
+    type=int,
+    default=10_000,
+    help="Batch size for processing entities (default: 10000)",
+)
+def reindex_full(
+    flush=False,
+    diff_only=False,
+    queue=False,
+    model=True,
+    mappings=True,
+    queue_batches=False,
+    batch_size=10_000,
+):
     """Re-index all collections."""
     for collection in Collection.all():
         if queue:
@@ -436,6 +494,8 @@ def reindex_full(flush=False, diff_only=False, queue=False, model=True, mappings
                 diff_only=diff_only,
                 model=model,
                 mappings=mappings,
+                queue_batches=queue_batches,
+                batch_size=batch_size,
             )
 
 
@@ -455,8 +515,26 @@ def reindex_full(flush=False, diff_only=False, queue=False, model=True, mappings
     default=False,
     help="Queue the reindexing task for each collection, distribute them across workers.",
 )
+@click.option(
+    "--queue-batches",
+    is_flag=True,
+    default=False,
+    help="Queue batches for parallel processing",
+)
+@click.option(
+    "--batch-size",
+    type=int,
+    default=10_000,
+    help="Batch size for processing entities (default: 10000)",
+)
 def reindex_casefiles(
-    flush=False, diff_only=False, queue=False, model=True, mappings=True
+    flush=False,
+    diff_only=False,
+    queue=False,
+    model=True,
+    mappings=True,
+    queue_batches=False,
+    batch_size=10_000,
 ):
     """Re-index all the casefile collections."""
     for collection in Collection.all_casefiles():
@@ -469,6 +547,8 @@ def reindex_casefiles(
                 diff_only=diff_only,
                 model=model,
                 mappings=mappings,
+                queue_batches=queue_batches,
+                batch_size=batch_size,
             )
 
 

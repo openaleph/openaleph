@@ -82,6 +82,7 @@ def reindex_collection(job: DatasetJob, collection: Collection) -> None:
     model = job.context.get("model", True)
     mappings = job.context.get("mappings", True)
     queue_batches = job.context.get("queue_batches", False)
+    batch_size = job.context.get("batch_size", 10_000)
     collections.reindex_collection(
         collection,
         flush=bool(flush),
@@ -89,6 +90,7 @@ def reindex_collection(job: DatasetJob, collection: Collection) -> None:
         model=bool(model),
         mappings=bool(mappings),
         queue_batches=bool(queue_batches),
+        batch_size=int(batch_size),
     )
     collections.refresh_collection(collection.id)
 
