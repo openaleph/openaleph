@@ -1711,7 +1711,7 @@ sql = ["sqlalchemy (>=2.0.36,<3.0.0)"]
 type = "git"
 url = "https://github.com/dataresearchcenter/ftmq.git"
 reference = "HEAD"
-resolved_reference = "4495cfe5d943a119318cd6c7ae90f227d352a42d"
+resolved_reference = "53416eeed425e3cc0b49d21168efddc99cda3cf8"
 
 [[package]]
 name = "fuzzywuzzy"

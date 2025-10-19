@@ -58,7 +58,7 @@ followthemoney-compare @ git+https://github.com/dataresearchcenter/followthemone
 followthemoney==4.3.0 ; python_version >= "3.12" and python_full_version < "4.0.0"
 frozenlist==1.8.0 ; python_version >= "3.12" and python_full_version < "4.0.0"
 fsspec==2025.9.0 ; python_version >= "3.12" and python_full_version < "4.0.0"
-ftmq @ git+https://github.com/dataresearchcenter/ftmq.git@4495cfe5d943a119318cd6c7ae90f227d352a42d ; python_version >= "3.12" and python_version < "4"
+ftmq @ git+https://github.com/dataresearchcenter/ftmq.git@53416eeed425e3cc0b49d21168efddc99cda3cf8 ; python_version >= "3.12" and python_version < "4"
 fuzzywuzzy==0.18.0 ; python_version >= "3.12" and python_full_version < "4.0.0"
 ghp-import==2.1.0 ; python_version >= "3.12" and python_full_version < "4.0.0"
 google-api-core==2.26.0 ; python_version >= "3.12" and python_full_version < "4.0.0"
