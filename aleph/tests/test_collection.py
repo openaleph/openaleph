@@ -34,7 +34,7 @@ class IndexTestCase(TestCase):
             f"/api/2/entities?filter:collection_id={self.private_coll.id}",
             headers=headers,
         )
-        assert res.json["total"] == 21, res.json
+        assert res.json["total"] == 22, res.json
         delete_entities(self.private_coll.id, sync=True)
 
         # Verify entities are gone from the index
