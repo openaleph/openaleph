@@ -201,7 +201,6 @@ def index_aggregator(
         _generate(),
         sync=sync,
         collection_id=collection.id,
-        namespace=collection.name,
     )
 
 
