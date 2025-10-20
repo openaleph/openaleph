@@ -1677,27 +1677,29 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "ftmq"
-version = "4.2.5"
+version = "4.3.0"
 description = "followthemoney query dsl and io helpers"
 optional = false
-python-versions = ">=3.11,<4"
+python-versions = "<4,>=3.11"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "ftmq-4.3.0-py3-none-any.whl", hash = "sha256:888260a9627430e8cccb0be6f2b64e5817c82fb939f27c05bc486109b15f58ba"},
+    {file = "ftmq-4.3.0.tar.gz", hash = "sha256:b026271108b8dd3e6ce030be90f3a712238cc4402390c278b9c855fbb4895928"},
+]
 
 [package.dependencies]
 anystore = ">=0.4.0,<0.5.0"
 click = ">=8.2.1,<9.0.0"
 click-default-group = ">=1.2.4,<2.0.0"
-followthemoney = ">=4.2.2,<5.0.0"
+followthemoney = ">=4.3.0,<5.0.0"
 nomenklatura = ">=4.1.9,<5.0.0"
 orjson = ">=3.10.18,<4.0.0"
-psycopg = {version = ">=3.2.9,<4.0.0", extras = ["pool"], optional = true}
+psycopg = {version = ">=3.2.9,<4.0.0", extras = ["pool"], optional = true, markers = "extra == \"postgres\""}
 pycountry = ">=24.6.1,<25.0.0"
 pydantic = ">=2.11.3,<3.0.0"
 pyicu = ">=2.15.2,<3.0.0"
-rigour = ">=1.3.10,<2.0.0"
-sqlalchemy = {version = ">=2.0.36,<3.0.0", optional = true}
+rigour = ">=1.3.13,<2.0.0"
+sqlalchemy = {version = ">=2.0.36,<3.0.0", optional = true, markers = "extra == \"postgres\""}
 
 [package.extras]
 aleph = ["alephclient (>=2.6.0,<3.0.0)", "furl (>=2.1.4,<3.0.0)"]
@@ -1706,12 +1708,6 @@ level = ["plyvel (>=1.5.1,<2.0.0)"]
 postgres = ["psycopg[pool] (>=3.2.9,<4.0.0)", "sqlalchemy (>=2.0.36,<3.0.0)"]
 redis = ["fakeredis (>=2.26.2,<3.0.0)", "redis (>=5.2.1,<6.0.0)"]
 sql = ["sqlalchemy (>=2.0.36,<3.0.0)"]
-
-[package.source]
-type = "git"
-url = "https://github.com/dataresearchcenter/ftmq.git"
-reference = "HEAD"
-resolved_reference = "53416eeed425e3cc0b49d21168efddc99cda3cf8"
 
 [[package]]
 name = "fuzzywuzzy"
@@ -6422,4 +6418,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.12, <4.0.0"
-content-hash = "61c3add27aa508955580709f368a9f98792da8bb0ff1cc61f753e4c4aa9bec60"
+content-hash = "ec49fbb80f39b3b17af898114f0ee4393879cc775c260d025a4b4011677ed151"
