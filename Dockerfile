@@ -59,7 +59,8 @@ ENV OPENALEPH_ELASTICSEARCH_URI=http://elasticsearch:9200/ \
     FTM_COMPARE_MODEL=/opt/ftm-compare/model.pkl \
     PROCRASTINATE_APP=aleph.procrastinate.tasks.app \
     OPENALEPH_SEARCH_AUTH=1 \
-    OPENALEPH_SEARCH_AUTH_FIELD=collection_id
+    OPENALEPH_SEARCH_AUTH_FIELD=collection_id \
+    OPENALEPH_SEARCH_INDEX_NAMESPACE_IDS=1
 
 
 RUN mkdir /run/prometheus
