@@ -46,7 +46,12 @@ from aleph.logic.roles import (
 from aleph.logic.xref import xref_collection
 from aleph.migration import cleanup_deleted, destroy_db, upgrade_system
 from aleph.model import Collection, EntitySet, Role
-from aleph.procrastinate.queues import queue_cancel_collection, queue_reindex
+from aleph.model.document import Document
+from aleph.procrastinate.queues import (
+    queue_cancel_collection,
+    queue_ingest,
+    queue_reindex,
+)
 from aleph.procrastinate.status import get_collection_status, get_status
 from aleph.util import JSONEncoder
 
@@ -563,6 +568,20 @@ def reingest(foreign_id, index_flush=True, ingest_flush=True):
         collection,
         index_flush=index_flush,
         ingest_flush=ingest_flush,
+    )
+
+
+@cli.command()
+@click.argument("document_id")
+def reingest_document(document_id):
+    """Re-process a specific document and re-index it (useful for debugging)."""
+    document = Document.by_id(document_id)
+    if document is None:
+        log.error(f"Can't find document with id `{document_id}`")
+        return
+    queue_ingest(document.collection, document.to_proxy())
+    log.info(
+        f"[{document.collection.name}] Queued document `{document.foreign_id}` for reingest."
     )
 
 
