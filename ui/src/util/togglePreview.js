@@ -13,7 +13,6 @@ export default function togglePreview(navigate, location, entity, profile) {
 
     // If opening a Document from search results, copy the search term into the hash as #q=...
     const isDocument = entity.schema.name === 'Pages'
-    console.log(entity)
     if (isOpening && isDocument) {
       const searchTerm = parsedSearch.q || parsedSearch.csq;
       parsedHash.q = searchTerm || undefined;
