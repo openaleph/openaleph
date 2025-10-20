@@ -81,7 +81,7 @@ def reindex_collection(job: DatasetJob, collection: Collection) -> None:
     diff_only = job.context.get("diff_only", False)
     model = job.context.get("model", True)
     mappings = job.context.get("mappings", True)
-    queue_batches = job.context.get("queue_batches", False)
+    queue_batches = job.context.get("queue_batches", True)
     batch_size = job.context.get("batch_size", 10_000)
     collections.reindex_collection(
         collection,
