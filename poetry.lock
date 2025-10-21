@@ -3628,22 +3628,26 @@ name = "openaleph-procrastinate"
 version = "5.1.0"
 description = "Task queue logic for OpenAleph built upon procrastinate"
 optional = false
-python-versions = "<4,>=3.11"
+python-versions = ">=3.11,<4"
 groups = ["main"]
-files = [
-    {file = "openaleph_procrastinate-5.1.0-py3-none-any.whl", hash = "sha256:bc4f7356767f9819847c5f604d518c4121b75c55b29919b1ee3686eafa87dbf3"},
-    {file = "openaleph_procrastinate-5.1.0.tar.gz", hash = "sha256:dba214f3724c2647d3086cca2455e15619ae01e150cb470b6317251c9e6923b7"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 anystore = ">=0.4.0,<0.5.0"
 cachetools = "<6"
-followthemoney = ">=4.2.2,<5.0.0"
-ftmq = ">=4.2.5,<5.0.0"
-procrastinate = ">=3.5.2,<4.0.0"
-psycopg = ">=3.2.10,<4.0.0"
+followthemoney = ">=4.3.0,<5.0.0"
+ftmq = ">=4.3.0,<5.0.0"
+procrastinate = ">=3.5.3,<4.0.0"
+psycopg = ">=3.2.11,<4.0.0"
 pydantic = ">=2.11.7,<3.0.0"
 pydantic-settings = ">=2.10.1,<3.0.0"
+
+[package.source]
+type = "git"
+url = "https://github.com/openaleph/openaleph-procrastinate.git"
+reference = "HEAD"
+resolved_reference = "194006900c9998697e653e9d27f344978fa0d89a"
 
 [[package]]
 name = "openaleph-search"
@@ -6418,4 +6422,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.12, <4.0.0"
-content-hash = "ec49fbb80f39b3b17af898114f0ee4393879cc775c260d025a4b4011677ed151"
+content-hash = "6be5d3a778904f1a915b80b370de2f0224be1813e8edf6d10aa54eab757e9e7d"
