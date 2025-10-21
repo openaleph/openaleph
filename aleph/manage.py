@@ -579,7 +579,7 @@ def reingest_document(document_id):
     if document is None:
         log.error(f"Can't find document with id `{document_id}`")
         return
-    queue_ingest(document.collection, document.to_proxy())
+    queue_ingest(document.collection, document.to_proxy(), priority=1000)
     log.info(
         f"[{document.collection.name}] Queued document `{document.foreign_id}` for reingest."
     )
