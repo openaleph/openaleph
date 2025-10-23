@@ -212,6 +212,7 @@ def _reindex_collection(
     mappings=True,
     queue_batches=False,
     batch_size=10_000,
+    schema=None,
 ):
     log.info("[%s] Starting to re-index", collection)
     try:
@@ -223,6 +224,7 @@ def _reindex_collection(
             mappings=mappings,
             queue_batches=queue_batches,
             batch_size=batch_size,
+            schema=schema,
         )
     except Exception:
         log.exception("Failed to re-index: %s", collection)
@@ -251,6 +253,13 @@ def _reindex_collection(
     default=10_000,
     help="Batch size for processing entities (default: 10000)",
 )
+@click.option(
+    "-s",
+    "--schema",
+    type=str,
+    default=None,
+    help="Filter entities by schema (e.g., Person, Company)",
+)
 def reindex(
     foreign_id,
     flush=False,
@@ -259,6 +268,7 @@ def reindex(
     mappings=True,
     queue_batches=False,
     batch_size=10_000,
+    schema=None,
 ):
     """Index all the aggregator contents for a collection."""
     collection = get_collection(foreign_id)
@@ -270,6 +280,7 @@ def reindex(
         mappings=mappings,
         queue_batches=queue_batches,
         batch_size=batch_size,
+        schema=schema,
     )
 
 
@@ -479,6 +490,13 @@ def index_diff_all(casefile=None):
     default=10_000,
     help="Batch size for processing entities (default: 10000)",
 )
+@click.option(
+    "-s",
+    "--schema",
+    type=str,
+    default=None,
+    help="Filter entities by schema (e.g., Person, Company)",
+)
 def reindex_full(
     flush=False,
     diff_only=False,
@@ -487,11 +505,12 @@ def reindex_full(
     mappings=True,
     queue_batches=False,
     batch_size=10_000,
+    schema=None,
 ):
     """Re-index all collections."""
     for collection in Collection.all():
         if queue:
-            queue_reindex(collection, flush=flush, diff_only=diff_only)
+            queue_reindex(collection, flush=flush, diff_only=diff_only, schema=schema)
         else:
             _reindex_collection(
                 collection,
@@ -501,6 +520,7 @@ def reindex_full(
                 mappings=mappings,
                 queue_batches=queue_batches,
                 batch_size=batch_size,
+                schema=schema,
             )
 
 
@@ -532,6 +552,13 @@ def reindex_full(
     default=10_000,
     help="Batch size for processing entities (default: 10000)",
 )
+@click.option(
+    "-s",
+    "--schema",
+    type=str,
+    default=None,
+    help="Filter entities by schema (e.g., Person, Company)",
+)
 def reindex_casefiles(
     flush=False,
     diff_only=False,
@@ -540,11 +567,12 @@ def reindex_casefiles(
     mappings=True,
     queue_batches=False,
     batch_size=10_000,
+    schema=None,
 ):
     """Re-index all the casefile collections."""
     for collection in Collection.all_casefiles():
         if queue:
-            queue_reindex(collection, flush=flush, diff_only=diff_only)
+            queue_reindex(collection, flush=flush, diff_only=diff_only, schema=schema)
         else:
             _reindex_collection(
                 collection,
@@ -554,6 +582,7 @@ def reindex_casefiles(
                 mappings=mappings,
                 queue_batches=queue_batches,
                 batch_size=batch_size,
+                schema=schema,
             )
 
 

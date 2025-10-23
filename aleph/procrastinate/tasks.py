@@ -68,7 +68,7 @@ def index_entities(job: DatasetJob, collection: Collection) -> None:
 
 @aleph_task(retry=defer.tasks.index.max_retries)
 def index_entities_by_ids(job: DatasetJob, collection: Collection) -> None:
-    entity_ids = job.payload.get("entity_ids", [])
+    entity_ids = set(job.payload.get("entity_ids", []))
     if entity_ids:
         aggregator = get_aggregator(collection)
         collections.index_aggregator(collection, aggregator, entity_ids)
@@ -83,6 +83,7 @@ def reindex_collection(job: DatasetJob, collection: Collection) -> None:
     mappings = job.context.get("mappings", True)
     queue_batches = job.context.get("queue_batches", True)
     batch_size = job.context.get("batch_size", 10_000)
+    schema = job.context.get("schema", None)
     collections.reindex_collection(
         collection,
         flush=bool(flush),
@@ -91,6 +92,7 @@ def reindex_collection(job: DatasetJob, collection: Collection) -> None:
         mappings=bool(mappings),
         queue_batches=bool(queue_batches),
         batch_size=int(batch_size),
+        schema=schema,
     )
     collections.refresh_collection(collection.id)
 

@@ -156,11 +156,18 @@ def aggregate_model(collection: Collection, aggregator):
 
 
 def index_aggregator(
-    collection: Collection, aggregator, entity_ids=None, skip_errors=False, sync=False
+    collection: Collection,
+    aggregator,
+    entity_ids=None,
+    skip_errors=False,
+    sync=False,
+    schema=None,
 ):
     def _generate():
         idx = 0
-        entities = aggregator.iterate(entity_id=entity_ids, skip_errors=skip_errors)
+        entities = aggregator.iterate(
+            entity_id=entity_ids, skip_errors=skip_errors, schema=schema
+        )
 
         # Batch fetch all tags for all entities at once
         tags_map = defaultdict(set)
@@ -273,6 +280,7 @@ def _index_batch(
     queue_batches: bool | None = False,
     skip_errors: bool | None = True,
     sync: bool | None = False,
+    schema: str | None = None,
 ) -> None:
     aggregator = get_aggregator(collection)
     if queue_batches:
@@ -292,6 +300,7 @@ def _index_batch(
             entity_ids=entity_ids,
             skip_errors=bool(skip_errors),
             sync=bool(sync),
+            schema=schema,
         )
 
 
@@ -302,6 +311,7 @@ def _process_batches(
     queue_batches: bool,
     skip_errors: bool,
     sync: bool,
+    schema: str | None = None,
 ):
     """Process entities in batches."""
     aggregator = get_aggregator(collection)
@@ -311,10 +321,10 @@ def _process_batches(
             for i in range(0, len(entity_ids), batch_size)
         )
     else:
-        batches = aggregator.get_sorted_id_batches(batch_size)
+        batches = aggregator.get_sorted_id_batches(batch_size, schema=schema)
 
     for batch in batches:
-        _index_batch(collection, batch, queue_batches, skip_errors, sync)
+        _index_batch(collection, batch, queue_batches, skip_errors, sync, schema)
 
 
 def reindex_collection(
@@ -327,6 +337,7 @@ def reindex_collection(
     mappings=True,
     queue_batches=False,
     batch_size=10_000,
+    schema=None,
 ):
     """Re-index all entities from the model, mappings and aggregator cache.
 
@@ -339,6 +350,7 @@ def reindex_collection(
         model: Aggregate model from database (Entities, Documents) before indexing
         mappings: Process collection mappings and aggregate to the aggregator
         queue_batches: Queue batches for parallelization
+        schema: Filter entities by schema (e.g., Person, Company)
     """
     from aleph.logic.profiles import profile_fragments
 
@@ -363,7 +375,7 @@ def reindex_collection(
             return
 
     _process_batches(
-        collection, entity_ids, batch_size, queue_batches, skip_errors, sync
+        collection, entity_ids, batch_size, queue_batches, skip_errors, sync, schema
     )
     if not queue_batches:
         compute_collection(collection, force=True)
