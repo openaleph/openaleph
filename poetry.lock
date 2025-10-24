@@ -3710,7 +3710,7 @@ google = ["google-cloud-storage (>=1.31.0,<3.0.0)", "grpcio (>=1.32.0,<2.0.0)"]
 type = "git"
 url = "https://github.com/openaleph/openaleph-servicelayer.git"
 reference = "HEAD"
-resolved_reference = "9012f508678e463e24a8f968a56ca44e2e6ffa7c"
+resolved_reference = "b55b796fdea2784b0da1c85a964433b5097c9e42"
 
 [[package]]
 name = "openpyxl"
