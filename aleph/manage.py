@@ -15,8 +15,10 @@ from tabulate import tabulate
 from aleph.authz import Authz
 from aleph.core import cache, create_app, db
 from aleph.index.collections import get_collection as _get_index_collection
+from aleph.logic.aggregator import get_aggregator
 from aleph.logic.archive import cleanup_archive
 from aleph.logic.collections import (
+    aggregate_model,
     compute_collection,
     create_collection,
     delete_collection,
@@ -204,6 +206,23 @@ def flush(foreign_id, sync=False):
     delete_collection(collection, keep_metadata=True, sync=sync)
 
 
+@cli.command("aggregate-model")
+@click.argument("foreign_id")
+def aggregate_model_command(foreign_id):
+    """Aggregate model entities (Documents and Entities) to the FTM store.
+
+    This syncs up the aggregator from the Aleph domain model by reading all
+    Document and Entity records from the database and writing them to the
+    collection's FTM store (aggregator).
+    """
+    collection = get_collection(foreign_id)
+    aggregator = get_aggregator(collection)
+
+    log.info("[%s] Aggregating model...", collection)
+    aggregate_model(collection, aggregator)
+    log.info("[%s] Model aggregation complete", collection)
+
+
 def _reindex_collection(
     collection,
     flush=False,
@@ -364,19 +383,24 @@ def index_diff(foreign_id):
     """
     collection = get_collection(foreign_id)
 
-    print(f"Computing diff counts for {collection.label} ({foreign_id})...")
+    log.info("[%s] Computing diff counts...", collection)
     diff = _compute_diff_stats(collection)
 
     # Display results
-    print("\n" + "=" * 60)
-    print(f"Index Diff Report for: {collection.label} ({foreign_id})")
-    print("=" * 60)
-    print(f"Total in aggregator:        {diff['aggregator_ids']:>10}")
-    print(f"Total in index:             {diff['index_ids']:>10}")
-    print(f"In both:                    {diff['in_both']:>10}")
-    print(f"Only in aggregator:         {diff['only_in_aggregator']:>10}")
-    print(f"Only in index:              {diff['only_in_index']:>10}")
-    print("=" * 60)
+    log.info(
+        "[%s] Index Diff Report:\n"
+        "  Total in aggregator:        %10d\n"
+        "  Total in index:             %10d\n"
+        "  In both:                    %10d\n"
+        "  Only in aggregator:         %10d\n"
+        "  Only in index:              %10d",
+        collection,
+        diff["aggregator_ids"],
+        diff["index_ids"],
+        diff["in_both"],
+        diff["only_in_aggregator"],
+        diff["only_in_index"],
+    )
 
 
 @cli.command("export-index-diff")
@@ -420,13 +444,13 @@ def export_index_diff(
     collection = get_collection(foreign_id)
 
     if not any([aggregator_ids, index_ids, only_aggregator, only_index]):
-        print("Error: At least one output file must be specified.")
-        print(
+        log.error(
+            "At least one output file must be specified. "
             "Available options: --aggregator-ids, --index-ids, --only-aggregator, --only-index"
         )
         return
 
-    print(f"Collecting entity IDs for {collection.label} ({foreign_id})...")
+    log.info("[%s] Collecting entity IDs...", collection)
     id_lists = _collect_diff_ids(collection)
 
     outputs = [
@@ -440,14 +464,18 @@ def export_index_diff(
             _write_entity_ids(entity_ids, output_file, description)
 
     # Display summary
-    print("\n" + "=" * 60)
-    print(f"Export Summary for: {collection.label} ({foreign_id})")
-    print("=" * 60)
-    print(f"Total in aggregator:        {len(id_lists['aggregator_ids']):>10}")
-    print(f"Total in index:             {len(id_lists['index_ids']):>10}")
-    print(f"Only in aggregator:         {len(id_lists['only_in_aggregator']):>10}")
-    print(f"Only in index:              {len(id_lists['only_in_index']):>10}")
-    print("=" * 60)
+    log.info(
+        "[%s] Export Summary:\n"
+        "  Total in aggregator:        %10d\n"
+        "  Total in index:             %10d\n"
+        "  Only in aggregator:         %10d\n"
+        "  Only in index:              %10d",
+        collection,
+        len(id_lists["aggregator_ids"]),
+        len(id_lists["index_ids"]),
+        len(id_lists["only_in_aggregator"]),
+        len(id_lists["only_in_index"]),
+    )
 
 
 @cli.command("index-diff-all")
@@ -466,7 +494,7 @@ def index_diff_all(casefile=None):
             continue
 
         try:
-            print(f"Processing {collection.foreign_id}...")
+            log.info("Processing %s...", collection.foreign_id)
             diff = _compute_diff_stats(collection)
             collections_list.append(
                 {
@@ -494,10 +522,6 @@ def index_diff_all(casefile=None):
             )
 
     # Display summary table
-    print("\n" + "=" * 100)
-    print("Index Diff Summary for All Collections")
-    print("=" * 100)
-
     headers = [
         "Foreign ID",
         "Label",
@@ -521,8 +545,7 @@ def index_diff_all(casefile=None):
             ]
         )
 
-    print(tabulate(rows, headers=headers, tablefmt="simple"))
-    print("=" * 100)
+    table = tabulate(rows, headers=headers, tablefmt="simple")
 
     # Show totals
     total_aggregator = sum(
@@ -540,11 +563,20 @@ def index_diff_all(casefile=None):
         c["only_index"] for c in collections_list if isinstance(c["only_index"], int)
     )
 
-    print(f"\nTotals across {len(collections_list)} collections:")
-    print(f"  Total entities in aggregator:      {total_aggregator:>10}")
-    print(f"  Total entities in index:           {total_index:>10}")
-    print(f"  Total missing from index:          {total_only_aggregator:>10}")
-    print(f"  Total orphaned in index:           {total_only_index:>10}")
+    log.info(
+        "Index Diff Summary for All Collections:\n\n%s\n\n"
+        "Totals across %d collections:\n"
+        "  Total entities in aggregator:      %10d\n"
+        "  Total entities in index:           %10d\n"
+        "  Total missing from index:          %10d\n"
+        "  Total orphaned in index:           %10d",
+        table,
+        len(collections_list),
+        total_aggregator,
+        total_index,
+        total_only_aggregator,
+        total_only_index,
+    )
 
 
 @cli.command("reindex-full")
