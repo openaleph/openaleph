@@ -3650,7 +3650,7 @@ pydantic-settings = ">=2.10.1,<3.0.0"
 type = "git"
 url = "https://github.com/openaleph/openaleph-procrastinate.git"
 reference = "HEAD"
-resolved_reference = "24159aa8e593b699fedcea20ca725d8035e620a6"
+resolved_reference = "ce2d9394c3ca81d9aa02f69864c11a0528c12c9a"
 
 [[package]]
 name = "openaleph-search"
