@@ -3654,7 +3654,7 @@ pydantic-settings = ">=2.10.1,<3.0.0"
 type = "git"
 url = "https://github.com/openaleph/openaleph-procrastinate.git"
 reference = "HEAD"
-resolved_reference = "ce2d9394c3ca81d9aa02f69864c11a0528c12c9a"
+resolved_reference = "74257c5deaa04068e19fcaf6078c1867ea119d60"
 
 [[package]]
 name = "openaleph-search"
@@ -3689,10 +3689,8 @@ description = "Basic remote service functions for openaleph components"
 optional = false
 python-versions = "*"
 groups = ["main"]
-files = [
-    {file = "openaleph_servicelayer-1.23.3-py2.py3-none-any.whl", hash = "sha256:ea8b85dd4bc911ef0fa93e8cbe55dc7789949170377fca5f5245b5ceee20a9a2"},
-    {file = "openaleph_servicelayer-1.23.3.tar.gz", hash = "sha256:4c1182967df5c2f0f31f0211c03c6962136ef952eb55f528ed1f696850f7abb3"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 banal = ">=1.0.6,<2.0.0"
@@ -3707,6 +3705,12 @@ structlog = ">=24.1.0,<25.0.0"
 amazon = ["boto3 (>=1.11.9,<2.0.0)"]
 dev = ["boto3 (>=1.11.9,<2.0.0)", "coverage", "moto (<5)", "pytest (>=3.6)", "pytest-cov", "time-machine (>=2.14.1,<3.0.0)", "twine"]
 google = ["google-cloud-storage (>=1.31.0,<3.0.0)", "grpcio (>=1.32.0,<2.0.0)"]
+
+[package.source]
+type = "git"
+url = "https://github.com/openaleph/openaleph-servicelayer.git"
+reference = "HEAD"
+resolved_reference = "9012f508678e463e24a8f968a56ca44e2e6ffa7c"
 
 [[package]]
 name = "openpyxl"
@@ -6390,4 +6394,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.12, <4.0.0"
-content-hash = "d8064bf95ec51846770e042baa80dff06d1ad5a2bd27607c85db8c4fee383918"
+content-hash = "bf09c72492f4005c654df8013d944fd8246d8e1dae38e743db22f30e1c16eb3c"
