@@ -1,6 +1,7 @@
 import time
 from collections import defaultdict
 from datetime import datetime
+from typing import Generator
 
 from anystore.logging import get_logger
 from followthemoney.dataset.util import dataset_name_check
@@ -13,11 +14,7 @@ from aleph.authz import Authz
 from aleph.core import cache, db
 from aleph.index import collections as index
 from aleph.index import xref as xref_index
-from aleph.logic.aggregator import (
-    get_aggregator,
-    get_aggregator_ids,
-    get_aggregator_name,
-)
+from aleph.logic.aggregator import get_aggregator, get_aggregator_name
 from aleph.logic.discover import update_collection_discovery
 from aleph.logic.documents import (
     MODEL_ORIGIN,
@@ -243,35 +240,51 @@ def _process_mappings(collection: Collection, aggregator):
             log.exception(f"Failed mapping: {mapping!r}", dataset=collection.name)
 
 
-def _get_diff_entity_ids(collection: Collection):
-    """Get entity IDs that need reindexing in diff-only mode.
+def _get_diff_reindex_batches(
+    collection: Collection, batch_size: int = 10_000
+) -> Generator[list[str], None, None]:
+    """Get batches of entity IDs that need reindexing in diff-only mode.
 
-    Returns:
-        list of entity IDs to reindex, or None to skip reindexing entirely
+    Yields batches of entity IDs that exist in the aggregator but not in the index.
+
+    Args:
+        collection: The collection to check
+        batch_size: Size of each batch (default: 10,000)
+
+    Yields:
+        Lists of entity IDs to reindex, up to batch_size per list
     """
-    diff = index_diff(collection)
-    # If index is empty, just do a full reindex
-    if not diff["index_ids"]:
-        log.info(
-            f"[{collection}] Diff-only mode: index is empty, doing full reindex",
-            dataset=collection.name,
-        )
-        return []
+    batch = []
+    total_missing = 0
 
-    entity_ids = list(diff["only_in_aggregator"])
-    if entity_ids:
+    for aggregator_id, index_id in index_diff(collection):
+        # Entity is in aggregator but not in index - needs reindexing
+        if index_id is None and aggregator_id is not None:
+            batch.append(aggregator_id)
+            total_missing += 1
+
+            if len(batch) >= batch_size:
+                log.info(
+                    f"[{collection}] Diff-only mode: found batch of {len(batch)} "
+                    f"entities missing from index (total so far: {total_missing})",
+                    dataset=collection.name,
+                )
+                yield batch
+                batch = []
+
+    # Yield remaining items in the last partial batch
+    if batch:
         log.info(
-            f"[{collection}] Diff-only mode: reindexing {len(entity_ids)} "
-            f"entities missing from index",
+            f"[{collection}] Diff-only mode: found {total_missing} entities "
+            f"total missing from index",
             dataset=collection.name,
         )
-        return entity_ids
-    else:
+        yield batch
+    elif total_missing == 0:
         log.info(
-            f"[{collection}] Diff-only mode: no entities to reindex",
+            f"[{collection}] Diff-only mode: no entities missing from index",
             dataset=collection.name,
         )
-        return None
 
 
 def _index_batch(
@@ -365,17 +378,27 @@ def reindex_collection(
         log.debug(f"[{collection}] Flushing...", dataset=collection.name)
         index.delete_entities(collection.id, sync=True)
 
-    # Determine which entities to index
-    entity_ids = None
+    # Handle diff-only mode separately - it yields batches directly
     if diff_only:
-        entity_ids = _get_diff_entity_ids(collection)
-        if entity_ids is None:
-            # No entities to reindex
-            compute_collection(collection, force=True)
-            return
+        batches = _get_diff_reindex_batches(collection, batch_size=batch_size)
+        has_batches = False
+        for batch in batches:
+            has_batches = True
+            _index_batch(collection, batch, queue_batches, skip_errors, sync, schema)
 
+        if not has_batches:
+            log.info(
+                f"[{collection}] Diff-only mode: no entities to reindex",
+                dataset=collection.name,
+            )
+
+        if not queue_batches:
+            compute_collection(collection, force=True)
+        return
+
+    # Regular reindex mode
     _process_batches(
-        collection, entity_ids, batch_size, queue_batches, skip_errors, sync, schema
+        collection, None, batch_size, queue_batches, skip_errors, sync, schema
     )
     if not queue_batches:
         compute_collection(collection, force=True)
@@ -480,47 +503,68 @@ def validate_collection_foreign_ids():
         return []
 
 
-def index_diff(collection):
+def index_diff(  # noqa: C901
+    collection,
+) -> Generator[tuple[str | None, str | None], None, None]:
     """Compare entity IDs between aggregator and search index.
 
-    Returns a dictionary with the following keys:
-    - aggregator_ids: set of entity IDs in the aggregator
-    - index_ids: set of entity IDs in the index
-    - only_in_aggregator: set of entity IDs only in aggregator
-    - only_in_index: set of entity IDs only in index
-    - in_both: set of entity IDs in both
+    This returns a tuple generator with (aggregator_id, index_id) (which are the
+    same) or if 1 of the values is None, it means the entity is missing either
+    in the aggregator or in the index.
     """
     log.info(
-        f"[{collection}] Fetching entity IDs from aggregator...",
+        f"[{collection.name}] Streaming sorted entity ID tuples from aggregator and index...",
         dataset=collection.name,
     )
     aggregator = get_aggregator(collection)
-    # Use batched approach for memory efficiency with large tables
-    aggregator_ids = set(get_aggregator_ids(aggregator))
-    log.info(
-        f"[{collection}] Found {len(aggregator_ids)} entities in aggregator",
-        dataset=collection.name,
-    )
+    aggregator_ids = aggregator.get_sorted_ids()
+    index_ids = entities_index.iter_entity_ids(collection_id=collection.id, sort="_id")
 
-    log.info(
-        f"[{collection}] Fetching entity IDs from search index...",
-        dataset=collection.name,
-    )
-    index_ids = set(entities_index.iter_entity_ids(collection_id=collection.id))
-    log.info(
-        f"[{collection}] Found {len(index_ids)} entities in index",
-        dataset=collection.name,
-    )
+    while True:
+        aggregator_id = next(aggregator_ids, None)
+        index_id = next(index_ids, None)
 
-    # Calculate differences
-    only_in_aggregator = aggregator_ids - index_ids
-    only_in_index = index_ids - aggregator_ids
-    in_both = aggregator_ids & index_ids
+        # we have nothing
+        if aggregator_id is None and index_id is None:
+            return
+        # end of aggregator ids
+        elif aggregator_id is None:
+            yield None, index_id
+            # yield remaining index ids
+            while True:
+                try:
+                    yield None, next(index_ids)
+                except StopIteration:
+                    return
 
-    return {
-        "aggregator_ids": aggregator_ids,
-        "index_ids": index_ids,
-        "only_in_aggregator": only_in_aggregator,
-        "only_in_index": only_in_index,
-        "in_both": in_both,
-    }
+        # end of index ids:
+        elif index_id is None:
+            yield aggregator_id, None
+            # yield remaining aggregator ids
+            while True:
+                try:
+                    yield next(aggregator_ids), None
+                except StopIteration:
+                    return
+
+        # same id in both stores
+        elif aggregator_id == index_id:
+            yield aggregator_id, index_id
+
+        else:
+            # id in aggregator but not in index
+            if aggregator_id < index_id:
+                # catch up with missing ids
+                while aggregator_id != index_id:
+                    yield aggregator_id, None
+                    aggregator_id = next(aggregator_ids, None)
+                    if aggregator_id is None:
+                        break
+            # id in index but not in aggregator
+            elif aggregator_id > index_id:
+                # catch up with missing ids
+                while aggregator_id != index_id:
+                    yield None, index_id
+                    index_id = next(index_ids, None)
+                    if index_id is None:
+                        break
