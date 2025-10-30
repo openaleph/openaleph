@@ -3,6 +3,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Generator
 
+import dateparser
 from anystore.logging import get_logger
 from followthemoney.dataset.util import dataset_name_check
 from openaleph_procrastinate.manage import cancel_jobs
@@ -40,6 +41,27 @@ from aleph.procrastinate.queues import (
 from aleph.procrastinate.status import get_collection_status
 
 log = get_logger(__name__)
+
+
+def _parse_timestamp(timestamp_str: str | None) -> datetime | None:
+    """Parse an arbitrary timestamp string via `dateparser` into a datetime
+    object."""
+    if timestamp_str is None:
+        return None
+
+    # Use dateparser to handle various formats including relative dates
+    parsed = dateparser.parse(
+        timestamp_str,
+        settings={
+            "TIMEZONE": "UTC",
+            "RETURN_AS_TIMEZONE_AWARE": False,
+            "PREFER_DATES_FROM": "past",  # For ambiguous dates, prefer past
+        },
+    )
+
+    if parsed is None:
+        raise ValueError(f"Invalid timestamp format: `{timestamp_str}`")
+    return parsed
 
 
 def create_collection(data, authz, sync=False):
@@ -380,6 +402,10 @@ def reindex_collection(
     """
     from aleph.logic.profiles import profile_fragments
 
+    # Parse timestamp strings to datetime objects for ftmq
+    since_dt = _parse_timestamp(since)
+    until_dt = _parse_timestamp(until)
+
     aggregator = get_aggregator(collection)
     if mappings:
         _process_mappings(collection, aggregator)
@@ -394,7 +420,7 @@ def reindex_collection(
     # Handle diff-only mode separately - it yields batches directly
     if diff_only:
         batches = _get_diff_reindex_batches(
-            collection, batch_size=batch_size, since=since, until=until
+            collection, batch_size=batch_size, since=since_dt, until=until_dt
         )
         has_batches = False
         for batch in batches:
@@ -420,8 +446,8 @@ def reindex_collection(
         skip_errors,
         sync,
         schema,
-        since,
-        until,
+        since_dt,
+        until_dt,
     )
     if not queue_batches:
         compute_collection(collection, force=True)

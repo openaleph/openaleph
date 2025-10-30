@@ -288,8 +288,8 @@ def _reindex_collection(
     type=str,
     default=None,
     help=(
-        "Filter entities by timestamp (ISO format or Unix timestamp), "
-        "only entities modified since this time"
+        "Filter entities modified since this time. "
+        "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
     ),
 )
 @click.option(
@@ -297,8 +297,8 @@ def _reindex_collection(
     type=str,
     default=None,
     help=(
-        "Filter entities by timestamp (ISO format or Unix timestamp), "
-        "only entities modified until this time"
+        "Filter entities modified until this time. "
+        "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
     ),
 )
 def reindex(
@@ -645,8 +645,8 @@ def index_diff_all(casefile=None):
     type=str,
     default=None,
     help=(
-        "Filter entities by timestamp (ISO format or Unix timestamp), "
-        "only entities modified since this time"
+        "Filter entities modified since this time. "
+        "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
     ),
 )
 @click.option(
@@ -654,8 +654,8 @@ def index_diff_all(casefile=None):
     type=str,
     default=None,
     help=(
-        "Filter entities by timestamp (ISO format or Unix timestamp), "
-        "only entities modified until this time"
+        "Filter entities modified until this time. "
+        "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
     ),
 )
 def reindex_full(
@@ -736,8 +736,8 @@ def reindex_full(
     type=str,
     default=None,
     help=(
-        "Filter entities by timestamp (ISO format or Unix timestamp), "
-        "only entities modified since this time"
+        "Filter entities modified since this time. "
+        "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
     ),
 )
 @click.option(
@@ -745,8 +745,8 @@ def reindex_full(
     type=str,
     default=None,
     help=(
-        "Filter entities by timestamp (ISO format or Unix timestamp), "
-        "only entities modified until this time"
+        "Filter entities modified until this time. "
+        "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
     ),
 )
 def reindex_casefiles(

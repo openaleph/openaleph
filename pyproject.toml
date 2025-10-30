@@ -69,6 +69,7 @@ dependencies = [
     "sentry-sdk[flask] (==2.19.2)",
     "legacy-cgi; python_version >= '3.13'",
     "lxml[html-clean] (>=5.4.0,<6.0.0)",
+    "dateparser (>=1.2.2,<2.0.0)",
 ]
 
 [project.scripts]
