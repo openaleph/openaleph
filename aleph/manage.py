@@ -232,6 +232,8 @@ def _reindex_collection(
     queue_batches=False,
     batch_size=10_000,
     schema=None,
+    since=None,
+    until=None,
 ):
     log.info("[%s] Starting to re-index", collection)
     try:
@@ -244,6 +246,8 @@ def _reindex_collection(
             queue_batches=queue_batches,
             batch_size=batch_size,
             schema=schema,
+            since=since,
+            until=until,
         )
     except Exception:
         log.exception("Failed to re-index: %s", collection)
@@ -279,6 +283,24 @@ def _reindex_collection(
     default=None,
     help="Filter entities by schema (e.g., Person, Company)",
 )
+@click.option(
+    "--since",
+    type=str,
+    default=None,
+    help=(
+        "Filter entities by timestamp (ISO format or Unix timestamp), "
+        "only entities modified since this time"
+    ),
+)
+@click.option(
+    "--until",
+    type=str,
+    default=None,
+    help=(
+        "Filter entities by timestamp (ISO format or Unix timestamp), "
+        "only entities modified until this time"
+    ),
+)
 def reindex(
     foreign_id,
     flush=False,
@@ -288,6 +310,8 @@ def reindex(
     queue_batches=False,
     batch_size=10_000,
     schema=None,
+    since=None,
+    until=None,
 ):
     """Index all the aggregator contents for a collection."""
     collection = get_collection(foreign_id)
@@ -300,6 +324,8 @@ def reindex(
         queue_batches=queue_batches,
         batch_size=batch_size,
         schema=schema,
+        since=since,
+        until=until,
     )
 
 
@@ -614,6 +640,24 @@ def index_diff_all(casefile=None):
     default=None,
     help="Filter entities by schema (e.g., Person, Company)",
 )
+@click.option(
+    "--since",
+    type=str,
+    default=None,
+    help=(
+        "Filter entities by timestamp (ISO format or Unix timestamp), "
+        "only entities modified since this time"
+    ),
+)
+@click.option(
+    "--until",
+    type=str,
+    default=None,
+    help=(
+        "Filter entities by timestamp (ISO format or Unix timestamp), "
+        "only entities modified until this time"
+    ),
+)
 def reindex_full(
     flush=False,
     diff_only=False,
@@ -623,11 +667,20 @@ def reindex_full(
     queue_batches=False,
     batch_size=10_000,
     schema=None,
+    since=None,
+    until=None,
 ):
     """Re-index all collections."""
     for collection in Collection.all():
         if queue:
-            queue_reindex(collection, flush=flush, diff_only=diff_only, schema=schema)
+            queue_reindex(
+                collection,
+                flush=flush,
+                diff_only=diff_only,
+                schema=schema,
+                since=since,
+                until=until,
+            )
         else:
             _reindex_collection(
                 collection,
@@ -638,6 +691,8 @@ def reindex_full(
                 queue_batches=queue_batches,
                 batch_size=batch_size,
                 schema=schema,
+                since=since,
+                until=until,
             )
 
 
@@ -676,6 +731,24 @@ def reindex_full(
     default=None,
     help="Filter entities by schema (e.g., Person, Company)",
 )
+@click.option(
+    "--since",
+    type=str,
+    default=None,
+    help=(
+        "Filter entities by timestamp (ISO format or Unix timestamp), "
+        "only entities modified since this time"
+    ),
+)
+@click.option(
+    "--until",
+    type=str,
+    default=None,
+    help=(
+        "Filter entities by timestamp (ISO format or Unix timestamp), "
+        "only entities modified until this time"
+    ),
+)
 def reindex_casefiles(
     flush=False,
     diff_only=False,
@@ -685,11 +758,20 @@ def reindex_casefiles(
     queue_batches=False,
     batch_size=10_000,
     schema=None,
+    since=None,
+    until=None,
 ):
     """Re-index all the casefile collections."""
     for collection in Collection.all_casefiles():
         if queue:
-            queue_reindex(collection, flush=flush, diff_only=diff_only, schema=schema)
+            queue_reindex(
+                collection,
+                flush=flush,
+                diff_only=diff_only,
+                schema=schema,
+                since=since,
+                until=until,
+            )
         else:
             _reindex_collection(
                 collection,
@@ -700,6 +782,8 @@ def reindex_casefiles(
                 queue_batches=queue_batches,
                 batch_size=batch_size,
                 schema=schema,
+                since=since,
+                until=until,
             )
 
 

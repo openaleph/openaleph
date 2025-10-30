@@ -241,7 +241,10 @@ def _process_mappings(collection: Collection, aggregator):
 
 
 def _get_diff_reindex_batches(
-    collection: Collection, batch_size: int = 10_000
+    collection: Collection,
+    batch_size: int = 10_000,
+    since=None,
+    until=None,
 ) -> Generator[list[str], None, None]:
     """Get batches of entity IDs that need reindexing in diff-only mode.
 
@@ -250,6 +253,8 @@ def _get_diff_reindex_batches(
     Args:
         collection: The collection to check
         batch_size: Size of each batch (default: 10,000)
+        since: Optional timestamp filter for aggregator (ISO format or timestamp)
+        until: Optional timestamp filter for aggregator (ISO format or timestamp)
 
     Yields:
         Lists of entity IDs to reindex, up to batch_size per list
@@ -257,7 +262,7 @@ def _get_diff_reindex_batches(
     batch = []
     total_missing = 0
 
-    for aggregator_id, index_id in index_diff(collection):
+    for aggregator_id, index_id in index_diff(collection, since=since, until=until):
         # Entity is in aggregator but not in index - needs reindexing
         if index_id is None and aggregator_id is not None:
             batch.append(aggregator_id)
@@ -325,6 +330,8 @@ def _process_batches(
     skip_errors: bool,
     sync: bool,
     schema: str | None = None,
+    since=None,
+    until=None,
 ):
     """Process entities in batches."""
     aggregator = get_aggregator(collection)
@@ -334,7 +341,9 @@ def _process_batches(
             for i in range(0, len(entity_ids), batch_size)
         )
     else:
-        batches = aggregator.get_sorted_id_batches(batch_size, schema=schema)
+        batches = aggregator.get_sorted_id_batches(
+            batch_size, schema=schema, since=since, until=until
+        )
 
     for batch in batches:
         _index_batch(collection, batch, queue_batches, skip_errors, sync, schema)
@@ -351,6 +360,8 @@ def reindex_collection(
     queue_batches=False,
     batch_size=10_000,
     schema=None,
+    since=None,
+    until=None,
 ):
     """Re-index all entities from the model, mappings and aggregator cache.
 
@@ -364,6 +375,8 @@ def reindex_collection(
         mappings: Process collection mappings and aggregate to the aggregator
         queue_batches: Queue batches for parallelization
         schema: Filter entities by schema (e.g., Person, Company)
+        since: Optional timestamp filter for aggregator (ISO format or timestamp)
+        until: Optional timestamp filter for aggregator (ISO format or timestamp)
     """
     from aleph.logic.profiles import profile_fragments
 
@@ -380,7 +393,9 @@ def reindex_collection(
 
     # Handle diff-only mode separately - it yields batches directly
     if diff_only:
-        batches = _get_diff_reindex_batches(collection, batch_size=batch_size)
+        batches = _get_diff_reindex_batches(
+            collection, batch_size=batch_size, since=since, until=until
+        )
         has_batches = False
         for batch in batches:
             has_batches = True
@@ -398,7 +413,15 @@ def reindex_collection(
 
     # Regular reindex mode
     _process_batches(
-        collection, None, batch_size, queue_batches, skip_errors, sync, schema
+        collection,
+        None,
+        batch_size,
+        queue_batches,
+        skip_errors,
+        sync,
+        schema,
+        since,
+        until,
     )
     if not queue_batches:
         compute_collection(collection, force=True)
@@ -505,19 +528,26 @@ def validate_collection_foreign_ids():
 
 def index_diff(  # noqa: C901
     collection,
+    since=None,
+    until=None,
 ) -> Generator[tuple[str | None, str | None], None, None]:
     """Compare entity IDs between aggregator and search index.
 
     This returns a tuple generator with (aggregator_id, index_id) (which are the
     same) or if 1 of the values is None, it means the entity is missing either
     in the aggregator or in the index.
+
+    Args:
+        collection: The collection to compare
+        since: Optional timestamp filter for aggregator (ISO format or timestamp)
+        until: Optional timestamp filter for aggregator (ISO format or timestamp)
     """
     log.info(
         f"[{collection.name}] Streaming sorted entity ID tuples from aggregator and index...",
         dataset=collection.name,
     )
     aggregator = get_aggregator(collection)
-    aggregator_ids = aggregator.get_sorted_ids()
+    aggregator_ids = aggregator.get_sorted_ids(since=since, until=until)
     index_ids = entities_index.iter_entity_ids(collection_id=collection.id, sort="_id")
 
     while True:
