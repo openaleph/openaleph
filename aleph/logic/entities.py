@@ -75,6 +75,19 @@ def update_entity(collection, entity_id=None, job_id=None):
     queue_analyze(collection, proxy, batch=job_id)
 
 
+def index_entity(collection, entity_id):
+    """(Re-)index a given entity by it's ID from the aggregator"""
+    aggregator = get_aggregator(collection)
+    proxy = aggregator.get(entity_id)
+    if proxy is None:
+        log.warning(f"[{collection.name}] No Entity found for ID `{entity_id}`.")
+    else:
+        index.index_proxy(
+            collection.name, proxy, sync=True, collection_id=collection.id
+        )
+        log.info(f"[{collection.name}] Indexed Entity `{entity_id}`.")
+
+
 def inline_names(aggregator, proxy):
     """Attempt to solve a weird UI problem. Imagine, for example, we
     are showing a list of payments between a sender and a beneficiary to

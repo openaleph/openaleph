@@ -32,6 +32,7 @@ from aleph.logic.collections import (
     validate_collection_foreign_ids,
 )
 from aleph.logic.documents import crawl_directory
+from aleph.logic.entities import index_entity
 from aleph.logic.export import retry_exports
 from aleph.logic.mapping import cleanup_mappings
 from aleph.logic.permissions import update_permission
@@ -813,6 +814,15 @@ def reingest_document(document_id):
     log.info(
         f"[{document.collection.name}] Queued document `{document.foreign_id}` for reingest."
     )
+
+
+@cli.command("reindex-entity")
+@click.argument("entity_id")
+@click.option("-f", "--foreign_id", required=True, help="Foreign ID of the collection")
+def reindex_entity_command(entity_id, foreign_id):
+    """Re-index a specific entity by ID from the aggregator (useful for debugging)."""
+    collection = get_collection(foreign_id)
+    index_entity(collection, entity_id)
 
 
 @cli.command("reingest-casefiles")
