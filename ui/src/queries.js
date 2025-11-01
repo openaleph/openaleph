@@ -14,6 +14,7 @@ export function entitiesQuery(location) {
   // We normally only want Things, not Intervals (relations between things).
   const context = {
     highlight: true,
+    dehydrate: true,  // this excludes entity properties from the response
     'filter:schemata': 'Thing',
   };
   return Query.fromLocation('entities', location, context, '');
