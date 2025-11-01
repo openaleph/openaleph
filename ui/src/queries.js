@@ -14,7 +14,7 @@ export function entitiesQuery(location) {
   // We normally only want Things, not Intervals (relations between things).
   const context = {
     highlight: true,
-    dehydrate: true,  // this excludes entity properties from the response
+    dehydrate: true, // this excludes entity properties from the response
     'filter:schemata': 'Thing',
   };
   return Query.fromLocation('entities', location, context, '');
@@ -30,6 +30,7 @@ export function collectionDocumentsQuery(location, collectionId) {
     'filter:collection_id': collectionId,
     'filter:schemata': 'Document',
     'empty:properties.parent': true,
+    dehydrate: true, // this excludes entity properties from the response
   };
   return collectionContextQuery(context, location, collectionId, 'documents');
 }
@@ -38,6 +39,7 @@ export function collectionEntitiesQuery(location, collectionId, schema) {
   const context = {
     'filter:collection_id': collectionId,
     'filter:schema': schema,
+    dehydrate: true, // this excludes entity properties from the response
   };
   return collectionContextQuery(context, location, collectionId, 'entities');
 }
@@ -46,6 +48,7 @@ export function collectionSearchQuery(location, collectionId, options = {}) {
   const context = {
     'filter:collection_id': collectionId,
     'filter:schemata': 'Thing',
+    dehydrate: true, // this excludes entity properties from the response
     ...options,
   };
   return collectionContextQuery(context, location, collectionId, 'cs');
@@ -152,7 +155,12 @@ export function entitySimilarQuery(location, entityId) {
 
 export function entityMoreLikeThisQuery(location, entityId) {
   const path = entityId ? `entities/${entityId}/more_like_this` : undefined;
-  return Query.fromLocation(path, location, {}, 'more_like_this')
+  return Query.fromLocation(
+    path,
+    location,
+    { dehydrate: true }, // this excludes entity properties from the response
+    'more_like_this'
+  )
     .defaultFacet('collection_id', true)
     .limit(10);
 }
