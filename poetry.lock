@@ -1679,13 +1679,15 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "ftmq"
-version = "4.3.0"
+version = "4.3.1"
 description = "followthemoney query dsl and io helpers"
 optional = false
-python-versions = ">=3.11,<4"
+python-versions = "<4,>=3.11"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "ftmq-4.3.1-py3-none-any.whl", hash = "sha256:9cca74cd9af425c0947b3197d547cd7a14d8022d8206e03a78809365468892a1"},
+    {file = "ftmq-4.3.1.tar.gz", hash = "sha256:4ae9e4303b45708e530dddce0a58d8e4ada2dff9a349fda0b6a8854029518c11"},
+]
 
 [package.dependencies]
 anystore = ">=0.4.0,<0.5.0"
@@ -1694,12 +1696,12 @@ click-default-group = ">=1.2.4,<2.0.0"
 followthemoney = ">=4.3.2,<5.0.0"
 nomenklatura = ">=4.1.10,<5.0.0"
 orjson = ">=3.10.18,<4.0.0"
-psycopg = {version = ">=3.2.9,<4.0.0", extras = ["pool"], optional = true}
+psycopg = {version = ">=3.2.9,<4.0.0", extras = ["pool"], optional = true, markers = "extra == \"postgres\""}
 pycountry = ">=24.6.1,<25.0.0"
 pydantic = ">=2.11.3,<3.0.0"
 pyicu = ">=2.15.2,<3.0.0"
 rigour = ">=1.4.0,<2.0.0"
-sqlalchemy = {version = ">=2.0.36,<3.0.0", optional = true}
+sqlalchemy = {version = ">=2.0.36,<3.0.0", optional = true, markers = "extra == \"postgres\""}
 
 [package.extras]
 aleph = ["alephclient (>=2.6.0,<3.0.0)", "furl (>=2.1.4,<3.0.0)"]
@@ -1708,12 +1710,6 @@ level = ["plyvel (>=1.5.1,<2.0.0)"]
 postgres = ["psycopg[pool] (>=3.2.9,<4.0.0)", "sqlalchemy (>=2.0.36,<3.0.0)"]
 redis = ["fakeredis (>=2.26.2,<3.0.0)", "redis (>=5.2.1,<6.0.0)"]
 sql = ["sqlalchemy (>=2.0.36,<3.0.0)"]
-
-[package.source]
-type = "git"
-url = "https://github.com/dataresearchcenter/ftmq.git"
-reference = "HEAD"
-resolved_reference = "879c2ca57b15c30a7c5534f3befdf1d4fdfbb567"
 
 [[package]]
 name = "fuzzywuzzy"
@@ -3623,55 +3619,47 @@ files = [
 
 [[package]]
 name = "openaleph-procrastinate"
-version = "5.1.0"
+version = "5.1.1"
 description = "Task queue logic for OpenAleph built upon procrastinate"
 optional = false
-python-versions = ">=3.11,<4"
+python-versions = "<4,>=3.11"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "openaleph_procrastinate-5.1.1-py3-none-any.whl", hash = "sha256:61f1a8cf022c1d46a2e16310641da9665b627bdcb004f80cd6a4b154bb6be5b7"},
+    {file = "openaleph_procrastinate-5.1.1.tar.gz", hash = "sha256:5a4b201992d13f7ca973e79a1281758401fb3078d6a9ea3b4c4dc773800e4d49"},
+]
 
 [package.dependencies]
 anystore = ">=0.4.0,<0.5.0"
 cachetools = "<6"
-followthemoney = ">=4.3.0,<5.0.0"
-ftmq = ">=4.3.0,<5.0.0"
+followthemoney = ">=4.3.2,<5.0.0"
+ftmq = ">=4.3.1,<5.0.0"
 procrastinate = ">=3.5.3,<4.0.0"
 psycopg = ">=3.2.11,<4.0.0"
 pydantic = ">=2.11.7,<3.0.0"
 pydantic-settings = ">=2.10.1,<3.0.0"
 
-[package.source]
-type = "git"
-url = "https://github.com/openaleph/openaleph-procrastinate.git"
-reference = "HEAD"
-resolved_reference = "c7556800a93966706118186d7eb5cff4f27c11fc"
-
 [[package]]
 name = "openaleph-search"
-version = "5.0.5"
+version = "5.1.0"
 description = "OpenAleph index & search module"
 optional = false
-python-versions = ">=3.12,<4"
+python-versions = "<4,>=3.12"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "openaleph_search-5.1.0-py3-none-any.whl", hash = "sha256:9da8306687a35e671c40aea7fc9e29ad2e66e040c4f0f9c6785fd135139593d4"},
+    {file = "openaleph_search-5.1.0.tar.gz", hash = "sha256:b75abe1a520a8ef70a2e5a91485b2f809082319e7ce4615fdc316d3c726888f0"},
+]
 
 [package.dependencies]
 cachetools = "<6"
 elasticsearch = ">=9.2.0,<10.0.0"
 followthemoney = ">=4.3.2,<5.0.0"
-ftmq = ">=4.3.0,<5.0.0"
+ftmq = ">=4.3.1,<5.0.0"
 pydantic = ">=2.11.9,<3.0.0"
 pydantic-settings = ">=2.10.1,<3.0.0"
 rigour = ">=1.4.0,<2.0.0"
 werkzeug = ">=3.1.3,<4.0.0"
-
-[package.source]
-type = "git"
-url = "https://github.com/openaleph/openaleph-search.git"
-reference = "HEAD"
-resolved_reference = "c6e08317ac1a53adcc664031911f798a9a7d1561"
 
 [[package]]
 name = "openaleph-servicelayer"
@@ -3701,7 +3689,7 @@ google = ["google-cloud-storage (>=1.31.0,<3.0.0)", "grpcio (>=1.32.0,<2.0.0)"]
 type = "git"
 url = "https://github.com/openaleph/openaleph-servicelayer.git"
 reference = "HEAD"
-resolved_reference = "b55b796fdea2784b0da1c85a964433b5097c9e42"
+resolved_reference = "f8ca62c7ca00df818e0f68297a738386c7b8f8df"
 
 [[package]]
 name = "openpyxl"
@@ -6380,4 +6368,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.12, <4.0.0"
-content-hash = "8904916e9598e60195501837b4be35c42565970dad005625aafec1b5137b2927"
+content-hash = "e0fb6412b296e20cfd72f59a6f6d8765e0e1b6329142529b47357f6c63e4a09d"
