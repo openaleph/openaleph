@@ -80,6 +80,9 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
     contains_ai = db.Column(db.Boolean, default=False)
     contains_ai_comment = db.Column(db.Unicode, nullable=True)
 
+    # allows tagging of entities
+    taggable = db.Column(db.Boolean, default=False)
+
     # Collection inherits the `updated_at` column from `DatedModel`.
     # These two fields are used to express different semantics: while
     # `updated_at` is used to describe the last change of the metadata,
@@ -126,6 +129,9 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
         # contains ai generated content
         self.contains_ai = data.get("contains_ai")
         self.contains_ai_comment = data.get("contains_ai_comment")
+
+        # tagging functionality
+        self.taggable = data.get("taggable", self.taggable)
 
         # Some fields are editable only by admins in order to have
         # a strict separation between source evidence and case
@@ -214,6 +220,7 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
                 "restricted": self.restricted,
                 "contains_ai": self.contains_ai,
                 "contains_ai_comment": self.contains_ai_comment,
+                "taggable": self.taggable,
             }
         )
         return data

@@ -15,11 +15,16 @@ from tabulate import tabulate
 from aleph.authz import Authz
 from aleph.core import cache, create_app, db
 from aleph.index.collections import get_collection as _get_index_collection
+from aleph.logic.aggregator import get_aggregator
 from aleph.logic.archive import cleanup_archive
 from aleph.logic.collections import (
+    aggregate_model,
     compute_collection,
     create_collection,
     delete_collection,
+)
+from aleph.logic.collections import index_diff as _index_diff
+from aleph.logic.collections import (
     reindex_collection,
     reingest_collection,
     update_collection,
@@ -27,6 +32,7 @@ from aleph.logic.collections import (
     validate_collection_foreign_ids,
 )
 from aleph.logic.documents import crawl_directory
+from aleph.logic.entities import index_entity
 from aleph.logic.export import retry_exports
 from aleph.logic.mapping import cleanup_mappings
 from aleph.logic.permissions import update_permission
@@ -43,7 +49,12 @@ from aleph.logic.roles import (
 from aleph.logic.xref import xref_collection
 from aleph.migration import cleanup_deleted, destroy_db, upgrade_system
 from aleph.model import Collection, EntitySet, Role
-from aleph.procrastinate.queues import queue_cancel_collection, queue_reindex
+from aleph.model.document import Document
+from aleph.procrastinate.queues import (
+    queue_cancel_collection,
+    queue_ingest,
+    queue_reindex,
+)
 from aleph.procrastinate.status import get_collection_status, get_status
 from aleph.util import JSONEncoder
 
@@ -196,10 +207,49 @@ def flush(foreign_id, sync=False):
     delete_collection(collection, keep_metadata=True, sync=sync)
 
 
-def _reindex_collection(collection, flush=False):
+@cli.command("aggregate-model")
+@click.argument("foreign_id")
+def aggregate_model_command(foreign_id):
+    """Aggregate model entities (Documents and Entities) to the FTM store.
+
+    This syncs up the aggregator from the Aleph domain model by reading all
+    Document and Entity records from the database and writing them to the
+    collection's FTM store (aggregator).
+    """
+    collection = get_collection(foreign_id)
+    aggregator = get_aggregator(collection)
+
+    log.info("[%s] Aggregating model...", collection)
+    aggregate_model(collection, aggregator)
+    log.info("[%s] Model aggregation complete", collection)
+
+
+def _reindex_collection(
+    collection,
+    flush=False,
+    diff_only=False,
+    model=True,
+    mappings=True,
+    queue_batches=False,
+    batch_size=10_000,
+    schema=None,
+    since=None,
+    until=None,
+):
     log.info("[%s] Starting to re-index", collection)
     try:
-        reindex_collection(collection, flush=flush)
+        reindex_collection(
+            collection,
+            flush=flush,
+            diff_only=diff_only,
+            model=model,
+            mappings=mappings,
+            queue_batches=queue_batches,
+            batch_size=batch_size,
+            schema=schema,
+            since=since,
+            until=until,
+        )
     except Exception:
         log.exception("Failed to re-index: %s", collection)
 
@@ -207,66 +257,586 @@ def _reindex_collection(collection, flush=False):
 @cli.command()
 @click.argument("foreign_id")
 @click.option("--flush", is_flag=True, default=False)
-def reindex(foreign_id, flush=False):
+@click.option("--model/--no-model", is_flag=True, default=True)
+@click.option("--mappings/--no-mappings", is_flag=True, default=True)
+@click.option(
+    "--diff-only",
+    is_flag=True,
+    default=False,
+    help="Only reindex entities that are in aggregator but not in index",
+)
+@click.option(
+    "--queue-batches",
+    is_flag=True,
+    default=False,
+    help="Queue batches for parallel processing",
+)
+@click.option(
+    "--batch-size",
+    type=int,
+    default=10_000,
+    help="Batch size for processing entities (default: 10000)",
+)
+@click.option(
+    "-s",
+    "--schema",
+    type=str,
+    default=None,
+    help="Filter entities by schema (e.g., Person, Company)",
+)
+@click.option(
+    "--since",
+    type=str,
+    default=None,
+    help=(
+        "Filter entities modified since this time. "
+        "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
+    ),
+)
+@click.option(
+    "--until",
+    type=str,
+    default=None,
+    help=(
+        "Filter entities modified until this time. "
+        "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
+    ),
+)
+def reindex(
+    foreign_id,
+    flush=False,
+    diff_only=False,
+    model=True,
+    mappings=True,
+    queue_batches=False,
+    batch_size=10_000,
+    schema=None,
+    since=None,
+    until=None,
+):
     """Index all the aggregator contents for a collection."""
     collection = get_collection(foreign_id)
-    _reindex_collection(collection, flush=flush)
+    _reindex_collection(
+        collection,
+        flush=flush,
+        diff_only=diff_only,
+        model=model,
+        mappings=mappings,
+        queue_batches=queue_batches,
+        batch_size=batch_size,
+        schema=schema,
+        since=since,
+        until=until,
+    )
+
+
+def _write_entity_ids(entity_ids, output_file, description):
+    """Write entity IDs to file, sorted one per line."""
+    sorted_ids = sorted(entity_ids)
+    for entity_id in sorted_ids:
+        output_file.write(f"{entity_id}\n")
+    log.info("Wrote %d %s to %s", len(sorted_ids), description, output_file.name)
+
+
+def _compute_diff_stats(collection) -> dict[str, int]:
+    """Compute diff statistics from the streaming index_diff generator.
+
+    Returns a dict with counts and lists of entity IDs.
+    """
+    aggregator_ids = 0
+    index_ids = 0
+    in_both = 0
+    only_in_aggregator = 0
+    only_in_index = 0
+
+    for aggregator_id, index_id in _index_diff(collection):
+        if aggregator_id is not None and index_id is not None:
+            aggregator_ids += 1
+            index_ids += 1
+            in_both += 1
+        elif aggregator_id is not None:
+            # Only in aggregator
+            aggregator_ids += 1
+            only_in_aggregator += 1
+        elif index_id is not None:
+            # Only in index
+            index_ids += 1
+            only_in_index += 1
+
+    return {
+        "aggregator_ids": aggregator_ids,
+        "index_ids": index_ids,
+        "in_both": in_both,
+        "only_in_aggregator": only_in_aggregator,
+        "only_in_index": only_in_index,
+    }
+
+
+def _collect_diff_ids(collection) -> dict[str, list[str]]:
+    """Collect entity IDs from diff for file output.
+
+    Returns lists of entity IDs categorized by their location.
+    """
+    aggregator_ids = []
+    index_ids = []
+    only_in_aggregator = []
+    only_in_index = []
+
+    for aggregator_id, index_id in _index_diff(collection):
+        if aggregator_id is not None:
+            aggregator_ids.append(aggregator_id)
+        if index_id is not None:
+            index_ids.append(index_id)
+
+        if aggregator_id is not None and index_id is None:
+            only_in_aggregator.append(aggregator_id)
+        elif index_id is not None and aggregator_id is None:
+            only_in_index.append(index_id)
+
+    return {
+        "aggregator_ids": aggregator_ids,
+        "index_ids": index_ids,
+        "only_in_aggregator": only_in_aggregator,
+        "only_in_index": only_in_index,
+    }
+
+
+@cli.command("index-diff")
+@click.argument("foreign_id")
+def index_diff(foreign_id):
+    """Compare entity IDs between aggregator and search index (streaming stats only).
+
+    For exporting IDs to files, use the 'export-index-diff' command instead.
+    """
+    collection = get_collection(foreign_id)
+
+    log.info("[%s] Computing diff counts...", collection)
+    diff = _compute_diff_stats(collection)
+
+    # Display results
+    log.info(
+        "[%s] Index Diff Report:\n"
+        "  Total in aggregator:        %10d\n"
+        "  Total in index:             %10d\n"
+        "  In both:                    %10d\n"
+        "  Only in aggregator:         %10d\n"
+        "  Only in index:              %10d",
+        collection,
+        diff["aggregator_ids"],
+        diff["index_ids"],
+        diff["in_both"],
+        diff["only_in_aggregator"],
+        diff["only_in_index"],
+    )
+
+
+@cli.command("export-index-diff")
+@click.argument("foreign_id")
+@click.option(
+    "--aggregator-ids",
+    type=click.File("w"),
+    default=None,
+    help="Output file for all aggregator IDs (sorted, one per line)",
+)
+@click.option(
+    "--index-ids",
+    type=click.File("w"),
+    default=None,
+    help="Output file for all index IDs (sorted, one per line)",
+)
+@click.option(
+    "--only-aggregator",
+    type=click.File("w"),
+    default=None,
+    help="Output file for IDs only in aggregator (sorted, one per line)",
+)
+@click.option(
+    "--only-index",
+    type=click.File("w"),
+    default=None,
+    help="Output file for IDs only in index (sorted, one per line)",
+)
+def export_index_diff(
+    foreign_id,
+    aggregator_ids=None,
+    index_ids=None,
+    only_aggregator=None,
+    only_index=None,
+):
+    """Export entity IDs from index diff to files.
+
+    This command collects all entity IDs in memory and writes them to the
+    requested output files. For quick stats without file output, use 'index-diff'.
+    """
+    collection = get_collection(foreign_id)
+
+    if not any([aggregator_ids, index_ids, only_aggregator, only_index]):
+        log.error(
+            "At least one output file must be specified. "
+            "Available options: --aggregator-ids, --index-ids, --only-aggregator, --only-index"
+        )
+        return
+
+    log.info("[%s] Collecting entity IDs...", collection)
+    id_lists = _collect_diff_ids(collection)
+
+    outputs = [
+        (aggregator_ids, id_lists["aggregator_ids"], "aggregator IDs"),
+        (index_ids, id_lists["index_ids"], "index IDs"),
+        (only_aggregator, id_lists["only_in_aggregator"], "only-in-aggregator IDs"),
+        (only_index, id_lists["only_in_index"], "only-in-index IDs"),
+    ]
+    for output_file, entity_ids, description in outputs:
+        if output_file:
+            _write_entity_ids(entity_ids, output_file, description)
+
+    # Display summary
+    log.info(
+        "[%s] Export Summary:\n"
+        "  Total in aggregator:        %10d\n"
+        "  Total in index:             %10d\n"
+        "  Only in aggregator:         %10d\n"
+        "  Only in index:              %10d",
+        collection,
+        len(id_lists["aggregator_ids"]),
+        len(id_lists["index_ids"]),
+        len(id_lists["only_in_aggregator"]),
+        len(id_lists["only_in_index"]),
+    )
+
+
+@cli.command("index-diff-all")
+@click.option(
+    "--casefile",
+    type=bool,
+    default=None,
+    help="Filter by casefiles (None means all)",
+)
+def index_diff_all(casefile=None):
+    """Compare entity IDs between aggregator and search index for all collections."""
+    collections_list = []
+
+    for collection in Collection.all():
+        if casefile is not None and collection.casefile != casefile:
+            continue
+
+        try:
+            log.info("Processing %s...", collection.foreign_id)
+            diff = _compute_diff_stats(collection)
+            collections_list.append(
+                {
+                    "foreign_id": collection.foreign_id,
+                    "label": collection.label,
+                    "aggregator": diff["aggregator_ids"],
+                    "index": diff["index_ids"],
+                    "in_both": diff["in_both"],
+                    "only_aggregator": diff["only_in_aggregator"],
+                    "only_index": diff["only_in_index"],
+                }
+            )
+        except Exception as e:
+            log.error("[%s] Failed to compute diff: %s", collection, e)
+            collections_list.append(
+                {
+                    "foreign_id": collection.foreign_id,
+                    "label": collection.label,
+                    "aggregator": "ERROR",
+                    "index": "ERROR",
+                    "in_both": "ERROR",
+                    "only_aggregator": "ERROR",
+                    "only_index": "ERROR",
+                }
+            )
+
+    # Display summary table
+    headers = [
+        "Foreign ID",
+        "Label",
+        "Aggregator",
+        "Index",
+        "In Both",
+        "Missing from Index",
+        "Orphaned in Index",
+    ]
+    rows = []
+    for coll in collections_list:
+        rows.append(
+            [
+                coll["foreign_id"],
+                coll["label"][:30],  # Truncate long labels
+                coll["aggregator"],
+                coll["index"],
+                coll["in_both"],
+                coll["only_aggregator"],
+                coll["only_index"],
+            ]
+        )
+
+    table = tabulate(rows, headers=headers, tablefmt="simple")
+
+    # Show totals
+    total_aggregator = sum(
+        c["aggregator"] for c in collections_list if isinstance(c["aggregator"], int)
+    )
+    total_index = sum(
+        c["index"] for c in collections_list if isinstance(c["index"], int)
+    )
+    total_only_aggregator = sum(
+        c["only_aggregator"]
+        for c in collections_list
+        if isinstance(c["only_aggregator"], int)
+    )
+    total_only_index = sum(
+        c["only_index"] for c in collections_list if isinstance(c["only_index"], int)
+    )
+
+    log.info(
+        "Index Diff Summary for All Collections:\n\n%s\n\n"
+        "Totals across %d collections:\n"
+        "  Total entities in aggregator:      %10d\n"
+        "  Total entities in index:           %10d\n"
+        "  Total missing from index:          %10d\n"
+        "  Total orphaned in index:           %10d",
+        table,
+        len(collections_list),
+        total_aggregator,
+        total_index,
+        total_only_aggregator,
+        total_only_index,
+    )
 
 
 @cli.command("reindex-full")
 @click.option("--flush", is_flag=True, default=False)
+@click.option("--model/--no-model", is_flag=True, default=True)
+@click.option("--mappings/--no-mappings", is_flag=True, default=True)
+@click.option(
+    "--diff-only",
+    is_flag=True,
+    default=False,
+    help="Only reindex entities that are in aggregator but not in index",
+)
 @click.option(
     "--queue",
     is_flag=True,
     default=False,
     help="Queue the reindexing task for each collection, distribute them across workers.",
 )
-def reindex_full(flush=False, queue=False):
+@click.option(
+    "--queue-batches",
+    is_flag=True,
+    default=False,
+    help="Queue batches for parallel processing",
+)
+@click.option(
+    "--batch-size",
+    type=int,
+    default=10_000,
+    help="Batch size for processing entities (default: 10000)",
+)
+@click.option(
+    "-s",
+    "--schema",
+    type=str,
+    default=None,
+    help="Filter entities by schema (e.g., Person, Company)",
+)
+@click.option(
+    "--since",
+    type=str,
+    default=None,
+    help=(
+        "Filter entities modified since this time. "
+        "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
+    ),
+)
+@click.option(
+    "--until",
+    type=str,
+    default=None,
+    help=(
+        "Filter entities modified until this time. "
+        "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
+    ),
+)
+def reindex_full(
+    flush=False,
+    diff_only=False,
+    queue=False,
+    model=True,
+    mappings=True,
+    queue_batches=False,
+    batch_size=10_000,
+    schema=None,
+    since=None,
+    until=None,
+):
     """Re-index all collections."""
     for collection in Collection.all():
         if queue:
-            queue_reindex(collection, flush=flush)
+            queue_reindex(
+                collection,
+                flush=flush,
+                diff_only=diff_only,
+                schema=schema,
+                since=since,
+                until=until,
+            )
         else:
-            _reindex_collection(collection, flush=flush)
+            _reindex_collection(
+                collection,
+                flush=flush,
+                diff_only=diff_only,
+                model=model,
+                mappings=mappings,
+                queue_batches=queue_batches,
+                batch_size=batch_size,
+                schema=schema,
+                since=since,
+                until=until,
+            )
 
 
 @cli.command("reindex-casefiles")
 @click.option("--flush", is_flag=True, default=False)
+@click.option("--model/--no-model", is_flag=True, default=True)
+@click.option("--mappings/--no-mappings", is_flag=True, default=True)
+@click.option(
+    "--diff-only",
+    is_flag=True,
+    default=False,
+    help="Only reindex entities that are in aggregator but not in index",
+)
 @click.option(
     "--queue",
     is_flag=True,
     default=False,
     help="Queue the reindexing task for each collection, distribute them across workers.",
 )
-def reindex_casefiles(flush=False, queue=False):
+@click.option(
+    "--queue-batches",
+    is_flag=True,
+    default=False,
+    help="Queue batches for parallel processing",
+)
+@click.option(
+    "--batch-size",
+    type=int,
+    default=10_000,
+    help="Batch size for processing entities (default: 10000)",
+)
+@click.option(
+    "-s",
+    "--schema",
+    type=str,
+    default=None,
+    help="Filter entities by schema (e.g., Person, Company)",
+)
+@click.option(
+    "--since",
+    type=str,
+    default=None,
+    help=(
+        "Filter entities modified since this time. "
+        "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
+    ),
+)
+@click.option(
+    "--until",
+    type=str,
+    default=None,
+    help=(
+        "Filter entities modified until this time. "
+        "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
+    ),
+)
+def reindex_casefiles(
+    flush=False,
+    diff_only=False,
+    queue=False,
+    model=True,
+    mappings=True,
+    queue_batches=False,
+    batch_size=10_000,
+    schema=None,
+    since=None,
+    until=None,
+):
     """Re-index all the casefile collections."""
     for collection in Collection.all_casefiles():
         if queue:
-            queue_reindex(collection, flush=flush)
+            queue_reindex(
+                collection,
+                flush=flush,
+                diff_only=diff_only,
+                schema=schema,
+                since=since,
+                until=until,
+            )
         else:
-            _reindex_collection(collection, flush=flush)
+            _reindex_collection(
+                collection,
+                flush=flush,
+                diff_only=diff_only,
+                model=model,
+                mappings=mappings,
+                queue_batches=queue_batches,
+                batch_size=batch_size,
+                schema=schema,
+                since=since,
+                until=until,
+            )
 
 
 @cli.command()
 @click.argument("foreign_id")
-@click.option("--index", is_flag=True, default=False)
-@click.option("--include_ingest", is_flag=True, default=False)
-@click.option("--flush/--no-flush", default=True)
-def reingest(foreign_id, index=False, flush=True, include_ingest=False):
+@click.option("--index-flush/--no-index-flush", is_flag=True, default=True)
+@click.option("--ingest-flush/--no-ingest-flush", is_flag=True, default=True)
+def reingest(foreign_id, index_flush=True, ingest_flush=True):
     """Process documents and database entities and index them."""
     collection = get_collection(foreign_id)
     reingest_collection(
-        collection, index=index, flush=flush, include_ingest=include_ingest
+        collection,
+        index_flush=index_flush,
+        ingest_flush=ingest_flush,
     )
 
 
+@cli.command()
+@click.argument("document_id")
+def reingest_document(document_id):
+    """Re-process a specific document and re-index it (useful for debugging)."""
+    document = Document.by_id(document_id)
+    if document is None:
+        log.error(f"Can't find document with id `{document_id}`")
+        return
+    queue_ingest(document.collection, document.to_proxy(), priority=1000)
+    log.info(
+        f"[{document.collection.name}] Queued document `{document.foreign_id}` for reingest."
+    )
+
+
+@cli.command("reindex-entity")
+@click.argument("entity_id")
+@click.option("-f", "--foreign_id", required=True, help="Foreign ID of the collection")
+def reindex_entity_command(entity_id, foreign_id):
+    """Re-index a specific entity by ID from the aggregator (useful for debugging)."""
+    collection = get_collection(foreign_id)
+    index_entity(collection, entity_id)
+
+
 @cli.command("reingest-casefiles")
-@click.option("--index", is_flag=True, default=False)
-def reingest_casefiles(index=False):
+@click.option("--index-flush/--no-index-flush", is_flag=True, default=True)
+@click.option("--ingest-flush/--no-ingest-flush", is_flag=True, default=True)
+def reingest_casefiles(index_flush=True, ingest_flush=True):
     """Re-ingest all the casefile collections."""
     for collection in Collection.all_casefiles():
         log.info("[%s] Starting to re-ingest", collection)
-        reingest_collection(collection, index=index)
+        reingest_collection(
+            collection,
+            index_flush=index_flush,
+            ingest_flush=ingest_flush,
+        )
 
 
 @cli.command()

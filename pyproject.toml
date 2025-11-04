@@ -1,6 +1,6 @@
 [project]
 name = "aleph"
-version = "5.0.2"
+version = "5.1.0-rc6"
 description = "Search and browse documents and data; find the people and companies you look for."
 authors = [
     { name = "Friedrich Lindenberg", email = "friedrich@pudo.org" },
@@ -12,11 +12,11 @@ license = "MIT"
 readme = "README.md"
 requires-python = ">= 3.12, <4.0.0"
 dependencies = [
-    "openaleph-procrastinate (>=5.0.0,<6.0.0)",
-    "openaleph-search (>=5.0.5,<6.0.0)",
-    "followthemoney (>=4.2.0,<5.0.0)",
-    "ftmq[postgres] (>=4.2.4,<5.0.0)",
-    "normality (>=3.0.1,<4.0.0)",
+    "openaleph-procrastinate (>=5.1.1,<6.0.0)",
+    "openaleph-search (>=5.1.0,<6.0.0)",
+    "followthemoney (>=4.3.2,<5.0.0)",
+    "ftmq[postgres] (>=4.3.1,<5.0.0)",
+    "normality (>=3.0.2,<4.0.0)",
     "pydantic (>=2.10.6,<3.0.0)",
     "banal (>=1.0.6,<2.0.0)",
     "pantomime (==0.6.1)",
@@ -45,9 +45,9 @@ dependencies = [
     "tabulate (==0.9.0)",
     "zipstream-new (==1.1.8)",
     "prometheus-client (>=0.17.1)",
-    "followthemoney-compare (==0.4.4)",
+    "followthemoney-compare @ git+https://github.com/dataresearchcenter/followthemoney-compare.git",
     # servicelayer extras requirements
-    "openaleph-servicelayer (>=1.23.3,<2.0.0)",
+    "openaleph-servicelayer @ git+https://github.com/openaleph/openaleph-servicelayer.git",
     "boto3 (>=1.11.9,<2.0.0)",
     "grpcio (>=1.32.0,<2.0.0)",
     "google-cloud-storage (>=1.31.0,<3.0.0)",
@@ -69,6 +69,7 @@ dependencies = [
     "sentry-sdk[flask] (==2.19.2)",
     "legacy-cgi; python_version >= '3.13'",
     "lxml[html-clean] (>=5.4.0,<6.0.0)",
+    "dateparser (>=1.2.2,<2.0.0)",
 ]
 
 [project.scripts]

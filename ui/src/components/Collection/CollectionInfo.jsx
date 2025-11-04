@@ -153,6 +153,16 @@ class CollectionInfo extends PureComponent {
             )}
           </div>
         )}
+        {collection.taggable && (
+          <div className="CollectionInfo__item">
+            <div className="key text-muted">
+              <FormattedMessage
+                id="collection.taggable"
+                defaultMessage="This collection supports entity tagging"
+              />
+            </div>
+          </div>
+        )}
       </div>
     );
   }

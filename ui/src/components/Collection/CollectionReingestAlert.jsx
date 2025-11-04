@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { defineMessages, FormattedMessage, injectIntl } from 'react-intl';
-import { Alert, Intent, Checkbox } from '@blueprintjs/core';
+import { Alert, Intent } from '@blueprintjs/core';
 import { compose } from 'redux';
 import { connect } from 'react-redux';
 import { triggerCollectionReingest } from 'actions';
@@ -20,29 +20,19 @@ const messages = defineMessages({
     id: 'collection.reingest.confirm',
     defaultMessage: 'Start processing',
   },
-  index: {
-    id: 'collection.reingest.index',
-    defaultMessage: 'Index documents as they are processed.',
-  },
 });
 
 class CollectionReingestAlert extends Component {
   constructor(props) {
     super(props);
-    this.state = { index: true };
-    this.onToggleIndex = this.onToggleIndex.bind(this);
     this.onConfirm = this.onConfirm.bind(this);
   }
 
   onConfirm() {
     const { collection, intl } = this.props;
-    this.props.triggerCollectionReingest(collection.id, this.state.index);
+    this.props.triggerCollectionReingest(collection.id);
     showSuccessToast(intl.formatMessage(messages.processing));
     this.props.toggleDialog();
-  }
-
-  onToggleIndex() {
-    this.setState((state) => ({ index: !state.index }));
   }
 
   render() {
@@ -70,11 +60,6 @@ class CollectionReingestAlert extends Component {
             }}
           />
         </p>
-        <Checkbox
-          checked={this.state.index}
-          label={intl.formatMessage(messages.index)}
-          onChange={this.onToggleIndex}
-        />
       </Alert>
     );
   }
