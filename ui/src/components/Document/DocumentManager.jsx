@@ -65,6 +65,7 @@ export class DocumentManager extends Component {
     this.openMappingEditor = this.openMappingEditor.bind(this);
     this.updateQuery = this.updateQuery.bind(this);
     this.onSearchSubmit = this.onSearchSubmit.bind(this);
+    this.onSynonymsChange = this.onSynonymsChange.bind(this);
   }
 
   updateSelection(document) {
@@ -97,6 +98,14 @@ export class DocumentManager extends Component {
   onSearchSubmit(queryText) {
     const { query } = this.props;
     const newQuery = query.set('q', queryText);
+    this.updateQuery(newQuery);
+  }
+
+  onSynonymsChange(synonymsValue) {
+    const { query } = this.props;
+    const newQuery = synonymsValue
+      ? query.set('synonyms', 'true')
+      : query.clear('synonyms');
     this.updateQuery(newQuery);
   }
 
@@ -163,6 +172,7 @@ export class DocumentManager extends Component {
             selection={selection}
             resetSelection={() => this.setState({ selection: [] })}
             onSearchSubmit={this.onSearchSubmit}
+            onSynonymsChange={this.onSynonymsChange}
             searchPlaceholder={searchPlaceholder}
             searchDisabled={result.total === 0 && !query.hasQuery()}
           >

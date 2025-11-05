@@ -54,7 +54,11 @@ const messages = defineMessages({
 export class HomeScreen extends Component {
   constructor(props) {
     super(props);
+    this.state = {
+      synonyms: false,
+    };
     this.onSubmit = this.onSubmit.bind(this);
+    this.onSynonymsChange = this.onSynonymsChange.bind(this);
   }
 
   componentDidMount() {
@@ -64,12 +68,19 @@ export class HomeScreen extends Component {
 
   onSubmit(queryText) {
     const { navigate } = this.props;
+    const { synonyms } = this.state;
+    const searchParams = { q: queryText };
+    if (synonyms) {
+      searchParams.synonyms = 'true';
+    }
     navigate({
       pathname: '/search',
-      search: queryString.stringify({
-        q: queryText,
-      }),
+      search: queryString.stringify(searchParams),
     });
+  }
+
+  onSynonymsChange(synonymsValue) {
+    this.setState({ synonyms: synonymsValue });
   }
 
   render() {
@@ -98,10 +109,12 @@ export class HomeScreen extends Component {
               <div className="HomeScreen__search">
                 <SearchBox
                   onSearch={this.onSubmit}
+                  onSynonymsChange={this.onSynonymsChange}
                   placeholder={intl.formatMessage(messages.placeholder, {
                     samples: samplesList,
                   })}
                   inputProps={{ large: true, autoFocus: true }}
+                  showSynonymsToggle={true}
                 />
                 <div className="HomeScreen__thirds">
                   <AnimatedCount

@@ -3644,12 +3644,10 @@ name = "openaleph-search"
 version = "5.1.0"
 description = "OpenAleph index & search module"
 optional = false
-python-versions = "<4,>=3.12"
+python-versions = ">=3.12,<4"
 groups = ["main"]
-files = [
-    {file = "openaleph_search-5.1.0-py3-none-any.whl", hash = "sha256:9da8306687a35e671c40aea7fc9e29ad2e66e040c4f0f9c6785fd135139593d4"},
-    {file = "openaleph_search-5.1.0.tar.gz", hash = "sha256:b75abe1a520a8ef70a2e5a91485b2f809082319e7ce4615fdc316d3c726888f0"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 cachetools = "<6"
@@ -3660,6 +3658,12 @@ pydantic = ">=2.11.9,<3.0.0"
 pydantic-settings = ">=2.10.1,<3.0.0"
 rigour = ">=1.4.0,<2.0.0"
 werkzeug = ">=3.1.3,<4.0.0"
+
+[package.source]
+type = "git"
+url = "https://github.com/openaleph/openaleph-search.git"
+reference = "HEAD"
+resolved_reference = "e598562deb96a775159966ca98f3249d1ca630a8"
 
 [[package]]
 name = "openaleph-servicelayer"
@@ -6372,4 +6376,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.12, <4.0.0"
-content-hash = "e0fb6412b296e20cfd72f59a6f6d8765e0e1b6329142529b47357f6c63e4a09d"
+content-hash = "41a1fb848398699a72b7fac1b817f98fe3ac4028a9df7bc52c7a770be3deac99"

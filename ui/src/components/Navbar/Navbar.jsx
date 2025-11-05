@@ -57,6 +57,7 @@ export class Navbar extends React.Component {
     this.onToggleMobileSearch = this.onToggleMobileSearch.bind(this);
     this.onToggleAdvancedSearch = this.onToggleAdvancedSearch.bind(this);
     this.onSearchSubmit = this.onSearchSubmit.bind(this);
+    this.onSynonymsChange = this.onSynonymsChange.bind(this);
     this.navbarRef = React.createRef();
     this.inputRef = React.createRef();
   }
@@ -85,6 +86,23 @@ export class Navbar extends React.Component {
     navigate({
       pathname: '/search',
       search,
+    });
+  }
+
+  onSynonymsChange(synonymsValue) {
+    const { navigate, query, location } = this.props;
+    if (!query) {
+      return;
+    }
+
+    const newQuery = synonymsValue
+      ? query.set('synonyms', 'true')
+      : query.clear('synonyms');
+
+    navigate({
+      pathname: location.pathname,
+      search: newQuery.toLocation(),
+      hash: location.hash,
     });
   }
 
@@ -136,12 +154,14 @@ export class Navbar extends React.Component {
                     <div className="Navbar__search-container__searchbar">
                       <SearchBox
                         onSearch={this.onSearchSubmit}
+                        onSynonymsChange={this.onSynonymsChange}
                         query={query}
                         inputProps={{
                           inputRef: this.inputRef,
                           rightElement: <SearchAlert alertQuery={alertQuery} />,
                         }}
                         placeholder={intl.formatMessage(messages.placeholder)}
+                        showSynonymsToggle={true}
                       />
                     </div>
                     <Button
