@@ -106,6 +106,10 @@ Minimum environment configuration (`aleph.env`), all others have reasonable defa
 ```bash
 ALEPH_SECRET_KEY=random-secret-string
 ALEPH_SINGLE_USER=true  # no user management at all for quick local set up
+# best practice to set db uris explicitly:
+OPENALEPH_DB_URI=postgresql://aleph:aleph@postgres
+FTM_FRAGMENTS_URI=postgresql://aleph:aleph@postgres
+PROCRASTINATE_DB_URI=postgresql://aleph:aleph@postgres
 ```
 
 ## Initial setup

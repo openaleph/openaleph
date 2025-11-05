@@ -25,6 +25,13 @@ Before starting a reindexing operation:
 3. Plan for downtime or read-only mode during the process
 4. Review performance tuning settings for your deployment size
 
+### Upgrading Elasticsearch when running in Docker
+
+If you have used the docker image provided by the original [alephdata/aleph](https://github.com/alephdata/aleph) repository, the Elasticsearch version is too old to be upgraded directly to 9. Instead you have to increase the version iteratively:
+
+1. Use the image `ghcr.io/openaleph/elasticsearch:7.17.0` on the elasticsearch data volume to upgrade. Once completed, use the next image:
+2. Use the image `ghcr.io/openaleph/elasticsearch:8.19.0` on the elasticsearch data volume, which is the latest 8.x release. Once Elasticsearch upgrade was successful, you can stop it and from there continue to upgrade using the `ghcr.io/openaleph/elasticsearch:latest` image.
+
 ## Reindexing Procedure
 
 ### Step 1: Enable Maintenance Mode

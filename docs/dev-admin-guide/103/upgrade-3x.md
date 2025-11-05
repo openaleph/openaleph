@@ -136,7 +136,7 @@ Refer to PostgreSQL documentation for upgrade procedures specific to your deploy
 
 Update your docker setup to include the new service definitions and configurations. Refer to the [example `docker-compose.yml`](../102/docker.md) as a reference.
 
-**Note**: If you use a single database for application data, FollowTheMoney data and the task queue, set `FTM_FRAGMENTS_URI` and `PROCRASTINATE_DB_URI` to the same value as `OPENALEPH_DB_URI`. ([See the PostgreSQL section in services](./102/services.md))
+**Note**: If you use a single database for application data, FollowTheMoney data and the task queue, set `FTM_FRAGMENTS_URI` and `PROCRASTINATE_DB_URI` to the same value as `OPENALEPH_DB_URI`. ([See the PostgreSQL section in services](../102/services.md))
 
 ### Step 3: Run Database Migrations
 
