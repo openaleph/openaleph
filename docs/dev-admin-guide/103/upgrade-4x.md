@@ -1,0 +1,1 @@
+The same information from [upgrading from 3.x](upgrade-3x.md) apply, except that there are conflicting database migrations. Please reach out to us in our [community discourse](https://darc.social) or via [hi@dataresearchcenter.org](mailto:hi@dataresearchcenter.org) to get specific guidance on how to upgrade from the 4.x versions to the current OpenAleph version.
