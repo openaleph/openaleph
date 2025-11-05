@@ -26,7 +26,7 @@ services:
       - redis-data:/data
 
   ingest:
-    image: ghcr.io/openaleph/ingest-file:5.1.0-rc6
+    image: ghcr.io/openaleph/ingest-file:5.1.0-rc9
     command: procrastinate worker -q ingest
     tmpfs:
       - /tmp:mode=777
@@ -40,7 +40,7 @@ services:
       - aleph.env
 
   analyze:
-    image: ghcr.io/openaleph/ftm-analyze:5.1.0-rc2
+    image: ghcr.io/openaleph/ftm-analyze:5.1.0-rc3
     command: procrastinate worker -q analyze
     tmpfs:
       - /tmp:mode=777
@@ -52,7 +52,7 @@ services:
       - aleph.env
 
   worker:
-    image: ghcr.io/openaleph/openaleph:5.1.0-rc6
+    image: ghcr.io/openaleph/openaleph:5.1.0-rc7
     command: procrastinate worker -q openaleph
     restart: on-failure
     depends_on:
@@ -68,7 +68,7 @@ services:
       - aleph.env
 
   api:
-    image: ghcr.io/openaleph/openaleph:5.1.0-rc6
+    image: ghcr.io/openaleph/openaleph:5.1.0-rc7
     expose:
       - 8000
     depends_on:
@@ -85,7 +85,7 @@ services:
       - aleph.env
 
   ui:
-    image: ghcr.io/openaleph/aleph-ui:5.1.0-rc6
+    image: ghcr.io/openaleph/aleph-ui:5.1.0-rc7
     depends_on:
       - api
     ports:
