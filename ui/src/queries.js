@@ -39,7 +39,6 @@ export function collectionEntitiesQuery(location, collectionId, schema) {
   const context = {
     'filter:collection_id': collectionId,
     'filter:schema': schema,
-    dehydrate: true, // this excludes entity properties from the response
   };
   return collectionContextQuery(context, location, collectionId, 'entities');
 }
