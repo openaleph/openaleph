@@ -107,3 +107,15 @@ Minimum environment configuration (`aleph.env`), all others have reasonable defa
 ALEPH_SECRET_KEY=random-secret-string
 ALEPH_SINGLE_USER=true  # no user management at all for quick local set up
 ```
+
+## Initial setup
+
+On a fresh database and index, starting up the containers will throw errors about database migrations and elasticsearch indices not present. To initialize (or upgrade), run within an app container (api or worker): `aleph upgrade`.
+
+Check the logs of the elasticsearch container to wait until it is properly up (health status changed to GREEN). Then run:
+
+```bash
+docker compose run --rm worker aleph upgrade
+```
+
+OpenAleph is then reachable at [localhost:8080](http://localhost:8080)
