@@ -36,8 +36,7 @@ const timestampToLabel = (timestamp, granularity, locale) => {
 
   // Check if the date is valid
   if (isNaN(dateObj.getTime())) {
-    const invalidLabel = String(timestamp);
-    return { label: invalidLabel, tooltipLabel: invalidLabel };
+    return { label: 'Invalid Date', tooltipLabel: 'Invalid Date' };
   }
 
   let label, tooltipLabel;
