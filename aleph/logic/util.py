@@ -46,13 +46,17 @@ def entity_url(entity_id=None, **query):
     return ui_url("entities", id=entity_id, **query)
 
 
-def archive_url(content_hash, file_name=None, mime_type=None, expire=None):
+def archive_url(
+    content_hash, file_name=None, mime_type=None, expire=None, role_id=None
+):
     """Create an access authorization link for an archive blob."""
     if content_hash is None:
         return None
     if expire is None:
         expire = datetime.utcnow() + timedelta(days=1)
     payload = {"c": content_hash, "f": file_name, "m": mime_type, "exp": expire}
+    if role_id is not None:
+        payload["r"] = role_id
     token = jwt.encode(payload, SETTINGS.SECRET_KEY, algorithm=ALGORITHM)
     return url_for("archive_api.retrieve", _query=[("token", token)])
 
@@ -60,7 +64,7 @@ def archive_url(content_hash, file_name=None, mime_type=None, expire=None):
 def archive_token(token):
     token = jwt.decode(token, key=SETTINGS.SECRET_KEY, algorithms=DECODE, verify=True)
     expire = datetime.utcfromtimestamp(token["exp"])
-    return token.get("c"), token.get("f"), token.get("m"), expire
+    return token.get("c"), token.get("f"), token.get("m"), expire, token.get("r")
 
 
 def entity_fingerprints(entity: EntityProxy) -> set[str]:

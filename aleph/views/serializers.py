@@ -235,18 +235,25 @@ class EntitySerializer(Serializer):
                 name = entity_filename(proxy)
                 mime = proxy.first("mimeType", quiet=True)
                 links["file"] = archive_url(
-                    content_hash, file_name=name, mime_type=mime
+                    content_hash,
+                    file_name=name,
+                    mime_type=mime,
+                    role_id=request.authz.id,
                 )
 
             pdf_hash = proxy.first("pdfHash", quiet=True)
             if pdf_hash:
                 name = entity_filename(proxy, extension="pdf")
-                links["pdf"] = archive_url(pdf_hash, file_name=name, mime_type=PDF)
+                links["pdf"] = archive_url(
+                    pdf_hash, file_name=name, mime_type=PDF, role_id=request.authz.id
+                )
 
             csv_hash = proxy.first("csvHash", quiet=True)
             if csv_hash:
                 name = entity_filename(proxy, extension="csv")
-                links["csv"] = archive_url(csv_hash, file_name=name, mime_type=CSV)
+                links["csv"] = archive_url(
+                    csv_hash, file_name=name, mime_type=CSV, role_id=request.authz.id
+                )
 
         collection = obj.get("collection") or {}
         coll_id = obj.pop("collection_id", collection.get("id"))
@@ -305,6 +312,7 @@ class ExportSerializer(Serializer):
                 obj.get("content_hash"),
                 file_name=obj.get("file_name"),
                 mime_type=obj.get("mime_type"),
+                role_id=request.authz.id,
             )
             obj["links"] = {"download": url}
         return obj

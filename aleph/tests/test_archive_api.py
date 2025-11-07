@@ -1,5 +1,7 @@
+from urllib.parse import parse_qs, urlparse
+
 from aleph.core import archive
-from aleph.logic.util import archive_url
+from aleph.logic.util import archive_token, archive_url
 from aleph.tests.util import TestCase
 
 
@@ -25,3 +27,19 @@ class ArchiveApiTestCase(TestCase):
         assert res.status_code == 200, res.status_code
         disposition = res.headers.get("Content-Disposition")
         assert "foo" in disposition, disposition
+
+    def test_with_token_role_id(self):
+        claim_url = archive_url(self.content_hash, file_name="foo")
+        parsed_url = urlparse(claim_url)
+        token = parse_qs(parsed_url.query).get("token", [None])[0]
+        assert token is not None
+        role_id = archive_token(token)[-1]
+        assert role_id is None
+
+        # explicitly pass through role id to jwt
+        claim_url = archive_url(self.content_hash, file_name="foo", role_id=1)
+        parsed_url = urlparse(claim_url)
+        token = parse_qs(parsed_url.query).get("token", [None])[0]
+        assert token is not None
+        role_id = archive_token(token)[-1]
+        assert role_id == 1

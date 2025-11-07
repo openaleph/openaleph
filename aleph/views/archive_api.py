@@ -1,6 +1,7 @@
 import logging
+
+from flask import Blueprint, redirect, request, send_file
 from flask.wrappers import Response
-from flask import Blueprint, redirect, send_file, request
 
 from aleph.core import archive
 from aleph.logic.util import archive_token
@@ -34,8 +35,8 @@ def retrieve():
       - Archive
     """
     token = request.args.get("token")
-    content_hash, file_name, mime_type, expire = archive_token(token)
-    tag_request(content_hash=content_hash, file_name=file_name)
+    content_hash, file_name, mime_type, expire, role_id = archive_token(token)
+    tag_request(content_hash=content_hash, file_name=file_name, role_id=role_id)
     url = archive.generate_url(
         content_hash,
         file_name=file_name,
