@@ -53,7 +53,7 @@ services:
 
   worker:
     image: ghcr.io/openaleph/openaleph:5.1.0-rc7
-    command: procrastinate worker -q openaleph
+    command: procrastinate worker -q openaleph,openaleph-management
     restart: on-failure
     depends_on:
       - postgres
