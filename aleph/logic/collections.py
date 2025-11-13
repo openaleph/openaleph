@@ -539,7 +539,7 @@ def validate_collection_foreign_ids():
             )
             log.warning(
                 f"Invalid foreign_id for collection {collection.id}: {collection.foreign_id} - {e}",  # noqa: B950
-                dataset=collection.name,
+                dataset=collection.foreign_id,
             )
 
     if invalid_collections:
