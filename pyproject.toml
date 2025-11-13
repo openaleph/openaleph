@@ -12,10 +12,10 @@ license = "MIT"
 readme = "README.md"
 requires-python = ">= 3.12, <4.0.0"
 dependencies = [
-    "openaleph-procrastinate (>=5.1.1,<6.0.0)",
-    "openaleph-search @ git+https://github.com/openaleph/openaleph-search.git",
-    "followthemoney (>=4.3.2,<5.0.0)",
-    "ftmq[postgres] (>=4.3.1,<5.0.0)",
+    "openaleph-procrastinate (>=5.1.2,<6.0.0)",
+    "openaleph-search (>=5.1.1,<6.0.0)",
+    "followthemoney (>=4.3.3,<5.0.0)",
+    "ftmq[postgres] (>=4.3.2,<5.0.0)",
     "normality (>=3.0.2,<4.0.0)",
     "pydantic (>=2.10.6,<3.0.0)",
     "banal (>=1.0.6,<2.0.0)",
@@ -47,7 +47,7 @@ dependencies = [
     "prometheus-client (>=0.17.1)",
     "followthemoney-compare @ git+https://github.com/dataresearchcenter/followthemoney-compare.git",
     # servicelayer extras requirements
-    "openaleph-servicelayer @ git+https://github.com/openaleph/openaleph-servicelayer.git",
+    "openaleph-servicelayer (>=1.23.4,<2.0.0)",
     "boto3 (>=1.11.9,<2.0.0)",
     "grpcio (>=1.32.0,<2.0.0)",
     "google-cloud-storage (>=1.31.0,<3.0.0)",

@@ -43,28 +43,28 @@ files = [
 
 [[package]]
 name = "aiobotocore"
-version = "2.25.1"
+version = "2.25.2"
 description = "Async client for aws services using botocore and aiohttp"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "aiobotocore-2.25.1-py3-none-any.whl", hash = "sha256:eb6daebe3cbef5b39a0bb2a97cffbe9c7cb46b2fcc399ad141f369f3c2134b1f"},
-    {file = "aiobotocore-2.25.1.tar.gz", hash = "sha256:ea9be739bfd7ece8864f072ec99bb9ed5c7e78ebb2b0b15f29781fbe02daedbc"},
+    {file = "aiobotocore-2.25.2-py3-none-any.whl", hash = "sha256:0cec45c6ba7627dd5e5460337291c86ac38c3b512ec4054ce76407d0f7f2a48f"},
+    {file = "aiobotocore-2.25.2.tar.gz", hash = "sha256:ae0a512b34127097910b7af60752956254099ae54402a84c2021830768f92cda"},
 ]
 
 [package.dependencies]
 aiohttp = ">=3.9.2,<4.0.0"
 aioitertools = ">=0.5.1,<1.0.0"
-botocore = ">=1.40.46,<1.40.62"
+botocore = ">=1.40.46,<1.40.71"
 jmespath = ">=0.7.1,<2.0.0"
 multidict = ">=6.0.0,<7.0.0"
 python-dateutil = ">=2.1,<3.0.0"
 wrapt = ">=1.10.10,<2.0.0"
 
 [package.extras]
-awscli = ["awscli (>=1.42.46,<1.42.62)"]
-boto3 = ["boto3 (>=1.40.46,<1.40.62)"]
+awscli = ["awscli (>=1.42.46,<1.42.71)"]
+boto3 = ["boto3 (>=1.40.46,<1.40.71)"]
 httpx = ["httpx (>=0.25.1,<0.29)"]
 
 [[package]]
@@ -547,18 +547,18 @@ files = [
 
 [[package]]
 name = "boto3"
-version = "1.40.61"
+version = "1.40.70"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "boto3-1.40.61-py3-none-any.whl", hash = "sha256:6b9c57b2a922b5d8c17766e29ed792586a818098efe84def27c8f582b33f898c"},
-    {file = "boto3-1.40.61.tar.gz", hash = "sha256:d6c56277251adf6c2bdd25249feae625abe4966831676689ff23b4694dea5b12"},
+    {file = "boto3-1.40.70-py3-none-any.whl", hash = "sha256:e8c2f4f4cb36297270f1023ebe5b100333e0e88ab6457a9687d80143d2e15bf9"},
+    {file = "boto3-1.40.70.tar.gz", hash = "sha256:191443707b391232ed15676bf6bba7e53caec1e71aafa12ccad2e825c5ee15cc"},
 ]
 
 [package.dependencies]
-botocore = ">=1.40.61,<1.41.0"
+botocore = ">=1.40.70,<1.41.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.14.0,<0.15.0"
 
@@ -567,14 +567,14 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.40.61"
+version = "1.40.70"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "botocore-1.40.61-py3-none-any.whl", hash = "sha256:17ebae412692fd4824f99cde0f08d50126dc97954008e5ba2b522eb049238aa7"},
-    {file = "botocore-1.40.61.tar.gz", hash = "sha256:a2487ad69b090f9cccd64cf07c7021cd80ee9c0655ad974f87045b02f3ef52cd"},
+    {file = "botocore-1.40.70-py3-none-any.whl", hash = "sha256:4a394ad25f5d9f1ef0bed610365744523eeb5c22de6862ab25d8c93f9f6d295c"},
+    {file = "botocore-1.40.70.tar.gz", hash = "sha256:61b1f2cecd54d1b28a081116fa113b97bf4e17da57c62ae2c2751fe4c528af1f"},
 ]
 
 [package.dependencies]
@@ -611,14 +611,14 @@ files = [
 
 [[package]]
 name = "certifi"
-version = "2025.10.5"
+version = "2025.11.12"
 description = "Python package for providing Mozilla's CA Bundle."
 optional = false
 python-versions = ">=3.7"
 groups = ["main"]
 files = [
-    {file = "certifi-2025.10.5-py3-none-any.whl", hash = "sha256:0f212c2744a9bb6de0c56639a6f68afe01ecd92d91f14ae897c4fe7bbeeef0de"},
-    {file = "certifi-2025.10.5.tar.gz", hash = "sha256:47c09d31ccf2acf0be3f701ea53595ee7e0b8fa08801c6624be771df09ae7b43"},
+    {file = "certifi-2025.11.12-py3-none-any.whl", hash = "sha256:97de8790030bbd5c2d96b7ec782fc2f7820ef8dba6db909ccf95449f2d062d4b"},
+    {file = "certifi-2025.11.12.tar.gz", hash = "sha256:d8ab5478f2ecd78af242878415affce761ca6bc54a22a27e026d7c25357c3316"},
 ]
 
 [[package]]
@@ -1146,6 +1146,56 @@ trio = ["trio (>=0.30)"]
 wmi = ["wmi (>=1.5.1) ; platform_system == \"Windows\""]
 
 [[package]]
+name = "duckdb"
+version = "1.4.2"
+description = "DuckDB in-process database"
+optional = false
+python-versions = ">=3.9.0"
+groups = ["main"]
+files = [
+    {file = "duckdb-1.4.2-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:85f0c36c1b5f378d96dd7d8c6d312317f4f547a567e8b76cacb2590a31d931f3"},
+    {file = "duckdb-1.4.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:125cd89dbfd40846f216032b11e5eeaf2be13ee4d6745b82413ddd213ddc4d99"},
+    {file = "duckdb-1.4.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:e1c80934cb15879844a752776a1ea3d1405635f307f5bb8b87c99f5a5564d33a"},
+    {file = "duckdb-1.4.2-cp310-cp310-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:2d3c39429b3ce1ee33d86daa94bed75a1f5b0fcf4d66d0839a6fcee398894548"},
+    {file = "duckdb-1.4.2-cp310-cp310-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:4da7aafa94800f475d287814ad91993cf1f912c16f76ff4b411769da40c4b7da"},
+    {file = "duckdb-1.4.2-cp310-cp310-win_amd64.whl", hash = "sha256:c45e0e682ee9073c36dc34d7ad8033210bfea0cab80cc98d1eca516227b35fdf"},
+    {file = "duckdb-1.4.2-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:b2d882672b61bc6117a2c524cf64ea519d2e829295951d214f04e126f1549b09"},
+    {file = "duckdb-1.4.2-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:995ec9c1fc3ce5fbfe5950b980ede2a9d51b35fdf2e3f873ce94c22fc3355fdc"},
+    {file = "duckdb-1.4.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:19d2c2f3cdf0242cad42e803602bbc2636706fc1d2d260ffac815ea2e3a018e8"},
+    {file = "duckdb-1.4.2-cp311-cp311-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:7a496a04458590dcec8e928122ebe2ecbb42c3e1de4119f5461f7bf547acbe79"},
+    {file = "duckdb-1.4.2-cp311-cp311-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:0c2315b693f201787c9892f31eb9a0484d3c648edb3578a86dc8c1284dd2873a"},
+    {file = "duckdb-1.4.2-cp311-cp311-win_amd64.whl", hash = "sha256:bdd2d808806ceeeec33ba89665a0bb707af8815f2ca40e6c4c581966c0628ba1"},
+    {file = "duckdb-1.4.2-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:9356fe17af2711e0a5ace4b20a0373e03163545fd7516e0c3c40428f44597052"},
+    {file = "duckdb-1.4.2-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:946a8374c0252db3fa41165ab9952b48adc8de06561a6b5fd62025ac700e492f"},
+    {file = "duckdb-1.4.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:389fa9abe4ca37d091332a2f8c3ebd713f18e87dc4cb5e8efd3e5aa8ddf8885f"},
+    {file = "duckdb-1.4.2-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:7be8c0c40f2264b91500b89c688f743e1c7764966e988f680b1f19416b00052e"},
+    {file = "duckdb-1.4.2-cp312-cp312-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:c6a21732dd52a76f1e61484c06d65800b18f57fe29e8102a7466c201a2221604"},
+    {file = "duckdb-1.4.2-cp312-cp312-win_amd64.whl", hash = "sha256:769440f4507c20542ae2e5b87f6c6c6d3f148c0aa8f912528f6c97e9aedf6a21"},
+    {file = "duckdb-1.4.2-cp313-cp313-macosx_10_13_universal2.whl", hash = "sha256:de646227fc2c53101ac84e86e444e7561aa077387aca8b37052f3803ee690a17"},
+    {file = "duckdb-1.4.2-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:f1fac31babda2045d4cdefe6d0fd2ebdd8d4c2a333fbcc11607cfeaec202d18d"},
+    {file = "duckdb-1.4.2-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:43ac632f40ab1aede9b4ce3c09ea043f26f3db97b83c07c632c84ebd7f7c0f4a"},
+    {file = "duckdb-1.4.2-cp313-cp313-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:77db030b48321bf785767b7b1800bf657dd2584f6df0a77e05201ecd22017da2"},
+    {file = "duckdb-1.4.2-cp313-cp313-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a456adbc3459c9dcd99052fad20bd5f8ef642be5b04d09590376b2eb3eb84f5c"},
+    {file = "duckdb-1.4.2-cp313-cp313-win_amd64.whl", hash = "sha256:2f7c61617d2b1da3da5d7e215be616ad45aa3221c4b9e2c4d1c28ed09bc3c1c4"},
+    {file = "duckdb-1.4.2-cp314-cp314-macosx_10_15_universal2.whl", hash = "sha256:422be8c6bdc98366c97f464b204b81b892bf962abeae6b0184104b8233da4f19"},
+    {file = "duckdb-1.4.2-cp314-cp314-macosx_10_15_x86_64.whl", hash = "sha256:459b1855bd06a226a2838da4f14c8863fd87a62e63d414a7f7f682a7c616511a"},
+    {file = "duckdb-1.4.2-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:20c45b4ead1ea4d23a1be1cd4f1dfc635e58b55f0dd11e38781369be6c549903"},
+    {file = "duckdb-1.4.2-cp314-cp314-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:2e552451054534970dc999e69ca5ae5c606458548c43fb66d772117760485096"},
+    {file = "duckdb-1.4.2-cp314-cp314-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:128c97dab574a438d7c8d020670b21c68792267d88e65a7773667b556541fa9b"},
+    {file = "duckdb-1.4.2-cp314-cp314-win_amd64.whl", hash = "sha256:dfcc56a83420c0dec0b83e97a6b33addac1b7554b8828894f9d203955591218c"},
+    {file = "duckdb-1.4.2-cp39-cp39-macosx_10_9_universal2.whl", hash = "sha256:4d757dae8c63eeb001517ce4cfba768f87f90628c5d22f230773c1fe0b430c5c"},
+    {file = "duckdb-1.4.2-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:d4af73198e56ba3bc1b2a05eaaf93d162615c225c031685f2a20ef6b2798ed33"},
+    {file = "duckdb-1.4.2-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:9106c7292cff824e9497233bb16867ab3bca82885a11f1b533e7ecabf8073b34"},
+    {file = "duckdb-1.4.2-cp39-cp39-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:449fa37cdefa85bf925681e551157f3cb6434ee85c8329d2f72d52e432e8810f"},
+    {file = "duckdb-1.4.2-cp39-cp39-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:c5feb658ed728cfc42d6fe5ff4e2035faf438a3f10c875f3cfa39ef9e2a2c004"},
+    {file = "duckdb-1.4.2-cp39-cp39-win_amd64.whl", hash = "sha256:c6d41fea4f9038663e6b9c325075a843fd105eaff0ec3d5fe31dfa9014114c3e"},
+    {file = "duckdb-1.4.2.tar.gz", hash = "sha256:df81acee3b15ecb2c72eb8f8579fb5922f6f56c71f5c8892ea3bc6fab39aa2c4"},
+]
+
+[package.extras]
+all = ["adbc-driver-manager", "fsspec", "ipython", "numpy", "pandas", "pyarrow"]
+
+[[package]]
 name = "elastic-transport"
 version = "9.2.0"
 description = "Transport classes and utilities shared among Python Elastic client libraries"
@@ -1434,13 +1484,13 @@ files = [
 
 [[package]]
 name = "followthemoney"
-version = "4.3.2"
+version = "4.3.3"
 description = "A data model for anti corruption data modeling and analysis."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "followthemoney-4.3.2-py3-none-any.whl", hash = "sha256:48f05dd81f61440db4138a4c404b3094b88b1630a71de3afe6cd575926925a3c"},
+    {file = "followthemoney-4.3.3-py3-none-any.whl", hash = "sha256:2bba54573217f0c0034a547065cc61f57a1311d018c022033b21455faa4f6572"},
 ]
 
 [package.dependencies]
@@ -1456,7 +1506,7 @@ prefixdate = ">=0.5.0,<1.0.0"
 pydantic = ">=2.11.0,<3.0.0"
 pytz = ">=2021.1"
 pyyaml = ">=5.0.0,<7.0.0"
-rdflib = ">=6.2.0,<7.3.0"
+rdflib = ">=6.2.0,<7.5.0"
 requests = ">=2.21.0,<3.0.0"
 rigour = ">=1.4.0,<2.0.0"
 sqlalchemy = {version = ">=2.0.0,<3.0.0", extras = ["mypy"]}
@@ -1675,14 +1725,14 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "ftmq"
-version = "4.3.1"
+version = "4.3.2"
 description = "followthemoney query dsl and io helpers"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "ftmq-4.3.1-py3-none-any.whl", hash = "sha256:9cca74cd9af425c0947b3197d547cd7a14d8022d8206e03a78809365468892a1"},
-    {file = "ftmq-4.3.1.tar.gz", hash = "sha256:4ae9e4303b45708e530dddce0a58d8e4ada2dff9a349fda0b6a8854029518c11"},
+    {file = "ftmq-4.3.2-py3-none-any.whl", hash = "sha256:7a43ef1e850762f63f9473f30cb68d0f8adc225e25ca7b063e6e86d331ca8e01"},
+    {file = "ftmq-4.3.2.tar.gz", hash = "sha256:dc72dc64a8f8ec20b2ef23b09fe8f1bedd68fd136ff7dc7014256c77fc89c3f0"},
 ]
 
 [package.dependencies]
@@ -1696,7 +1746,7 @@ psycopg = {version = ">=3.2.9,<4.0.0", extras = ["pool"], optional = true, marke
 pycountry = ">=24.6.1,<25.0.0"
 pydantic = ">=2.11.3,<3.0.0"
 pyicu = ">=2.15.2,<3.0.0"
-rigour = ">=1.4.0,<2.0.0"
+rigour = ">=1.4.1,<2.0.0"
 sqlalchemy = {version = ">=2.0.36,<3.0.0", optional = true, markers = "extra == \"postgres\""}
 
 [package.extras]
@@ -3469,17 +3519,18 @@ test = ["pytest (>=7.2)", "pytest-cov (>=4.0)"]
 
 [[package]]
 name = "nomenklatura"
-version = "4.1.10"
+version = "4.2.0"
 description = "Make record linkages in followthemoney data."
 optional = false
 python-versions = ">=3.11"
 groups = ["main"]
 files = [
-    {file = "nomenklatura-4.1.10-py3-none-any.whl", hash = "sha256:e79ec1852d85230969ecdd7228a19ce1c0389446bd296bd14a45d13a73b4666e"},
+    {file = "nomenklatura-4.2.0-py3-none-any.whl", hash = "sha256:d1eb8ff560bbd06eca6366fea2aa533f1f42f2f527270e231f6cb67c146d2b11"},
 ]
 
 [package.dependencies]
 click = "<9.0.0"
+duckdb = ">=1.2.0,<2.0.0"
 fingerprints = ">=1.3.1,<2.0.0"
 followthemoney = ">=4.1.1,<5.0.0"
 lxml = ">4.0.0,<7.0.0"
@@ -3492,9 +3543,9 @@ sqlalchemy = ">=2.0.0"
 textual = ">=3.0.0,<5.0.0"
 
 [package.extras]
-dev = ["build", "bump2version", "coverage (>=4.1)", "fakeredis", "flake8 (>=2.6.0)", "lxml-stubs", "mypy", "plyvel (<2.0.0)", "psycopg2-binary", "pytest", "pytest-cov", "redis (>5.0.0,<7.0.0)", "requests-mock", "twine", "types-pyyaml", "types-redis", "types-requests", "types-setuptools", "wheel (>=0.29.0)"]
+dev = ["build", "bump2version", "coverage (>=4.1)", "fakeredis", "flake8 (>=2.6.0)", "lxml-stubs", "mypy", "plyvel (<2.0.0)", "psycopg2-binary", "pytest", "pytest-cov", "redis (>5.0.0,<8.0.0)", "requests-mock", "twine", "types-pyyaml", "types-redis", "types-requests", "types-setuptools", "wheel (>=0.29.0)"]
 leveldb = ["plyvel (<2.0.0)"]
-redis = ["redis (>5.0.0,<7.0.0)"]
+redis = ["redis (>5.0.0,<8.0.0)"]
 
 [[package]]
 name = "normality"
@@ -3615,21 +3666,21 @@ files = [
 
 [[package]]
 name = "openaleph-procrastinate"
-version = "5.1.1"
+version = "5.1.2"
 description = "Task queue logic for OpenAleph built upon procrastinate"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "openaleph_procrastinate-5.1.1-py3-none-any.whl", hash = "sha256:61f1a8cf022c1d46a2e16310641da9665b627bdcb004f80cd6a4b154bb6be5b7"},
-    {file = "openaleph_procrastinate-5.1.1.tar.gz", hash = "sha256:5a4b201992d13f7ca973e79a1281758401fb3078d6a9ea3b4c4dc773800e4d49"},
+    {file = "openaleph_procrastinate-5.1.2-py3-none-any.whl", hash = "sha256:29555d270538b7d6ffc57cef8f9908aef101b451f58852bbd14a9480c05f9258"},
+    {file = "openaleph_procrastinate-5.1.2.tar.gz", hash = "sha256:b6739dedfcea88c109ae9eaca089ce34ee7779cdb22fb31e1584cd43a12af9cb"},
 ]
 
 [package.dependencies]
 anystore = ">=0.4.0,<0.5.0"
 cachetools = "<6"
 followthemoney = ">=4.3.2,<5.0.0"
-ftmq = ">=4.3.1,<5.0.0"
+ftmq = ">=4.3.2,<5.0.0"
 procrastinate = ">=3.5.3,<4.0.0"
 psycopg = ">=3.2.11,<4.0.0"
 pydantic = ">=2.11.7,<3.0.0"
@@ -3637,29 +3688,25 @@ pydantic-settings = ">=2.10.1,<3.0.0"
 
 [[package]]
 name = "openaleph-search"
-version = "5.1.0"
+version = "5.1.1"
 description = "OpenAleph index & search module"
 optional = false
-python-versions = ">=3.12,<4"
+python-versions = "<4,>=3.12"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "openaleph_search-5.1.1-py3-none-any.whl", hash = "sha256:4dcf3fdf5148c55abb0db0fa3738fb1a3628967482f90f5a1d8f9ba3ad6e2707"},
+    {file = "openaleph_search-5.1.1.tar.gz", hash = "sha256:bf170728359ce880002a560868c05d4024d1a6dc1c1c17844b0aec27d7182acc"},
+]
 
 [package.dependencies]
 cachetools = "<6"
 elasticsearch = ">=9.2.0,<10.0.0"
 followthemoney = ">=4.3.2,<5.0.0"
-ftmq = ">=4.3.1,<5.0.0"
+ftmq = ">=4.3.2,<5.0.0"
 pydantic = ">=2.11.9,<3.0.0"
 pydantic-settings = ">=2.10.1,<3.0.0"
-rigour = ">=1.4.0,<2.0.0"
+rigour = ">=1.4.1,<2.0.0"
 werkzeug = ">=3.1.3,<4.0.0"
-
-[package.source]
-type = "git"
-url = "https://github.com/openaleph/openaleph-search.git"
-reference = "HEAD"
-resolved_reference = "e598562deb96a775159966ca98f3249d1ca630a8"
 
 [[package]]
 name = "openaleph-servicelayer"
@@ -3668,8 +3715,10 @@ description = "Basic remote service functions for openaleph components"
 optional = false
 python-versions = "*"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "openaleph_servicelayer-1.23.4-py2.py3-none-any.whl", hash = "sha256:a3edecc17b57cd4a72bbd5b3fc992716df768f6c1f4368512a1dd3167601d93c"},
+    {file = "openaleph_servicelayer-1.23.4.tar.gz", hash = "sha256:9a861d1fe5a9426741dac08f02e53b82a3ac96a60213e9cce914789e56f14096"},
+]
 
 [package.dependencies]
 banal = ">=1.0.6,<2.0.0"
@@ -3684,12 +3733,6 @@ structlog = ">=24.1.0,<25.0.0"
 amazon = ["boto3 (>=1.11.9,<2.0.0)"]
 dev = ["boto3 (>=1.11.9,<2.0.0)", "coverage", "moto (<5)", "pytest (>=3.6)", "pytest-cov", "time-machine (>=2.14.1,<3.0.0)", "twine"]
 google = ["google-cloud-storage (>=1.31.0,<3.0.0)", "grpcio (>=1.32.0,<2.0.0)"]
-
-[package.source]
-type = "git"
-url = "https://github.com/openaleph/openaleph-servicelayer.git"
-reference = "HEAD"
-resolved_reference = "f8ca62c7ca00df818e0f68297a738386c7b8f8df"
 
 [[package]]
 name = "openpyxl"
@@ -3992,14 +4035,14 @@ ptyprocess = ">=0.5"
 
 [[package]]
 name = "phonenumbers"
-version = "9.0.17"
+version = "9.0.18"
 description = "Python version of Google's common library for parsing, formatting, storing and validating international phone numbers."
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "phonenumbers-9.0.17-py2.py3-none-any.whl", hash = "sha256:180e4ec2e05f6d3150cbd63b1b6f26996f8738cd0657bcc8747fbd10184721ae"},
-    {file = "phonenumbers-9.0.17.tar.gz", hash = "sha256:4f7e06b2111640cd6b2a8e36d1c2dc3c1af0f5d6ab734a2bcf4c9aec2ad80b53"},
+    {file = "phonenumbers-9.0.18-py2.py3-none-any.whl", hash = "sha256:d3354454ac31c97f8a08121df97a7145b8dca641f734c6f1518a41c2f60c5764"},
+    {file = "phonenumbers-9.0.18.tar.gz", hash = "sha256:5537c61ba95b11b992c95e804da6e49193cc06b1224f632ade64631518a48ed1"},
 ]
 
 [[package]]
@@ -4572,14 +4615,14 @@ typing-extensions = ">=4.14.1"
 
 [[package]]
 name = "pydantic-settings"
-version = "2.11.0"
+version = "2.12.0"
 description = "Settings management using Pydantic"
 optional = false
-python-versions = ">=3.9"
+python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "pydantic_settings-2.11.0-py3-none-any.whl", hash = "sha256:fe2cea3413b9530d10f3a5875adffb17ada5c1e1bab0b2885546d7310415207c"},
-    {file = "pydantic_settings-2.11.0.tar.gz", hash = "sha256:d0e87a1c7d33593beb7194adb8470fc426e95ba02af83a0f23474a04c9a08180"},
+    {file = "pydantic_settings-2.12.0-py3-none-any.whl", hash = "sha256:fddb9fd99a5b18da837b29710391e945b1e30c135477f484084ee513adb93809"},
+    {file = "pydantic_settings-2.12.0.tar.gz", hash = "sha256:005538ef951e3c2a68e1c08b292b5f2e71490def8589d4221b95dab00dafcfd0"},
 ]
 
 [package.dependencies]
@@ -4640,14 +4683,14 @@ tests = ["coverage[toml] (==5.0.4)", "pytest (>=6.0.0,<7.0.0)"]
 
 [[package]]
 name = "pymdown-extensions"
-version = "10.16.1"
+version = "10.17.1"
 description = "Extension pack for Python Markdown."
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "pymdown_extensions-10.16.1-py3-none-any.whl", hash = "sha256:d6ba157a6c03146a7fb122b2b9a121300056384eafeec9c9f9e584adfdb2a32d"},
-    {file = "pymdown_extensions-10.16.1.tar.gz", hash = "sha256:aace82bcccba3efc03e25d584e6a22d27a8e17caa3f4dd9f207e49b787aa9a91"},
+    {file = "pymdown_extensions-10.17.1-py3-none-any.whl", hash = "sha256:1f160209c82eecbb5d8a0d8f89a4d9bd6bdcbde9a8537761844cfc57ad5cd8a6"},
+    {file = "pymdown_extensions-10.17.1.tar.gz", hash = "sha256:60d05fe55e7fb5a1e4740fc575facad20dc6ee3a748e8d3d36ba44142e75ce03"},
 ]
 
 [package.dependencies]
@@ -4997,14 +5040,14 @@ all = ["numpy"]
 
 [[package]]
 name = "rdflib"
-version = "7.2.1"
+version = "7.4.0"
 description = "RDFLib is a Python library for working with RDF, a simple yet powerful language for representing information."
 optional = false
 python-versions = ">=3.8.1"
 groups = ["main"]
 files = [
-    {file = "rdflib-7.2.1-py3-none-any.whl", hash = "sha256:1a175bc1386a167a42fbfaba003bfa05c164a2a3ca3cb9c0c97f9c9638ca6ac2"},
-    {file = "rdflib-7.2.1.tar.gz", hash = "sha256:cf9b7fa25234e8925da8b1fb09700f8349b5f0f100e785fb4260e737308292ac"},
+    {file = "rdflib-7.4.0-py3-none-any.whl", hash = "sha256:0af003470404ff21bc0eb04077cc97ee96da581f2429bf42a8e163fc1c2797bc"},
+    {file = "rdflib-7.4.0.tar.gz", hash = "sha256:c8ee16c31848c19c174aed96185327ea139ca3d392fac7fa882ddf5687f8f533"},
 ]
 
 [package.dependencies]
@@ -5220,13 +5263,13 @@ jupyter = ["ipywidgets (>=7.5.1,<9)"]
 
 [[package]]
 name = "rigour"
-version = "1.4.1"
+version = "1.4.2"
 description = "Financial crime domain data validation and normalization library."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "rigour-1.4.1-py3-none-any.whl", hash = "sha256:6a01fd55093387fc3dce1a5720140b73c4123a36b318b7c71628c54032bc1401"},
+    {file = "rigour-1.4.2-py3-none-any.whl", hash = "sha256:4a25d79a20a75d7c061ac59d61d5c539ffbc89a8e0d674d5403843048946bd88"},
 ]
 
 [package.dependencies]
@@ -6372,4 +6415,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.12, <4.0.0"
-content-hash = "41a1fb848398699a72b7fac1b817f98fe3ac4028a9df7bc52c7a770be3deac99"
+content-hash = "b16f2250309d82826652f678559c61bfc5a57e8dd9d0d49cc734f5867fafd6e9"
