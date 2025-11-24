@@ -12,7 +12,7 @@ from aleph.logic.collections import aggregate_model, index_aggregator, update_co
 from aleph.logic.entitysets import save_entityset_item
 from aleph.logic.notifications import publish
 from aleph.model import Events, Mapping, Status
-from aleph.util import get_entity_proxy
+from aleph.util import make_entity_proxy
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ def _get_table(mapping, aggregator) -> EntityProxy | None:
     table = get_entity(mapping.table_id)
     if table is None:
         return aggregator.get(mapping.table_id)
-    return get_entity_proxy(table)
+    return make_entity_proxy(table)
 
 
 def mapping_origin(mapping_id):

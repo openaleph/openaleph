@@ -94,11 +94,8 @@ def is_auto_admin(email):
     return email is not None and email.lower() in auto_admins
 
 
-def get_entity_proxy(data, cleaned=True) -> EntityProxy:
-    """Create a ValueEntity proxy from entity data.
-
-    This replaces the use of followthemoney.model.get_proxy() to use
-    the more efficient ValueEntity.from_dict() approach.
+def make_entity_proxy(data, cleaned=True) -> EntityProxy:
+    """Create a EntityProxy from entity data.
 
     Args:
         data: Entity data dictionary

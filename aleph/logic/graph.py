@@ -4,7 +4,7 @@ from followthemoney.graph import Graph as FtMGraph
 from followthemoney.types import registry
 
 from aleph.model import Entity
-from aleph.util import get_entity_proxy
+from aleph.util import make_entity_proxy
 
 log = logging.getLogger(__name__)
 
@@ -25,4 +25,4 @@ class Graph(FtMGraph):
         for id_ in self.queued:
             entity = resolver.get(self, Entity, id_)
             if entity is not None:
-                self.add(get_entity_proxy(entity))
+                self.add(make_entity_proxy(entity))

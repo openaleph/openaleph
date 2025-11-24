@@ -13,7 +13,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from aleph.core import cache, db
 from aleph.model.collection import Collection
 from aleph.model.common import DatedModel, iso_text
-from aleph.util import get_entity_proxy
+from aleph.util import make_entity_proxy
 
 log = logging.getLogger(__name__)
 
@@ -182,7 +182,7 @@ class Document(db.Model, DatedModel):
 
     def to_proxy(self, ns=None):
         ns = ns or self.collection.ns
-        proxy = get_entity_proxy(
+        proxy = make_entity_proxy(
             {
                 "id": ns.sign(self.id),
                 "schema": self.model,

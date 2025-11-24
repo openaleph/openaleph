@@ -25,7 +25,7 @@ from aleph.core import cache, db
 from aleph.logic import resolver
 from aleph.logic.entitysets import get_entityset, save_entityset_item
 from aleph.model import Entity, EntitySet, EntitySetItem, Judgement
-from aleph.util import Stub, get_entity_proxy
+from aleph.util import Stub, make_entity_proxy
 
 log = logging.getLogger(__name__)
 ORIGIN = "profile"
@@ -66,7 +66,7 @@ def get_profile(entityset_id, authz=None):
     for item in data["items"]:
         item["entity"] = resolver.get(stub, Entity, item.get("entity_id"))
         if item["entity"] is not None:
-            proxy = get_entity_proxy(item["entity"])
+            proxy = make_entity_proxy(item["entity"])
             proxy.context = {}
             data["proxies"].append(proxy)
             if merged is None:
@@ -99,7 +99,7 @@ def profile_fragments(collection, aggregator, entity_id=None):
         collection.id, entity_id=entity_id
     ):
         data = {"id": entity_id, "schema": Entity.THING, "profile_id": profile_id}
-        writer.put(get_entity_proxy(data), origin=ORIGIN)
+        writer.put(make_entity_proxy(data), origin=ORIGIN)
     writer.flush()
     return profile_id
 

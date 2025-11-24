@@ -4,7 +4,7 @@ from followthemoney.helpers import remove_checksums
 from followthemoney.types import registry
 
 from aleph.logic.aggregator import get_aggregator
-from aleph.util import get_entity_proxy
+from aleph.util import make_entity_proxy
 
 
 def bulk_write(
@@ -15,7 +15,7 @@ def bulk_write(
     aggregator = get_aggregator(collection)
     writer = aggregator.bulk()
     for data in entities:
-        entity = get_entity_proxy(data, cleaned=(not clean))
+        entity = make_entity_proxy(data, cleaned=(not clean))
         if entity.id is None:
             raise InvalidData("No ID for entity", errors=entity.to_dict())
         entity = collection.ns.apply(entity)
