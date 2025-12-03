@@ -1484,13 +1484,13 @@ files = [
 
 [[package]]
 name = "followthemoney"
-version = "4.3.3"
+version = "4.3.4"
 description = "A data model for anti corruption data modeling and analysis."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "followthemoney-4.3.3-py3-none-any.whl", hash = "sha256:2bba54573217f0c0034a547065cc61f57a1311d018c022033b21455faa4f6572"},
+    {file = "followthemoney-4.3.4-py3-none-any.whl", hash = "sha256:50dc1669287c5c5105c6e12febac9630b14490ee4a3818144a415171d3826879"},
 ]
 
 [package.dependencies]
@@ -1725,28 +1725,28 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "ftmq"
-version = "4.3.2"
+version = "4.3.3"
 description = "followthemoney query dsl and io helpers"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "ftmq-4.3.2-py3-none-any.whl", hash = "sha256:7a43ef1e850762f63f9473f30cb68d0f8adc225e25ca7b063e6e86d331ca8e01"},
-    {file = "ftmq-4.3.2.tar.gz", hash = "sha256:dc72dc64a8f8ec20b2ef23b09fe8f1bedd68fd136ff7dc7014256c77fc89c3f0"},
+    {file = "ftmq-4.3.3-py3-none-any.whl", hash = "sha256:e76569cf0632b8b2782e20ddc84e1779876c0dba43395fde206ce84c5fefae8f"},
+    {file = "ftmq-4.3.3.tar.gz", hash = "sha256:4f21a16774c40406ceceb44338e194379fded84473c76a4b239c2ee0b225c503"},
 ]
 
 [package.dependencies]
 anystore = ">=0.4.0,<0.5.0"
 click = ">=8.2.1,<9.0.0"
 click-default-group = ">=1.2.4,<2.0.0"
-followthemoney = ">=4.3.2,<5.0.0"
-nomenklatura = ">=4.1.10,<5.0.0"
+followthemoney = ">=4.3.4,<5.0.0"
+nomenklatura = ">=4.3.1,<5.0.0"
 orjson = ">=3.10.18,<4.0.0"
 psycopg = {version = ">=3.2.9,<4.0.0", extras = ["pool"], optional = true, markers = "extra == \"postgres\""}
 pycountry = ">=24.6.1,<25.0.0"
 pydantic = ">=2.11.3,<3.0.0"
 pyicu = ">=2.15.2,<3.0.0"
-rigour = ">=1.4.1,<2.0.0"
+rigour = ">=1.5.0,<2.0.0"
 sqlalchemy = {version = ">=2.0.36,<3.0.0", optional = true, markers = "extra == \"postgres\""}
 
 [package.extras]
@@ -3691,22 +3691,26 @@ name = "openaleph-search"
 version = "5.1.1"
 description = "OpenAleph index & search module"
 optional = false
-python-versions = "<4,>=3.12"
+python-versions = ">=3.12,<4"
 groups = ["main"]
-files = [
-    {file = "openaleph_search-5.1.1-py3-none-any.whl", hash = "sha256:4dcf3fdf5148c55abb0db0fa3738fb1a3628967482f90f5a1d8f9ba3ad6e2707"},
-    {file = "openaleph_search-5.1.1.tar.gz", hash = "sha256:bf170728359ce880002a560868c05d4024d1a6dc1c1c17844b0aec27d7182acc"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 cachetools = "<6"
 elasticsearch = ">=9.2.0,<10.0.0"
-followthemoney = ">=4.3.2,<5.0.0"
-ftmq = ">=4.3.2,<5.0.0"
+followthemoney = ">=4.3.4,<5.0.0"
+ftmq = ">=4.3.3,<5.0.0"
 pydantic = ">=2.11.9,<3.0.0"
 pydantic-settings = ">=2.10.1,<3.0.0"
-rigour = ">=1.4.1,<2.0.0"
+rigour = ">=1.5.0,<2.0.0"
 werkzeug = ">=3.1.3,<4.0.0"
+
+[package.source]
+type = "git"
+url = "https://github.com/openaleph/openaleph-search.git"
+reference = "HEAD"
+resolved_reference = "c10d54b7d4c4303efe50c7b1ca67b04cc5b264df"
 
 [[package]]
 name = "openaleph-servicelayer"
@@ -6415,4 +6419,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.12, <4.0.0"
-content-hash = "b16f2250309d82826652f678559c61bfc5a57e8dd9d0d49cc734f5867fafd6e9"
+content-hash = "712f91d80dce8d5a473e6d334cd53023606562bb27e83ed42e4233f687b25642"
