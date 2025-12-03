@@ -1,6 +1,7 @@
 from typing import Any, TypedDict
 
 import structlog
+from banal import clean_dict
 from followthemoney.proxy import EntityProxy
 from openaleph_procrastinate import defer
 from openaleph_procrastinate.app import make_app
@@ -41,12 +42,14 @@ def get_context(collection: Collection) -> Context:
     """Set some task context variables that configure the ingestors."""
     from aleph.logic.aggregator import get_aggregator_name
 
-    return {
-        "languages": [x for x in collection.languages if x],
-        "ftmstore": get_aggregator_name(collection),
-        "namespace": collection.foreign_id,
-        "priority": Priorities.USER if collection.casefile else None,
-    }
+    return clean_dict(
+        {
+            "languages": [x for x in collection.languages if x],
+            "ftmstore": get_aggregator_name(collection),
+            "namespace": collection.foreign_id,
+            "priority": Priorities.USER if collection.casefile else None,
+        }
+    )
 
 
 def queue_ingest(collection: Collection, proxy: EntityProxy, **context: Any) -> None:
