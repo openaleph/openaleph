@@ -1,8 +1,8 @@
 import React, { PureComponent } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { Classes, Pre } from '@blueprintjs/core';
-
-import { Property, Skeleton } from 'components/common';
+import { Schema } from 'react-ftm';
+import { Property, Skeleton, Entity } from 'components/common';
 import wordList from 'util/wordList';
 
 import './EmailViewer.scss';
@@ -25,12 +25,15 @@ class EmailViewer extends PureComponent {
           entity.getProperty('email').forEach((email) => {
             if (normValue.indexOf(email.toLowerCase().trim()) !== -1) {
               result = (
-                <Property.Value
-                  key={entity.id}
-                  prop={eprop}
-                  value={entity}
-                  translitLookup={entity.latinized}
-                />
+                <Entity.Link entity={entity} icon>
+                  <Schema.Icon
+                    schema={entity.schema}
+                    className="left-icon"
+                    size={16}
+                  />
+                  {entity.getCaption() != email && entity.getCaption() + ' '}
+                  {'<' + email + '>'}
+                </Entity.Link>
               );
             }
           });
