@@ -29,9 +29,9 @@ We recommend that you use a [virtual environment](https://packaging.python.org/e
 
 You're now ready to use the OpenAleph CLI and Python library.
 
-3. **Optional: Add environmet variables**
+3. **Optional: Add environment variables**
 
-	The `openaleph` cli uses environment variables to read the host of the OpenAleph instance you want to interact with, as well as the API key.
+	The `openaleph` CLI uses environment variables to read the host of the OpenAleph instance you want to interact with, as well as the API key.
 
 	Store this information in your shells rc file or export it before you use `openaleph`
 
