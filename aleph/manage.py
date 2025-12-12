@@ -816,6 +816,24 @@ def reingest_document(document_id):
     )
 
 
+@cli.command()
+@click.argument("infile", type=click.File("r"))
+def reingest_documents(infile):
+    """Re-process documents and re-index them (useful for debugging) based from
+    a list of ids"""
+    for line in infile:
+        document_id = line.strip()
+        document = Document.by_id(document_id)
+        if document is None:
+            log.error(f"Can't find document with id `{document_id}`")
+            return
+        queue_ingest(document.collection, document.to_proxy(), priority=1000)
+        log.info(
+            f"[{document.collection.name}] Queued document `{document.foreign_id}`"
+            " for reingest."
+        )
+
+
 @cli.command("reindex-entity")
 @click.argument("entity_id")
 @click.option("-f", "--foreign_id", required=True, help="Foreign ID of the collection")
