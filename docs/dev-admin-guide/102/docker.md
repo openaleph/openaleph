@@ -11,7 +11,7 @@ services:
   postgres:
     image: postgres:latest
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql
     environment:
       POSTGRES_USER: aleph
       POSTGRES_PASSWORD: aleph
