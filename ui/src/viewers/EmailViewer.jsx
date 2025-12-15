@@ -11,6 +11,7 @@ class EmailViewer extends PureComponent {
   headerProperty(name, entitiesProp) {
     const { document } = this.props;
     const prop = document.schema.getProperty(name);
+    let entityIdsRendered = [];
     const values = document.getProperty(prop).map((value) => {
       let result = (
         <Property.Value key={value.id || value} prop={prop} value={value} />
@@ -22,8 +23,13 @@ class EmailViewer extends PureComponent {
           if (!entity?.id) {
             return;
           }
+          if (entityIdsRendered.indexOf(entity.id) != -1) {
+            result = null;
+            return;
+          }
           entity.getProperty('email').forEach((email) => {
             if (normValue.indexOf(email.toLowerCase().trim()) !== -1) {
+              entityIdsRendered.push(entity.id);
               result = (
                 <Entity.Link entity={entity} icon>
                   <Schema.Icon
@@ -47,7 +53,12 @@ class EmailViewer extends PureComponent {
     return (
       <tr key={prop.qname}>
         <th>{prop.label}</th>
-        <td>{wordList(values, ', ')}</td>
+        <td>
+          {wordList(
+            values.filter((val) => !!val),
+            ', '
+          )}
+        </td>
       </tr>
     );
   }
