@@ -3751,22 +3751,27 @@ name = "openaleph-procrastinate"
 version = "5.1.2"
 description = "Task queue logic for OpenAleph built upon procrastinate"
 optional = false
-python-versions = "<4,>=3.11"
+python-versions = ">=3.11,<4"
 groups = ["main"]
-files = [
-    {file = "openaleph_procrastinate-5.1.2-py3-none-any.whl", hash = "sha256:29555d270538b7d6ffc57cef8f9908aef101b451f58852bbd14a9480c05f9258"},
-    {file = "openaleph_procrastinate-5.1.2.tar.gz", hash = "sha256:b6739dedfcea88c109ae9eaca089ce34ee7779cdb22fb31e1584cd43a12af9cb"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 anystore = ">=0.4.0,<0.5.0"
 cachetools = "<6"
-followthemoney = ">=4.3.2,<5.0.0"
-ftmq = ">=4.3.2,<5.0.0"
-procrastinate = ">=3.5.3,<4.0.0"
-psycopg = ">=3.2.11,<4.0.0"
+followthemoney = ">=4.3.4,<5.0.0"
+ftmq = ">=4.3.3,<5.0.0"
+procrastinate = ">=3.6.0,<4.0.0"
+psycopg = ">=3.3.2,<4.0.0"
+psycopg-pool = "<3.3"
 pydantic = ">=2.11.7,<3.0.0"
 pydantic-settings = ">=2.10.1,<3.0.0"
+
+[package.source]
+type = "git"
+url = "https://github.com/openaleph/openaleph-procrastinate.git"
+reference = "HEAD"
+resolved_reference = "33c74d63076f45fb22598930c76e536248e7ae5a"
 
 [[package]]
 name = "openaleph-search"
@@ -4369,14 +4374,14 @@ files = [
 
 [[package]]
 name = "proto-plus"
-version = "1.26.1"
+version = "1.27.0"
 description = "Beautiful, Pythonic protocol buffers"
 optional = false
 python-versions = ">=3.7"
 groups = ["main"]
 files = [
-    {file = "proto_plus-1.26.1-py3-none-any.whl", hash = "sha256:13285478c2dcf2abb829db158e1047e2f1e8d63a077d94263c2b88b043c75a66"},
-    {file = "proto_plus-1.26.1.tar.gz", hash = "sha256:21a515a4c4c0088a773899e23c7bbade3d18f9c66c73edd4c7ee3816bc96a012"},
+    {file = "proto_plus-1.27.0-py3-none-any.whl", hash = "sha256:1baa7f81cf0f8acb8bc1f6d085008ba4171eaf669629d1b6d1673b21ed1c0a82"},
+    {file = "proto_plus-1.27.0.tar.gz", hash = "sha256:873af56dd0d7e91836aee871e5799e1c6f1bda86ac9a983e0bb9f0c266a568c4"},
 ]
 
 [package.dependencies]
@@ -4432,21 +4437,18 @@ test = ["anyio (>=4.0)", "mypy (>=1.19.0) ; implementation_name != \"pypy\"", "p
 
 [[package]]
 name = "psycopg-pool"
-version = "3.3.0"
+version = "3.2.8"
 description = "Connection Pool for Psycopg"
 optional = false
-python-versions = ">=3.10"
+python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "psycopg_pool-3.3.0-py3-none-any.whl", hash = "sha256:2e44329155c410b5e8666372db44276a8b1ebd8c90f1c3026ebba40d4bc81063"},
-    {file = "psycopg_pool-3.3.0.tar.gz", hash = "sha256:fa115eb2860bd88fce1717d75611f41490dec6135efb619611142b24da3f6db5"},
+    {file = "psycopg_pool-3.2.8-py3-none-any.whl", hash = "sha256:5474137f3a58e697e0141d0311e70ec067fc4466031496d7f9ef3e2c28a1dc09"},
+    {file = "psycopg_pool-3.2.8.tar.gz", hash = "sha256:854e17c2a637c3b9f8d8b24faad57d4cf850baf3fc03ca56ef7e5b4998e391b9"},
 ]
 
 [package.dependencies]
 typing-extensions = ">=4.6"
-
-[package.extras]
-test = ["anyio (>=4.0)", "mypy (>=1.14)", "pproxy (>=2.7)", "pytest (>=6.2.5)", "pytest-cov (>=3.0)", "pytest-randomly (>=3.5)"]
 
 [[package]]
 name = "ptyprocess"
@@ -6500,4 +6502,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.12, <4.0.0"
-content-hash = "712f91d80dce8d5a473e6d334cd53023606562bb27e83ed42e4233f687b25642"
+content-hash = "926ef6ec4be31acc4cecf593c9319442aa811fd5fc8aeb00a97c8bc7582dde7d"
