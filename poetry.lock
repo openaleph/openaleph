@@ -302,14 +302,14 @@ trio = ["trio (>=0.31.0) ; python_version < \"3.10\"", "trio (>=0.32.0) ; python
 
 [[package]]
 name = "anystore"
-version = "0.4.0"
+version = "0.4.1"
 description = "Store and cache things anywhere"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "anystore-0.4.0-py3-none-any.whl", hash = "sha256:e152d7b4f244cbe37d40b3cdc75c9d65bf8f8395256b5d04243ed28fe28798a8"},
-    {file = "anystore-0.4.0.tar.gz", hash = "sha256:08b6240b62e989f770b7becc7c929fd22350e35399104ece44f295af37ac3d8d"},
+    {file = "anystore-0.4.1-py3-none-any.whl", hash = "sha256:de660ccb59738fbae080d68ec3a92e9edc5264af350f54bdbda83c7c7a5b2cb0"},
+    {file = "anystore-0.4.1.tar.gz", hash = "sha256:c7b196042b7e74bd9a6ca6df1068e7d1b8752c84d91df73b0f6dfd831cfdcf62"},
 ]
 
 [package.dependencies]
@@ -3748,16 +3748,18 @@ files = [
 
 [[package]]
 name = "openaleph-procrastinate"
-version = "5.1.2"
+version = "5.1.3"
 description = "Task queue logic for OpenAleph built upon procrastinate"
 optional = false
-python-versions = ">=3.11,<4"
+python-versions = "<4,>=3.11"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "openaleph_procrastinate-5.1.3-py3-none-any.whl", hash = "sha256:c7d63a41f81571ac846d0a09f52157bc00760a8d59fcff5c26c46a503907a0f8"},
+    {file = "openaleph_procrastinate-5.1.3.tar.gz", hash = "sha256:9756cf46c0243a32212a7ccf8b6cbf8c91f77abb5b0cf05a397279834f6bf010"},
+]
 
 [package.dependencies]
-anystore = ">=0.4.0,<0.5.0"
+anystore = ">=0.4.1,<0.5.0"
 cachetools = "<6"
 followthemoney = ">=4.3.4,<5.0.0"
 ftmq = ">=4.3.3,<5.0.0"
@@ -3766,12 +3768,6 @@ psycopg = ">=3.3.2,<4.0.0"
 psycopg-pool = "<3.3"
 pydantic = ">=2.11.7,<3.0.0"
 pydantic-settings = ">=2.10.1,<3.0.0"
-
-[package.source]
-type = "git"
-url = "https://github.com/openaleph/openaleph-procrastinate.git"
-reference = "HEAD"
-resolved_reference = "33c74d63076f45fb22598930c76e536248e7ae5a"
 
 [[package]]
 name = "openaleph-search"
@@ -6502,4 +6498,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.12, <4.0.0"
-content-hash = "926ef6ec4be31acc4cecf593c9319442aa811fd5fc8aeb00a97c8bc7582dde7d"
+content-hash = "ee3c6cf647df5c893dcb02c17f7e2e8d0973ee7f5217ea983ec957d3b772f25a"
