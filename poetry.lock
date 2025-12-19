@@ -3605,24 +3605,24 @@ test = ["pytest (>=7.2)", "pytest-cov (>=4.0)"]
 
 [[package]]
 name = "nomenklatura"
-version = "4.3.2"
+version = "4.4.1"
 description = "Make record linkages in followthemoney data."
 optional = false
 python-versions = ">=3.11"
 groups = ["main"]
 files = [
-    {file = "nomenklatura-4.3.2-py3-none-any.whl", hash = "sha256:f429facbcf9b02742ef91dc8957729a96eb9b4484f0795d99aedbb8da878c7e0"},
+    {file = "nomenklatura-4.4.1-py3-none-any.whl", hash = "sha256:9dea9450445ccbd3d71385055e3704f076599fbb4d0b0c567bf833c117a94049"},
 ]
 
 [package.dependencies]
 click = "<9.0.0"
 duckdb = ">=1.2.0,<2.0.0"
 fingerprints = ">=1.3.1,<2.0.0"
-followthemoney = ">=4.1.1,<5.0.0"
+followthemoney = ">=4.4.0,<5.0.0"
 lxml = ">4.0.0,<7.0.0"
 pydantic = ">2.0.0,<3.0.0"
 rich = ">=13.0.0,<15.0.0"
-rigour = ">=1.5.0,<2.0.0"
+rigour = ">=1.6.0,<2.0.0"
 scikit-learn = "1.7.2"
 shortuuid = ">=1.0.11,<2.0.0"
 sqlalchemy = ">=2.0.0"
@@ -5115,14 +5115,14 @@ all = ["numpy"]
 
 [[package]]
 name = "rdflib"
-version = "7.4.0"
+version = "7.5.0"
 description = "RDFLib is a Python library for working with RDF, a simple yet powerful language for representing information."
 optional = false
 python-versions = ">=3.8.1"
 groups = ["main"]
 files = [
-    {file = "rdflib-7.4.0-py3-none-any.whl", hash = "sha256:0af003470404ff21bc0eb04077cc97ee96da581f2429bf42a8e163fc1c2797bc"},
-    {file = "rdflib-7.4.0.tar.gz", hash = "sha256:c8ee16c31848c19c174aed96185327ea139ca3d392fac7fa882ddf5687f8f533"},
+    {file = "rdflib-7.5.0-py3-none-any.whl", hash = "sha256:b011dfc40d0fc8a44252e906dcd8fc806a7859bc231be190c37e9568a31ac572"},
+    {file = "rdflib-7.5.0.tar.gz", hash = "sha256:663083443908b1830e567350d72e74d9948b310f827966358d76eebdc92bf592"},
 ]
 
 [package.dependencies]
@@ -5134,6 +5134,7 @@ html = ["html5rdf (>=1.2,<2)"]
 lxml = ["lxml (>=4.3,<6.0)"]
 networkx = ["networkx (>=2,<4)"]
 orjson = ["orjson (>=3.9.14,<4)"]
+rdf4j = ["httpx (>=0.28.1,<0.29.0)"]
 
 [[package]]
 name = "redis"
