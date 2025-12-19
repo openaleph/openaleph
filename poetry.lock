@@ -302,14 +302,14 @@ trio = ["trio (>=0.31.0) ; python_version < \"3.10\"", "trio (>=0.32.0) ; python
 
 [[package]]
 name = "anystore"
-version = "0.4.1"
+version = "0.4.2"
 description = "Store and cache things anywhere"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "anystore-0.4.1-py3-none-any.whl", hash = "sha256:de660ccb59738fbae080d68ec3a92e9edc5264af350f54bdbda83c7c7a5b2cb0"},
-    {file = "anystore-0.4.1.tar.gz", hash = "sha256:c7b196042b7e74bd9a6ca6df1068e7d1b8752c84d91df73b0f6dfd831cfdcf62"},
+    {file = "anystore-0.4.2-py3-none-any.whl", hash = "sha256:ffb9878af8aeb438842824f46fb637eb9fa5122a898b8b80da33f8d4db3c5c8f"},
+    {file = "anystore-0.4.2.tar.gz", hash = "sha256:5b78ed954a602261478207622c908cc64f3f5fbe0f471d54a707a3dd51ed9e00"},
 ]
 
 [package.dependencies]
@@ -1728,25 +1728,24 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "ftmq"
-version = "4.3.3"
+version = "4.3.4"
 description = "followthemoney query dsl and io helpers"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "ftmq-4.3.3-py3-none-any.whl", hash = "sha256:e76569cf0632b8b2782e20ddc84e1779876c0dba43395fde206ce84c5fefae8f"},
-    {file = "ftmq-4.3.3.tar.gz", hash = "sha256:4f21a16774c40406ceceb44338e194379fded84473c76a4b239c2ee0b225c503"},
+    {file = "ftmq-4.3.4-py3-none-any.whl", hash = "sha256:41c6dbc8f3b869cd358a4d81e416926ef854cd657fc52045d40376f0efc8b4ab"},
+    {file = "ftmq-4.3.4.tar.gz", hash = "sha256:c44c5d38940271deb9ae1ac210232195303bedec47c68dee6ed65acc2d108915"},
 ]
 
 [package.dependencies]
-anystore = ">=0.4.0,<0.5.0"
+anystore = ">=0.4.2,<0.5.0"
 click = ">=8.2.1,<9.0.0"
 click-default-group = ">=1.2.4,<2.0.0"
 followthemoney = ">=4.3.4,<5.0.0"
-nomenklatura = ">=4.3.1,<5.0.0"
+nomenklatura = ">=4.3.2,<5.0.0"
 orjson = ">=3.10.18,<4.0.0"
 psycopg = {version = ">=3.2.9,<4.0.0", extras = ["pool"], optional = true, markers = "extra == \"postgres\""}
-pycountry = ">=24.6.1,<25.0.0"
 pydantic = ">=2.11.3,<3.0.0"
 pyicu = ">=2.15.2,<3.0.0"
 rigour = ">=1.5.0,<2.0.0"
@@ -3771,29 +3770,25 @@ pydantic-settings = ">=2.10.1,<3.0.0"
 
 [[package]]
 name = "openaleph-search"
-version = "5.1.1"
+version = "5.1.2"
 description = "OpenAleph index & search module"
 optional = false
-python-versions = ">=3.12,<4"
+python-versions = "<4,>=3.12"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "openaleph_search-5.1.2-py3-none-any.whl", hash = "sha256:897a948f891d5589cf9036bb3ac4a3f47bc2c6b6fb80ea7434b385a1f3cc1333"},
+    {file = "openaleph_search-5.1.2.tar.gz", hash = "sha256:f70d4c9726a5f1384c54bdeb9d640c62a93ffb803cca76cb8a0fd434f8662232"},
+]
 
 [package.dependencies]
 cachetools = "<6"
 elasticsearch = ">=9.2.0,<10.0.0"
 followthemoney = ">=4.3.4,<5.0.0"
-ftmq = ">=4.3.3,<5.0.0"
+ftmq = ">=4.3.4,<5.0.0"
 pydantic = ">=2.11.9,<3.0.0"
 pydantic-settings = ">=2.10.1,<3.0.0"
 rigour = ">=1.5.0,<2.0.0"
 werkzeug = ">=3.1.3,<4.0.0"
-
-[package.source]
-type = "git"
-url = "https://github.com/openaleph/openaleph-search.git"
-reference = "HEAD"
-resolved_reference = "c10d54b7d4c4303efe50c7b1ca67b04cc5b264df"
 
 [[package]]
 name = "openaleph-servicelayer"
@@ -4122,14 +4117,14 @@ ptyprocess = ">=0.5"
 
 [[package]]
 name = "phonenumbers"
-version = "9.0.20"
+version = "9.0.21"
 description = "Python version of Google's common library for parsing, formatting, storing and validating international phone numbers."
 optional = false
-python-versions = "*"
+python-versions = ">=2.5"
 groups = ["main"]
 files = [
-    {file = "phonenumbers-9.0.20-py2.py3-none-any.whl", hash = "sha256:03bf5dd14891891284ba96f803d0e5e7e11b9306a0ec4fdf25756ada39eacb86"},
-    {file = "phonenumbers-9.0.20.tar.gz", hash = "sha256:849788eec8e5a9737a99c8b906d18a62d9fced6497ba7033784b6a7e4c89bb2d"},
+    {file = "phonenumbers-9.0.21-py2.py3-none-any.whl", hash = "sha256:3a0f717fddf901a5a424f47c43fb72722cb45bd25ee87331987b00eafe6855bf"},
+    {file = "phonenumbers-9.0.21.tar.gz", hash = "sha256:df4145cba0a8b3ee9c425d5d9b5dbe1b4fceccc68b030ac549ea13c95592b602"},
 ]
 
 [[package]]
@@ -4518,18 +4513,6 @@ files = [
 
 [package.dependencies]
 pyasn1 = ">=0.6.1,<0.7.0"
-
-[[package]]
-name = "pycountry"
-version = "24.6.1"
-description = "ISO country, subdivision, language, currency and script definitions and their translations"
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-files = [
-    {file = "pycountry-24.6.1-py3-none-any.whl", hash = "sha256:f1a4fb391cd7214f8eefd39556d740adcc233c778a27f8942c8dca351d6ce06f"},
-    {file = "pycountry-24.6.1.tar.gz", hash = "sha256:b61b3faccea67f87d10c1f2b0fc0be714409e8fcdcc1315613174f6466c10221"},
-]
 
 [[package]]
 name = "pycparser"
@@ -6498,4 +6481,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.12, <4.0.0"
-content-hash = "ee3c6cf647df5c893dcb02c17f7e2e8d0973ee7f5217ea983ec957d3b772f25a"
+content-hash = "43b79e26fdda7a3d4ddb6e62f7047065f7257fd8f601c6b6dd46482e638623c6"
