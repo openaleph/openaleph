@@ -76,4 +76,16 @@ nav:
           - Installation: user-guide/104/install.md
           - The Command Line Interface: user-guide/104/cli.md
           - Using the library in Python scripts: user-guide/104/python.md
+  - Admin Guide:
+      - Read this first: dev-admin-guide/101/index.md
+      - Deployment:
+        - Services overview: dev-admin-guide/102/services.md
+        - Configuration reference: dev-admin-guide/102/configuration.md
+        - Docker example: dev-admin-guide/102/docker.md
+        - Backup strategy: dev-admin-guide/102/backup.md
+      - Migration:
+        - Versions overview: dev-admin-guide/103/versions.md
+        - Re-indexing: dev-admin-guide/103/reindex.md
+        - Upgrade from 3.x: dev-admin-guide/103/upgrade-3x.md
+        - Upgrade from 4.x: dev-admin-guide/103/upgrade-4x.md
   - Power User Blogpost Series: https://openaleph.org/blog/

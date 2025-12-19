@@ -31,7 +31,7 @@ from aleph.migration import destroy_db
 from aleph.model import Collection, Entity, Permission, Role
 from aleph.oauth import oauth
 from aleph.settings import SETTINGS
-from aleph.util import get_entity_proxy
+from aleph.util import make_entity_proxy
 
 log = logging.getLogger(__name__)
 APP_NAME = "aleph-test"
@@ -52,7 +52,7 @@ def read_entities(file_name):
 
 
 def get_caption(entity):
-    proxy = get_entity_proxy(entity, cleaned=False)
+    proxy = make_entity_proxy(entity, cleaned=False)
     return proxy.caption
 
 

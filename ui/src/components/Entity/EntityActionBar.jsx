@@ -43,6 +43,7 @@ class EntityActionBar extends Component {
       query,
       result,
       onSearchSubmit,
+      onSynonymsChange,
       searchDisabled,
       searchPlaceholder,
       updateStatus,
@@ -74,9 +75,11 @@ class EntityActionBar extends Component {
             )}
             <SearchBox
               onSearch={onSearchSubmit}
+              onSynonymsChange={onSynonymsChange}
               placeholder={searchPlaceholder}
               query={query}
               inputProps={{ disabled: searchDisabled }}
+              showSynonymsToggle={!!onSynonymsChange}
             />
           </div>
         </ControlGroup>

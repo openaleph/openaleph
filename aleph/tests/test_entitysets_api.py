@@ -166,6 +166,9 @@ class EntitySetAPITest(TestCase):
         assert res.json["id"] != data["id"], res.json
         assert res.json["id"].startswith(data["id"]), res.json
 
+        unauthorized_res = self.client.get(url, headers=self.headers_x)
+        assert unauthorized_res.status_code == 403, res
+
         data = dict(res.json)
         data["properties"]["nationality"] = ["np"]
         res2 = self.client.post(url, json=data, headers=self.headers)

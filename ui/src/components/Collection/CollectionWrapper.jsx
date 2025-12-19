@@ -29,6 +29,7 @@ export class CollectionWrapper extends Component {
     super(props);
     this.onUploadSuccess = this.onUploadSuccess.bind(this);
     this.onSearch = this.onSearch.bind(this);
+    this.onSynonymsChange = this.onSynonymsChange.bind(this);
   }
 
   onSearch(queryText) {
@@ -40,6 +41,22 @@ export class CollectionWrapper extends Component {
         mode: collectionViewIds.SEARCH,
         search: newQuery.toLocation(),
       })
+    );
+  }
+
+  onSynonymsChange(synonymsValue) {
+    const { collection, navigate, query, location } = this.props;
+    const newQuery = synonymsValue
+      ? query.set('synonyms', 'true')
+      : query.clear('synonyms');
+
+    navigate(
+      getCollectionLink({
+        collection,
+        mode: collectionViewIds.SEARCH,
+        search: newQuery.toLocation(),
+      }),
+      { replace: true }
     );
   }
 
@@ -75,9 +92,12 @@ export class CollectionWrapper extends Component {
     const search = (
       <SearchBox
         onSearch={this.onSearch}
+        onSynonymsChange={this.onSynonymsChange}
         placeholder={message}
         query={query}
         inputProps={{ disabled: !collection?.id }}
+        showSynonymsToggle={true}
+        synonymsToggleLightLabel={true}
       />
     );
 

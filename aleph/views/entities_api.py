@@ -18,7 +18,6 @@ from aleph.logic.expand import entity_tags, expand_proxies
 from aleph.logic.export import create_export
 from aleph.logic.html import sanitize_html
 from aleph.logic.profiles import pairwise_judgements
-from aleph.logic.xref import SCORE_CUTOFF
 from aleph.model.bookmark import Bookmark
 from aleph.model.entityset import EntitySet, Judgement
 from aleph.procrastinate.queues import OP_EXPORT_SEARCH, queue_export_search
@@ -33,7 +32,7 @@ from aleph.search import (
 )
 from aleph.search.result import get_query_result
 from aleph.settings import SETTINGS
-from aleph.util import get_entity_proxy
+from aleph.util import make_entity_proxy
 from aleph.views.context import enable_cache, tag_request
 from aleph.views.serializers import (
     EntitySerializer,
@@ -187,7 +186,7 @@ def export():
       tags:
       - Entity
     """
-    require(request.authz.logged_in)
+    require(request.authz.session_write)
     parser = SearchQueryParser(request.args, request.authz.search_auth)
     tag_request(query=parser.text, prefix=parser.prefix)
     query = EntitiesQuery(parser)
@@ -239,7 +238,7 @@ def match():
     """
     require(request.authz.can_browse_anonymous)
     entity = parse_request("EntityUpdate")
-    entity = get_entity_proxy(entity, cleaned=False)
+    entity = make_entity_proxy(entity, cleaned=False)
     tag_request(schema=entity.schema.name, caption=entity.caption)
     collection_ids = request.args.getlist("collection_ids")
     result = get_query_result(
@@ -329,7 +328,7 @@ def view(entity_id):
     excludes = ["text", "numeric.*"]
     entity = get_index_entity(entity_id, request.authz.READ, excludes=excludes)
     tag_request(collection_id=entity.get("collection_id"))
-    proxy = get_entity_proxy(entity)
+    proxy = make_entity_proxy(entity)
     html = proxy.get("bodyHtml", quiet=True)
     source_url = proxy.first("sourceUrl", quiet=True)
     encoding = proxy.first("encoding", quiet=True)
@@ -377,7 +376,7 @@ def nearby(entity_id):
     # enable_cache()
     entity = get_index_entity(entity_id, request.authz.READ)
     tag_request(collection_id=entity.get("collection_id"))
-    proxy = get_entity_proxy(entity)
+    proxy = make_entity_proxy(entity)
     parser = SearchQueryParser(request.values, request.authz.search_auth)
     result = get_query_result(GeoDistanceQuery, request, entity=proxy, parser=parser)
     return EntitySerializer.jsonify_result(result)
@@ -422,22 +421,21 @@ def similar(entity_id):
     # enable_cache()
     entity = get_index_entity(entity_id, request.authz.READ)
     tag_request(collection_id=entity.get("collection_id"))
-    proxy = get_entity_proxy(entity)
+    proxy = make_entity_proxy(entity)
     result = get_query_result(MatchQuery, request, entity=proxy)
     entities = list(result.results)
     pairs = [(entity_id, s.get("id")) for s in entities]
     judgements = pairwise_judgements(pairs, entity.get("collection_id"))
     result.results = []
     for obj in entities:
-        score = compare(proxy, get_entity_proxy(obj))
-        if score > SCORE_CUTOFF:
-            item = {
-                "score": score,
-                "judgement": judgements.get((entity_id, obj.get("id"))),
-                "collection_id": entity.get("collection_id"),
-                "entity": obj,
-            }
-            result.results.append(item)
+        score = compare(proxy, make_entity_proxy(obj))
+        item = {
+            "score": score,
+            "judgement": judgements.get((entity_id, obj.get("id"))),
+            "collection_id": entity.get("collection_id"),
+            "entity": obj,
+        }
+        result.results.append(item)
     return SimilarSerializer.jsonify_result(result)
 
 
@@ -481,7 +479,7 @@ def more_like_this(entity_id):
     # enable_cache()
     entity = get_index_entity(entity_id, request.authz.READ)
     tag_request(collection_id=entity.get("collection_id"))
-    proxy = get_entity_proxy(entity)
+    proxy = make_entity_proxy(entity)
     result = get_query_result(MoreLikeThisQuery, request, entity=proxy)
     return EntitySerializer.jsonify_result(result)
 
@@ -517,10 +515,13 @@ def tags(entity_id):
       tags:
       - Entity
     """
+    # DO NOT BE FOOLED: this endpoint is for mentions and other "tagged" values
+    # (ibans, emails, ...) and has nothing to do with the new entity tagging
+    # feature found in tags_api.py
     enable_cache()
     entity = get_index_entity(entity_id, request.authz.READ)
     tag_request(collection_id=entity.get("collection_id"))
-    results = entity_tags(get_entity_proxy(entity), request.authz)
+    results = entity_tags(make_entity_proxy(entity), request.authz)
     return jsonify({"status": "ok", "total": len(results), "results": results})
 
 
@@ -656,12 +657,11 @@ def expand(entity_id):
       - Entity
     """
     entity = get_index_entity(entity_id, request.authz.READ)
-    proxy = get_entity_proxy(entity)
+    proxy = make_entity_proxy(entity)
     collection_id = entity.get("collection_id")
     tag_request(collection_id=collection_id)
-    log.critical(f"args: {request.args}")
     parser = QueryParser(
-        request.args, request.authz.search_auth, limit=SETTINGS.MAX_EXPAND_ENTITIES
+        request.args, request.authz.search_auth, max_limit=SETTINGS.MAX_EXPAND_ENTITIES
     )
     properties = parser.filters.get("property")
     results = expand_proxies(

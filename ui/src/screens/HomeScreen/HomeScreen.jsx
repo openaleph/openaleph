@@ -64,11 +64,10 @@ export class HomeScreen extends Component {
 
   onSubmit(queryText) {
     const { navigate } = this.props;
+    const searchParams = { q: queryText };
     navigate({
       pathname: '/search',
-      search: queryString.stringify({
-        q: queryText,
-      }),
+      search: queryString.stringify(searchParams),
     });
   }
 

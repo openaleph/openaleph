@@ -23,7 +23,7 @@ from aleph.model import (
     Export,
     Role,
 )
-from aleph.util import get_entity_proxy
+from aleph.util import make_entity_proxy
 from aleph.views.util import clean_object, jsonify
 
 log = logging.getLogger(__name__)
@@ -210,7 +210,7 @@ class EntitySerializer(Serializer):
                 self.queue(Entity, value, schema=prop.range)
 
     def _serialize(self, obj):
-        proxy = get_entity_proxy(dict(obj))
+        proxy = make_entity_proxy(dict(obj))
         properties = {}
         for prop, value in proxy.itervalues():
             properties.setdefault(prop.name, [])
@@ -235,18 +235,25 @@ class EntitySerializer(Serializer):
                 name = entity_filename(proxy)
                 mime = proxy.first("mimeType", quiet=True)
                 links["file"] = archive_url(
-                    content_hash, file_name=name, mime_type=mime
+                    content_hash,
+                    file_name=name,
+                    mime_type=mime,
+                    role_id=request.authz.id,
                 )
 
             pdf_hash = proxy.first("pdfHash", quiet=True)
             if pdf_hash:
                 name = entity_filename(proxy, extension="pdf")
-                links["pdf"] = archive_url(pdf_hash, file_name=name, mime_type=PDF)
+                links["pdf"] = archive_url(
+                    pdf_hash, file_name=name, mime_type=PDF, role_id=request.authz.id
+                )
 
             csv_hash = proxy.first("csvHash", quiet=True)
             if csv_hash:
                 name = entity_filename(proxy, extension="csv")
-                links["csv"] = archive_url(csv_hash, file_name=name, mime_type=CSV)
+                links["csv"] = archive_url(
+                    csv_hash, file_name=name, mime_type=CSV, role_id=request.authz.id
+                )
 
         collection = obj.get("collection") or {}
         coll_id = obj.pop("collection_id", collection.get("id"))
@@ -305,6 +312,7 @@ class ExportSerializer(Serializer):
                 obj.get("content_hash"),
                 file_name=obj.get("file_name"),
                 mime_type=obj.get("mime_type"),
+                role_id=request.authz.id,
             )
             obj["links"] = {"download": url}
         return obj
@@ -429,4 +437,16 @@ class BookmarkSerializer(Serializer):
         obj.pop("entity_id", None)
         obj.pop("collection_id", None)
         obj.pop("writeable", None)
+        return obj
+
+
+class TagSerializer(Serializer):
+    def collect(self, obj):
+        self.queue(Entity, obj.get("entity_id"))
+        self.queue(Role, obj.get("role_id"))
+
+    def _serialize(self, obj):
+        obj["entity"] = self.resolve(Entity, obj.get("entity_id"), EntitySerializer)
+        obj["role"] = self.resolve(Role, obj.get("role_id"), RoleSerializer)
+
         return obj

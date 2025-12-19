@@ -12,7 +12,7 @@ from aleph.logic.collections import (
     reingest_collection,
     update_collection,
 )
-from aleph.logic.discover import get_collection_discovery, update_collection_discovery
+from aleph.logic.discover import get_collection_discovery
 from aleph.logic.entitysets import save_entityset_item
 from aleph.logic.processing import bulk_write
 from aleph.procrastinate.queues import (
@@ -84,7 +84,7 @@ def create():
               schema:
                 $ref: '#/components/schemas/Collection'
     """
-    require(request.authz.logged_in)
+    require(request.authz.session_write)
     data = parse_request("CollectionCreate")
     sync = get_flag("sync", True)
     try:
@@ -185,11 +185,6 @@ def reingest(collection_id):
         schema:
           minimum: 1
           type: integer
-      - in: query
-        name: index
-        description: Index documents while they're being processed.
-        schema:
-          type: boolean
       responses:
         '202':
           description: Accepted
@@ -197,8 +192,7 @@ def reingest(collection_id):
       - Collection
     """
     collection = get_db_collection(collection_id, request.authz.WRITE)
-    index = get_flag("index", False)
-    reingest_collection(collection, job_id=get_session_id(), index=index)
+    reingest_collection(collection, job_id=get_session_id())
     return ("", 202)
 
 
@@ -422,11 +416,6 @@ def discover(collection_id):
 
     # Return cached discovery analysis
     discovery = get_collection_discovery(collection_id, collection.foreign_id)
-
-    # If not cached, compute and cache
-    if discovery is None:
-        discovery = update_collection_discovery(collection_id, collection.foreign_id)
-
     return jsonify(discovery.model_dump(mode="json"))
 
 

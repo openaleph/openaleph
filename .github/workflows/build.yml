@@ -19,6 +19,11 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          install: true
+
       - name: Set up
         run: |
           sudo sysctl -w vm.max_map_count=262144
@@ -32,8 +37,14 @@ jobs:
           docker compose pull --quiet elasticsearch
           make ALEPH_TAG=${GITHUB_SHA} test-services
 
-      - name: Build docker image
-        run: docker build -t ghcr.io/openaleph/openaleph:${GITHUB_SHA} .
+      - name: Build docker image for testing
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          load: true
+          tags: ghcr.io/openaleph/openaleph:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Install development dependencies
         run: make dev
@@ -60,11 +71,6 @@ jobs:
             type=sha
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags') }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-        with:
-          install: true
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -76,7 +82,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          platforms: linux/amd64  #,linux/arm64
+          platforms: ${{ startsWith(github.ref, 'refs/tags/') && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

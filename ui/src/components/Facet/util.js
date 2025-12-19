@@ -28,7 +28,18 @@ const cleanDateQParam = (value) => {
 };
 
 const timestampToLabel = (timestamp, granularity, locale) => {
-  const dateObj = new Date(timestamp);
+  // Extract just the date portion (YYYY-MM-DD) from the timestamp
+  const isoDate =
+    typeof timestamp === 'string' ? timestamp.substring(0, 10) : timestamp;
+
+  const dateObj = new Date(isoDate);
+
+  // Check if the date is valid
+  if (isNaN(dateObj.getTime())) {
+    const invalidLabel = String(timestamp);
+    return { label: invalidLabel, tooltipLabel: invalidLabel };
+  }
+
   let label, tooltipLabel;
 
   if (granularity === 'month') {

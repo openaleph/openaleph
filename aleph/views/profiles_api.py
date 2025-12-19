@@ -10,7 +10,7 @@ from aleph.procrastinate.queues import queue_update_entity
 from aleph.search import MatchQuery, QueryParser
 from aleph.search.result import get_query_result
 from aleph.settings import SETTINGS
-from aleph.util import get_entity_proxy
+from aleph.util import make_entity_proxy
 from aleph.views.context import tag_request
 from aleph.views.serializers import ProfileSerializer, SimilarSerializer
 from aleph.views.util import (
@@ -141,7 +141,7 @@ def similar(profile_id):
     result.results = []
     for obj in entities:
         item = {
-            "score": compare(profile["merged"], get_entity_proxy(obj)),
+            "score": compare(profile["merged"], make_entity_proxy(obj)),
             "judgement": Judgement.NO_JUDGEMENT,
             "collection_id": profile.get("collection_id"),
             "entity": obj,

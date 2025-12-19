@@ -23,9 +23,8 @@ In addition to that, we have a section on how to interact with OpenAleph from th
 ## Deploy & Contribute
 
 ### Deploying OpenAleph
-We are currently updating this section. In the meantime, you can refer to the **developer and administrator** documentation from OpenAleph's predecessor, Aleph. Most of that information is still relevant for installing and maintaining OpenAleph.
 
-[Start with the Developer & Admin Guide](https://docs.aleph.occrp.org/developers/)
+[Read this first!](./dev-admin-guide/101/index.md)
 
 ### Contribute
 OpenAleph is an open source project, and we'd love to collaborate with you. **If you want to contribute**, please start by reading the [contributors guide](https://github.com/dataresearchcenter/openaleph/blob/main/CONTRIBUTING.md). Then, pick an [issue](https://github.com/dataresearchcenter/openaleph/issues) to work on or suggest a feature you'd like to add! Please make sure to familiarize yourself with our [Code of Conduct](https://github.com/dataresearchcenter/openaleph/blob/main/CODE_OF_CONDUCT.md).

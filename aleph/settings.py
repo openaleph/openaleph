@@ -129,9 +129,6 @@ class Settings:
         ui_languages = env.to_list("ALEPH_UI_LANGUAGES", ui_languages)
         self.UI_LANGUAGES = [lang.lower().strip() for lang in ui_languages]
 
-        # Document processing pipeline
-        self.INGEST_PIPELINE = env.to_list("ALEPH_INGEST_PIPELINE", ["analyze"])
-
         # Result high-lighting
         self.RESULT_HIGHLIGHT = env.to_bool("ALEPH_RESULT_HIGHLIGHT", True)
 

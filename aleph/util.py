@@ -6,7 +6,7 @@ from datetime import date, datetime
 import structlog
 from elastic_transport import Transport
 from flask_babel.speaklater import LazyString
-from followthemoney import ValueEntity
+from followthemoney import EntityProxy
 from normality import stringify
 
 from aleph.settings import SETTINGS
@@ -94,20 +94,17 @@ def is_auto_admin(email):
     return email is not None and email.lower() in auto_admins
 
 
-def get_entity_proxy(data, cleaned=True):
-    """Create a ValueEntity proxy from entity data.
-
-    This replaces the use of followthemoney.model.get_proxy() to use
-    the more efficient ValueEntity.from_dict() approach.
+def make_entity_proxy(data, cleaned=True) -> EntityProxy:
+    """Create a EntityProxy from entity data.
 
     Args:
         data: Entity data dictionary
         cleaned: Whether to apply property validation (default: True)
 
     Returns:
-        ValueEntity proxy object
+        EntityProxy object
     """
-    return ValueEntity.from_dict(data, cleaned=cleaned)
+    return EntityProxy.from_dict(data, cleaned=cleaned)
 
 
 def deprecated(since: str, deleted: str, reason="This function is deprecated"):

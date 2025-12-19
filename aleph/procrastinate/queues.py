@@ -1,9 +1,12 @@
 from typing import Any, TypedDict
 
 import structlog
+from banal import clean_dict
 from followthemoney.proxy import EntityProxy
 from openaleph_procrastinate import defer
 from openaleph_procrastinate.app import make_app
+from openaleph_procrastinate.model import DatasetJob
+from openaleph_procrastinate.settings import DeferSettings
 from openaleph_procrastinate.tasks import Priorities
 
 from aleph.logic.aggregator import get_aggregator_name
@@ -12,6 +15,7 @@ from aleph.settings import SETTINGS
 
 log = structlog.get_logger(__name__)
 app = make_app(SETTINGS.PROCRASTINATE_TASKS, sync=True)
+settings = DeferSettings()
 
 OP_INGEST = "ingest"
 OP_ANALYZE = "analyze"
@@ -38,12 +42,14 @@ def get_context(collection: Collection) -> Context:
     """Set some task context variables that configure the ingestors."""
     from aleph.logic.aggregator import get_aggregator_name
 
-    return {
-        "languages": [x for x in collection.languages if x],
-        "ftmstore": get_aggregator_name(collection),
-        "namespace": collection.foreign_id,
-        "priority": Priorities.USER if collection.casefile else None,
-    }
+    return clean_dict(
+        {
+            "languages": [x for x in collection.languages if x],
+            "ftmstore": get_aggregator_name(collection),
+            "namespace": collection.foreign_id,
+            "priority": Priorities.USER if collection.casefile else None,
+        }
+    )
 
 
 def queue_ingest(collection: Collection, proxy: EntityProxy, **context: Any) -> None:
@@ -67,6 +73,19 @@ def queue_index(
     dataset = get_aggregator_name(collection)
     with app.open():
         defer.index(app, dataset, entities, **context)
+
+
+def queue_index_batch(
+    collection: Collection, entity_ids: list[str], **context: Any
+) -> None:
+    context = {**context, **get_context(collection)}
+    payload = {"context": context, "entity_ids": entity_ids}
+    dataset = get_aggregator_name(collection)
+    task = "aleph.procrastinate.tasks.index_entities_by_ids"
+    queue = settings.reindex.queue
+    with app.open():
+        job = DatasetJob(dataset=dataset, payload=payload, queue=queue, task=task)
+        job.defer(app, priority=settings.reindex.min_priority)
 
 
 def queue_reindex(collection: Collection, **context: Any) -> None:

@@ -66,10 +66,34 @@ def index_entities(job: DatasetJob, collection: Collection) -> None:
     collections.refresh_collection(collection.id)
 
 
+@aleph_task(retry=defer.tasks.index.max_retries)
+def index_entities_by_ids(job: DatasetJob, collection: Collection) -> None:
+    entity_ids = set(job.payload.get("entity_ids", []))
+    if entity_ids:
+        aggregator = get_aggregator(collection)
+        collections.index_aggregator(collection, aggregator, entity_ids)
+        collections.refresh_collection(collection.id)
+
+
 @aleph_task(retry=defer.tasks.reindex.max_retries)
 def reindex_collection(job: DatasetJob, collection: Collection) -> None:
-    flush = job.payload.get("context", {}).get("flush", False)
-    collections.reindex_collection(collection, bool(flush))
+    flush = job.context.get("flush", False)
+    diff_only = job.context.get("diff_only", False)
+    model = job.context.get("model", True)
+    mappings = job.context.get("mappings", True)
+    queue_batches = job.context.get("queue_batches", True)
+    batch_size = job.context.get("batch_size", 10_000)
+    schema = job.context.get("schema", None)
+    collections.reindex_collection(
+        collection,
+        flush=bool(flush),
+        diff_only=bool(diff_only),
+        model=bool(model),
+        mappings=bool(mappings),
+        queue_batches=bool(queue_batches),
+        batch_size=int(batch_size),
+        schema=schema,
+    )
     collections.refresh_collection(collection.id)
 
 
@@ -87,8 +111,8 @@ def cancel_dataset(job: DatasetJob, collection: Collection) -> None:
 
 @aleph_task(retry=defer.tasks.load_mapping.max_retries)
 def load_mapping(job: DatasetJob, collection: Collection) -> None:
-    mapping_id = job.payload.get("context", {}).get("mapping_id", None)
-    sync = job.payload.get("context", {}).get("sync", False)
+    mapping_id = job.context.get("mapping_id", None)
+    sync = job.context.get("sync", False)
     if not mapping_id:
         job.log.error("No mapping ID provided for load_mapping")
         raise InvalidJob
@@ -98,8 +122,8 @@ def load_mapping(job: DatasetJob, collection: Collection) -> None:
 
 @aleph_task(retry=defer.tasks.flush_mapping.max_retries)
 def flush_mapping(job: DatasetJob, collection: Collection) -> None:
-    mapping_id = job.payload.get("context", {}).get("mapping_id", None)
-    sync = job.payload.get("context", {}).get("sync", True)
+    mapping_id = job.context.get("mapping_id", None)
+    sync = job.context.get("sync", False)
     if not mapping_id:
         job.log.error("No mapping ID provided for flush_mapping")
         raise InvalidJob
@@ -109,7 +133,7 @@ def flush_mapping(job: DatasetJob, collection: Collection) -> None:
 
 @aleph_task(retry=defer.tasks.update_entity.max_retries)
 def update_entity(job: DatasetJob, collection: Collection) -> None:
-    entity_id = job.payload.get("context", {}).get("entity_id", None)
+    entity_id = job.context.get("entity_id", None)
     if not entity_id:
         job.log.error("No entity ID provided for update_entity")
         raise InvalidJob
@@ -119,7 +143,7 @@ def update_entity(job: DatasetJob, collection: Collection) -> None:
 
 @aleph_task(retry=defer.tasks.prune_entity.max_retries)
 def prune_entity(job: DatasetJob, collection: Collection) -> None:
-    entity_id = job.payload.get("context", {}).get("entity_id", None)
+    entity_id = job.context.get("entity_id", None)
     if not entity_id:
         job.log.error("No entity ID provided for prune_entity")
         raise InvalidJob
@@ -129,7 +153,7 @@ def prune_entity(job: DatasetJob, collection: Collection) -> None:
 
 @aleph_task(retry=defer.tasks.export_search.max_retries)
 def export_search(job: Job) -> None:
-    export_id = job.payload.get("context", {}).get("export_id", None)
+    export_id = job.context.get("export_id", None)
     if not export_id:
         job.log.error("No export ID provided for export_search")
         raise InvalidJob
@@ -138,7 +162,7 @@ def export_search(job: Job) -> None:
 
 @aleph_task(retry=defer.tasks.export_xref.max_retries)
 def export_xref(job: DatasetJob, collection: Collection) -> None:
-    export_id = job.payload.get("context", {}).get("export_id", None)
+    export_id = job.payload.get("export_id", None)
     if not export_id:
         job.log.error("No export ID provided for Export XREF")
         raise InvalidJob
@@ -188,7 +212,7 @@ async def remove_old_jobs(context, timestamp):
     return await builtin_tasks.remove_old_jobs(
         context,
         max_hours=24,
-        remove_failed=True,
+        remove_failed=False,
         remove_cancelled=True,
         remove_aborted=True,
     )

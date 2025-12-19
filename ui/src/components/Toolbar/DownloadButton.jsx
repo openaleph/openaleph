@@ -78,11 +78,16 @@ class DownloadButton extends React.PureComponent {
       return null;
     }
 
+    // add a signal for web server logging that this is actually a download:
+    const fileUrl = new URL(file, window.location.origin);
+    fileUrl.searchParams.set('download', '1');
+    const fileUri = fileUrl.toString();
+
     if (dontWarnOnDownload) {
       return (
         <Tooltip content={intl.formatMessage(messages.mode_download)}>
           <AnchorButton
-            href={file}
+            href={fileUri}
             icon="download"
             download
             target="_blank"
@@ -134,7 +139,7 @@ class DownloadButton extends React.PureComponent {
           </div>
           <div className={Classes.ALERT_FOOTER}>
             <AnchorButton
-              href={file}
+              href={fileUri}
               icon="download"
               download
               target="_blank"

@@ -5,7 +5,7 @@ from followthemoney.types import registry
 
 from aleph.logic import resolver
 from aleph.model import Collection, Entity, Events
-from aleph.util import get_entity_proxy
+from aleph.util import make_entity_proxy
 
 log = logging.getLogger(__name__)
 
@@ -163,7 +163,7 @@ class EntityFacet(Facet):
     def update(self, result, key):
         entity = resolver.get(self.parser, Entity, key)
         if entity is not None:
-            proxy = get_entity_proxy(entity)
+            proxy = make_entity_proxy(entity)
             result["label"] = proxy.caption
 
 

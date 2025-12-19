@@ -33,7 +33,7 @@ from aleph.model import (
     Role,
 )
 from aleph.settings import SETTINGS
-from aleph.util import get_entity_proxy
+from aleph.util import make_entity_proxy
 
 log = logging.getLogger(__name__)
 GLOBAL = "Global"
@@ -153,7 +153,7 @@ def render_notification(stub, notification):
             title = data.get("label")
             link = collection_url(value)
         elif clazz == Entity:
-            proxy = get_entity_proxy(data)
+            proxy = make_entity_proxy(data)
             title = proxy.caption
             link = entity_url(value)
         elif clazz == EntitySet:
