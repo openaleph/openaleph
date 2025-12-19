@@ -1487,14 +1487,13 @@ files = [
 
 [[package]]
 name = "followthemoney"
-version = "4.3.4"
+version = "4.4.0"
 description = "A data model for anti corruption data modeling and analysis."
 optional = false
-python-versions = ">=3.10"
+python-versions = ">= 3.10"
 groups = ["main"]
-files = [
-    {file = "followthemoney-4.3.4-py3-none-any.whl", hash = "sha256:50dc1669287c5c5105c6e12febac9630b14490ee4a3818144a415171d3826879"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 babel = ">=2.14.0,<3.0.0"
@@ -1509,14 +1508,20 @@ prefixdate = ">=0.5.0,<1.0.0"
 pydantic = ">=2.11.0,<3.0.0"
 pytz = ">=2021.1"
 pyyaml = ">=5.0.0,<7.0.0"
-rdflib = ">=6.2.0,<7.5.0"
+rdflib = ">=6.2.0,<7.6.0"
 requests = ">=2.21.0,<3.0.0"
-rigour = ">=1.4.0,<2.0.0"
+rigour = ">=1.6.0,<2.0.0"
 sqlalchemy = {version = ">=2.0.0,<3.0.0", extras = ["mypy"]}
 
 [package.extras]
-dev = ["build", "bump2version", "coverage (>=4.1)", "flake8 (>=2.6.0)", "mypy", "pip (>=10.0.0)", "pytest", "pytest-cov", "recommonmark (>=0.4.0)", "responses (>=0.9.0)", "transifex-client", "twine", "types-openpyxl", "types-pyyaml", "types-requests", "types-setuptools", "wheel (>=0.29.0)"]
+dev = ["build", "bump2version", "coverage (>=4.1)", "flake8 (>=2.6.0)", "mypy", "pip (>=10.0.0)", "pytest", "pytest-cov", "recommonmark (>=0.4.0)", "responses (>=0.9.0)", "transifex-client", "twine", "types-PyYAML", "types-PyYAML", "types-openpyxl", "types-requests", "types-setuptools", "wheel (>=0.29.0)"]
 docs = ["mkdocs (>=1.4.0)", "mkdocs-gen-files", "mkdocs-macros-plugin", "mkdocs-material (>=9.0.0)", "mkdocstrings[python]"]
+
+[package.source]
+type = "git"
+url = "https://github.com/dataresearchcenter/followthemoney.git"
+reference = "fix/pickle"
+resolved_reference = "218100fc6b568029986baff89afc20d8dc419483"
 
 [[package]]
 name = "followthemoney-compare"
@@ -5333,13 +5338,13 @@ jupyter = ["ipywidgets (>=7.5.1,<9)"]
 
 [[package]]
 name = "rigour"
-version = "1.5.0"
+version = "1.6.0"
 description = "Financial crime domain data validation and normalization library."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "rigour-1.5.0-py3-none-any.whl", hash = "sha256:20f58993fbe415607bc782950aba6c3eeb9967078615b5349cd2d3558636d21e"},
+    {file = "rigour-1.6.0-py3-none-any.whl", hash = "sha256:29718f068cceba734910d6f58ce1a85e20d47e8cab00325bc6a3736c360f9eaa"},
 ]
 
 [package.dependencies]
@@ -6481,4 +6486,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.12, <4.0.0"
-content-hash = "43b79e26fdda7a3d4ddb6e62f7047065f7257fd8f601c6b6dd46482e638623c6"
+content-hash = "6e1c85c2ab61ada1b42be5184cc4fb12e27a32942b9060283e5d6338e5a774cc"

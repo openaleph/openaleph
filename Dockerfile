@@ -37,9 +37,6 @@ WORKDIR /aleph
 ENV PYTHONPATH /aleph
 RUN pip install --no-deps --no-cache-dir -q -r /aleph/requirements.txt
 RUN pip install --no-deps --no-cache-dir -q /aleph
-# FIXME
-RUN pip uninstall -y followthemoney
-RUN pip install "followthemoney @ git+https://github.com/dataresearchcenter/followthemoney.git@fix/pickle"
 
 ENV ALEPH_WORD_FREQUENCY_URI=https://public.data.occrp.org/develop/models/word-frequencies/word_frequencies-v0.4.1.zip
 ENV ALEPH_FTM_COMPARE_MODEL_URI=https://public.data.occrp.org/develop/models/xref/glm_bernoulli_2e_wf-v0.4.1.pkl
