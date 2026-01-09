@@ -1487,7 +1487,7 @@ files = [
 
 [[package]]
 name = "followthemoney"
-version = "4.4.0"
+version = "4.5.0"
 description = "A data model for anti corruption data modeling and analysis."
 optional = false
 python-versions = ">= 3.10"
@@ -1521,7 +1521,7 @@ docs = ["mkdocs (>=1.4.0)", "mkdocs-gen-files", "mkdocs-macros-plugin", "mkdocs-
 type = "git"
 url = "https://github.com/dataresearchcenter/followthemoney.git"
 reference = "fix/pickle"
-resolved_reference = "218100fc6b568029986baff89afc20d8dc419483"
+resolved_reference = "1ac6bede4b35363f8ddcaa3e0abed77f7ac47eb1"
 
 [[package]]
 name = "followthemoney-compare"
@@ -3761,10 +3761,10 @@ files = []
 develop = false
 
 [package.dependencies]
-anystore = ">=0.4.1,<0.5.0"
+anystore = ">=0.4.2,<0.5.0"
 cachetools = "<6"
-followthemoney = ">=4.3.4,<5.0.0"
-ftmq = ">=4.3.3,<5.0.0"
+followthemoney = ">=4.5.0,<5.0.0"
+ftmq = ">=4.3.4,<5.0.0"
 procrastinate = ">=3.6.0,<4.0.0"
 psycopg = ">=3.3.2,<4.0.0"
 psycopg-pool = "<3.3"
@@ -3775,7 +3775,7 @@ pydantic-settings = ">=2.10.1,<3.0.0"
 type = "git"
 url = "https://github.com/openaleph/openaleph-procrastinate.git"
 reference = "HEAD"
-resolved_reference = "0471cbb83033b8f4fa28ca82e6f31972b96d47ab"
+resolved_reference = "66e52475b8c826b67380afc57c2e7c3049355748"
 
 [[package]]
 name = "openaleph-search"
