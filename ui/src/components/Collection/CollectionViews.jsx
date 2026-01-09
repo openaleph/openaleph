@@ -4,6 +4,7 @@ import { Tabs, Tab } from '@blueprintjs/core';
 import queryString from 'query-string';
 
 import withRouter from 'app/withRouter';
+import { getSearchConfig } from 'app/storage';
 import CollectionDocumentsMode from 'components/Collection/CollectionDocumentsMode';
 import CollectionOverviewMode from 'components/Collection/CollectionOverviewMode';
 import CollectionXrefMode from 'components/Collection/CollectionXrefMode';
@@ -11,6 +12,7 @@ import CollectionDiscoveryMode from 'components/Collection/CollectionDiscoveryMo
 import FacetedEntitySearch from 'components/EntitySearch/FacetedEntitySearch';
 import collectionViewIds from 'components/Collection/collectionViewIds';
 import CollectionView from 'components/Collection/CollectionView';
+import { getGroupField } from 'components/SearchField/util';
 import { collectionSearchQuery } from 'queries';
 import { selectCollection, selectEntitiesResult } from 'selectors';
 
@@ -124,11 +126,21 @@ class CollectionViews extends React.Component {
   }
 }
 
+const defaultColumns = ['countries', 'dates'];
+
 const mapStateToProps = (state, ownProps) => {
   const { collectionId, location } = ownProps;
-  const searchQuery = collectionSearchQuery(location, collectionId, {
-    highlight: true,
-  });
+
+  // Get columns from storage to include necessary property fields in the query
+  const searchConfig = getSearchConfig();
+  const columns = searchConfig?.columns || defaultColumns.map(getGroupField);
+
+  const searchQuery = collectionSearchQuery(
+    location,
+    collectionId,
+    { highlight: true },
+    columns
+  );
 
   return {
     collection: selectCollection(state, collectionId),

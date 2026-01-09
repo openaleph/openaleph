@@ -10,14 +10,16 @@ export function alertsQuery(location) {
   );
 }
 
-export function entitiesQuery(location) {
+export function entitiesQuery(location, fields = []) {
   // We normally only want Things, not Intervals (relations between things).
   const context = {
     highlight: true,
     dehydrate: true, // this excludes entity properties from the response
     'filter:schemata': 'Thing',
   };
-  return Query.fromLocation('entities', location, context, '');
+  return Query.fromLocation('entities', location, context, '').addIncludeFields(
+    fields
+  );
 }
 
 function collectionContextQuery(context, location, collectionId, name) {
@@ -43,14 +45,24 @@ export function collectionEntitiesQuery(location, collectionId, schema) {
   return collectionContextQuery(context, location, collectionId, 'entities');
 }
 
-export function collectionSearchQuery(location, collectionId, options = {}) {
+export function collectionSearchQuery(
+  location,
+  collectionId,
+  options = {},
+  fields = []
+) {
   const context = {
     'filter:collection_id': collectionId,
     'filter:schemata': 'Thing',
     dehydrate: true, // this excludes entity properties from the response
     ...options,
   };
-  return collectionContextQuery(context, location, collectionId, 'cs');
+  return collectionContextQuery(
+    context,
+    location,
+    collectionId,
+    'cs'
+  ).addIncludeFields(fields);
 }
 
 export function entitySetSchemaCountsQuery(entitySetId) {
