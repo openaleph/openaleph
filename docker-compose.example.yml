@@ -1,0 +1,113 @@
+# =============================================================================
+# Production Deployment
+# =============================================================================
+# Full stack deployment with all services.
+#
+# Usage:
+#   docker compose -f docker-compose.production.yml up -d
+#
+# Configuration:
+#   Set ALEPH_TAG environment variable to specify image version.
+#   Create aleph.env with production settings.
+
+services:
+  postgres:
+    image: postgres:17
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: aleph
+      POSTGRES_PASSWORD: aleph
+      POSTGRES_DATABASE: aleph
+    restart: unless-stopped
+
+  elasticsearch:
+    image: ghcr.io/openaleph/elasticsearch:latest
+    hostname: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    command: ["redis-server", "--save", "3600", "10"]
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  ingest:
+    image: ghcr.io/openaleph/ingest-file:${ALEPH_TAG:-latest}
+    command: procrastinate worker -q ingest
+    tmpfs:
+      - /tmp:mode=777
+    volumes:
+      - archive-data:/data
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    env_file:
+      - aleph.env
+
+  analyze:
+    image: ghcr.io/openaleph/ftm-analyze:${ALEPH_TAG:-latest}
+    command: procrastinate worker -q analyze
+    tmpfs:
+      - /tmp:mode=777
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    env_file:
+      - aleph.env
+
+  worker:
+    image: ghcr.io/openaleph/openaleph:${ALEPH_TAG:-latest}
+    command: procrastinate worker -q openaleph,openaleph-management
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - elasticsearch
+      - redis
+      - ingest
+    tmpfs:
+      - /tmp
+    volumes:
+      - archive-data:/data
+    env_file:
+      - aleph.env
+
+  api:
+    image: ghcr.io/openaleph/openaleph:${ALEPH_TAG:-latest}
+    expose:
+      - 8000
+    depends_on:
+      - postgres
+      - elasticsearch
+      - redis
+      - worker
+      - ingest
+    tmpfs:
+      - /tmp
+    volumes:
+      - archive-data:/data
+    restart: unless-stopped
+    env_file:
+      - aleph.env
+
+  ui:
+    image: ghcr.io/openaleph/aleph-ui:${ALEPH_TAG:-latest}
+    depends_on:
+      - api
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  archive-data:
+  postgres-data:
+  redis-data:
+  elasticsearch-data:

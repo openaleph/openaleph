@@ -32,7 +32,11 @@ markdown_extensions:
       pygments_lang_class: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.details
   - admonition
   - pymdownx.tasklist:
@@ -88,4 +92,9 @@ nav:
         - Re-indexing: dev-admin-guide/103/reindex.md
         - Upgrade from 3.x: dev-admin-guide/103/upgrade-3x.md
         - Upgrade from 4.x: dev-admin-guide/103/upgrade-4x.md
+  - Development:
+      - Getting Started: dev-admin-guide/104/index.md
+      - Setup Guide: dev-admin-guide/104/setup.md
+      - Architecture: dev-admin-guide/104/architecture.md
+      - Docker & CI: dev-admin-guide/104/docker.md
   - Power User Blogpost Series: https://openaleph.org/blog/
