@@ -4,6 +4,7 @@ import { compose } from 'redux';
 import { defineMessages, injectIntl } from 'react-intl';
 
 import withRouter from 'app/withRouter';
+import { getSearchConfig } from 'app/storage';
 import CollectionDocumentsMode from 'components/Collection/CollectionDocumentsMode';
 import CollectionOverviewMode from 'components/Collection/CollectionOverviewMode';
 import CollectionStatisticsGroup from 'components/Collection/CollectionStatisticsGroup';
@@ -15,6 +16,7 @@ import CollectionDiscoveryMode from 'components/Collection/CollectionDiscoveryMo
 import CollectionView from 'components/Collection/CollectionView';
 import CollectionViewIds from 'components/Collection/collectionViewIds';
 import FacetedEntitySearch from 'components/EntitySearch/FacetedEntitySearch';
+import { getGroupField } from 'components/SearchField/util';
 import { ErrorSection, Schema } from 'components/common';
 import { collectionSearchQuery } from 'queries';
 import { selectEntitiesResult } from 'selectors';
@@ -121,11 +123,21 @@ class InvestigationViews extends React.Component {
   }
 }
 
+const defaultColumns = ['countries', 'dates'];
+
 const mapStateToProps = (state, ownProps) => {
   const { collectionId, location } = ownProps;
-  const searchQuery = collectionSearchQuery(location, collectionId, {
-    highlight: true,
-  });
+
+  // Get columns from storage to include necessary property fields in the query
+  const searchConfig = getSearchConfig();
+  const columns = searchConfig?.columns || defaultColumns.map(getGroupField);
+
+  const searchQuery = collectionSearchQuery(
+    location,
+    collectionId,
+    { highlight: true },
+    columns
+  );
 
   return {
     searchQuery,

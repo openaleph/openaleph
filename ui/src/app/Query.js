@@ -117,7 +117,7 @@ class Query {
   }
 
   filters() {
-    // List all the filters explictly active in this query
+    // List all the filters explicitly active in this query
     // (i.e. not through the context)
     const fieldPrefix = `${this.queryName}filter:`;
     return _.keys(this.state)
@@ -236,6 +236,19 @@ class Query {
 
   clearFacets() {
     return this.set('facet', []);
+  }
+
+  addIncludeFields(fields) {
+    // Add include_fields for property fields when using dehydrate mode
+    // This allows specific properties to be included in the response
+    let query = this;
+    const propertyFields = (fields || []).filter((field) => field.isProperty);
+
+    propertyFields.forEach((field) => {
+      query = query.add('include_fields', `properties.${field.name}`);
+    });
+
+    return query;
   }
 
   sameAs(other) {
