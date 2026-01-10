@@ -82,6 +82,7 @@ pytest-env = "^1.1.5"
 fakeredis = "<2.31"
 mkdocs = "^1.6.1"
 mkdocs-material = "^9.6.11"
+pre-commit = "^4.5.1"
 
 
 [build-system]
