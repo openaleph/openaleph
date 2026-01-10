@@ -111,6 +111,7 @@ COPY --from=models /opt/ftm-compare /opt/ftm-compare
 # Copy application code
 COPY --chown=app:app aleph /aleph/aleph
 COPY --chown=app:app gunicorn.conf.py /aleph/gunicorn.conf.py
+COPY --chown=app:app pyproject.toml /aleph/pyproject.toml
 COPY --chown=app:app docker-entrypoint.sh /docker-entrypoint.sh
 COPY --chown=app:app docker-entrypoint.d /docker-entrypoint.d/
 
