@@ -5,7 +5,7 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 99
-    target-branch: develop
+    target-branch: main
     groups:
       dev-dependencies:
         patterns:
@@ -19,7 +19,7 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 99
-    target-branch: develop
+    target-branch: main
     groups:
       e2e-dependencies:
         patterns:
@@ -30,7 +30,7 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 99
-    target-branch: develop
+    target-branch: main
     groups:
       dev:
         dependency-type: "development"
@@ -51,18 +51,18 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 99
-    target-branch: develop
+    target-branch: main
 
   - package-ecosystem: docker
     directory: "/ui"
     schedule:
       interval: weekly
     open-pull-requests-limit: 99
-    target-branch: develop
+    target-branch: main
 
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
     open-pull-requests-limit: 99
-    target-branch: develop
+    target-branch: main
