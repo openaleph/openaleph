@@ -27,7 +27,7 @@ jobs:
 
   deploy-docs:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
-    needs: build
+    needs: build-docs
     runs-on: ubuntu-latest
 
     concurrency:
