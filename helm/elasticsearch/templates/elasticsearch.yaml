@@ -1,0 +1,110 @@
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: {{ .Values.elasticsearch.name }}
+  namespace: {{ .Values.elasticsearch.namespace }}
+  {{- if hasKey .Values.elasticsearch "eckManaged" }}
+  annotations:
+    eck.k8s.elastic.co/managed: {{ .Values.elasticsearch.eckManaged | quote }}
+  {{- end }}
+spec:
+  version: {{ .Values.elasticsearch.version }}
+  updateStrategy:
+    {{- toYaml .Values.elasticsearch.updateStrategy | nindent 4 }}
+  nodeSets:
+    {{- if gt (int .Values.elasticsearch.nodeSets.master.count) 0 }}
+    # Master nodes
+    - name: master
+      count: {{ .Values.elasticsearch.nodeSets.master.count }}
+      config:
+        {{- toYaml .Values.elasticsearch.nodeSets.master.config | nindent 8 }}
+      podTemplate:
+        spec:
+          {{- if .Values.elasticsearch.nodeSets.master.nodeSelector }}
+          nodeSelector:
+            {{- toYaml .Values.elasticsearch.nodeSets.master.nodeSelector | nindent 12 }}
+          {{- end }}
+          initContainers:
+            - name: install-plugins
+              command:
+                - sh
+                - -c
+                - |
+                  {{- range .Values.elasticsearch.plugins }}
+                  bin/elasticsearch-plugin install --batch {{ . }}
+                  {{- end }}
+          containers:
+          - name: elasticsearch
+            resources:
+              {{- toYaml .Values.elasticsearch.nodeSets.master.resources | nindent 14 }}
+            {{- if .Values.elasticsearch.synonymsConfigMap }}
+            volumeMounts:
+              - name: synonyms
+                mountPath: /usr/share/elasticsearch/config/synonyms.txt
+                subPath: synonyms.txt
+            {{- end }}
+          {{- if .Values.elasticsearch.synonymsConfigMap }}
+          volumes:
+            - name: synonyms
+              configMap:
+                name: {{ .Values.elasticsearch.synonymsConfigMap }}
+          {{- end }}
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: {{ .Values.elasticsearch.nodeSets.master.storage.size }}
+            storageClassName: {{ .Values.elasticsearch.nodeSets.master.storage.storageClassName }}
+    {{- end }}
+    {{- if gt (int .Values.elasticsearch.nodeSets.data.count) 0 }}
+    # Data nodes
+    - name: data
+      count: {{ .Values.elasticsearch.nodeSets.data.count }}
+      config:
+        {{- toYaml .Values.elasticsearch.nodeSets.data.config | nindent 8 }}
+      podTemplate:
+        spec:
+          {{- if .Values.elasticsearch.nodeSets.data.nodeSelector }}
+          nodeSelector:
+            {{- toYaml .Values.elasticsearch.nodeSets.data.nodeSelector | nindent 12 }}
+          {{- end }}
+          initContainers:
+            - name: install-plugins
+              command:
+                - sh
+                - -c
+                - |
+                  {{- range .Values.elasticsearch.plugins }}
+                  bin/elasticsearch-plugin install --batch {{ . }}
+                  {{- end }}
+          containers:
+          - name: elasticsearch
+            resources:
+              {{- toYaml .Values.elasticsearch.nodeSets.data.resources | nindent 14 }}
+            {{- if .Values.elasticsearch.synonymsConfigMap }}
+            volumeMounts:
+              - name: synonyms
+                mountPath: /usr/share/elasticsearch/config/synonyms.txt
+                subPath: synonyms.txt
+            {{- end }}
+          {{- if .Values.elasticsearch.synonymsConfigMap }}
+          volumes:
+            - name: synonyms
+              configMap:
+                name: {{ .Values.elasticsearch.synonymsConfigMap }}
+          {{- end }}
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: {{ .Values.elasticsearch.nodeSets.data.storage.size }}
+            storageClassName: {{ .Values.elasticsearch.nodeSets.data.storage.storageClassName }}
+    {{- end }}

@@ -1,0 +1,23 @@
+apiVersion: v2
+name: openaleph
+description: OpenAleph - Investigation data platform for journalists
+type: application
+version: 1.0.0
+appVersion: "5.1.0"
+
+# No upstream chart dependency - OpenAleph charts are self-contained
+# Unlike Aleph 4.x which used https://aleph-helm-charts.storage.googleapis.com
+
+keywords:
+  - openaleph
+  - investigation
+  - journalism
+  - data-platform
+
+maintainers:
+  - name: Le Monde SRE
+    email: sre@lemonde.fr
+
+sources:
+  - https://github.com/lemondesre/openaleph
+  - https://github.com/openaleph/openaleph

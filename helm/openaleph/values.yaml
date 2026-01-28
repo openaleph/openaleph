@@ -1,0 +1,460 @@
+# OpenAleph Helm Chart - Default Values
+# This file contains the default configuration for OpenAleph deployment
+# Override these values in values-prd.yaml for production deployment
+
+global:
+  # Naming prefix for all resources
+  namingPrefix: openaleph
+
+  # Image configuration
+  image:
+    registry: ghcr.io/openaleph
+    pullPolicy: Always
+    # Default tag - override per service if needed
+    tag: "5.1.0"
+
+  # Common environment variables for all services
+  commonEnv:
+    LOG_FORMAT: JSON
+    ALEPH_DEBUG: "false"
+    ALEPH_CACHE: "true"
+
+  # Prometheus metrics
+  prometheus:
+    enabled: true
+    port: 9100
+
+  # Service monitor for Prometheus Operator
+  serviceMonitor:
+    enabled: false
+
+# =============================================================================
+# API Service - Flask/Gunicorn backend
+# =============================================================================
+api:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: ghcr.io/openaleph/openaleph
+    tag: ""  # Uses global.image.tag if empty
+    pullPolicy: Always
+
+  # Use image default CMD (gunicorn) - matches docker-compose behavior
+  command: []
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 2Gi
+    limits:
+      memory: 3Gi
+
+  service:
+    type: ClusterIP
+    port: 8000
+
+  podSecurityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+
+  containerSecurityContext:
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 14
+    targetCPUUtilizationPercentage: 60
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 4
+      maxUnavailable: 10%
+
+  # Liveness and readiness probes
+  livenessProbe:
+    httpGet:
+      path: /api/2/status
+      port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /api/2/status
+      port: 8000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+  # Additional environment variables
+  env: {}
+
+  # Node selector
+  nodeSelector: {}
+
+  # Tolerations
+  tolerations: []
+
+  # Affinity rules
+  affinity: {}
+
+# =============================================================================
+# Worker Service - Procrastinate background job processor
+# =============================================================================
+worker:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: ghcr.io/openaleph/openaleph
+    tag: ""
+    pullPolicy: Always
+
+  # Official queues from docker-compose.yml: openaleph,openaleph-management
+  command: ["procrastinate", "worker", "-q", "openaleph", "-q", "openaleph-management"]
+
+  resources:
+    requests:
+      cpu: 300m
+      memory: 500Mi
+    limits:
+      memory: 1Gi
+
+  podSecurityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+
+  containerSecurityContext:
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 100%
+
+  env: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# =============================================================================
+# Ingest Service - File ingestion worker
+# =============================================================================
+ingest:
+  enabled: true
+  replicaCount: 5
+
+  image:
+    repository: ghcr.io/openaleph/ingest-file
+    tag: "5.1.0"
+    pullPolicy: Always
+
+  command: ["procrastinate", "worker", "-q", "ingest"]
+
+  resources:
+    requests:
+      cpu: 300m
+      memory: 2Gi
+    limits:
+      memory: 3Gi
+
+  podSecurityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+
+  containerSecurityContext:
+    readOnlyRootFilesystem: true
+
+  terminationGracePeriodSeconds: 300
+
+  hpa:
+    enabled: true
+    minReplicas: 5
+    maxReplicas: 60
+    targetCPUUtilizationPercentage: 100
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 20
+      maxUnavailable: 100%
+
+  podAnnotations:
+    cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+
+  env:
+    WORKER_THREADS: "0"
+    OCR_VISION_API: "false"
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# =============================================================================
+# Analyze Service - NER and entity analysis worker
+# =============================================================================
+analyze:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: ghcr.io/openaleph/ftm-analyze
+    tag: "5.1.0"
+    pullPolicy: Always
+
+  command: ["procrastinate", "worker", "-q", "analyze"]
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      memory: 4Gi
+
+  podSecurityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+
+  containerSecurityContext:
+    readOnlyRootFilesystem: true
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 50%
+
+  env:
+    FTM_ANALYZE_NER_ENGINE: "spacy"
+    FTM_ANALYZE_NER_DEFAULT_LANG: "eng"
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# =============================================================================
+# UI Service - React frontend served by Nginx
+# =============================================================================
+ui:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: ghcr.io/openaleph/aleph-ui
+    tag: "5.1.0"
+    pullPolicy: Always
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
+  service:
+    type: ClusterIP
+    port: 8080
+
+  podAnnotations:
+    cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 50%
+
+  # Nginx configuration - mounted as ConfigMap
+  nginxConfig:
+    mime.types: |
+      types {
+          text/html                                        html htm shtml;
+          text/css                                         css;
+          text/xml                                         xml;
+          image/gif                                        gif;
+          image/jpeg                                       jpeg jpg;
+          application/javascript                           js;
+          image/png                                        png;
+          image/svg+xml                                    svg svgz;
+          image/tiff                                       tif tiff;
+          image/x-icon                                     ico;
+          image/x-jng                                      jng;
+          application/font-woff                            woff;
+          application/json                                 json;
+          application/zip                                  zip;
+      }
+    nginx.conf: |
+      worker_processes 4;
+
+      events {
+        worker_connections 1024;
+      }
+
+      http {
+        include mime.types;
+        index index.html;
+        sendfile on;
+
+        client_max_body_size 100M;
+
+        error_log /dev/stdout warn;
+        access_log /dev/stdout;
+
+        server {
+          listen 8080 default_server;
+          server_name _;
+
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          proxy_set_header X-Forwarded-Host $http_host;
+          proxy_set_header Host $http_host;
+
+          location /api/ {
+            proxy_pass http://openaleph-api:8000;
+            proxy_redirect off;
+            add_header Cache-Control "no-store, must-revalidate";
+            add_header Pragma "no-cache";
+            expires 0;
+          }
+
+          location ~ ^/static.* {
+            root /assets;
+            expires 14d;
+            access_log off;
+          }
+
+          location / {
+            root /assets;
+            try_files $uri $uri/ /index.html;
+            expires 1s;
+          }
+        }
+      }
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# =============================================================================
+# Upgrade Job - Database migration job
+# =============================================================================
+upgrade:
+  enabled: true
+
+  image:
+    repository: ghcr.io/openaleph/openaleph
+    tag: ""
+    pullPolicy: Always
+
+  command: ["aleph", "upgrade"]
+
+  resources:
+    requests:
+      memory: 1Gi
+    limits:
+      memory: 2Gi
+
+  # Runs as a Helm hook before deployment
+  hookWeight: "-5"
+
+# =============================================================================
+# Ingress Configuration
+# =============================================================================
+ingress:
+  enabled: true
+  className: "alb"
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/group.name: external
+    external-dns.alpha.kubernetes.io/ttl: "60"
+  hosts:
+    - host: openaleph.prd-decodeurs.eks.lemonde.io
+      paths:
+        - path: /
+          pathType: Prefix
+          service: ui
+          port: 8080
+
+# =============================================================================
+# External Secrets - AWS Secrets Manager integration
+# =============================================================================
+externalSecrets:
+  enabled: true
+  refreshInterval: 30s
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: aws-secretsmanager-euw1
+  # AWS Secrets Manager key
+  remoteKey: "applications/prd/decodeurs-openaleph"
+  # Mapping of secret keys to environment variables
+  data:
+    ALEPH_SECRET_KEY: ALEPH_SECRET_KEY
+    OPENALEPH_DB_URI: OPENALEPH_DB_URI
+    FTM_FRAGMENTS_URI: FTM_FRAGMENTS_URI
+    PROCRASTINATE_DB_URI: PROCRASTINATE_DB_URI
+    ALEPH_OAUTH_SECRET: ALEPH_OAUTH_SECRET
+    AWS_ACCESS_KEY_ID: AWS_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY: AWS_SECRET_ACCESS_KEY
+
+# =============================================================================
+# Environment Variables - Non-secret configuration
+# =============================================================================
+env:
+  # Application settings
+  ALEPH_APP_TITLE: "OpenAleph"
+  ALEPH_APP_NAME: "openaleph"
+  ALEPH_APP_DESCRIPTION: "Investigation data platform for journalists"
+  ALEPH_UI_URL: "https://openaleph.prd-decodeurs.eks.lemonde.io"
+  ALEPH_FORCE_HTTPS: "true"
+  ALEPH_URL_SCHEME: "https"
+
+  # Authentication
+  ALEPH_PASSWORD_LOGIN: "true"
+  ALEPH_OAUTH: "true"
+  ALEPH_OAUTH_METADATA_URL: "https://accounts.google.com/.well-known/openid-configuration"
+  # ALEPH_OAUTH_KEY is set via externalSecrets
+
+  # Search configuration (Elasticsearch)
+  OPENALEPH_SEARCH_URI: "https://prd-openaleph-es-http.prd-openaleph-elasticsearch.svc.cluster.local:9200"
+  OPENALEPH_SEARCH_INDEX_PREFIX: "openaleph"
+  OPENALEPH_SEARCH_INDEX_WRITE: "v1"
+  OPENALEPH_SEARCH_INDEX_READ: "v1"
+  OPENALEPH_SEARCH_INDEX_REPLICAS: "2"
+  OPENALEPH_SEARCH_TIMEOUT: "600"
+
+  # Redis (cache only - task queue uses Procrastinate/PostgreSQL)
+  REDIS_URL: ""  # Set via externalSecrets or direct value
+
+  # Storage (S3)
+  ARCHIVE_TYPE: "s3"
+  ARCHIVE_BUCKET: "storage-prd-openaleph"
+  AWS_REGION: "eu-west-1"
+
+  # Rate limiting
+  ALEPH_API_RATE_LIMIT: "600"
+
+# =============================================================================
+# Service Account
+# =============================================================================
+serviceAccount:
+  create: true
+  name: openaleph
+  annotations: {}
+
+# =============================================================================
+# Pod Disruption Budget
+# =============================================================================
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1

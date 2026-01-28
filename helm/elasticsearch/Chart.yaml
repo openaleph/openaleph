@@ -1,0 +1,21 @@
+apiVersion: v2
+name: openaleph-elasticsearch
+description: Elasticsearch deployment for OpenAleph with ECK Operator
+type: application
+version: 1.0.0
+appVersion: "9.0.0"
+
+keywords:
+  - elasticsearch
+  - openaleph
+  - search
+
+maintainers:
+  - name: Le Monde SRE
+    email: sre@lemonde.fr
+
+dependencies:
+  - name: eck-operator
+    version: "2.16.1"
+    repository: "https://helm.elastic.co"
+    condition: eck-operator.enabled

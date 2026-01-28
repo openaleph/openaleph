@@ -1,0 +1,81 @@
+{{- if .Values.ingest.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "openaleph.fullname" . }}-ingest
+  labels:
+    {{- include "openaleph.labels" . | nindent 4 }}
+    {{- include "openaleph.componentLabels" (dict "component" "ingest") | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  {{- if not .Values.ingest.hpa.enabled }}
+  replicas: {{ .Values.ingest.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "openaleph.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: ingest
+  strategy:
+    {{- toYaml .Values.ingest.strategy | nindent 4 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.ingest.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "openaleph.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: ingest
+    spec:
+      serviceAccountName: {{ include "openaleph.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ .Values.ingest.terminationGracePeriodSeconds | default 300 }}
+      {{- with .Values.ingest.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: ingest
+          image: "{{ .Values.ingest.image.repository }}:{{ .Values.ingest.image.tag | default .Values.global.image.tag }}"
+          imagePullPolicy: {{ .Values.ingest.image.pullPolicy | default .Values.global.image.pullPolicy }}
+          {{- with .Values.ingest.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          envFrom:
+            {{- include "openaleph.commonEnvFrom" . | nindent 12 }}
+          env:
+            {{- range $key, $value := .Values.ingest.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.ingest.resources | nindent 12 }}
+          {{- with .Values.ingest.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: cache
+              mountPath: /.cache
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: cache
+          emptyDir: {}
+      {{- with .Values.ingest.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ingest.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ingest.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

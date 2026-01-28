@@ -1,0 +1,43 @@
+{{- if .Values.upgrade.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "openaleph.fullname" . }}-upgrade
+  labels:
+    {{- include "openaleph.labels" . | nindent 4 }}
+    {{- include "openaleph.componentLabels" (dict "component" "upgrade") | nindent 4 }}
+  annotations:
+    # Use sync-wave for ArgoCD ordering (runs after ServiceAccount/ConfigMap/Secret, before Deployments)
+    argocd.argoproj.io/sync-wave: "5"
+    # Delete job before creating new one on re-sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        {{- include "openaleph.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: upgrade
+    spec:
+      serviceAccountName: {{ include "openaleph.serviceAccountName" . }}
+      restartPolicy: Never
+      containers:
+        - name: upgrade
+          image: "{{ .Values.upgrade.image.repository }}:{{ .Values.upgrade.image.tag | default .Values.global.image.tag }}"
+          imagePullPolicy: {{ .Values.upgrade.image.pullPolicy | default .Values.global.image.pullPolicy }}
+          {{- with .Values.upgrade.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          envFrom:
+            {{- include "openaleph.commonEnvFrom" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.upgrade.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

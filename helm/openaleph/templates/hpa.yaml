@@ -1,0 +1,47 @@
+{{- if and .Values.api.enabled .Values.api.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "openaleph.fullname" . }}-api
+  labels:
+    {{- include "openaleph.labels" . | nindent 4 }}
+    {{- include "openaleph.componentLabels" (dict "component" "api") | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "openaleph.fullname" . }}-api
+  minReplicas: {{ .Values.api.hpa.minReplicas }}
+  maxReplicas: {{ .Values.api.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.api.hpa.targetCPUUtilizationPercentage }}
+{{- end }}
+---
+{{- if and .Values.ingest.enabled .Values.ingest.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "openaleph.fullname" . }}-ingest
+  labels:
+    {{- include "openaleph.labels" . | nindent 4 }}
+    {{- include "openaleph.componentLabels" (dict "component" "ingest") | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "openaleph.fullname" . }}-ingest
+  minReplicas: {{ .Values.ingest.hpa.minReplicas }}
+  maxReplicas: {{ .Values.ingest.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.ingest.hpa.targetCPUUtilizationPercentage }}
+{{- end }}

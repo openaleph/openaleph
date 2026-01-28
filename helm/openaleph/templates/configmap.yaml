@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "openaleph.fullname" . }}-env
+  labels:
+    {{- include "openaleph.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+data:
+  {{- range $key, $value := .Values.env }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- range $key, $value := .Values.global.commonEnv }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+---
+{{- if .Values.ui.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "openaleph.fullname" . }}-nginx
+  labels:
+    {{- include "openaleph.labels" . | nindent 4 }}
+    {{- include "openaleph.componentLabels" (dict "component" "ui") | nindent 4 }}
+data:
+  {{- range $key, $value := .Values.ui.nginxConfig }}
+  {{ $key }}: |
+{{ $value | indent 4 }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,344 @@
+# OpenAleph Production Values
+# This file overrides default values for production deployment on prd-decodeurs EKS cluster
+
+global:
+  namingPrefix: openaleph
+
+  image:
+    # Use Le Monde ECR for ARM64 images if needed, otherwise use ghcr.io
+    # registry: 596486340390.dkr.ecr.eu-west-1.amazonaws.com/openaleph
+    registry: ghcr.io/openaleph
+    tag: "5.1.0"
+    pullPolicy: Always
+
+  commonEnv:
+    LOG_FORMAT: JSON
+    ALEPH_DEBUG: "false"
+    ALEPH_CACHE: "true"
+
+  prometheus:
+    enabled: true
+    port: 9100
+
+  serviceMonitor:
+    enabled: false  # Enable when Prometheus Operator is configured
+
+# =============================================================================
+# API Service - Production settings
+# =============================================================================
+api:
+  enabled: true
+
+  image:
+    repository: ghcr.io/openaleph/openaleph
+    tag: "5.1.0"
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 2Gi
+    limits:
+      memory: 3Gi
+
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 14
+    targetCPUUtilizationPercentage: 60
+
+# =============================================================================
+# Worker Service - Production settings
+# =============================================================================
+worker:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: ghcr.io/openaleph/openaleph
+    tag: "5.1.0"
+
+  resources:
+    requests:
+      cpu: 300m
+      memory: 500Mi
+    limits:
+      memory: 1Gi
+
+# =============================================================================
+# Ingest Service - Production settings
+# =============================================================================
+ingest:
+  enabled: true
+
+  image:
+    repository: ghcr.io/openaleph/ingest-file
+    tag: "5.1.0"
+
+  resources:
+    requests:
+      cpu: 300m
+      memory: 2Gi
+    limits:
+      memory: 3Gi
+
+  hpa:
+    enabled: true
+    minReplicas: 5
+    maxReplicas: 60
+    targetCPUUtilizationPercentage: 100
+
+  env:
+    WORKER_THREADS: "0"
+    OCR_VISION_API: "false"
+
+# =============================================================================
+# Analyze Service - Production settings
+# =============================================================================
+analyze:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: ghcr.io/openaleph/ftm-analyze
+    tag: "5.1.0"
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      memory: 4Gi
+
+  env:
+    FTM_ANALYZE_NER_ENGINE: "spacy"
+    FTM_ANALYZE_NER_DEFAULT_LANG: "fra"  # French default for Le Monde
+
+# =============================================================================
+# UI Service - Production settings
+# =============================================================================
+ui:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: ghcr.io/openaleph/aleph-ui
+    tag: "5.1.0"
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
+  # Nginx config with production API endpoint
+  nginxConfig:
+    mime.types: |
+      types {
+          text/html                                        html htm shtml;
+          text/css                                         css;
+          text/xml                                         xml;
+          image/gif                                        gif;
+          image/jpeg                                       jpeg jpg;
+          application/javascript                           js;
+          image/png                                        png;
+          image/svg+xml                                    svg svgz;
+          image/tiff                                       tif tiff;
+          image/x-icon                                     ico;
+          image/x-jng                                      jng;
+          application/font-woff                            woff;
+          application/json                                 json;
+          application/zip                                  zip;
+      }
+    nginx.conf: |
+      worker_processes 4;
+
+      events {
+        worker_connections 1024;
+      }
+
+      http {
+        include mime.types;
+        index index.html;
+        sendfile on;
+
+        client_max_body_size 100M;
+
+        error_log /dev/stdout warn;
+
+        log_format detailed_debug '$remote_addr - $remote_user [$time_local] '
+                                '"$request" $status $body_bytes_sent '
+                                '"$http_referer" "$http_user_agent" '
+                                'request_uri="$request_uri" '
+                                'uri="$uri" '
+                                'scheme="$scheme" '
+                                'http_host="$http_host" '
+                                'x_forwarded_proto="$http_x_forwarded_proto"';
+
+        access_log /dev/stdout detailed_debug;
+
+        map $http_x_forwarded_proto $real_scheme {
+          default $http_x_forwarded_proto;
+          ''      $scheme;
+        }
+
+        server {
+          listen 8080 default_server;
+          server_name _;
+
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $real_scheme;
+          proxy_set_header X-Forwarded-Host $http_host;
+          proxy_set_header Host $http_host;
+
+          location /api/ {
+            proxy_pass http://openaleph-api.prd-openaleph.svc.cluster.local:8000;
+            proxy_redirect off;
+            add_header Cache-Control "no-store, must-revalidate";
+            add_header Pragma "no-cache";
+            expires 0;
+          }
+
+          location ~ ^/static.* {
+            root /assets;
+            expires 14d;
+            access_log off;
+          }
+
+          location / {
+            root /assets;
+            try_files $uri $uri/ /index.html;
+            expires 1s;
+          }
+        }
+      }
+
+# =============================================================================
+# Upgrade Job - Production settings
+# =============================================================================
+upgrade:
+  enabled: true
+
+  image:
+    repository: ghcr.io/openaleph/openaleph
+    tag: "5.1.0"
+
+  resources:
+    requests:
+      memory: 1Gi
+    limits:
+      memory: 2Gi
+
+# =============================================================================
+# Ingress - Production settings
+# =============================================================================
+ingress:
+  enabled: true
+  className: "alb"
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    # HTTPS with ACM certificate (required for production)
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:eu-west-1:082700408956:certificate/REPLACE_WITH_CERT_ID"
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/group.name: external
+    external-dns.alpha.kubernetes.io/ttl: "60"
+    # Security header - similar to existing Aleph
+    # alb.ingress.kubernetes.io/conditions.openaleph-ui: >
+    #   [{"field":"http-header","httpHeaderConfig":{"httpHeaderName": "X-Backend-Security", "values":["YOUR_SECRET_HERE"]}}]
+  hosts:
+    - host: prd-openaleph.prd-decodeurs.eks.lemonde.io
+      paths:
+        - path: /
+          pathType: Prefix
+          service: ui
+          port: 8080
+
+# =============================================================================
+# External Secrets - Production AWS Secrets Manager
+# =============================================================================
+externalSecrets:
+  enabled: true
+  refreshInterval: 30s
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: aws-secretsmanager-euw1
+  remoteKey: "applications/prd/decodeurs-openaleph"
+  data:
+    # Application secret
+    ALEPH_SECRET_KEY: ALEPH_SECRET_KEY
+    # Database connections (pointing to existing Aurora)
+    OPENALEPH_DB_URI: OPENALEPH_DB_URI
+    FTM_FRAGMENTS_URI: FTM_FRAGMENTS_URI
+    PROCRASTINATE_DB_URI: PROCRASTINATE_DB_URI
+    # OAuth (Google)
+    ALEPH_OAUTH_SECRET: ALEPH_OAUTH_SECRET
+    # S3 credentials
+    AWS_ACCESS_KEY_ID: AWS_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY: AWS_SECRET_ACCESS_KEY
+    # Elasticsearch credentials (will be populated after ECK deployment)
+    OPENALEPH_SEARCH_AUTH_USER: OPENALEPH_SEARCH_AUTH_USER
+    OPENALEPH_SEARCH_AUTH_PASSWORD: OPENALEPH_SEARCH_AUTH_PASSWORD
+
+# =============================================================================
+# Environment Variables - Production configuration
+# =============================================================================
+env:
+  # Application settings
+  ALEPH_APP_TITLE: "OpenAleph - Le Monde"
+  ALEPH_APP_NAME: "openaleph"
+  ALEPH_APP_DESCRIPTION: "Plateforme d'investigation pour les journalistes du Monde"
+  ALEPH_UI_URL: "https://openaleph-aws.lemonde.fr"
+  ALEPH_FORCE_HTTPS: "true"
+  ALEPH_URL_SCHEME: "https"
+
+  # Admins - same as existing Aleph (OpenAleph uses comma-separated, Aleph used colon-separated)
+  ALEPH_ADMINS: "bshabou@ext.lemonde.fr,ferrer@lemonde.fr,m.romain@lemonde.fr,sanchez@lemonde.fr,aubert@lemonde.fr"
+
+  # OAuth Key (non-secret part - secret part comes from Secrets Manager)
+  ALEPH_OAUTH_KEY: "760995207084-3fi1ne1qnjv5t80jg0hvi9htat890f4t.apps.googleusercontent.com"
+
+  # Authentication
+  ALEPH_PASSWORD_LOGIN: "true"
+  ALEPH_OAUTH: "true"
+  ALEPH_OAUTH_METADATA_URL: "https://accounts.google.com/.well-known/openid-configuration"
+
+  # Search configuration (Elasticsearch in separate namespace)
+  OPENALEPH_SEARCH_URI: "https://prd-openaleph-es-http.prd-openaleph-elasticsearch.svc.cluster.local:9200"
+  OPENALEPH_SEARCH_INDEX_PREFIX: "openaleph"
+  OPENALEPH_SEARCH_INDEX_WRITE: "v1"
+  OPENALEPH_SEARCH_INDEX_READ: "v1"
+  OPENALEPH_SEARCH_INDEX_REPLICAS: "2"
+  OPENALEPH_SEARCH_TIMEOUT: "600"
+
+  # Redis (using existing ElastiCache)
+  REDIS_URL: "redis://decodeurs-aleph-elasticache-prd.5qrwnh.ng.0001.euw1.cache.amazonaws.com:6379/1"
+
+  # Storage (S3) - new bucket for OpenAleph
+  ARCHIVE_TYPE: "s3"
+  ARCHIVE_BUCKET: "storage-prd-openaleph"
+  AWS_REGION: "eu-west-1"
+
+  # Rate limiting
+  ALEPH_API_RATE_LIMIT: "600"
+
+  # Features
+  ALEPH_ENABLE_EXPERIMENTAL_BOOKMARKS_FEATURE: "true"
+
+# =============================================================================
+# Service Account - Production
+# =============================================================================
+serviceAccount:
+  create: true
+  name: openaleph
+  annotations:
+    # Add IRSA annotation if needed for S3 access
+    # eks.amazonaws.com/role-arn: arn:aws:iam::082700408956:role/openaleph-s3-role
+
+# =============================================================================
+# Pod Disruption Budget - Production
+# =============================================================================
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1

@@ -1,0 +1,63 @@
+# OpenAleph Elasticsearch - Default Values
+# Uses ECK (Elastic Cloud on Kubernetes) Operator
+
+# ECK Operator - disabled by default (enable in environment-specific values)
+eck-operator:
+  enabled: false
+
+elasticsearch:
+  name: prd-openaleph
+  namespace: prd-openaleph-elasticsearch
+
+  # ECK management - set to "false" for single-node setups to avoid rolling upgrade issues
+  # For multi-node production clusters, keep as "true"
+  eckManaged: "true"
+
+  # Elasticsearch version - OpenAleph requires 9.x
+  version: "9.0.0"
+
+  # Update strategy
+  updateStrategy:
+    changeBudget:
+      maxUnavailable: 1
+
+  # Node sets configuration
+  nodeSets:
+    # Master nodes
+    master:
+      count: 3
+      config:
+        node.roles: ["master"]
+      resources:
+        requests:
+          cpu: "2"
+          memory: "8Gi"
+        limits:
+          cpu: "4"
+          memory: "8Gi"
+      storage:
+        size: 50Gi
+        storageClassName: gp3-wait
+
+    # Data nodes
+    data:
+      count: 5
+      config:
+        node.roles: ["data", "ingest"]
+      resources:
+        requests:
+          cpu: "2"
+          memory: "16Gi"
+        limits:
+          cpu: "4"
+          memory: "16Gi"
+      storage:
+        size: 1Ti
+        storageClassName: gp3-wait
+
+  # Plugins to install
+  plugins:
+    - analysis-icu
+
+  # Synonyms ConfigMap name (optional)
+  synonymsConfigMap: ""

@@ -1,0 +1,71 @@
+# OpenAleph Elasticsearch - Production Values
+# Includes ECK operator as subchart dependency
+
+# ECK Operator - enabled for PRD (self-contained deployment)
+eck-operator:
+  enabled: true
+  managedNamespaces:
+    - prd-openaleph-elasticsearch  # Only watch this namespace to avoid conflicts
+  installCRDs: true
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+elasticsearch:
+  name: prd-openaleph
+  namespace: prd-openaleph-elasticsearch
+
+  # Elasticsearch 9.x for OpenAleph 5.x
+  version: "9.0.0"
+
+  updateStrategy:
+    changeBudget:
+      maxUnavailable: 1
+
+  nodeSets:
+    # Master nodes - 3 for HA
+    master:
+      count: 3
+      config:
+        node.roles: ["master"]
+        # Allow reindex from old Aleph if needed
+        # reindex.remote.whitelist: ["old-aleph-es:9200"]
+      resources:
+        requests:
+          cpu: "2"
+          memory: "8Gi"
+        limits:
+          cpu: "4"
+          memory: "8Gi"
+      storage:
+        size: 50Gi
+        storageClassName: gp3-wait
+
+    # Data nodes - 5 for capacity
+    data:
+      count: 5
+      config:
+        node.roles: ["data", "ingest"]
+        # Allow reindex from old Aleph if needed
+        # reindex.remote.whitelist: ["old-aleph-es:9200"]
+      resources:
+        requests:
+          cpu: "2"
+          memory: "16Gi"
+        limits:
+          cpu: "4"
+          memory: "16Gi"
+      storage:
+        size: 1Ti
+        storageClassName: gp3-wait
+
+  # Required plugin for OpenAleph
+  plugins:
+    - analysis-icu
+
+  # Synonyms ConfigMap (optional - create if needed)
+  synonymsConfigMap: "prd-openaleph-synonyms"

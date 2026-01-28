@@ -1,0 +1,331 @@
+# OpenAleph Staging Values
+# This file overrides default values for staging deployment to test before production migration
+
+global:
+  namingPrefix: openaleph
+
+  image:
+    registry: ghcr.io/openaleph
+    tag: "5.1.0"
+    pullPolicy: Always
+
+  commonEnv:
+    LOG_FORMAT: JSON
+    ALEPH_DEBUG: "true"  # Enable debug for staging
+    ALEPH_CACHE: "true"
+
+  prometheus:
+    enabled: true
+    port: 9100
+
+  serviceMonitor:
+    enabled: false
+
+# =============================================================================
+# API Service - Staging settings (reduced resources)
+# =============================================================================
+api:
+  enabled: true
+
+  image:
+    repository: ghcr.io/openaleph/openaleph
+    tag: "5.1.0"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 70
+
+# =============================================================================
+# Worker Service - Staging settings
+# =============================================================================
+worker:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/openaleph/openaleph
+    tag: "5.1.0"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+# =============================================================================
+# Ingest Service - Staging settings
+# =============================================================================
+ingest:
+  enabled: true
+
+  image:
+    repository: ghcr.io/openaleph/ingest-file
+    tag: "5.1.0"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 100
+
+  env:
+    WORKER_THREADS: "0"
+    OCR_VISION_API: "false"
+
+# =============================================================================
+# Analyze Service - Staging settings
+# =============================================================================
+analyze:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/openaleph/ftm-analyze
+    tag: "5.1.0"
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+  env:
+    FTM_ANALYZE_NER_ENGINE: "spacy"
+    FTM_ANALYZE_NER_DEFAULT_LANG: "fra"
+
+# =============================================================================
+# UI Service - Staging settings
+# =============================================================================
+ui:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/openaleph/aleph-ui
+    tag: "5.1.0"
+
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+
+  nginxConfig:
+    mime.types: |
+      types {
+          text/html                                        html htm shtml;
+          text/css                                         css;
+          text/xml                                         xml;
+          image/gif                                        gif;
+          image/jpeg                                       jpeg jpg;
+          application/javascript                           js;
+          image/png                                        png;
+          image/svg+xml                                    svg svgz;
+          image/tiff                                       tif tiff;
+          image/x-icon                                     ico;
+          image/x-jng                                      jng;
+          application/font-woff                            woff;
+          application/json                                 json;
+          application/zip                                  zip;
+      }
+    nginx.conf: |
+      worker_processes 2;
+
+      events {
+        worker_connections 512;
+      }
+
+      http {
+        include mime.types;
+        index index.html;
+        sendfile on;
+
+        client_max_body_size 100M;
+
+        error_log /dev/stdout warn;
+
+        log_format detailed_debug '$remote_addr - $remote_user [$time_local] '
+                                '"$request" $status $body_bytes_sent '
+                                '"$http_referer" "$http_user_agent" '
+                                'request_uri="$request_uri" '
+                                'uri="$uri" '
+                                'scheme="$scheme" '
+                                'http_host="$http_host" '
+                                'x_forwarded_proto="$http_x_forwarded_proto"';
+
+        access_log /dev/stdout detailed_debug;
+
+        map $http_x_forwarded_proto $real_scheme {
+          default $http_x_forwarded_proto;
+          ''      $scheme;
+        }
+
+        server {
+          listen 8080 default_server;
+          server_name _;
+
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $real_scheme;
+          proxy_set_header X-Forwarded-Host $http_host;
+          proxy_set_header Host $http_host;
+
+          location /api/ {
+            # Note: Points to staging namespace
+            proxy_pass http://openaleph-api.stg-openaleph.svc.cluster.local:8000;
+            proxy_redirect off;
+            add_header Cache-Control "no-store, must-revalidate";
+            add_header Pragma "no-cache";
+            expires 0;
+          }
+
+          location ~ ^/static.* {
+            root /assets;
+            expires 14d;
+            access_log off;
+          }
+
+          location / {
+            root /assets;
+            try_files $uri $uri/ /index.html;
+            expires 1s;
+          }
+        }
+      }
+
+# =============================================================================
+# Upgrade Job - Staging settings
+# =============================================================================
+upgrade:
+  enabled: true
+
+  image:
+    repository: ghcr.io/openaleph/openaleph
+    tag: "5.1.0"
+
+  resources:
+    requests:
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+# =============================================================================
+# Ingress - Staging settings
+# =============================================================================
+ingress:
+  enabled: true
+  className: "alb"
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    # Use HTTP for staging (no certificate required)
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    alb.ingress.kubernetes.io/group.name: external
+    external-dns.alpha.kubernetes.io/ttl: "60"
+    # For HTTPS, uncomment below and add certificate ARN:
+    # alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    # alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:eu-west-1:082700408956:certificate/CERT_ID"
+    # alb.ingress.kubernetes.io/ssl-redirect: "443"
+  hosts:
+    - host: stg-openaleph.prd-decodeurs.eks.lemonde.io
+      paths:
+        - path: /
+          pathType: Prefix
+          service: ui
+          port: 8080
+
+# =============================================================================
+# External Secrets - Staging AWS Secrets Manager
+# =============================================================================
+externalSecrets:
+  enabled: true
+  refreshInterval: 30s
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: aws-secretsmanager-euw1
+  remoteKey: "applications/stg/decodeurs-openaleph"
+  data:
+    ALEPH_SECRET_KEY: ALEPH_SECRET_KEY
+    OPENALEPH_DB_URI: OPENALEPH_DB_URI
+    FTM_FRAGMENTS_URI: FTM_FRAGMENTS_URI
+    PROCRASTINATE_DB_URI: PROCRASTINATE_DB_URI
+    ALEPH_OAUTH_SECRET: ALEPH_OAUTH_SECRET
+    AWS_ACCESS_KEY_ID: AWS_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY: AWS_SECRET_ACCESS_KEY
+    OPENALEPH_SEARCH_AUTH_USER: OPENALEPH_SEARCH_AUTH_USER
+    OPENALEPH_SEARCH_AUTH_PASSWORD: OPENALEPH_SEARCH_AUTH_PASSWORD
+
+# =============================================================================
+# Environment Variables - Staging configuration
+# =============================================================================
+env:
+  ALEPH_APP_TITLE: "OpenAleph Staging - Le Monde"
+  ALEPH_APP_NAME: "openaleph-stg"
+  ALEPH_APP_DESCRIPTION: "Staging - Plateforme d'investigation pour les journalistes du Monde"
+  ALEPH_UI_URL: "https://stg-openaleph.prd-decodeurs.eks.lemonde.io"
+  ALEPH_FORCE_HTTPS: "true"
+  ALEPH_URL_SCHEME: "https"
+
+  # Same admins as production for testing
+  ALEPH_ADMINS: "bshabou@ext.lemonde.fr,ferrer@lemonde.fr,m.romain@lemonde.fr,sanchez@lemonde.fr,aubert@lemonde.fr"
+
+  ALEPH_OAUTH_KEY: "760995207084-3fi1ne1qnjv5t80jg0hvi9htat890f4t.apps.googleusercontent.com"
+
+  ALEPH_PASSWORD_LOGIN: "true"
+  ALEPH_OAUTH: "true"
+  ALEPH_OAUTH_METADATA_URL: "https://accounts.google.com/.well-known/openid-configuration"
+
+  # Elasticsearch in staging namespace
+  OPENALEPH_SEARCH_URI: "https://stg-openaleph-es-http.stg-openaleph-elasticsearch.svc.cluster.local:9200"
+  OPENALEPH_SEARCH_INDEX_PREFIX: "openaleph-stg"
+  OPENALEPH_SEARCH_INDEX_WRITE: "v1"
+  OPENALEPH_SEARCH_INDEX_READ: "v1"
+  OPENALEPH_SEARCH_INDEX_REPLICAS: "1"
+  OPENALEPH_SEARCH_TIMEOUT: "600"
+
+  # Redis - TODO: provide staging Redis endpoint
+  # REDIS_URL: "redis://<staging-redis-endpoint>:6379/0"
+
+  # Storage (S3) - staging bucket
+  ARCHIVE_TYPE: "s3"
+  ARCHIVE_BUCKET: "lemonde-db-backups-staging"
+  AWS_REGION: "eu-west-1"
+
+  # Rate limiting
+  ALEPH_API_RATE_LIMIT: "600"
+
+  ALEPH_ENABLE_EXPERIMENTAL_BOOKMARKS_FEATURE: "true"
+
+# =============================================================================
+# Service Account - Staging
+# =============================================================================
+serviceAccount:
+  create: true
+  name: openaleph
+  # Optional: Enable IRSA instead of using AWS credentials in secrets
+  # annotations:
+  #   eks.amazonaws.com/role-arn: "arn:aws:iam::082700408956:role/stg-openaleph-s3-access"
+
+# =============================================================================
+# Pod Disruption Budget - Staging (disabled for flexibility)
+# =============================================================================
+podDisruptionBudget:
+  enabled: false

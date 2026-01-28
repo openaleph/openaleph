@@ -1,0 +1,33 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+{{- if .Values.api.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "openaleph.fullname" . }}-api
+  labels:
+    {{- include "openaleph.labels" . | nindent 4 }}
+    {{- include "openaleph.componentLabels" (dict "component" "api") | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "openaleph.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+{{- end }}
+---
+{{- if .Values.ui.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "openaleph.fullname" . }}-ui
+  labels:
+    {{- include "openaleph.labels" . | nindent 4 }}
+    {{- include "openaleph.componentLabels" (dict "component" "ui") | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "openaleph.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: ui
+{{- end }}
+{{- end }}

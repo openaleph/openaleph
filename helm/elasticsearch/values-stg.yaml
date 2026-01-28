@@ -1,0 +1,67 @@
+# OpenAleph Elasticsearch - Staging Values
+# Smaller cluster for testing before production migration
+
+# ECK Operator - disabled for STG (using cluster-wide ECK operator)
+eck-operator:
+  enabled: false
+
+elasticsearch:
+  name: stg-openaleph
+  namespace: stg-openaleph-elasticsearch
+
+  # Disable ECK management for single-node staging setup
+  # ECK's rolling upgrade causes issues with single data node (system indices become unavailable)
+  eckManaged: "false"
+
+  # Elasticsearch 9.x for OpenAleph 5.x
+  version: "9.0.0"
+
+  updateStrategy:
+    changeBudget:
+      maxUnavailable: -1  # Allow all pods unavailable for staging (faster upgrades)
+
+  nodeSets:
+    # Master node - 1 for staging
+    master:
+      count: 1
+      config:
+        node.roles: ["master"]
+        cluster.routing.allocation.disk.watermark.low: "85%"
+        cluster.routing.allocation.disk.watermark.high: "90%"
+        cluster.routing.allocation.disk.watermark.flood_stage: "95%"
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "1Gi"
+        limits:
+          cpu: "500m"
+          memory: "1Gi"
+      storage:
+        size: 10Gi
+        storageClassName: gp3
+
+    # Data node - 1 for staging
+    data:
+      count: 1
+      config:
+        node.roles: ["data", "ingest"]
+        cluster.routing.allocation.disk.watermark.low: "85%"
+        cluster.routing.allocation.disk.watermark.high: "90%"
+        cluster.routing.allocation.disk.watermark.flood_stage: "95%"
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "1Gi"
+        limits:
+          cpu: "500m"
+          memory: "1Gi"
+      storage:
+        size: 30Gi
+        storageClassName: gp3
+
+  # Required plugin for OpenAleph
+  plugins:
+    - analysis-icu
+
+  # Synonyms ConfigMap (optional - create if needed)
+  synonymsConfigMap: ""

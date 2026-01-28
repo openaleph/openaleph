@@ -1,0 +1,78 @@
+{{- if .Values.analyze.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "openaleph.fullname" . }}-analyze
+  labels:
+    {{- include "openaleph.labels" . | nindent 4 }}
+    {{- include "openaleph.componentLabels" (dict "component" "analyze") | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  replicas: {{ .Values.analyze.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "openaleph.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: analyze
+  strategy:
+    {{- toYaml .Values.analyze.strategy | nindent 4 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.analyze.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "openaleph.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: analyze
+    spec:
+      serviceAccountName: {{ include "openaleph.serviceAccountName" . }}
+      {{- with .Values.analyze.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: analyze
+          image: "{{ .Values.analyze.image.repository }}:{{ .Values.analyze.image.tag | default .Values.global.image.tag }}"
+          imagePullPolicy: {{ .Values.analyze.image.pullPolicy | default .Values.global.image.pullPolicy }}
+          {{- with .Values.analyze.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          envFrom:
+            {{- include "openaleph.commonEnvFrom" . | nindent 12 }}
+          env:
+            {{- range $key, $value := .Values.analyze.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.analyze.resources | nindent 12 }}
+          {{- with .Values.analyze.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: cache
+              mountPath: /.cache
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: cache
+          emptyDir: {}
+      {{- with .Values.analyze.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.analyze.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.analyze.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
