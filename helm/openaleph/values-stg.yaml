@@ -5,7 +5,7 @@ global:
   namingPrefix: openaleph
 
   image:
-    registry: ghcr.io/openaleph
+    registry: 829155541198.dkr.ecr.eu-west-1.amazonaws.com
     tag: "5.1.0"
     pullPolicy: Always
 
@@ -28,7 +28,7 @@ api:
   enabled: true
 
   image:
-    repository: ghcr.io/openaleph/openaleph
+    repository: 829155541198.dkr.ecr.eu-west-1.amazonaws.com/openaleph
     tag: "5.1.0"
 
   resources:
@@ -52,7 +52,7 @@ worker:
   replicaCount: 1
 
   image:
-    repository: ghcr.io/openaleph/openaleph
+    repository: 829155541198.dkr.ecr.eu-west-1.amazonaws.com/openaleph
     tag: "5.1.0"
 
   resources:
@@ -69,7 +69,7 @@ ingest:
   enabled: true
 
   image:
-    repository: ghcr.io/openaleph/ingest-file
+    repository: 829155541198.dkr.ecr.eu-west-1.amazonaws.com/openaleph
     tag: "5.1.0"
 
   resources:
@@ -97,7 +97,7 @@ analyze:
   replicaCount: 1
 
   image:
-    repository: ghcr.io/openaleph/ftm-analyze
+    repository: 829155541198.dkr.ecr.eu-west-1.amazonaws.com/openaleph
     tag: "5.1.0"
 
   resources:
@@ -119,7 +119,7 @@ ui:
   replicaCount: 1
 
   image:
-    repository: ghcr.io/openaleph/aleph-ui
+    repository: 829155541198.dkr.ecr.eu-west-1.amazonaws.com/openaleph-ui
     tag: "5.1.0"
 
   resources:
@@ -219,7 +219,7 @@ upgrade:
   enabled: true
 
   image:
-    repository: ghcr.io/openaleph/openaleph
+    repository: 829155541198.dkr.ecr.eu-west-1.amazonaws.com/openaleph
     tag: "5.1.0"
 
   resources:
