@@ -6,6 +6,8 @@ metadata:
   labels:
     {{- include "openaleph.labels" . | nindent 4 }}
     {{- include "openaleph.componentLabels" (dict "component" "api") | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "15"
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
@@ -30,6 +32,8 @@ metadata:
   labels:
     {{- include "openaleph.labels" . | nindent 4 }}
     {{- include "openaleph.componentLabels" (dict "component" "ingest") | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "15"
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
