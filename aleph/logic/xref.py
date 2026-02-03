@@ -75,7 +75,7 @@ XREF_CANDIDATES_QUERY_ROUNDTRIP_DURATION = Histogram(
 
 
 @cache
-def _get_nk_algorithm(name: str | None) -> type[ScoringAlgorithm] | None:
+def _get_nk_algorithm() -> type[ScoringAlgorithm] | None:
     if SETTINGS.XREF_ALGORITHM is not None:
         return get_algorithm(SETTINGS.XREF_ALGORITHM)
 
