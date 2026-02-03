@@ -2,17 +2,20 @@ import logging
 import shutil
 import typing
 from dataclasses import dataclass
+from functools import cache
 from tempfile import mkdtemp
 from timeit import default_timer
 
 import followthemoney
-from followthemoney import compare, model
+from followthemoney import E, compare, model
 from followthemoney.exc import InvalidData
 from followthemoney.export.excel import ExcelWriter
 from followthemoney.helpers import name_entity
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
 from followthemoney_compare.models import GLMBernoulli2EEvaluator
+from nomenklatura.matching import ScoringConfig, get_algorithm
+from nomenklatura.matching.types import ScoringAlgorithm
 from openaleph_search.index.entities import ENTITY_SOURCE, iter_proxies
 from openaleph_search.index.indexes import entities_read_index
 from openaleph_search.index.util import unpack_result
@@ -71,6 +74,15 @@ XREF_CANDIDATES_QUERY_ROUNDTRIP_DURATION = Histogram(
 )
 
 
+@cache
+def _get_nk_algorithm(name: str | None) -> type[ScoringAlgorithm] | None:
+    if SETTINGS.XREF_ALGORITHM is not None:
+        return get_algorithm(SETTINGS.XREF_ALGORITHM)
+
+
+NK_SCORING_CONFIG = ScoringConfig.defaults()
+
+
 @dataclass
 class Match:
     score: float
@@ -93,8 +105,21 @@ def _bulk_compare_ftmc_model(proxies):
         yield score, confidence, MODEL.version
 
 
+def _bulk_compare_nomenklatura(
+    proxies: list[tuple[E, E]],
+) -> typing.Generator[tuple[float, None, str]]:
+    algorithm = _get_nk_algorithm()
+    if algorithm is not None:
+        for entity, candidate in proxies:
+            result = algorithm.compare(entity, candidate, NK_SCORING_CONFIG)
+            yield result.score, None, algorithm.NAME
+
+
 def _bulk_compare(proxies):
     if not proxies:
+        return
+    if _get_nk_algorithm() is not None:
+        yield from _bulk_compare_nomenklatura(proxies)
         return
     if SETTINGS.XREF_MODEL is None:
         yield from _bulk_compare_ftm(proxies)
