@@ -16,6 +16,7 @@ dependencies = [
     "openaleph-search (>=5.1.2,<6.0.0)",
     "followthemoney @ git+https://github.com/dataresearchcenter/followthemoney.git@fix/pickle",
     "ftmq[postgres] (>=4.3.4,<5.0.0)",
+    "nomenklatura (>=4.6.1,<4.6.2)",
     "normality (>=3.0.2,<4.0.0)",
     "pydantic (>=2.10.6,<3.0.0)",
     "banal (>=1.0.6,<2.0.0)",
