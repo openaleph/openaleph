@@ -42,6 +42,7 @@ repos:
     rev: 26.1.0
     hooks:
       - id: black
+        args: ["--extend-exclude", "aleph/migrate"]
 
   - repo: https://github.com/csachs/pyproject-flake8
     rev: v7.0.0
@@ -52,7 +53,7 @@ repos:
         exclude: (test_[\w]+\.py|\.csv|\.json|\.lock|migrate/versions/[\w]+\.py)$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.14
+    rev: v0.15.0
     hooks:
       - id: ruff
         args: [ --fix ]

@@ -4,7 +4,7 @@
 # Full stack deployment with all services.
 #
 # Usage:
-#   docker compose -f docker-compose.production.yml up -d
+#   docker compose -f docker-compose.example.yml up -d
 #
 # Configuration:
 #   Set ALEPH_TAG environment variable to specify image version.
