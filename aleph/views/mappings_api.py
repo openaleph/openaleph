@@ -1,17 +1,23 @@
 import logging
+
 from banal import first
-from followthemoney import model
 from flask import Blueprint, request
+from followthemoney import model
 from werkzeug.exceptions import BadRequest, NotFound
 
 from aleph.core import db
 from aleph.model import Mapping, Status
-from aleph.search import QueryParser, DatabaseQueryResult
+from aleph.procrastinate.queues import queue_flush_mapping, queue_load_mapping
+from aleph.search import DatabaseQueryResult, QueryParser
 from aleph.views.serializers import MappingSerializer
-from aleph.views.util import get_db_collection, get_entityset, parse_request, get_nested
-from aleph.views.util import get_index_entity, require
-from aleph.procrastinate.queues import queue_load_mapping, queue_flush_mapping
-
+from aleph.views.util import (
+    get_db_collection,
+    get_entityset,
+    get_index_entity,
+    get_nested,
+    parse_request,
+    require,
+)
 
 blueprint = Blueprint("mappings_api", __name__)
 log = logging.getLogger(__name__)

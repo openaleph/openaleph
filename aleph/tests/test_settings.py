@@ -1,9 +1,9 @@
 import json
 import os
 from json.decoder import JSONDecodeError
-from aleph.settings import Settings
 from unittest.mock import patch
 
+from aleph.settings import Settings
 
 STRING_PREFIX = "FOO_"
 JSON_PREFIX = "BAR_"

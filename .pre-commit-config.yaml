@@ -42,6 +42,7 @@ repos:
     rev: 26.1.0
     hooks:
       - id: black
+        args: ["--extend-exclude", "aleph/migrate"]
 
   - repo: https://github.com/csachs/pyproject-flake8
     rev: v7.0.0
