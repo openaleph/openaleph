@@ -39,7 +39,7 @@ repos:
         args: ["--profile", "black"]
 
   - repo: https://github.com/psf/black
-    rev: 25.12.0
+    rev: 26.1.0
     hooks:
       - id: black
 
@@ -52,7 +52,7 @@ repos:
         exclude: (test_[\w]+\.py|\.csv|\.json|\.lock|migrate/versions/[\w]+\.py)$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.11
+    rev: v0.14.14
     hooks:
       - id: ruff
         args: [ --fix ]
@@ -76,13 +76,13 @@ repos:
       - id: rst-inline-touching-normal
 
   - repo: https://github.com/python-poetry/poetry
-    rev: 2.2.1
+    rev: 2.3.2
     hooks:
       - id: poetry-check
       - id: poetry-lock
 
   - repo: https://github.com/python-poetry/poetry-plugin-export
-    rev: 1.9.0
+    rev: 1.10.0
     hooks:
       - id: poetry-export
         args: ["--without-hashes", "-o", "requirements.txt"]
