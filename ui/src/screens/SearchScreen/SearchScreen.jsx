@@ -4,14 +4,13 @@ import { compose } from 'redux';
 import { connect } from 'react-redux';
 
 import withRouter from 'app/withRouter';
-import { getSearchConfig } from 'app/storage';
 import { selectEntitiesResult } from 'selectors';
 import { triggerQueryExport } from 'src/actions';
 import { SignInCallout } from 'components/common';
 import FacetedEntitySearch from 'components/EntitySearch/FacetedEntitySearch';
-import { getGroupField } from 'components/SearchField/util';
 import Screen from 'components/Screen/Screen';
 import { entitiesQuery } from 'queries';
+import { getColumnsFromHash, getDefaultColumns } from 'util/columnHash';
 
 import './SearchScreen.scss';
 
@@ -63,14 +62,12 @@ export class SearchScreen extends React.Component {
     );
   }
 }
-const defaultColumns = ['countries', 'dates'];
 
 const mapStateToProps = (state, ownProps) => {
   const { location } = ownProps;
 
-  // Get columns from storage to include necessary property fields in the query
-  const searchConfig = getSearchConfig();
-  const columns = searchConfig?.columns || defaultColumns.map(getGroupField);
+  // Get columns from URL hash to include necessary property fields in the query
+  const columns = getColumnsFromHash(location) || getDefaultColumns();
 
   const query = entitiesQuery(location, columns);
   const result = selectEntitiesResult(state, query);

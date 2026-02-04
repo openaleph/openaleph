@@ -239,13 +239,15 @@ class Query {
   }
 
   addIncludeFields(fields) {
-    // Add include_fields for property fields when using dehydrate mode
-    // This allows specific properties to be included in the response
+    // Add include_fields for all column fields when using dehydrate mode
+    // Property fields use 'properties.fieldName', group fields use just 'fieldName'
     let query = this;
-    const propertyFields = (fields || []).filter((field) => field.isProperty);
 
-    propertyFields.forEach((field) => {
-      query = query.add('include_fields', `properties.${field.name}`);
+    (fields || []).forEach((field) => {
+      const fieldName = field.isProperty
+        ? `properties.${field.name}`
+        : field.name;
+      query = query.add('include_fields', fieldName);
     });
 
     return query;
