@@ -8,6 +8,7 @@ export ALEPH_DEBUG := true
 export ALEPH_SECRET_KEY := development
 export ALEPH_SINGLE_USER := true
 export ALEPH_UI_URL := http://localhost:3000
+export ALEPH_UI_API_URL := http://localhost:5000
 export ARCHIVE_TYPE := file
 export ARCHIVE_PATH := data
 export OPENALEPH_ELASTICSEARCH_URI := http://localhost:9200
