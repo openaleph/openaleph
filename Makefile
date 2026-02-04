@@ -1,12 +1,9 @@
-COMPOSE=docker compose -f docker-compose.dev.yml
-COMPOSE_E2E=docker compose -f docker-compose.dev.yml -f docker-compose.e2e.yml
-APPDOCKER=$(COMPOSE) run --rm app
-TESTDOCKER=$(COMPOSE) run --no-deps --rm app
-UIDOCKER=$(COMPOSE) run --no-deps --rm ui
-ALEPH_TAG=latest
-BLACK_OPTS=--extend-exclude aleph/migrate
+COMPOSE = docker compose
+ALEPH_TAG ?= latest
 
-# env for non-docker local dev
+# =============================================================================
+# Environment for local development
+# =============================================================================
 export ALEPH_DEBUG := true
 export ALEPH_SECRET_KEY := development
 export ALEPH_SINGLE_USER := true
@@ -15,90 +12,115 @@ export ARCHIVE_TYPE := file
 export ARCHIVE_PATH := data
 export OPENALEPH_ELASTICSEARCH_URI := http://localhost:9200
 export OPENALEPH_DB_URI := postgresql://aleph:aleph@localhost:5432/aleph
+export PROCRASTINATE_DB_URI := postgresql://aleph:aleph@localhost:5432/aleph
 export FTM_FRAGMENTS_URI := postgresql://aleph:aleph@localhost:5432/aleph
 export REDIS_URL := redis://localhost:6379
 export PROCRASTINATE_APP := aleph.procrastinate.tasks.app
-export OPENALEPH_SEARCH_AUTH=1
-export OPENALEPH_SEARCH_AUTH_FIELD=collection_id
+export OPENALEPH_SEARCH_AUTH := 1
+export OPENALEPH_SEARCH_AUTH_FIELD := collection_id
 
-all: build upgrade web
+# =============================================================================
+# Development (local)
+# =============================================================================
 
 services:
-	$(COMPOSE) up -d --remove-orphans redis postgres elasticsearch \
-		ingest-file ftm-analyze procrastinate-worker
+	$(COMPOSE) up -d postgres elasticsearch redis ingest-file ftm-analyze
+
+stop:
+	$(COMPOSE) down --remove-orphans
+
+api: services
+	FLASK_APP=aleph.wsgi flask run -h 0.0.0.0 -p 5000 --with-threads --reload --debugger
+
+worker: services
+	procrastinate worker -q openaleph,openaleph-management --concurrency 2
+
+ui:
+	cd ui && npm start
+
+upgrade: services
+	@$(COMPOSE) exec postgres pg_isready --timeout=30
+	@$(COMPOSE) exec elasticsearch timeout 30 bash -c "printf 'Waiting for elasticsearch'; until curl --silent --output /dev/null localhost:9200/_cat/health?h=st; do printf '.'; sleep 1; done; printf '\n'"
+	aleph upgrade
+
+update: services
+	aleph update
 
 shell: services
-	$(APPDOCKER) /bin/bash
+	aleph shell
 
-test-services:
-	$(COMPOSE) up -d --remove-orphans postgres elasticsearch redis
+tail:
+	$(COMPOSE) logs -f
 
-# To run a single test file:
-# make test file=aleph/tests/test_manage.py
-test: test-services
-	$(TESTDOCKER) contrib/test.sh $(file)
+# =============================================================================
+# Testing & Linting
+# =============================================================================
 
-test-ui:
-	$(UIDOCKER) npm run test
+test: services
+	pytest aleph/tests/ $(file)
 
 lint:
 	ruff check .
 
 lint-ui:
-	$(UIDOCKER) npm run lint
+	cd ui && npm run lint
 
 format:
-	black $(BLACK_OPTS) aleph/
+	black --extend-exclude aleph/migrate aleph/
 
 format-ui:
-	$(UIDOCKER) npm run format
+	cd ui && npm run format
 
 format-check:
-	black --check $(BLACK_OPTS) aleph/
+	black --check --extend-exclude aleph/migrate aleph/
 
 format-check-ui:
-	$(UIDOCKER) npm run format:check
+	cd ui && npm run format:check
 
-upgrade: build
-	$(COMPOSE) up -d postgres elasticsearch
-	# wait for postgres to be available
-	@$(COMPOSE) exec postgres pg_isready --timeout=30
-	# wait for elasticsearch to be available
-	@$(COMPOSE) exec elasticsearch timeout 30 bash -c "printf 'Waiting for elasticsearch'; until curl --silent --output /dev/null localhost:9200/_cat/health?h=st; do printf '.'; sleep 1; done; printf '\n'"
-	$(APPDOCKER) aleph upgrade
+# =============================================================================
+# Build
+# =============================================================================
 
-upgrade-local: test-services
-	aleph upgrade
+build:
+	docker build -t ghcr.io/openaleph/openaleph:$(ALEPH_TAG) .
 
-update: test-services
-	$(APPDOCKER) aleph update
+build-ui:
+	docker build -t ghcr.io/openaleph/aleph-ui:$(ALEPH_TAG) ui/
 
-update-local: test-services
-	aleph update
+build-all: build build-ui
 
-api: services
-	$(COMPOSE) up --abort-on-container-exit api
+# =============================================================================
+# Development setup
+# =============================================================================
 
-api-local: test-services
-	FLASK_APP=aleph.wsgi flask run -h 0.0.0.0 -p 5000 --with-threads --reload --debugger
+install:
+	python3 -m pip install --upgrade pip
+	python3 -m pip install -q --no-deps -r requirements.txt
 
-web: services
-	$(COMPOSE) up api ui
+dev: install
+	python3 -m pip install -q --no-deps -r requirements-dev.txt
 
-web-local:
-	cd ui ; ALEPH_UI_API_URL=http://localhost:5000 npm run start
+dev-ui:
+	cd ui && npm install
 
-worker: services
-	$(COMPOSE) up procrastinate-worker
+fixtures:
+	aleph crawldir -f fixtures aleph/tests/fixtures/samples
 
-worker-local: test-services
-	procrastinate worker -q openaleph,openaleph-management --concurrency 2
+# =============================================================================
+# Translations
+# =============================================================================
 
-tail:
-	$(COMPOSE) logs -f
+translate: dev
+	cd ui && npm run messages
+	pybabel extract -F babel.cfg -k lazy_gettext -o aleph/translations/messages.pot aleph
+	tx push --source
+	tx pull -a -f
+	cd ui && npm run translate
+	pybabel compile -d aleph/translations -D aleph -f
 
-stop:
-	$(COMPOSE) down --remove-orphans
+# =============================================================================
+# Utilities
+# =============================================================================
 
 clean:
 	rm -rf dist build .eggs ui/build
@@ -109,58 +131,10 @@ clean:
 	find . -type d -name __pycache__ -exec rm -r {} \+
 	find ui/src -name '*.css' -exec rm -f {} +
 
-build:
-	$(COMPOSE) build
-
-build-ui:
-	docker build -t ghcr.io/openaleph/aleph-ui-production:$(ALEPH_TAG) -f ui/Dockerfile.production ui
-
-build-e2e:
-	$(COMPOSE_E2E) build --build-arg PLAYWRIGHT_VERSION=$(shell awk -F'==' '/^playwright==/ { print $$2 }' e2e/requirements.txt)
-
-build-full: build build-ui build-e2e
-
-ingest-restart:
-	$(COMPOSE) up -d --no-deps --remove-orphans --force-recreate ingest-file
-
-dev:
-	python3 -m pip install --upgrade pip
-	python3 -m pip install -q -r requirements.txt
-# 	python3 -m pip install -q -r requirements-dev.txt
-
-fixtures:
-	aleph crawldir -f fixtures aleph/tests/fixtures/samples
-
-# pybabel init -i aleph/translations/messages.pot -d aleph/translations -l de -D aleph
-translate: dev
-	npm run --prefix ui messages
-	pybabel extract -F babel.cfg -k lazy_gettext -o aleph/translations/messages.pot aleph
-	tx push --source
-	tx pull -a -f
-	npm run --prefix ui translate
-	pybabel compile -d aleph/translations -D aleph -f
-
-e2e/test-results:
-	mkdir -p e2e/test-results
-
-e2e: services e2e/test-results
-	$(COMPOSE_E2E) run --rm app aleph upgrade
-	$(COMPOSE_E2E) run --rm app aleph createuser --name="E2E Admin" --admin --password="admin" admin@admin.admin
-	$(COMPOSE_E2E) up -d api ui worker
-	BASE_URL=http://ui:8080 $(COMPOSE_E2E) run --rm e2e pytest -s -v --output=/e2e/test-results/ --screenshot=only-on-failure --video=retain-on-failure e2e/
-
-e2e-local-setup: dev
-	python3 -m pip install -q -r e2e/requirements.txt
-	playwright install
-
-e2e-local:
-	pytest -s -v --screenshot only-on-failure e2e/
-
-.PHONY: build services e2e
+migrations:
+	FLASK_APP=aleph.wsgi flask db migrate
 
 documentation:
 	mkdocs build
-	aws --endpoint-url https://s3.investigativedata.org s3 sync ./site s3://openaleph.org/docs
 
-migrations:
-	FLASK_APP=aleph.wsgi flask db migrate
+.PHONY: services stop api worker ui upgrade update shell tail test lint format build install dev clean

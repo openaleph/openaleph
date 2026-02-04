@@ -230,6 +230,7 @@ def _reindex_collection(
     diff_only=False,
     model=True,
     mappings=True,
+    profiles=True,
     queue_batches=False,
     batch_size=10_000,
     schema=None,
@@ -244,6 +245,7 @@ def _reindex_collection(
             diff_only=diff_only,
             model=model,
             mappings=mappings,
+            profiles=profiles,
             queue_batches=queue_batches,
             batch_size=batch_size,
             schema=schema,
@@ -259,6 +261,7 @@ def _reindex_collection(
 @click.option("--flush", is_flag=True, default=False)
 @click.option("--model/--no-model", is_flag=True, default=True)
 @click.option("--mappings/--no-mappings", is_flag=True, default=True)
+@click.option("--profiles/--no-profiles", is_flag=True, default=True)
 @click.option(
     "--diff-only",
     is_flag=True,
@@ -308,6 +311,7 @@ def reindex(
     diff_only=False,
     model=True,
     mappings=True,
+    profiles=True,
     queue_batches=False,
     batch_size=10_000,
     schema=None,
@@ -322,6 +326,7 @@ def reindex(
         diff_only=diff_only,
         model=model,
         mappings=mappings,
+        profiles=profiles,
         queue_batches=queue_batches,
         batch_size=batch_size,
         schema=schema,

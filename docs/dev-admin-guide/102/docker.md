@@ -2,7 +2,7 @@
 
 [Read this first](../101/index.md)
 
-We provide a reference `docker-compose.yml` as a starting point. The [online version in the OpenAleph repository contains the current image tags](https://github.com/openaleph/openaleph/blob/main/docker-compose.yml)
+We provide a reference `docker-compose.example.yml` as a starting point. The [online version in the OpenAleph repository contains the current image tags](https://github.com/openaleph/openaleph/blob/main/docker-compose.example.yml)
 
 This is a minimal working example:
 

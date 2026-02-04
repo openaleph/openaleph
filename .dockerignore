@@ -1,17 +1,85 @@
-build
-data
-site
-htmlcov
+# =============================================================================
+# Aleph Backend .dockerignore
+# =============================================================================
+# Optimized to exclude unnecessary files from Docker build context.
+# This speeds up builds by reducing context transfer time.
+
+# UI directory (built separately)
 ui
-helm
-aleph.env
-aleph.egg-info
-docker-compose.*
-celerybeat-schedul*
-contrib/allCountries.zip
+
+# Build artifacts
+build
+dist
+*.egg-info
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Data and runtime files
+data
+*.db
+*.sqlite
+
+# Documentation (not needed in runtime)
+site
+docs
+*.md
+!README.md
+
+# Test artifacts
+htmlcov
+.coverage
+.pytest_cache
+.tox
+.nox
+
+# Development configuration
 .git
-.vscode
 .github
-.travis.yml
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Environment files (security)
 .env
+.env.*
+aleph.env
+*.local
+
+# Docker files (avoid recursive context)
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Helm charts (deployed separately)
+helm
+
+# CI/CD
+.travis.yml
+.gitlab-ci.yml
+Makefile
+
+# Virtual environments
+.venv
+venv
+env
+
+# Large contrib files that are downloaded in Dockerfile
+contrib/allCountries.zip
+contrib/*.pkl
+contrib/*.zip
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+celerybeat-schedul*
+
+# Transifex
 .tx

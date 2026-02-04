@@ -1,3 +1,37 @@
-node_modules*
-build*
-npm-debug.log
+# Dependencies (will be installed in container)
+node_modules
+
+# Build output
+build
+dist
+
+# Development/IDE
+.git
+.gitignore
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage
+.nyc_output
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed in container)
+*.md
+!README.md
+
+# Docker files (avoid recursive context)
+Dockerfile*
+docker-compose*
+.dockerignore

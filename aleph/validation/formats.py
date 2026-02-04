@@ -1,13 +1,12 @@
-from normality import stringify
 from flask_babel import gettext
 from followthemoney import model
-from followthemoney.types import registry
 from followthemoney.namespace import Namespace
+from followthemoney.types import registry
 from jsonschema import FormatChecker
+from normality import stringify
 
-from aleph.settings import SETTINGS
 from aleph.model import Collection, EntitySet
-
+from aleph.settings import SETTINGS
 
 checker = FormatChecker()
 

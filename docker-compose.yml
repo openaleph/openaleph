@@ -1,35 +1,59 @@
+# =============================================================================
+# Development Services
+# =============================================================================
+# Minimal services for local development.
+# Run backend and UI locally, not in containers.
+#
+# Usage:
+#   make services    # Start all services
+#   make api         # Run API locally
+#   make worker      # Run worker locally
+#   make ui          # Run UI locally (cd ui && npm start)
+
 services:
   postgres:
-    image: postgres:18
+    image: postgres:17
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql
+      - postgres-data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: aleph
       POSTGRES_PASSWORD: aleph
       POSTGRES_DATABASE: aleph
 
   elasticsearch:
-    image: ghcr.io/openaleph/elasticsearch:latest
-    hostname: elasticsearch
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - xpack.security.transport.ssl.enabled=false
-      - xpack.security.http.ssl.enabled=false
+    image: ghcr.io/openaleph/elasticsearch:9
+    restart: on-failure
+    ports:
+      - "127.0.0.1:9200:9200"
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
+    environment:
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - "discovery.type=single-node"
+      - "xpack.security.enabled=false"
+      - "xpack.security.transport.ssl.enabled=false"
+      - "xpack.security.http.ssl.enabled=false"
+      - "http.cors.enabled=true"
+      - "http.cors.allow-origin=/.*/"
+      - "http.cors.allow-headers=/.*/"
+      - "http.cors.allow-credentials=true"
+      - "network.host=0.0.0.0"
 
   redis:
     image: redis:alpine
-    command: [ "redis-server", "--save", "3600", "10" ]
+    command: ["redis-server", "--save", "3600", "10"]
+    ports:
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis-data:/data
 
-  ingest:
-    image: ghcr.io/openaleph/ingest-file:5.1.0
-    command: procrastinate worker -q ingest
-    tmpfs:
-      - /tmp:mode=777
+  ingest-file:
+    image: ghcr.io/openaleph/ingest-file:latest
+    command: procrastinate worker -q ingest --concurrency 2
+    hostname: ingest
+    tmpfs: /tmp
     volumes:
       - archive-data:/data
     depends_on:
@@ -39,60 +63,19 @@ services:
     env_file:
       - aleph.env
 
-  analyze:
-    image: ghcr.io/openaleph/ftm-analyze:5.1.0
-    command: procrastinate worker -q analyze
-    tmpfs:
-      - /tmp:mode=777
-    depends_on:
-      - postgres
-      - redis
-    restart: on-failure
-    env_file:
-      - aleph.env
-
-  worker:
-    image: ghcr.io/openaleph/openaleph:5.1.0
-    command: procrastinate worker -q openaleph,openaleph-management
+  ftm-analyze:
+    image: ghcr.io/dataresearchcenter/ftm-analyze:latest
+    entrypoint: procrastinate worker -q analyze --concurrency 2
     restart: on-failure
     depends_on:
       - postgres
-      - elasticsearch
-      - redis
-      - ingest
     tmpfs:
       - /tmp
-    volumes:
-      - archive-data:/data
     env_file:
       - aleph.env
-
-  api:
-    image: ghcr.io/openaleph/openaleph:5.1.0
-    expose:
-      - 8000
-    depends_on:
-      - postgres
-      - elasticsearch
-      - redis
-      - worker
-      - ingest
-    tmpfs:
-      - /tmp
-    volumes:
-      - archive-data:/data
-    env_file:
-      - aleph.env
-
-  ui:
-    image: ghcr.io/openaleph/aleph-ui:5.1.0
-    depends_on:
-      - api
-    ports:
-      - "8080:8080"
 
 volumes:
-  archive-data: {}
-  postgres-data: {}
-  redis-data: {}
-  elasticsearch-data: {}
+  archive-data:
+  elasticsearch-data:
+  postgres-data:
+  redis-data:
