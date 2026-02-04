@@ -21,6 +21,13 @@ export OPENALEPH_SEARCH_AUTH := 1
 export OPENALEPH_SEARCH_AUTH_FIELD := collection_id
 
 # =============================================================================
+# Example Demo
+# =============================================================================
+
+up:
+	$(COMPOSE) -f docker-compose.example.yml up
+
+# =============================================================================
 # Development (local)
 # =============================================================================
 
@@ -138,4 +145,4 @@ migrations:
 documentation:
 	mkdocs build
 
-.PHONY: services stop api worker ui upgrade update shell tail test lint format build install dev clean
+.PHONY: services stop api worker ui upgrade update shell tail test lint format build install dev clean up
