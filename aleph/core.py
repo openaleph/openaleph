@@ -2,6 +2,7 @@ import logging
 from urllib.parse import urlencode, urljoin
 
 import sentry_sdk
+from anystore.logging import configure_logging
 from flask import Flask, request
 from flask import url_for as flask_url_for
 from flask_babel import Babel
@@ -16,7 +17,6 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 from servicelayer.archive import init_archive
 from servicelayer.cache import get_redis
 from servicelayer.extensions import get_extensions
-from servicelayer.logs import configure_logging
 from werkzeug.local import LocalProxy
 from werkzeug.middleware.profiler import ProfilerMiddleware
 
@@ -56,7 +56,7 @@ def create_app(config=None):
     if config is None:
         config = {}
 
-    configure_logging(level=logging.DEBUG if SETTINGS.DEBUG else logging.INFO)
+    configure_logging()
     logging.getLogger("watchdog").setLevel(logging.INFO)
 
     if SETTINGS.SENTRY_DSN:
