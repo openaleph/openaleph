@@ -31,6 +31,8 @@ export {
   queryMoreLikeThis,
   queryNearby,
   queryEntityExpand,
+  triggerEntityTranscribe,
+  triggerEntityTranslate,
   updateEntity,
 } from './entityActions';
 export {
