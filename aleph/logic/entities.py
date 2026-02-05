@@ -2,9 +2,10 @@ import logging
 
 from banal import ensure_dict
 from flask_babel import gettext
-from followthemoney import model
+from followthemoney import EntityProxy, model
 from followthemoney.exc import InvalidData
 from followthemoney.types import registry
+from openaleph_procrastinate.defer import tasks
 from openaleph_search.index import entities as index
 
 from aleph.core import cache, db
@@ -19,6 +20,7 @@ from aleph.procrastinate.queues import (
     queue_prune_entity,
     queue_update_entity,
 )
+from aleph.settings import SETTINGS
 from aleph.util import make_entity_proxy
 
 log = logging.getLogger(__name__)
@@ -124,6 +126,28 @@ def validate_entity(data):
     # making it valid -- all this does, therefore, is to raise an
     # exception that notifies the user.
     schema.validate(data)
+
+
+def should_transcribe(proxy: EntityProxy) -> bool:
+    """Check if an entity is eligible for transcription."""
+    if not tasks.transcribe.defer:
+        return False
+    if proxy.schema.is_a("Video") or proxy.schema.is_a("Audio"):
+        return not proxy.has("bodyText")
+    return False
+
+
+def should_translate(proxy: EntityProxy) -> bool:
+    """Check if an entity is eligible for translation."""
+    if not tasks.translate.defer:
+        return False
+    if proxy.schema.is_a("Analyzable"):
+        if proxy.has("translatedText"):
+            return False
+        source_lang = proxy.get("detectedLanguage")
+        if source_lang and SETTINGS.FTM_TRANSLATE_TARGET_LANGUAGE != source_lang:
+            return True
+    return False
 
 
 def check_write_entity(entity, authz):

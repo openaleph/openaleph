@@ -10,7 +10,12 @@ from rigour.mime.types import CSV, PDF
 
 from aleph.core import url_for
 from aleph.logic import resolver
-from aleph.logic.entities import check_write_entity, transliterate_values
+from aleph.logic.entities import (
+    check_write_entity,
+    should_transcribe,
+    should_translate,
+    transliterate_values,
+)
 from aleph.logic.util import archive_url, collection_url, entity_url
 from aleph.model import (
     Alert,
@@ -254,6 +259,12 @@ class EntitySerializer(Serializer):
                 links["csv"] = archive_url(
                     csv_hash, file_name=name, mime_type=CSV, role_id=request.authz.id
                 )
+
+        if should_transcribe(proxy):
+            links["transcribe"] = url_for("entities_api.transcribe", entity_id=proxy.id)
+
+        if should_translate(proxy):
+            links["translate"] = url_for("entities_api.translate", entity_id=proxy.id)
 
         collection = obj.get("collection") or {}
         coll_id = obj.pop("collection_id", collection.get("id"))
