@@ -16,8 +16,13 @@ import c from 'classnames';
 
 import withRouter from 'app/withRouter';
 import { triggerQueryExport } from 'src/actions';
-import { setSearchConfig, getSearchConfig } from 'app/storage';
+import { getSearchConfig, setSearchConfig } from 'app/storage';
 import { getGroupField } from 'components/SearchField/util';
+import {
+  getColumnsFromHash,
+  getDefaultColumns,
+  setColumnsInHash,
+} from 'util/columnHash';
 import { DualPane, ErrorSection, HotkeysContainer } from 'components/common';
 import EntitySearch from 'components/EntitySearch/EntitySearch';
 import SearchActionBar from 'components/common/SearchActionBar';
@@ -25,6 +30,7 @@ import Facets from 'components/Facet/Facets';
 import SearchFieldSelect from 'components/SearchField/SearchFieldSelect';
 import QueryTags from 'components/QueryTags/QueryTags';
 import togglePreview from 'util/togglePreview';
+import { selectModel } from 'selectors';
 
 import './FacetedEntitySearch.scss';
 
@@ -41,7 +47,6 @@ const defaultFacets = [
   'addresses',
   'tags',
 ];
-const defaultColumns = ['countries', 'dates'];
 
 const messages = defineMessages({
   no_results_title: {
@@ -207,16 +212,25 @@ class FacetedEntitySearch extends React.Component {
   saveSearchConfig(config) {
     const { navigate, location } = this.props;
 
-    setSearchConfig(config);
+    // Store facets in localStorage (kept for facet persistence)
+    if (config.facets !== undefined) {
+      setSearchConfig({ facets: config.facets });
+    }
 
-    navigate(
-      {
-        pathname: location.pathname,
-        search: location.search,
-        hash: location.hash,
-      },
-      { replace: true }
-    );
+    // Store columns in URL hash
+    if (config.columns !== undefined) {
+      setColumnsInHash(navigate, location, config.columns);
+    } else {
+      // Trigger re-render without navigation when only facets changed
+      navigate(
+        {
+          pathname: location.pathname,
+          search: location.search,
+          hash: location.hash,
+        },
+        { replace: true }
+      );
+    }
   }
 
   renderFacets() {
@@ -416,10 +430,28 @@ class FacetedEntitySearch extends React.Component {
   }
 }
 const mapStateToProps = (state, ownProps) => {
-  const { query } = ownProps;
+  const { query, location } = ownProps;
   const searchConfig = getSearchConfig();
   const facets = searchConfig?.facets || defaultFacets.map(getGroupField);
-  const columns = searchConfig?.columns || defaultColumns.map(getGroupField);
+  const model = selectModel(state);
+
+  // Read columns from URL hash
+  const columnsFromHash = getColumnsFromHash(location);
+  let columns = columnsFromHash || getDefaultColumns();
+
+  // Resolve labels for property columns using the FTM model
+  if (model?.getProperties) {
+    const allProperties = model.getProperties();
+    columns = columns.map((col) => {
+      if (col.isProperty && !col.label) {
+        const prop = allProperties.find((p) => p.name === col.name);
+        if (prop) {
+          return { ...col, label: prop.label, type: prop.type?.name };
+        }
+      }
+      return col;
+    });
+  }
 
   // add any active facets to the list of displayed columns
   const activeFacetKeys = query.getList('facet');
@@ -432,7 +464,7 @@ const mapStateToProps = (state, ownProps) => {
 
   return {
     hasCustomFacets: !!searchConfig?.facets,
-    hasCustomColumns: !!searchConfig?.columns,
+    hasCustomColumns: !!columnsFromHash,
     facets,
     columns: _.uniqBy([...columns, ...activeFacets], (facet) => facet.name),
   };

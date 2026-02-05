@@ -18,6 +18,7 @@ import FacetedEntitySearch from 'components/EntitySearch/FacetedEntitySearch';
 import { ErrorSection, Schema } from 'components/common';
 import { collectionSearchQuery } from 'queries';
 import { selectEntitiesResult } from 'selectors';
+import { getColumnsFromHash, getDefaultColumns } from 'util/columnHash';
 
 import './InvestigationViews.scss';
 
@@ -123,9 +124,16 @@ class InvestigationViews extends React.Component {
 
 const mapStateToProps = (state, ownProps) => {
   const { collectionId, location } = ownProps;
-  const searchQuery = collectionSearchQuery(location, collectionId, {
-    highlight: true,
-  });
+
+  // Get columns from URL hash to include necessary property fields in the query
+  const columns = getColumnsFromHash(location) || getDefaultColumns();
+
+  const searchQuery = collectionSearchQuery(
+    location,
+    collectionId,
+    { highlight: true },
+    columns
+  );
 
   return {
     searchQuery,

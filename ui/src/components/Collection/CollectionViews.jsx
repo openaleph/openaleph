@@ -13,6 +13,7 @@ import collectionViewIds from 'components/Collection/collectionViewIds';
 import CollectionView from 'components/Collection/CollectionView';
 import { collectionSearchQuery } from 'queries';
 import { selectCollection, selectEntitiesResult } from 'selectors';
+import { getColumnsFromHash, getDefaultColumns } from 'util/columnHash';
 
 import './CollectionViews.scss';
 
@@ -126,9 +127,16 @@ class CollectionViews extends React.Component {
 
 const mapStateToProps = (state, ownProps) => {
   const { collectionId, location } = ownProps;
-  const searchQuery = collectionSearchQuery(location, collectionId, {
-    highlight: true,
-  });
+
+  // Get columns from URL hash to include necessary property fields in the query
+  const columns = getColumnsFromHash(location) || getDefaultColumns();
+
+  const searchQuery = collectionSearchQuery(
+    location,
+    collectionId,
+    { highlight: true },
+    columns
+  );
 
   return {
     collection: selectCollection(state, collectionId),

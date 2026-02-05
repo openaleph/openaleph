@@ -63,9 +63,6 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # Copy only the build output from builder stage
 COPY --from=builder /app/build /assets
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
-
 EXPOSE 8080
 
 CMD ["nginx", "-g", "daemon off;"]
