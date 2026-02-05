@@ -3,9 +3,10 @@ import logging
 from flask import Blueprint, request
 from flask_babel import gettext
 from followthemoney.compare import compare
+from openaleph_procrastinate.defer import tasks
 from openaleph_search.settings import MAX_PAGE
 from rigour.mime.types import ZIP
-from werkzeug.exceptions import NotFound
+from werkzeug.exceptions import BadRequest, NotFound
 
 from aleph.core import db, url_for
 from aleph.logic.entities import (
@@ -20,7 +21,13 @@ from aleph.logic.html import sanitize_html
 from aleph.logic.profiles import pairwise_judgements
 from aleph.model.bookmark import Bookmark
 from aleph.model.entityset import EntitySet, Judgement
-from aleph.procrastinate.queues import OP_EXPORT_SEARCH, queue_export_search
+from aleph.procrastinate.queues import (
+    OP_EXPORT_SEARCH,
+    queue_analyze,
+    queue_export_search,
+    queue_transcribe,
+    queue_translate,
+)
 from aleph.search import (
     DatabaseQueryResult,
     EntitiesQuery,
@@ -764,3 +771,129 @@ def entitysets(entity_id):
     )
     result = DatabaseQueryResult(request, entitysets, parser=parser)
     return EntitySetSerializer.jsonify_result(result)
+
+
+@blueprint.route("/api/2/entities/<entity_id>/analyze", methods=["POST"])
+def analyze(entity_id):
+    """
+    ---
+    post:
+      summary: Analyze an entity
+      description: >
+        Trigger analysis processing for the entity with id `entity_id`.
+        Analysis extracts metadata, detects languages, and performs OCR
+        on document entities. Requires the analysis queue to be enabled
+        on the server.
+      parameters:
+      - in: path
+        name: entity_id
+        required: true
+        schema:
+          type: string
+          format: entity-id
+      responses:
+        '202':
+          description: Accepted - analysis job queued
+        '400':
+          description: Analysis queue is not enabled on this instance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Entity not found
+      tags:
+      - Entity
+    """
+    if not tasks.analyze.defer:
+        raise BadRequest("Analysis queue is not enabled on this OpenAleph instance")
+    entity = get_index_entity(entity_id, request.authz.WRITE)
+    collection = get_db_collection(entity.get("collection_id"), request.authz.WRITE)
+    tag_request(collection_id=collection.id, entity_id=entity_id)
+    proxy = make_entity_proxy(entity)
+    queue_analyze(collection, proxy)
+    return ("", 202)
+
+
+@blueprint.route("/api/2/entities/<entity_id>/transcribe", methods=["POST"])
+def transcribe(entity_id):
+    """
+    ---
+    post:
+      summary: Transcribe an entity
+      description: >
+        Trigger audio/video transcription for the entity with id `entity_id`.
+        Uses speech-to-text to extract text content from audio and video
+        files. Requires the transcription queue to be enabled on the server.
+      parameters:
+      - in: path
+        name: entity_id
+        required: true
+        schema:
+          type: string
+          format: entity-id
+      responses:
+        '202':
+          description: Accepted - transcription job queued
+        '400':
+          description: Transcription queue is not enabled on this instance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Entity not found
+      tags:
+      - Entity
+    """
+    if not tasks.transcribe.defer:
+        raise BadRequest(
+            "Transcription queue is not enabled on this OpenAleph instance"
+        )
+    entity = get_index_entity(entity_id, request.authz.WRITE)
+    collection = get_db_collection(entity.get("collection_id"), request.authz.WRITE)
+    tag_request(collection_id=collection.id, entity_id=entity_id)
+    proxy = make_entity_proxy(entity)
+    queue_transcribe(collection, proxy)
+    return ("", 202)
+
+
+@blueprint.route("/api/2/entities/<entity_id>/translate", methods=["POST"])
+def translate(entity_id):
+    """
+    ---
+    post:
+      summary: Translate an entity
+      description: >
+        Trigger translation processing for the entity with id `entity_id`.
+        Translates text content to the configured target language. Requires
+        the translation queue to be enabled on the server.
+      parameters:
+      - in: path
+        name: entity_id
+        required: true
+        schema:
+          type: string
+          format: entity-id
+      responses:
+        '202':
+          description: Accepted - translation job queued
+        '400':
+          description: Translation queue is not enabled on this instance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Entity not found
+      tags:
+      - Entity
+    """
+    if not tasks.translate.defer:
+        raise BadRequest("Translation queue is not enabled on this OpenAleph instance")
+    entity = get_index_entity(entity_id, request.authz.WRITE)
+    collection = get_db_collection(entity.get("collection_id"), request.authz.WRITE)
+    tag_request(collection_id=collection.id, entity_id=entity_id)
+    proxy = make_entity_proxy(entity)
+    queue_translate(collection, proxy)
+    return ("", 202)
