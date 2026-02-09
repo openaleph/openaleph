@@ -206,6 +206,11 @@ class Settings:
         self.ENABLE_EXPERIMENTAL_BOOKMARKS_FEATURE = env.get(
             "ALEPH_ENABLE_EXPERIMENTAL_BOOKMARKS_FEATURE", False
         )
+        self.ENABLE_TIMELINES = env.to_bool("ALEPH_ENABLE_TIMELINES", True)
+        self.ENABLE_LISTS = env.to_bool("ALEPH_ENABLE_LISTS", True)
+        self.ENABLE_NETWORK_DIAGRAMS = env.to_bool(
+            "ALEPH_ENABLE_NETWORK_DIAGRAMS", True
+        )
 
         ###############################################################################
         # Feedback
