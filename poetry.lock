@@ -3883,7 +3883,7 @@ werkzeug = ">=3.1.3,<4.0.0"
 type = "git"
 url = "https://github.com/openaleph/openaleph-search.git"
 reference = "HEAD"
-resolved_reference = "2f641e058b838d1b9abc5e00b13bb10ba81d8742"
+resolved_reference = "e773f8d891e73bbffd991483498f3464965f4b0f"
 
 [[package]]
 name = "openaleph-servicelayer"
@@ -6216,20 +6216,20 @@ test = ["argcomplete (>=3.0.3)", "mypy (>=1.7.0)", "pre-commit", "pytest (>=7.0,
 
 [[package]]
 name = "typer"
-version = "0.23.1"
+version = "0.23.2"
 description = "Typer, build great CLIs. Easy to code. Based on Python type hints."
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "typer-0.23.1-py3-none-any.whl", hash = "sha256:3291ad0d3c701cbf522012faccfbb29352ff16ad262db2139e6b01f15781f14e"},
-    {file = "typer-0.23.1.tar.gz", hash = "sha256:2070374e4d31c83e7b61362fd859aa683576432fd5b026b060ad6b4cd3b86134"},
+    {file = "typer-0.23.2-py3-none-any.whl", hash = "sha256:e9c8dc380f82450b3c851a9b9d5a0edf95d1d6456ae70c517d8b06a50c7a9978"},
+    {file = "typer-0.23.2.tar.gz", hash = "sha256:a99706a08e54f1aef8bb6a8611503808188a4092808e86addff1828a208af0de"},
 ]
 
 [package.dependencies]
 annotated-doc = ">=0.0.2"
-click = ">=8.0.0"
-rich = ">=10.11.0"
+click = {version = ">=8.2.1", markers = "python_version >= \"3.10\""}
+rich = ">=12.3.0"
 shellingham = ">=1.3.0"
 
 [[package]]
