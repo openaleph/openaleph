@@ -57,7 +57,7 @@ python-dateutil==2.9.0.post0 ; python_version >= "3.12" and python_version < "3.
 pytokens==0.4.1 ; python_version >= "3.12" and python_version < "3.14"
 pyyaml-env-tag==1.1 ; python_version >= "3.12" and python_version < "3.14"
 pyyaml==6.0.2 ; python_version >= "3.12" and python_version < "3.14"
-redis==7.1.1 ; python_version >= "3.12" and python_version < "3.14"
+redis==7.2.0 ; python_version >= "3.12" and python_version < "3.14"
 requests==2.32.3 ; python_version >= "3.12" and python_version < "3.14"
 ruff==0.15.1 ; python_version >= "3.12" and python_version < "3.14"
 six==1.17.0 ; python_version >= "3.12" and python_version < "3.14"
