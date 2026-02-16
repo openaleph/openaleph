@@ -1,13 +1,14 @@
 import logging
 from datetime import datetime
-from normality import stringify
-from sqlalchemy import or_, not_, func
+
 from itsdangerous import URLSafeTimedSerializer
-from werkzeug.security import generate_password_hash, check_password_hash
+from normality import stringify
+from sqlalchemy import func, not_, or_
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from aleph.core import db
+from aleph.model.common import IdModel, SoftDeleteModel, make_token, query_like
 from aleph.settings import SETTINGS
-from aleph.model.common import SoftDeleteModel, IdModel, make_token, query_like
 from aleph.util import anonymize_email
 
 log = logging.getLogger(__name__)
@@ -15,8 +16,8 @@ log = logging.getLogger(__name__)
 
 membership = db.Table(
     "role_membership",
-    db.Column("group_id", db.Integer, db.ForeignKey("role.id")),  # noqa
-    db.Column("member_id", db.Integer, db.ForeignKey("role.id")),  # noqa
+    db.Column("group_id", db.Integer, db.ForeignKey("role.id")),
+    db.Column("member_id", db.Integer, db.ForeignKey("role.id")),
 )
 
 
@@ -181,7 +182,7 @@ class Role(db.Model, IdModel, SoftDeleteModel):
         q = cls.all()
         q = q.filter_by(api_key=api_key)
         q = q.filter(cls.type == cls.USER)
-        q = q.filter(cls.is_blocked == False)  # noqa
+        q = q.filter(cls.is_blocked == False)  # noqa: E712
         return q.first()
 
     @classmethod
@@ -241,7 +242,7 @@ class Role(db.Model, IdModel, SoftDeleteModel):
         if exclude:
             q = q.filter(not_(Role.id.in_(exclude)))
         q = q.filter(
-            or_(func.lower(cls.email) == prefix.lower(), query_like(cls.name, prefix))
+            or_(query_like(func.lower(cls.email), prefix), query_like(cls.name, prefix))
         )
         q = q.order_by(Role.id.asc())
         return q
@@ -259,7 +260,7 @@ class Role(db.Model, IdModel, SoftDeleteModel):
     @classmethod
     def all_users(cls):
         q = cls.all().filter(Role.type == Role.USER)
-        q = q.filter(cls.is_blocked == False)  # noqa
+        q = q.filter(cls.is_blocked == False)  # noqa: E712
         return q
 
     @classmethod
