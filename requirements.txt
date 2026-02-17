@@ -72,7 +72,7 @@ jsonschema-specifications==2025.9.1 ; python_version >= "3.12" and python_versio
 jsonschema==4.23.0 ; python_version >= "3.12" and python_version < "3.14"
 legacy-cgi==2.6.4 ; python_version == "3.13"
 levenshtein==0.27.3 ; python_version >= "3.12" and python_version < "3.14"
-librt==0.8.0 ; python_version >= "3.12" and python_version < "3.14" and platform_python_implementation != "PyPy"
+librt==0.8.1 ; python_version >= "3.12" and python_version < "3.14" and platform_python_implementation != "PyPy"
 linkify-it-py==2.0.3 ; python_version >= "3.12" and python_version < "3.14"
 lxml-html-clean==0.4.3 ; python_version >= "3.12" and python_version < "3.14"
 lxml==5.4.0 ; python_version >= "3.12" and python_version < "3.14"
