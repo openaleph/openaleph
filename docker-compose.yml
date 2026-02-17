@@ -50,7 +50,7 @@ services:
       - redis-data:/data
 
   ingest-file:
-    image: ghcr.io/openaleph/ingest-file:latest
+    image: ghcr.io/openaleph/ingest-file:main
     command: procrastinate worker -q ingest --concurrency 2
     hostname: ingest
     tmpfs: /tmp
@@ -61,10 +61,10 @@ services:
       - redis
     restart: on-failure
     env_file:
-      - aleph.env
+      - aleph.env.docker
 
   ftm-analyze:
-    image: ghcr.io/dataresearchcenter/ftm-analyze:latest
+    image: ghcr.io/openaleph/ftm-analyze:main-spacy
     entrypoint: procrastinate worker -q analyze --concurrency 2
     restart: on-failure
     depends_on:
@@ -72,7 +72,18 @@ services:
     tmpfs:
       - /tmp
     env_file:
-      - aleph.env
+      - aleph.env.docker
+
+  ftm-translate:
+    image: ghcr.io/openaleph/ftm-translate:main-argos
+    entrypoint: procrastinate worker -q translate --concurrency 2
+    restart: on-failure
+    depends_on:
+      - postgres
+    tmpfs:
+      - /tmp
+    env_file:
+      - aleph.env.docker
 
 volumes:
   archive-data:

@@ -20,6 +20,10 @@ RUN npm ci --ignore-scripts
 # Rebuilds when source code changes, but reuses cached dependencies.
 FROM node:20-slim AS builder
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy dependencies from deps stage

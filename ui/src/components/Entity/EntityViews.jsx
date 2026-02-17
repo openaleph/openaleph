@@ -40,6 +40,7 @@ import EntityMoreLikeThisMode from 'components/Entity/EntityMoreLikeThisMode';
 import EntityMappingMode from 'components/Entity/EntityMappingMode';
 import EntityNearbyMode from 'components/Entity/EntityNearbyMode';
 import DocumentViewMode from 'components/Document/DocumentViewMode';
+import TranslationViewer from 'viewers/TranslationViewer';
 
 import './EntityViews.scss';
 
@@ -99,6 +100,7 @@ class EntityViews extends React.Component {
     const hasDocumentViewMode =
       hasViewer || (!hasBrowseMode && !hasTextOnlyMode);
     const hasViewMode = entity.schema.isDocument() && hasDocumentViewMode;
+    const hasTranslation = !!entity.getFirst('translatedText');
     const processingError = entity.getProperty('processingError');
     const entityParent = entity.getFirst('parent');
     const showWorkbookWarning =
@@ -187,6 +189,21 @@ class EntityViews extends React.Component {
                   textMode
                 />
               }
+            />
+          )}
+          {hasTranslation && (
+            <Tab
+              id="translation"
+              title={
+                <>
+                  <Icon icon="translate" className="left-icon" />
+                  <FormattedMessage
+                    id="entity.info.translation"
+                    defaultMessage="Translation"
+                  />
+                </>
+              }
+              panel={<TranslationViewer document={entity} />}
             />
           )}
           {hasBrowseMode && (
@@ -341,21 +358,21 @@ const mapStateToProps = (state, ownProps) => {
   const { entity, location, activeMode, isPreview } = ownProps;
   const childrenQuery = folderDocumentsQuery(location, entity.id, undefined);
   const reference = selectEntityReference(state, entity.id, activeMode);
-  
+
   // Check if we're in a search preview and get search result count
   let searchResultCount = null;
   let isSearchPreview = false;
-  
+
   if (isPreview && location && entity.schema && entity.schema.isDocument()) {
     const parsedHash = queryString.parse(location.hash);
     const parsedSearch = queryString.parse(location.search);
     isSearchPreview = !!(parsedHash['preview:id'] && parsedHash.q && (parsedSearch.q || parsedSearch.csq));
-    
+
     if (isSearchPreview) {
       // Create the same query that PdfViewer uses to get search count
       const hashQuery = queryString.parse(location.hash);
       const queryText = hashQuery.q;
-      
+
       if (queryText) {
         const baseQuery = Query.fromLocation('entities', location, {}, 'document')
           .setFilter('properties.document', entity.id)
@@ -367,13 +384,13 @@ const mapStateToProps = (state, ownProps) => {
           .sortBy('properties.index', 'asc')
           .clear('limit')
           .clear('offset');
-        
+
         const searchCountResult = selectEntitiesResult(state, searchCountQuery);
         searchResultCount = searchCountResult.total;
       }
     }
   }
-  
+
   return {
     reference,
     references: selectEntityReferences(state, entity.id),
