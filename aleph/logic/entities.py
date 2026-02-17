@@ -133,7 +133,7 @@ def should_transcribe(proxy: EntityProxy) -> bool:
     if not tasks.transcribe.defer:
         return False
     if proxy.schema.is_a("Video") or proxy.schema.is_a("Audio"):
-        return not proxy.has("bodyText")
+        return True
     return False
 
 
@@ -142,8 +142,6 @@ def should_translate(proxy: EntityProxy) -> bool:
     if not tasks.translate.defer:
         return False
     if proxy.schema.is_a("Analyzable"):
-        if proxy.has("translatedText"):
-            return False
         source_lang = proxy.get("detectedLanguage")
         if source_lang and SETTINGS.FTM_TRANSLATE_TARGET_LANGUAGE != source_lang:
             return True
