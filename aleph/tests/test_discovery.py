@@ -43,18 +43,22 @@ class DiscoveryTestCase(TestCase):
     def test_unpack_buckets(self):
         """Test unpacking aggregation buckets into MentionedTerms."""
         mock_agg = {
-            "properties.peopleMentioned.significant_terms": {
-                "buckets": [
-                    {"key": "John Doe", "doc_count": 5},
-                    {"key": "Jane Smith", "doc_count": 3},
-                    {"key": "ignored_term", "doc_count": 2},
-                ]
+            "properties.peopleMentioned.significant_sampled": {
+                "properties.peopleMentioned.significant_terms": {
+                    "buckets": [
+                        {"key": "John Doe", "doc_count": 5},
+                        {"key": "Jane Smith", "doc_count": 3},
+                        {"key": "ignored_term", "doc_count": 2},
+                    ]
+                }
             },
-            "properties.companiesMentioned.significant_terms": {
-                "buckets": [
-                    {"key": "ACME Corp", "doc_count": 8},
-                    {"key": "ignored_term", "doc_count": 1},
-                ]
+            "properties.companiesMentioned.significant_sampled": {
+                "properties.companiesMentioned.significant_terms": {
+                    "buckets": [
+                        {"key": "ACME Corp", "doc_count": 8},
+                        {"key": "ignored_term", "doc_count": 1},
+                    ]
+                }
             },
         }
 
