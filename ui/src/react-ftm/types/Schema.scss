@@ -69,11 +69,16 @@
     }
   }
 
-  // Neutral — no background, inherits text color
+  // Neutral — no background, fully inherits from parent
   &--neutral {
+    display: inline;
     background-color: transparent;
     color: inherit;
     padding: 0;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    border-radius: 0;
 
     .SchemaIcon {
       color: inherit !important;

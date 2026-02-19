@@ -61,18 +61,17 @@ export class EntityPreview extends React.Component {
     }
 
     return (
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.15rem', marginBottom: '0.25rem' }}>
+      <div className="EntityPreview__tags">
         {tags.map((tag) => (
           <Link
             key={tag}
             to={`/search?filter:tags=${encodeURIComponent(tag)}`}
-            style={{ textDecoration: 'none' }}
+            className="EntityPreview__tag-link"
           >
             <Tag
               minimal
-              intent="primary"
               icon="tag"
-              style={{ fontSize: '0.65rem', padding: '0.1rem 0.3rem', fontWeight: 300 }}
+              className="EntityPreview__tag"
             >
               {tag}
             </Tag>

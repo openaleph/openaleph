@@ -1,6 +1,9 @@
 import React, { PureComponent } from 'react';
 import { defineMessages, injectIntl } from 'react-intl';
 import { InputGroup, Switch } from '@blueprintjs/core';
+import c from 'classnames';
+
+import './SearchBox.scss';
 
 const messages = defineMessages({
   placeholder: {
@@ -95,8 +98,8 @@ export class SearchBox extends PureComponent {
     }
 
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <form onSubmit={this.onSubmitSearch} className={className} style={{ flex: 1 }}>
+      <div className="SearchBox">
+        <form onSubmit={this.onSubmitSearch} className={c('SearchBox__form', className)}>
           <InputGroup
             fill
             leftIcon="search"
@@ -111,11 +114,9 @@ export class SearchBox extends PureComponent {
             checked={synonyms}
             label={intl.formatMessage(messages.synonyms_toggle)}
             onChange={this.onSynonymsChange}
-            style={{
-              marginBottom: 0,
-              whiteSpace: 'nowrap',
-              color: synonymsToggleLightLabel ? '#ffffff' : undefined
-            }}
+            className={c('SearchBox__synonyms-toggle', {
+              'SearchBox__synonyms-toggle--light-label': synonymsToggleLightLabel,
+            })}
           />
         )}
       </div>

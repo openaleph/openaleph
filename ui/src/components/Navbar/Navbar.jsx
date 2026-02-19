@@ -6,8 +6,10 @@ import {
   Alignment,
   Button,
   Classes,
+  Menu,
   Navbar as BpNavbar,
 } from '@blueprintjs/core';
+import { Popover2 as Popover } from '@blueprintjs/popover2';
 import { compose } from 'redux';
 import { connect } from 'react-redux';
 import c from 'classnames';
@@ -28,6 +30,7 @@ import {
   HotkeysContainer,
   SearchBox,
   LinkButton,
+  LinkMenuItem,
   BookmarksDrawer,
 } from 'components/common';
 import getPageLink from 'util/getPageLink';
@@ -162,6 +165,7 @@ export class Navbar extends React.Component {
                         }}
                         placeholder={intl.formatMessage(messages.placeholder)}
                         showSynonymsToggle={true}
+                        synonymsToggleLightLabel
                       />
                     </div>
                     <Button
@@ -218,19 +222,6 @@ export class Navbar extends React.Component {
                       defaultMessage="Datasets"
                     />
                   </LinkButton>
-                  {session.loggedIn && (
-                    <LinkButton
-                      to="/investigations"
-                      icon="briefcase"
-                      minimal={true}
-                      className="Navbar__collections-button mobile-hide"
-                    >
-                      <FormattedMessage
-                        id="nav.cases"
-                        defaultMessage="Investigations"
-                      />
-                    </LinkButton>
-                  )}
                   {bookmarksEnabled && (
                     <DialogToggleButton
                       buttonProps={{
@@ -246,17 +237,35 @@ export class Navbar extends React.Component {
                       Dialog={BookmarksDrawer}
                     />
                   )}
-                  {menuPages.map((page) => (
-                    <LinkButton
-                      key={page.name}
-                      to={getPageLink(page)}
-                      icon={page.icon}
-                      minimal={true}
-                      className="Navbar__collections-button mobile-hide"
+                  {menuPages.length > 0 && (
+                    <Popover
+                      content={
+                        <Menu>
+                          {menuPages.map((page) => (
+                            <LinkMenuItem
+                              key={page.name}
+                              to={getPageLink(page)}
+                              icon={page.icon}
+                              text={page.short}
+                            />
+                          ))}
+                        </Menu>
+                      }
+                      placement="bottom-end"
+                      minimal
                     >
-                      {page.short}
-                    </LinkButton>
-                  ))}
+                      <Button
+                        icon="info-sign"
+                        minimal
+                        className="Navbar__collections-button mobile-hide"
+                      >
+                        <FormattedMessage
+                          id="nav.info"
+                          defaultMessage="Info"
+                        />
+                      </Button>
+                    </Popover>
+                  )}
                 </>
               )}
               <BpNavbar.Divider

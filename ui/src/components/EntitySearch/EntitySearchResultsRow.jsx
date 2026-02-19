@@ -129,18 +129,17 @@ class EntitySearchResultsRow extends Component {
     }
 
     return (
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.15rem', marginBottom: '0.25rem' }}>
+      <div className="EntitySearchResultsRow__tags">
         {tags.map((tag) => (
           <Link
             key={tag}
             to={`/search?filter:tags=${encodeURIComponent(tag)}`}
-            style={{ textDecoration: 'none' }}
+            className="EntitySearchResultsRow__tag-link"
           >
             <Tag
               minimal
-              intent="primary"
               icon="tag"
-              style={{ fontSize: '0.65rem', padding: '0.1rem 0.3rem', fontWeight: 300 }}
+              className="EntitySearchResultsRow__tag"
             >
               {tag}
             </Tag>

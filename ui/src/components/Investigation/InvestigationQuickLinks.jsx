@@ -165,7 +165,7 @@ class InvestigationQuickLinks extends React.Component {
           >
             <>
               <div className="QuickLinks__item__icon">
-                <img src="/static/1F3AF.svg" alt="" />
+                <img src="/static/1F9E9.svg" alt="" />
               </div>
               <div className="QuickLinks__item__text">
                 <p>

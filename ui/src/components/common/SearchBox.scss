@@ -1,0 +1,29 @@
+@import 'app/variables.scss';
+
+.SearchBox {
+  display: flex;
+  align-items: center;
+  gap: $aleph-grid-size * 1.5;
+
+  &__form {
+    flex: 1;
+  }
+
+  &__synonyms-toggle {
+    margin-bottom: 0;
+    white-space: nowrap;
+    font-size: $aleph-font-size - 1;
+
+    &--light-label {
+      color: rgba(#ffffff, 0.85);
+
+      .#{$bp-ns}-control-indicator {
+        background-color: rgba(#ffffff, 0.25) !important;
+      }
+
+      &.#{$bp-ns}-control.#{$bp-ns}-switch input:checked ~ .#{$bp-ns}-control-indicator {
+        background-color: rgba(#ffffff, 0.5) !important;
+      }
+    }
+  }
+}
