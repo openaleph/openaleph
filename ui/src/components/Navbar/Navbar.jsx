@@ -222,6 +222,19 @@ export class Navbar extends React.Component {
                       defaultMessage="Datasets"
                     />
                   </LinkButton>
+                  {session.loggedIn && (
+                    <LinkButton
+                      to="/investigations"
+                      icon="briefcase"
+                      minimal={true}
+                      className="Navbar__collections-button mobile-hide"
+                    >
+                      <FormattedMessage
+                        id="nav.cases"
+                        defaultMessage="Investigations"
+                      />
+                    </LinkButton>
+                  )}
                   {bookmarksEnabled && (
                     <DialogToggleButton
                       buttonProps={{
