@@ -8,6 +8,8 @@ from rigour.mime.types import ZIP
 from werkzeug.exceptions import NotFound
 
 from aleph.core import db, url_for
+from aleph.logic.aggregator import get_aggregator
+from aleph.logic.documents import ingest_flush
 from aleph.logic.entities import (
     check_write_entity,
     delete_entity,
@@ -20,7 +22,11 @@ from aleph.logic.html import sanitize_html
 from aleph.logic.profiles import pairwise_judgements
 from aleph.model.bookmark import Bookmark
 from aleph.model.entityset import EntitySet, Judgement
-from aleph.procrastinate.queues import OP_EXPORT_SEARCH, queue_export_search
+from aleph.procrastinate.queues import (
+    OP_EXPORT_SEARCH,
+    queue_export_search,
+    queue_ingest,
+)
 from aleph.search import (
     DatabaseQueryResult,
     EntitiesQuery,
@@ -340,7 +346,7 @@ def view(entity_id):
     if request.authz.logged_in:
         bookmark = Bookmark.query.filter_by(
             role_id=request.authz.id,
-            collection_id=entity.get("collection_id"),
+            collection_id=int(entity.get("collection_id")),
             entity_id=entity_id,
         ).first()
         entity["bookmarked"] = True if bookmark else False
@@ -425,7 +431,7 @@ def similar(entity_id):
     result = get_query_result(MatchQuery, request, entity=proxy)
     entities = list(result.results)
     pairs = [(entity_id, s.get("id")) for s in entities]
-    judgements = pairwise_judgements(pairs, entity.get("collection_id"))
+    judgements = pairwise_judgements(pairs, int(entity.get("collection_id")))
     result.results = []
     for obj in entities:
         score = compare(proxy, make_entity_proxy(obj))
@@ -612,6 +618,40 @@ def delete(entity_id):
     job_id = get_session_id()
     delete_entity(collection, entity, sync=sync, job_id=job_id)
     return ("", 204)
+
+
+@blueprint.route("/api/2/entities/<entity_id>/ingest", methods=["POST", "PUT"])
+def ingest(entity_id):
+    """
+    ---
+    post:
+      summary: Trigger ingest for an entity
+      description: >-
+        Queue the entity with id `entity_id` for ingestion. The entity
+        must be a document that already exists in a collection.
+      parameters:
+      - in: path
+        name: entity_id
+        required: true
+        schema:
+          type: string
+      responses:
+        '202':
+          description: Accepted
+      tags:
+      - Entity
+      - Ingest
+    """
+    entity = get_index_entity(entity_id, request.authz.WRITE)
+    collection = get_db_collection(entity.get("collection_id"), request.authz.WRITE)
+    tag_request(collection_id=collection.id, entity_id=entity_id)
+    job_id = get_session_id()
+    proxy = make_entity_proxy(entity)
+    aggregator = get_aggregator(collection)
+    aggregator.put(proxy)
+    ingest_flush(collection, entity_id=entity_id)
+    queue_ingest(collection, proxy, batch=job_id)
+    return ("", 202)
 
 
 @blueprint.route("/api/2/entities/<entity_id>/expand", methods=["GET"])
