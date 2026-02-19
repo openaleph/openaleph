@@ -1,6 +1,6 @@
 [project]
 name = "aleph"
-version = "5.1.0"
+version = "5.2.0-rc1"
 description = "Search and browse documents and data; find the people and companies you look for."
 authors = [
     { name = "Friedrich Lindenberg", email = "friedrich@pudo.org" },
