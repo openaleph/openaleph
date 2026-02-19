@@ -8,8 +8,8 @@
 
   &__item {
     padding: $aleph-grid-size * 2;
-    background: #fff;
-    border: 1px solid rgba($black, 0.08);
+    background: $darc-gray-50;
+    border: 1px solid $darc-gray-200;
     border-radius: $aleph-border-radius;
     flex: 1 1 auto;
     margin: $aleph-content-padding * 0.5;
@@ -31,7 +31,7 @@
 
   .CollectionStatus {
     font-size: $pt-font-size-small;
-    background-color: #fff !important;
+    background-color: $darc-gray-50 !important;
 
     .#{$bp-ns}-heading {
       font-size: $pt-font-size-large !important;
