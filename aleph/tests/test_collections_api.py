@@ -363,3 +363,81 @@ class CollectionsApiTestCase(TestCase):
         res = self.client.get(update_url, headers=headers)
         assert res.status_code == 200, res
         assert res.json["taggable"] is False
+
+    def test_external_collection_read_only(self):
+        _, headers = self.login(is_admin=True)
+
+        # Default: external is False and collection is writeable
+        url = "/api/2/collections/%s" % self.col.id
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res
+        assert res.json["external"] is False
+        assert res.json["writeable"] is True
+
+        # Set external=True via direct DB update (simulating external system)
+        self.col.external = True
+        db.session.add(self.col)
+        db.session.commit()
+
+        # Admin cannot update external collection metadata
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res
+        assert res.json["external"] is True
+        assert res.json["writeable"] is False
+
+        data = res.json
+        data["label"] = "Should Not Work"
+        res = self.client.post(
+            url, data=json.dumps(data), headers=headers, content_type=JSON
+        )
+        assert res.status_code == 403, res
+
+        # Admin cannot delete external collection
+        res = self.client.delete(url, headers=headers)
+        assert res.status_code == 403, res
+
+        # Admin cannot bulk write to external collection
+        bulk_url = "/api/2/collections/%s/_bulk" % self.col.id
+        bulk_data = json.dumps(
+            [
+                {
+                    "id": "1234567890",
+                    "schema": "Person",
+                    "properties": {"name": "Test"},
+                },
+            ]
+        )
+        res = self.client.post(bulk_url, headers=headers, data=bulk_data)
+        assert res.status_code == 403, res
+
+        # Collection is still readable
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res
+        assert res.json["label"] == "Test Collection"
+
+    def test_external_collection_non_admin(self):
+        role, headers = self.login()
+        self.grant(self.col, role, True, True)
+
+        # Verify user can write before setting external
+        url = "/api/2/collections/%s" % self.col.id
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res
+        assert res.json["writeable"] is True
+
+        # Set external=True
+        self.col.external = True
+        db.session.add(self.col)
+        db.session.commit()
+
+        # Non-admin user also cannot write to external collection
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res
+        assert res.json["writeable"] is False
+
+        data = res.json
+        data["label"] = "Should Not Work"
+        res = self.client.post(
+            url, data=json.dumps(data), headers=headers, content_type=JSON
+        )
+        assert res.status_code == 403, res

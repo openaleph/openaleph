@@ -83,6 +83,9 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
     # allows tagging of entities
     taggable = db.Column(db.Boolean, default=False)
 
+    # external managed, appears read-only in UI even for admins
+    external = db.Column(db.Boolean, default=False)
+
     # Collection inherits the `updated_at` column from `DatedModel`.
     # These two fields are used to express different semantics: while
     # `updated_at` is used to describe the last change of the metadata,
@@ -129,6 +132,9 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
         # contains ai generated content
         self.contains_ai = data.get("contains_ai")
         self.contains_ai_comment = data.get("contains_ai_comment")
+
+        # external
+        self.external = data.get("external")
 
         # tagging functionality
         self.taggable = data.get("taggable", self.taggable)
@@ -220,6 +226,7 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
                 "restricted": self.restricted,
                 "contains_ai": self.contains_ai,
                 "contains_ai_comment": self.contains_ai_comment,
+                "external": self.external,
                 "taggable": self.taggable,
             }
         )

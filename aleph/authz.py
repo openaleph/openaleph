@@ -69,16 +69,36 @@ class Authz(object):
             return False
         if action == self.WRITE and not self.session_write:
             return False
-        if self.is_admin:
-            return True
 
         if isinstance(collection, Collection):
+            collection_obj = collection
             collection = collection.id
-        try:
-            collection = int(collection)
-        except (TypeError, ValueError):
-            return False
+        else:
+            collection_obj = None
+            try:
+                collection = int(collection)
+            except (TypeError, ValueError):
+                return False
+
+        # Block writes on external collections for everyone, including admins
+        if action == self.WRITE:
+            if collection_obj is not None:
+                if collection_obj.external:
+                    return False
+            elif self._is_external_collection(collection):
+                return False
+
+        if self.is_admin:
+            return True
         return collection in self.collections(action)
+
+    def _is_external_collection(self, collection_id):
+        if not hasattr(self, "_external_cache"):
+            self._external_cache = {}
+        if collection_id not in self._external_cache:
+            coll = Collection.by_id(collection_id)
+            self._external_cache[collection_id] = coll.external if coll else False
+        return self._external_cache[collection_id]
 
     def can_bulk_import(self):
         if not self.can_browse_anonymous or not self.session_write:
