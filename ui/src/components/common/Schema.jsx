@@ -36,7 +36,7 @@ function SchemaLink({ collection, location, schema, ...rest }) {
 
   return (
     <CollectionView.Link {...viewProps}>
-      <VLSchema.Label schema={schema} icon={true} {...rest} />
+      <VLSchema.Label schema={schema} icon={true} neutral {...rest} />
     </CollectionView.Link>
   );
 }

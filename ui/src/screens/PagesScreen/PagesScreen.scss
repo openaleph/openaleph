@@ -2,7 +2,7 @@
 @import 'app/mixins.scss';
 
 $pages-max-width: 1000px;
-$pages-padding: $aleph-grid-size * 2.5;
+$pages-padding: $aleph-grid-size * 3;
 
 @mixin large {
   @media screen and (min-width: $pages-max-width) {
@@ -33,7 +33,7 @@ $pages-padding: $aleph-grid-size * 2.5;
   &__title {
     margin: 0;
     border-bottom: 1px solid $aleph-border-color;
-    color: $dark-gray5;
+    color: $darc-gray-600;
     font-size: $aleph-grid-size * 3.5;
     padding: $pages-padding * 1.5 0 $pages-padding * 2;
 
@@ -58,7 +58,7 @@ $pages-padding: $aleph-grid-size * 2.5;
     display: flex;
     flex-direction: column;
     flex-grow: 6;
-    color: $dark-gray5;
+    color: $darc-gray-600;
     line-height: 1.5;
     clear: both;
 
@@ -94,7 +94,7 @@ $pages-padding: $aleph-grid-size * 2.5;
       margin-bottom: $aleph-grid-size;
 
       .#{$bp-ns}-heading {
-        color: $blue1;
+        color: $aleph-link-color;
         padding-top: 2px;
       }
     }

@@ -35,11 +35,11 @@
 
     .#{$bp-ns}-intent-primary {
       font-weight: bold;
-      color: $green1;
+      color: $darc-green-dark;
     }
     .#{$bp-ns}-intent-danger {
       font-weight: bold;
-      color: $red1;
+      color: $aleph-error-highlight-color;
     }
   }
 }

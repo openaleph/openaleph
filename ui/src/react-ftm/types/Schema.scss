@@ -1,3 +1,82 @@
+@import 'src/react-ftm/variables.scss';
+
 .SchemaIcon {
   color: inherit !important;
+}
+
+.SchemaLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+
+  .SchemaIcon {
+    flex-shrink: 0;
+  }
+
+  // Person — soft blue
+  &--person {
+    background-color: #DDEAF6;
+    color: #2C4A6B;
+
+    .SchemaIcon {
+      color: #2C4A6B !important;
+    }
+  }
+
+  // Organization — DARC green
+  &--organization {
+    background-color: $darc-green-light;
+    color: $darc-green-dark;
+
+    .SchemaIcon {
+      color: $darc-green-dark !important;
+    }
+  }
+
+  // Document — DARC purple
+  &--document {
+    background-color: $darc-purple-light;
+    color: $darc-purple-dark;
+
+    .SchemaIcon {
+      color: $darc-purple-dark !important;
+    }
+  }
+
+  // Event — DARC orange
+  &--event {
+    background-color: $darc-orange-light;
+    color: $darc-orange-dark;
+
+    .SchemaIcon {
+      color: $darc-orange-dark !important;
+    }
+  }
+
+  // Default — gray
+  &--default {
+    background-color: #F2F2F2;
+    color: #595959;
+
+    .SchemaIcon {
+      color: #595959 !important;
+    }
+  }
+
+  // Neutral — no background, inherits text color
+  &--neutral {
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+
+    .SchemaIcon {
+      color: inherit !important;
+    }
+  }
 }

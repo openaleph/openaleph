@@ -8,7 +8,11 @@ $navbar-horizontal-padding: $aleph-grid-size * 0.8;
     display: flex;
     padding: 0 $aleph-content-padding;
     justify-content: space-between;
-    background-color: $dark-gray1 !important;
+    height: auto;
+    min-height: 50px;
+    padding-top: $aleph-grid-size * 1;
+    padding-bottom: $aleph-grid-size * 1;
+    background-color: $black !important;
 
     @media screen and (max-width: $aleph-navbar-mobile-max-width) {
       padding: 0 $aleph-mobile-content-padding;
@@ -34,7 +38,7 @@ $navbar-horizontal-padding: $aleph-grid-size * 0.8;
       }
 
       input {
-        background: #fff;
+        background: $white;
         color: $pt-text-color;
       }
     }
@@ -154,7 +158,7 @@ $navbar-horizontal-padding: $aleph-grid-size * 0.8;
 
   .#{$bp-ns}-button,
   .#{$bp-ns}-menu {
-    border-radius: 0;
+    border-radius: $aleph-border-radius;
   }
 
   .#{$bp-ns}-divider {

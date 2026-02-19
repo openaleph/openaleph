@@ -1,0 +1,45 @@
+@import 'app/variables.scss';
+
+.EntitySearchDiscovery__query {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+
+  .#{$bp-ns}-tag {
+    padding: 2px 10px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    border-radius: 4px;
+  }
+}
+
+.EntitySearchDiscovery__terms {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.EntitySearchDiscovery__term {
+  background: none;
+  border: 1px solid $darc-gray-300;
+  border-radius: 4px;
+  color: $aleph-accent-color;
+  cursor: pointer;
+  padding: 2px 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+
+  &:hover {
+    border-color: $aleph-accent-color;
+    background-color: rgba($aleph-accent-color, 0.05);
+  }
+}

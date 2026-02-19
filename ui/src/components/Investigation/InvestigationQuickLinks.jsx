@@ -84,12 +84,9 @@ class InvestigationQuickLinks extends React.Component {
             dialogProps={{ collection, onUploadSuccess: this.onDocUpload }}
           >
             <>
-              <div
-                className="QuickLinks__item__image"
-                style={{
-                  backgroundImage: 'url(/static/investigation_upload.svg)',
-                }}
-              />
+              <div className="QuickLinks__item__icon">
+                <img src="/static/1F4E4.svg" alt="" />
+              </div>
               <div className="QuickLinks__item__text">
                 <p>
                   <FormattedMessage
@@ -116,12 +113,9 @@ class InvestigationQuickLinks extends React.Component {
             }}
           >
             <>
-              <div
-                className="QuickLinks__item__image"
-                style={{
-                  backgroundImage: 'url(/static/investigation_entities.svg)',
-                }}
-              />
+              <div className="QuickLinks__item__icon">
+                <img src="/static/1F4DD.svg" alt="" />
+              </div>
               <div className="QuickLinks__item__text">
                 <p>
                   <FormattedMessage
@@ -146,10 +140,9 @@ class InvestigationQuickLinks extends React.Component {
             }}
           >
             <>
-              <div
-                className="QuickLinks__item__image"
-                style={{ backgroundImage: 'url(/static/home_networks.svg)' }}
-              />
+              <div className="QuickLinks__item__icon">
+                <img src="/static/1F578.svg" alt="" />
+              </div>
               <div className="QuickLinks__item__text">
                 <p>
                   <FormattedMessage
@@ -171,10 +164,9 @@ class InvestigationQuickLinks extends React.Component {
             dialogProps={{ collection, onSubmit: this.onXrefSubmit }}
           >
             <>
-              <div
-                className="QuickLinks__item__image"
-                style={{ backgroundImage: 'url(/static/home_xref.svg)' }}
-              />
+              <div className="QuickLinks__item__icon">
+                <img src="/static/1F3AF.svg" alt="" />
+              </div>
               <div className="QuickLinks__item__text">
                 <p>
                   <FormattedMessage

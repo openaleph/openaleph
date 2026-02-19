@@ -44,7 +44,7 @@
       margin-bottom: $aleph-grid-size;
 
       .#{$bp-ns}-heading {
-        color: $blue1;
+        color: $aleph-link-color;
         padding-top: 2px;
       }
     }
@@ -65,12 +65,12 @@
 
   &__title {
     font-size: 22px;
-    color: $dark-gray1;
+    color: $black;
     margin: 0 0 $aleph-grid-size;
   }
 
   &__subheading {
-    color: $dark-gray5;
+    color: $darc-gray-600;
     line-height: 1.5;
     clear: both;
     max-width: 700px;

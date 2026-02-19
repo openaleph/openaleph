@@ -48,6 +48,7 @@ import ExportLink from './ExportLink';
 import UpdateStatus from './UpdateStatus';
 import JudgementButtons from './JudgementButtons';
 import LinkMenuItem from './LinkMenuItem';
+import Panel from './Panel';
 import LinkButton from './LinkButton';
 import WidthBoundary from './WidthBoundary';
 import DeleteDialog from './DeleteDialog';
@@ -105,6 +106,7 @@ export {
   UpdateStatus,
   JudgementButtons,
   LinkMenuItem,
+  Panel,
   LinkButton,
   WidthBoundary,
   DeleteDialog,

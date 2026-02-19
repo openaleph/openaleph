@@ -6,8 +6,8 @@
 }
 
 .EntitySearchResults-inner-container {
-  overflow-x: scroll;
-  overflow-y: visible;
+  overflow-x: auto;
+  overflow-y: hidden;
   padding: 0;
   position: relative;
 }
@@ -21,18 +21,6 @@
 }
 
 .EntitySearchResultsRow {
-  .highlights {
-    @include rtlSupportInvertedProp(
-      padding,
-      left,
-      $aleph-grid-size * 3.2,
-      null
-    );
-    &__content {
-      max-width: $aleph-grid-size * 100;
-    }
-  }
-
   td {
     min-width: $aleph-grid-size * 13;
 
@@ -43,6 +31,33 @@
       min-width: $aleph-grid-size * 17;
     }
   }
+
+  // Entity data row that has a highlight row following it
+  &.prefix td {
+    &:first-child {
+      border-radius: 6px 0 0 0;
+    }
+    &:last-child {
+      border-radius: 0 6px 0 0;
+    }
+  }
+
+  .highlights {
+    @include rtlSupportInvertedProp(
+      padding,
+      left,
+      $aleph-grid-size * 3.2,
+      null
+    );
+    border-radius: 0 0 6px 6px;
+    // Pull up into the prefix row to close the border-spacing gap
+    box-shadow: 0 -6px 0 0 #fff;
+
+    &__content {
+      max-width: $aleph-grid-size * 100;
+    }
+  }
+
   .more-text {
     &.#{$bp-ns}-button {
       padding: 0 3px;

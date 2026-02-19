@@ -61,8 +61,11 @@ $darc-yellow7: #FFC533;
 $darc-yellow8: #FDAD2B;
 $darc-yellow-dark: #F9841C;
 
+// accent color (keep in sync with app/variables.scss $aleph-accent-color)
+$accent-color: #4A5E78;
+
 // blueprint overrides
-$blue2: $darc-purple8;
+$blue2: $accent-color;
 
 @import '@blueprintjs/core/lib/scss/variables';
 
@@ -79,13 +82,13 @@ $sidebar-width: 270px;
 $sidebar-gutter: 15px;
 
 $text-color-main: white;
-$text-color-secondary: $light-gray1;
+$text-color-secondary: rgba(255, 248, 241, 0.6);
 $disabled-color: $black-60;
 
 .error-text {
   font-style: italic;
   font-size: 12px;
-  color: $red1;
+  color: #d4130d;
   padding: 5px;
 }
 
