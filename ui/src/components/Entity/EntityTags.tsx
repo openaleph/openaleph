@@ -169,7 +169,6 @@ const EntityTags: React.FC<IEntityTagsProps> = ({ entity }) => {
               >
                 <Tag
                   icon={isDeleting ? 'time' : 'tag'}
-                  intent="primary"
                   minimal
                   className={`EntityTags__tag ${
                     isDeleting ? 'EntityTags__tag--deleting' : ''
