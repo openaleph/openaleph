@@ -55,7 +55,7 @@ services:
     hostname: ingest
     tmpfs: /tmp
     volumes:
-      - archive-data:/data
+      - ./data:/data
     depends_on:
       - postgres
       - redis
@@ -75,7 +75,6 @@ services:
       - aleph.env
 
 volumes:
-  archive-data:
   elasticsearch-data:
   postgres-data:
   redis-data:
