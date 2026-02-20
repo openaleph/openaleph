@@ -10,7 +10,7 @@ $vertical-spacing: $aleph-grid-size * 5;
   }
 
   b {
-    color: $darc-orange5;
+    color: $darc-orange-500;
   }
 
   &__section {
@@ -90,7 +90,7 @@ $vertical-spacing: $aleph-grid-size * 5;
   &__title-divider {
     width: 20%;
     margin: $aleph-grid-size * 4 auto $aleph-grid-size * 5;
-    border-bottom: 2px solid $darc-orange5;
+    border-bottom: 2px solid $darc-orange-500;
     -webkit-border-image: -webkit-linear-gradient(left, white, black);
     display: none;
   }
@@ -137,8 +137,8 @@ $vertical-spacing: $aleph-grid-size * 5;
         }
 
         &:focus {
-          border-color: $darc-orange5;
-          box-shadow: 0 2px 12px rgba($darc-orange5, 0.15);
+          border-color: $darc-orange-500;
+          box-shadow: 0 2px 12px rgba($darc-orange-500, 0.15);
         }
       }
 
@@ -168,7 +168,7 @@ $vertical-spacing: $aleph-grid-size * 5;
     .AnimatedCount {
       flex: 1;
       border-right: 1px solid rgba($black, 0.1);
-      color: $darc-orange5;
+      color: $darc-orange-500;
       text-align: center;
 
       &:last-child {
@@ -314,7 +314,7 @@ $vertical-spacing: $aleph-grid-size * 5;
 
         &:hover {
           background: rgba($black, 0.04) !important;
-          color: $darc-orange5 !important;
+          color: $darc-orange-500 !important;
         }
       }
 
@@ -414,9 +414,9 @@ $vertical-spacing: $aleph-grid-size * 5;
     font-size: 0.85em;
     font-weight: 500;
     margin-bottom: 20px;
-    background: rgba($darc-orange5, 0.1);
-    border: 1px solid rgba($darc-orange5, 0.3);
-    color: $darc-orange5;
+    background: rgba($darc-orange-500, 0.1);
+    border: 1px solid rgba($darc-orange-500, 0.3);
+    color: $darc-orange-500;
   }
 
   .oa-values {
@@ -436,7 +436,7 @@ $vertical-spacing: $aleph-grid-size * 5;
     &__num {
       font-size: 3em;
       font-weight: 700;
-      color: $darc-orange5;
+      color: $darc-orange-500;
       line-height: 1;
       margin-bottom: 16px;
       font-family: var(--font-family-mono, monospace);
@@ -493,11 +493,11 @@ $vertical-spacing: $aleph-grid-size * 5;
     cursor: pointer;
 
     &--primary {
-      background: $darc-orange5;
+      background: $darc-orange-500;
       color: #fff !important;
 
       &:hover {
-        background: $darc-orange-dark;
+        background: $darc-orange-900;
       }
     }
 

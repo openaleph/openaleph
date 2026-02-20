@@ -34,9 +34,8 @@ interface ISchemaLabelProps extends ISchemaCommonProps {
 
 function getSchemaColorClass(schema: FTMSchema): string {
   if (schema.isA('Person')) return 'SchemaLabel--person';
-  if (schema.isA('Organization')) return 'SchemaLabel--organization';
+  if (schema.isA('LegalEntity')) return 'SchemaLabel--legalentity';
   if (schema.isDocument()) return 'SchemaLabel--document';
-  if (schema.isA('Event')) return 'SchemaLabel--event';
   return 'SchemaLabel--default';
 }
 

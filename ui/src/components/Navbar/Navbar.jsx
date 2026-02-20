@@ -161,22 +161,22 @@ export class Navbar extends React.Component {
                         query={query}
                         inputProps={{
                           inputRef: this.inputRef,
-                          rightElement: <SearchAlert alertQuery={alertQuery} />,
                         }}
                         placeholder={intl.formatMessage(messages.placeholder)}
                         showSynonymsToggle={true}
-                        synonymsToggleLightLabel
+                        searchButton
+                        extraButtons={
+                          <>
+                            <SearchAlert alertQuery={alertQuery} />
+                            <Button
+                              className="Navbar__search-container__search-tips"
+                              icon="settings"
+                              onClick={this.onToggleAdvancedSearch}
+                            />
+                          </>
+                        }
                       />
                     </div>
-                    <Button
-                      className={c(
-                        'Navbar__search-container__search-tips',
-                        Classes.FIXED
-                      )}
-                      icon="settings"
-                      minimal
-                      onClick={this.onToggleAdvancedSearch}
-                    />
                   </div>
                 </div>
               )}

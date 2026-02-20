@@ -19,43 +19,33 @@
     flex-shrink: 0;
   }
 
-  // Person — soft blue
+  // Person — DARC orange
   &--person {
-    background-color: #DDEAF6;
-    color: #2C4A6B;
+    background-color: $darc-orange-50;
+    color: $darc-orange-900;
 
     .SchemaIcon {
-      color: #2C4A6B !important;
+      color: $darc-orange-900 !important;
     }
   }
 
-  // Organization — DARC green
-  &--organization {
-    background-color: $darc-green-light;
-    color: $darc-green-dark;
+  // LegalEntity — DARC yellow
+  &--legalentity {
+    background-color: $darc-yellow-50;
+    color: $darc-yellow-900;
 
     .SchemaIcon {
-      color: $darc-green-dark !important;
+      color: $darc-yellow-900 !important;
     }
   }
 
   // Document — DARC purple
   &--document {
-    background-color: $darc-purple-light;
-    color: $darc-purple-dark;
+    background-color: $darc-purple-50;
+    color: $darc-purple-900;
 
     .SchemaIcon {
-      color: $darc-purple-dark !important;
-    }
-  }
-
-  // Event — DARC orange
-  &--event {
-    background-color: $darc-orange-light;
-    color: $darc-orange-dark;
-
-    .SchemaIcon {
-      color: $darc-orange-dark !important;
+      color: $darc-purple-900 !important;
     }
   }
 

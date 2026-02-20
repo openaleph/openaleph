@@ -8,7 +8,7 @@
     position: static;
     overflow-x: scroll;
     margin-bottom: $aleph-grid-size * 3;
-    margin-left: $aleph-grid-size;
+    margin-left: $aleph-content-padding;
     box-shadow:
       0 0 0 1px rgba(16, 22, 26, 0.1),
       0 2px 4px rgba(16, 22, 26, 0.2),
@@ -25,7 +25,6 @@
 
   .#{$bp-ns}-portal {
     z-index: 101;
-    top: 50px !important;
   }
 
   .#{$bp-ns}-label {

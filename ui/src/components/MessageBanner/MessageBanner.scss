@@ -8,8 +8,8 @@
 
   // DARC scheme overrides for Blueprint Callout intents
   &.#{$bp-ns}-intent-primary {
-    background-color: rgba($darc-purple3, 0.08);
-    color: $darc-purple-dark;
+    background-color: rgba($darc-purple-300, 0.08);
+    color: $darc-purple-900;
   }
 
   &.#{$bp-ns}-intent-warning {
@@ -18,13 +18,13 @@
   }
 
   &.#{$bp-ns}-intent-danger {
-    background-color: rgba($darc-orange5, 0.08);
-    color: $darc-orange-dark;
+    background-color: rgba($darc-orange-500, 0.08);
+    color: $darc-orange-900;
   }
 
   &.#{$bp-ns}-intent-success {
-    background-color: rgba($darc-green5, 0.08);
-    color: $darc-green-dark;
+    background-color: rgba($darc-green-400, 0.08);
+    color: $darc-green-900;
   }
 }
 
