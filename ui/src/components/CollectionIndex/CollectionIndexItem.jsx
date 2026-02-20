@@ -1,7 +1,7 @@
 import React, { PureComponent } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { Link } from 'react-router-dom';
-import { Classes, Icon, H4, Tag } from '@blueprintjs/core';
+import { Classes, Icon, H4 } from '@blueprintjs/core';
 import {
   Date,
   Role,

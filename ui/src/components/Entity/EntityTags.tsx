@@ -68,6 +68,7 @@ const EntityTags: React.FC<IEntityTagsProps> = ({ entity }) => {
     if (entity.id) {
       fetchTags();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entity.id]);
 
   // Generate URL for tag search
