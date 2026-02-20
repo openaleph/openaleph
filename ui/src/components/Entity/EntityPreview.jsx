@@ -68,11 +68,7 @@ export class EntityPreview extends React.Component {
             to={`/search?filter:tags=${encodeURIComponent(tag)}`}
             className="EntityPreview__tag-link"
           >
-            <Tag
-              minimal
-              icon="tag"
-              className="EntityPreview__tag"
-            >
+            <Tag minimal icon="tag" className="EntityPreview__tag">
               {tag}
             </Tag>
           </Link>
@@ -92,7 +88,12 @@ export class EntityPreview extends React.Component {
     return (
       <div className="ItemOverview preview">
         <div className="ItemOverview__heading">
-          <EntityImage api={ftmAssetsApi} entity={entity} thumbnail />
+          <EntityImage
+            api={ftmAssetsApi}
+            entity={entity}
+            thumbnail
+            fallback={false}
+          />
           <span>
             {this.renderTags()}
             <EntityHeading entity={entity} isPreview />
@@ -148,7 +149,13 @@ const mapStateToProps = (state, ownProps) => {
     profile,
     parsedHash,
     entity: selectEntity(state, entityId),
-    activeMode: selectEntityView(state, entityId, activeMode, true, ownProps.location),
+    activeMode: selectEntityView(
+      state,
+      entityId,
+      activeMode,
+      true,
+      ownProps.location
+    ),
     locale: selectLocale(state),
     ftmAssetsApi: selectServiceUrl(state, 'ftm_assets'),
   };
