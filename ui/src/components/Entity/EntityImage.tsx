@@ -87,8 +87,8 @@ export default function EntityImage(props: IComponent) {
 
   useEffect(() => {
     // currently, only qid is supported
-    setLoading(true);
-    id &&
+    if (id) {
+      setLoading(true);
       getImage(props.api, id.toString())
         .then((r) => {
           setImage(r);
@@ -98,6 +98,10 @@ export default function EntityImage(props: IComponent) {
           setImage(null);
           setLoading(false);
         });
+    } else {
+      setLoading(false);
+      setImage(null);
+    }
   }, [id, props.api]);
 
   if (loading) {
