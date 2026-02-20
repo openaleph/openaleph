@@ -1,11 +1,16 @@
 @import 'app/variables.scss';
 
+$navbar-height: 50px + $aleph-grid-size * 2;
+
 .AdvancedSearch {
   .#{$bp-ns}-overlay.#{$bp-ns}-overlay-container {
-    position: static;
+    position: fixed;
+    top: $navbar-height;
+    left: 0;
+    right: 0;
   }
   .#{$bp-ns}-drawer {
-    position: static;
+    position: relative;
     overflow-x: scroll;
     margin-bottom: $aleph-grid-size * 3;
     margin-left: $aleph-content-padding;
