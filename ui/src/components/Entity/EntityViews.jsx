@@ -341,39 +341,38 @@ const mapStateToProps = (state, ownProps) => {
   const { entity, location, activeMode, isPreview } = ownProps;
   const childrenQuery = folderDocumentsQuery(location, entity.id, undefined);
   const reference = selectEntityReference(state, entity.id, activeMode);
-  
+
   // Check if we're in a search preview and get search result count
   let searchResultCount = null;
   let isSearchPreview = false;
-  
+
   if (isPreview && location && entity.schema && entity.schema.isDocument()) {
     const parsedHash = queryString.parse(location.hash);
     const parsedSearch = queryString.parse(location.search);
     isSearchPreview = !!(parsedHash['preview:id'] && parsedHash.q && (parsedSearch.q || parsedSearch.csq));
-    
+
     if (isSearchPreview) {
       // Create the same query that PdfViewer uses to get search count
       const hashQuery = queryString.parse(location.hash);
       const queryText = hashQuery.q;
-      
+
       if (queryText) {
         const baseQuery = Query.fromLocation('entities', location, {}, 'document')
           .setFilter('properties.document', entity.id)
           .setFilter('schema', 'Page');
-        const countQuery = baseQuery.setString('q', undefined).offset(0).limit(0);
         const searchCountQuery = baseQuery
           .set('highlight', true)
           .set('q', queryText)
           .sortBy('properties.index', 'asc')
           .clear('limit')
           .clear('offset');
-        
+
         const searchCountResult = selectEntitiesResult(state, searchCountQuery);
         searchResultCount = searchCountResult.total;
       }
     }
   }
-  
+
   return {
     reference,
     references: selectEntityReferences(state, entity.id),

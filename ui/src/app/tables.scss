@@ -52,6 +52,14 @@ table {
     }
   }
 
+  tr td.schema {
+    width: 1%;
+    white-space: nowrap;
+    overflow: visible;
+    max-width: unset !important;
+    text-overflow: unset;
+  }
+
   tr td.fileSize {
     width: 10%;
     white-space: nowrap;
@@ -62,19 +70,12 @@ table {
   }
 
   tr.active {
-    background-color: $aleph-theme-intent;
-    color: white;
-
     td {
-      background-color: $aleph-theme-intent;
-      color: white;
+      background-color: rgba($aleph-theme-intent, 0.08);
+      color: inherit;
 
-      a,
-      a:link,
-      a:visited,
-      a:hover,
-      a:active {
-        color: white;
+      .SchemaLabel {
+        background-color: rgba($aleph-theme-intent, 0.12);
       }
     }
   }
@@ -149,24 +150,39 @@ table {
 table.data-table {
   @extend .#{$bp-ns}-html-table;
   width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 6px;
 
   &.pending > tbody {
     opacity: 0.5;
   }
 
   td {
-    border-bottom: 1px solid $aleph-table-border-color;
+    background-color: #fff;
+    border-bottom: none;
+    padding-top: $aleph-grid-size;
+    padding-bottom: $aleph-grid-size;
+
+    &:first-child {
+      border-radius: 6px 0 0 6px;
+    }
+    &:last-child {
+      border-radius: 0 6px 6px 0;
+    }
   }
 
   th,
   th:hover {
     white-space: nowrap;
-    background: $aleph-table-heading-background;
+    background: transparent;
+    border-bottom: none;
+    text-transform: uppercase;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: $darc-gray-500;
   }
 
-  tbody tr:first-child td {
-    box-shadow: inset 0 $table-border-width 0 0 $aleph-table-border-color;
-  }
 }
 
 table.settings-table {

@@ -10,7 +10,7 @@
 
   &.#{$bp-ns}-intent-primary,
   .#{$bp-ns}-tab[aria-selected='true'] > & {
-    background-color: $pt-intent-primary !important;
+    background-color: $accent-color !important;
     color: white !important;
   }
 }

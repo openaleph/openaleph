@@ -1,6 +1,6 @@
 @import 'react-ftm/variables.scss';
 
-$tooltip-border-color: $light-gray1;
+$tooltip-border-color: rgba(26, 26, 26, 0.12);
 
 .Histogram {
   .recharts-surface {
@@ -16,7 +16,7 @@ $tooltip-border-color: $light-gray1;
 
   .recharts-reference-area-rect,
   .recharts-tooltip-cursor {
-    fill: $light-gray4;
+    fill: rgba(26, 26, 26, 0.06);
   }
 
   .recharts-reference-area-rect {

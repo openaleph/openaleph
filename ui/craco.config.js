@@ -63,18 +63,7 @@ const svgIcon = (path, selectors) => {
   return new sass.types.String(value);
 };
 
-const webpack = require('webpack');
-
 module.exports = {
-  webpack: {
-    plugins: {
-      add: [
-        new webpack.ProvidePlugin({
-          _: 'lodash',
-        }),
-      ],
-    },
-  },
   style: {
     sass: {
       implementation: sass,

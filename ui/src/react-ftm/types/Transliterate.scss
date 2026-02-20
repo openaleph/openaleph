@@ -6,7 +6,7 @@
     .#{$bp-ns}-popover2-content {
       padding: 5px !important;
       background: #fcf8d3 !important;
-      color: $gray1 !important;
+      color: rgba(26, 26, 26, 0.6) !important;
     }
 
     &__main,
@@ -22,6 +22,6 @@
   }
   &.#{$bp-ns}-tooltip2-indicator {
     cursor: inherit;
-    border-color: $gray5;
+    border-color: rgba(26, 26, 26, 0.2);
   }
 }

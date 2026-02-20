@@ -3,6 +3,7 @@
 @import '~@blueprintjs/icons/src/blueprint-icons.scss';
 @import '~@blueprintjs/select/src/blueprint-select.scss';
 @import '~@blueprintjs/popover2/lib/css/blueprint-popover2.css';
+@import '~flag-icons/css/flag-icons.min.css';
 @import './variables.scss';
 @import './tables.scss';
 @import './layouts.scss';
@@ -12,6 +13,7 @@
 
 html {
   height: 100%;
+  background-color: $aleph-page-background;
 }
 
 body {
@@ -33,11 +35,13 @@ body {
 
 h1 {
   font-size: $aleph-font-size * 1.7;
+  margin-bottom: $aleph-grid-size * 1.5;
 }
 
 h2 {
   font-size: $aleph-font-size * 1.5;
-  margin-top: $aleph-grid-size * 2;
+  margin-top: $aleph-grid-size * 2.5;
+  margin-bottom: $aleph-grid-size * 1.5;
 }
 
 pre {
@@ -87,12 +91,12 @@ a {
 
 .text-page-title {
   font-size: 22px;
-  color: $dark-gray1;
+  color: $black;
   margin: 0 0 $aleph-grid-size;
 }
 
 .text-page-subtitle {
-  color: $dark-gray5;
+  color: $darc-gray-600;
   line-height: 1.5;
   clear: both;
   max-width: 700px;
@@ -121,7 +125,7 @@ a {
 
 .error-text {
   font-style: italic;
-  color: $red1;
+  color: $aleph-error-highlight-color;
 }
 
 .clickable {
@@ -153,11 +157,31 @@ a {
 }
 
 .index-item {
-  padding: $aleph-grid-size * 2.5 0;
-  border-bottom: 1px solid $aleph-border-color;
+  background: #fff;
+  border: 1px solid rgba($black, 0.08);
+  border-radius: $aleph-border-radius;
+  margin-bottom: $aleph-grid-size * 1.5;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba($black, 0.1);
+    border-color: rgba($black, 0.12);
+  }
 
   &:last-child {
-    border: none;
+    margin-bottom: 0;
+  }
+
+  &__link {
+    display: block;
+    padding: $aleph-grid-size * 2.5;
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      color: inherit;
+      text-decoration: none;
+    }
   }
 
   &__title {

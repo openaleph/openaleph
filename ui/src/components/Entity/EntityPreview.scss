@@ -4,6 +4,26 @@
 $preview-padding: $aleph-grid-size * 1.5;
 
 .EntityPreview {
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.15rem;
+    margin-bottom: 0.25rem;
+  }
+
+  &__tag-link {
+    text-decoration: none;
+  }
+
+  &__tag.#{$bp-ns}-tag {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.3rem;
+    font-weight: 400;
+    background: none;
+    border: 1px solid $darc-gray-200;
+    color: $darc-gray-600;
+  }
+
   &__content {
     padding: $preview-padding;
     overflow-y: scroll;

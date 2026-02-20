@@ -1,5 +1,5 @@
 import React, { PureComponent } from 'react';
-import { Alignment, Button, Intent, MenuItem } from '@blueprintjs/core';
+import { Alignment, Button, MenuItem } from '@blueprintjs/core';
 
 import { Count, SelectWrapper } from 'components/common';
 
@@ -38,7 +38,6 @@ class SortingBarSelect extends PureComponent {
           text={activeItem.label}
           alignText={Alignment.LEFT}
           minimal
-          intent={Intent.PRIMARY}
           rightIcon="caret-down"
         />
       </SelectWrapper>

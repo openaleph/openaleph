@@ -28,7 +28,7 @@ class QueryFilterTag extends PureComponent {
   label = (query, filter, type, value) => {
     switch (type || filter) {
       case 'schema':
-        return <Schema.Label schema={value} icon plural />;
+        return <Schema.Label schema={value} icon plural neutral />;
       case 'country':
       case 'countries':
         return <Country.Name code={value} />;

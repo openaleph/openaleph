@@ -13,10 +13,10 @@
 
   &__popover {
     &__menu {
-      background-color: #3a454d !important;
+      background-color: $black !important;
     }
     .#{$bp-ns}-popover2-arrow-fill {
-      fill: #3a454d !important;
+      fill: $black !important;
     }
 
     .#{$bp-ns}-menu-item.mobile-show {

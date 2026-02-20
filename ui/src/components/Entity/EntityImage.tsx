@@ -1,5 +1,7 @@
 import { Entity } from '@alephdata/followthemoney';
+import { Spinner } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
+import Schema from 'react-ftm/types/Schema';
 
 const DEFAULT_LANG = 'en';
 
@@ -28,6 +30,7 @@ interface IComponent {
   readonly entity: Entity;
   readonly api: string;
   readonly thumbnail?: boolean;
+  readonly fallback?: boolean;
 }
 
 const extractAlt = (image: IImageMeta, lang: string = DEFAULT_LANG): string => {
@@ -78,16 +81,36 @@ export function ImageAttribution(props: { attribution: IImageAttribution }) {
 }
 
 export default function EntityImage(props: IComponent) {
+  const [loading, setLoading] = useState<boolean>(false);
   const [image, setImage] = useState<IImageMeta | null>(null);
   const id = props.entity.getFirst('wikidataId');
 
   useEffect(() => {
     // currently, only qid is supported
-    id &&
+    if (id) {
+      setLoading(true);
       getImage(props.api, id.toString())
-        .then(setImage)
-        .catch(() => setImage(null));
+        .then((r) => {
+          setImage(r);
+          setLoading(false);
+        })
+        .catch(() => {
+          setImage(null);
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
+      setImage(null);
+    }
   }, [id, props.api]);
+
+  if (loading) {
+    return (
+      <span className="ftm-assets__Image-wrapper">
+        <Spinner size={20} />
+      </span>
+    );
+  }
 
   return image ? (
     <span className="ftm-assets__Image-wrapper">
@@ -95,7 +118,13 @@ export default function EntityImage(props: IComponent) {
         src={props.thumbnail ? image.thumbnail_url : image.url}
         alt={extractAlt(image)}
       />
-      <ImageAttribution attribution={image.attribution} />
+      {image.attribution && (
+        <ImageAttribution attribution={image.attribution} />
+      )}
+    </span>
+  ) : props.fallback !== false ? (
+    <span className="ftm-assets__Image-wrapper ftm-assets__Image-wrapper--fallback">
+      <Schema.Icon schema={props.entity.schema} size={48} />
     </span>
   ) : null;
 }

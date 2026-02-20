@@ -45,7 +45,7 @@ export class CollectionWrapper extends Component {
   }
 
   onSynonymsChange(synonymsValue) {
-    const { collection, navigate, query, location } = this.props;
+    const { collection, navigate, query } = this.props;
     const newQuery = synonymsValue
       ? query.set('synonyms', 'true')
       : query.clear('synonyms');

@@ -1,6 +1,9 @@
 import React, { PureComponent } from 'react';
 import { defineMessages, injectIntl } from 'react-intl';
-import { InputGroup, Switch } from '@blueprintjs/core';
+import { Button, InputGroup, Switch } from '@blueprintjs/core';
+import c from 'classnames';
+
+import './SearchBox.scss';
 
 const messages = defineMessages({
   placeholder: {
@@ -13,7 +16,7 @@ const messages = defineMessages({
   },
   synonyms_toggle: {
     id: 'search.synonyms_toggle',
-    defaultMessage: 'Include synonyms',
+    defaultMessage: 'Synonyms',
   },
 });
 
@@ -79,6 +82,8 @@ export class SearchBox extends PureComponent {
       inputProps,
       showSynonymsToggle,
       synonymsToggleLightLabel,
+      searchButton,
+      extraButtons,
     } = this.props;
     const { queryText, synonyms } = this.state;
     if (!this.props.onSearch) {
@@ -95,27 +100,44 @@ export class SearchBox extends PureComponent {
     }
 
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <form onSubmit={this.onSubmitSearch} className={className} style={{ flex: 1 }}>
+      <div className="SearchBox">
+        <form onSubmit={this.onSubmitSearch} className={c('SearchBox__form', className)}>
           <InputGroup
             fill
-            leftIcon="search"
+            leftIcon={searchButton ? undefined : 'search'}
             onChange={this.onQueryTextChange}
             placeholder={searchPlaceholder}
             value={queryText}
             {...inputProps}
+            {...(searchButton ? { rightElement: undefined } : {})}
           />
+          {searchButton && (
+            <>
+              <Button
+                icon="search"
+                type="submit"
+                className="SearchBox__search-button"
+              />
+              {extraButtons}
+              {showSynonymsToggle && (
+                <Switch
+                  checked={synonyms}
+                  label={intl.formatMessage(messages.synonyms_toggle)}
+                  onChange={this.onSynonymsChange}
+                  className="SearchBox__synonyms-toggle"
+                />
+              )}
+            </>
+          )}
         </form>
-        {showSynonymsToggle && (
+        {!searchButton && showSynonymsToggle && (
           <Switch
             checked={synonyms}
             label={intl.formatMessage(messages.synonyms_toggle)}
             onChange={this.onSynonymsChange}
-            style={{
-              marginBottom: 0,
-              whiteSpace: 'nowrap',
-              color: synonymsToggleLightLabel ? '#ffffff' : undefined
-            }}
+            className={c('SearchBox__synonyms-toggle', {
+              'SearchBox__synonyms-toggle--light-label': synonymsToggleLightLabel,
+            })}
           />
         )}
       </div>

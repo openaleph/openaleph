@@ -1,3 +1,5 @@
+@import 'app/variables.scss';
+
 .EntityTags {
   &__list {
     display: flex;
@@ -5,12 +7,12 @@
     align-items: center;
     gap: 0.5rem;
     margin: 0;
-    max-width: 100%; // Ensure list doesn't exceed parent width
+    max-width: 100%;
   }
 
   &__tag-wrapper {
     display: inline-flex;
-    max-width: 220px; // Ensure wrapper also has max width
+    max-width: 220px;
   }
 
   &__tag-link {
@@ -21,18 +23,17 @@
     }
   }
 
-  &__tag {
+  &__tag.#{$bp-ns}-tag {
     margin: 0 !important;
     cursor: pointer;
-    max-width: 200px !important; // Limit tag width to prevent overflow
+    max-width: 200px !important;
     display: inline-flex !important;
+    background: none;
+    border: 1px solid $darc-gray-200;
+    color: $darc-gray-600;
 
-    // Apply truncation directly to the tag's text content
-    & > .bp4-fill {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      display: block;
+    .#{$bp-ns}-icon {
+      color: $darc-gray-400;
     }
 
     &--deleting {
@@ -41,13 +42,12 @@
     }
   }
 
-  // Custom class for truncated tag content
   &__tag-label {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     display: inline-block;
-    max-width: 150px; // Adjust based on your needs
+    max-width: 150px;
     vertical-align: middle;
   }
 
@@ -65,7 +65,7 @@
       opacity: 1;
     }
 
-    .bp4-icon {
+    .#{$bp-ns}-icon {
       font-size: 6px;
     }
   }
@@ -81,16 +81,16 @@
     display: inline-flex;
     max-width: 200px;
 
-    .bp4-input-group {
+    .#{$bp-ns}-input-group {
       font-size: 0.75rem;
 
-      .bp4-input {
+      .#{$bp-ns}-input {
         padding: 0.25rem 0.5rem;
         height: auto;
         min-height: auto;
       }
 
-      .bp4-button {
+      .#{$bp-ns}-button {
         padding: 0.25rem;
         min-height: auto;
         height: auto;
@@ -101,10 +101,5 @@
   &__empty,
   &__loading {
     opacity: 0.7;
-  }
-
-  &__empty .bp4-tag,
-  &__loading .bp4-tag {
-    color: var(--bp4-text-color-muted);
   }
 }

@@ -5,7 +5,7 @@
   display: inline-block;
 
   &.#{$bp-ns}-callout.dark {
-    background-color: white;
+    background-color: inherit;
   }
 
   &__headline {
@@ -14,7 +14,7 @@
     margin-bottom: 15px;
 
     .dark & {
-      color: $blue1 !important;
+      color: $black !important;
     }
   }
 
@@ -49,12 +49,12 @@
         background-color: #ffffff38 !important;
 
         .dark & {
-          color: $blue1 !important;
+          color: $aleph-link-color !important;
         }
       }
 
       .dark & {
-        color: black !important;
+        color: $black !important;
       }
     }
 

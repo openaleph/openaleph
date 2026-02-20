@@ -4,8 +4,8 @@
 $vertical-spacing: 5px;
 
 .CollectionStatus {
-  background-color: $light-gray4 !important;
-  color: $gray1;
+  background-color: $darc-gray-50 !important;
+  color: $darc-gray-600;
 
   .total-count {
     font-size: 12px;
@@ -26,7 +26,7 @@ $vertical-spacing: 5px;
   }
 
   .#{$bp-ns}-heading {
-    color: $blue2 !important;
+    color: $aleph-link-color !important;
     margin-bottom: $vertical-spacing !important;
   }
 }

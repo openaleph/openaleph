@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { Colors } from '@blueprintjs/core';
 import { injectIntl, WrappedComponentProps } from 'react-intl';
 import {
   BarChart,
@@ -15,7 +14,7 @@ import Numeric from 'react-ftm/types/Numeric';
 
 import './Histogram.scss';
 
-const DEFAULT_FILL = Colors.BLUE2;
+const DEFAULT_FILL = '#4A5E78';
 
 const dataFromEvent = (e: any) => e?.activePayload?.[0]?.payload;
 

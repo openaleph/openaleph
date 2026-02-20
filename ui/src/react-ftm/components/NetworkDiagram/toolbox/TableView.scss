@@ -21,7 +21,7 @@ $border-color: rgba(16, 22, 26, 0.15);
 
   .#{$bp-ns}-tab[aria-selected='true'] {
     .SchemaIcon {
-      fill: $blue2;
+      fill: $accent-color;
     }
   }
 

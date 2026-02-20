@@ -4,12 +4,12 @@
 .InvestigationOverview {
   &__section {
     position: relative;
-    margin: $aleph-content-padding * 0.5 0 $aleph-content-padding * 1.5;
+    margin: $aleph-content-padding * 0.7 0 $aleph-content-padding * 1.5;
 
     &__title.#{$bp-ns}-heading {
-      margin-bottom: $aleph-content-padding * 0.5;
-      padding-bottom: $aleph-grid-size * 0.7;
-      border-bottom: 1px solid $aleph-border-color;
+      margin-bottom: $aleph-content-padding * 0.7;
+      padding-bottom: $aleph-grid-size;
+      border-bottom: 1px solid rgba($black, 0.08);
     }
   }
 
@@ -34,17 +34,19 @@
   }
 
   &__guides {
-    $guides-button-margin: 7px;
+    $guides-button-margin: 10px;
 
     margin: 0 (-$guides-button-margin * 0.5);
 
     .#{$bp-ns}-button {
       margin: $guides-button-margin * 0.5;
-      background-color: rgba($blue2, 0.09) !important;
-      transition: background-color 0.05s ease-in-out;
+      background-color: rgba($black, 0.04) !important;
+      border: 1px solid rgba($black, 0.08);
+      transition: border-color 0.2s ease;
 
       &:hover {
-        background-color: rgba($blue2, 0.04) !important;
+        border-color: rgba($black, 0.15);
+        background-color: rgba($black, 0.02) !important;
       }
     }
   }

@@ -64,6 +64,7 @@
 
   .#{$bp-ns}-drawer {
     box-shadow: none;
+    background: transparent;
   }
 
   .#{$bp-ns}-overlay {
@@ -111,7 +112,7 @@
       transform: translateY(-50%);
 
       &:hover {
-        background: $light-gray3;
+        background: $darc-gray-100;
       }
     }
   }

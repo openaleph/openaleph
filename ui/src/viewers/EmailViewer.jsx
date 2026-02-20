@@ -31,7 +31,7 @@ class EmailViewer extends PureComponent {
                     className="left-icon"
                     size={16}
                   />
-                  {entity.getCaption() != email && entity.getCaption() + ' '}
+                  {entity.getCaption() !== email && entity.getCaption() + ' '}
                   {'<' + email + '>'}
                 </Entity.Link>
               );

@@ -3,7 +3,8 @@
 
 .Breadcrumbs {
   z-index: 1;
-  padding: $aleph-grid-size * 0.5 $aleph-content-padding;
+  padding: $aleph-grid-size * 1.2 $aleph-content-padding;
+  border-bottom: 1px solid rgba($black, 0.08);
   background-color: $aleph-breadcrumbs-background;
 
   @media screen and (max-width: $aleph-screen-sm-max-width) {
@@ -30,7 +31,7 @@
     }
 
     .#{$bp-ns}-divider {
-      border-color: $light-gray4;
+      border-color: rgba(255, 255, 255, 0.2);
     }
   }
 
@@ -102,10 +103,10 @@
   }
 
   .#{$bp-ns}-breadcrumb-current {
-    color: $blue1;
+    color: $aleph-link-color;
 
     .#{$bp-ns}-spinner-head {
-      stroke: $blue1;
+      stroke: $aleph-link-color;
     }
   }
 

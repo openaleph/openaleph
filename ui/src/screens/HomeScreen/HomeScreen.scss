@@ -3,14 +3,14 @@
 $vertical-spacing: $aleph-grid-size * 5;
 
 .HomeScreen {
-  font-family: $pt-font-family; 
+  font-family: $pt-font-family;
   font-size: 16px;
   @media screen and (max-width: $aleph-screen-sm-max-width) {
     font-size: 14px;
   }
 
   b {
-    color: $blue1;
+    color: $darc-orange-500;
   }
 
   &__section {
@@ -23,21 +23,6 @@ $vertical-spacing: $aleph-grid-size * 5;
       min-height: 500px;
       position: relative;
       background-color: $white !important;
-      &::after {
-        background-image: url('../../assets/background.jpg');
-        background-size: cover;
-        background-repeat: no-repeat;
-        background-position: 50% 50%;
-        position: absolute;
-        content: '';
-        opacity: 0.09;
-        top: 0;
-        left: 0;
-        bottom: 0;
-        right: 0;
-        position: absolute;
-        z-index: -1;
-      }
     }
 
     &__content {
@@ -82,30 +67,40 @@ $vertical-spacing: $aleph-grid-size * 5;
   }
 
   &__app-title {
-    font-size: 3em;
-    margin: $vertical-spacing * 0.5 0;
-    color: $dark-gray3;
-    line-height: 1;
+    font-size: 3.5em;
+    margin: $vertical-spacing * 0.5 0 $aleph-grid-size * 3;
+    color: $black;
+    line-height: 1.2;
+    font-family: var(--font-family-sans), 'Inter', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+
+    @media screen and (max-width: $aleph-screen-sm-max-width) {
+      font-size: 2.5em;
+    }
   }
 
   &__title {
     font-size: 2em;
     margin: 0 0 $aleph-grid-size * 6;
     font-weight: 700;
-    color: $dark-gray3;
+    color: $black;
   }
 
   &__title-divider {
     width: 20%;
     margin: $aleph-grid-size * 4 auto $aleph-grid-size * 5;
-    border-bottom: 2px solid $blue1;
+    border-bottom: 2px solid $darc-orange-500;
     -webkit-border-image: -webkit-linear-gradient(left, white, black);
     display: none;
   }
 
   &__description {
-    font-size: 1em;
-    margin: $aleph-grid-size * 3 0;
+    font-size: 1.1em;
+    margin: 0 0 $aleph-grid-size * 4;
+    line-height: 1.6;
+    max-width: 520px;
+    color: rgba($black, 0.5);
   }
 
   &__auth-warning {
@@ -122,10 +117,79 @@ $vertical-spacing: $aleph-grid-size * 5;
   }
 
   &__search {
-    max-width: 600px;
-    margin: auto;
+    max-width: 700px;
+    margin: 0 auto $aleph-grid-size * 5;
+
     .#{$bp-ns}-input-group {
-      margin-bottom: $vertical-spacing * 0.5;
+      .#{$bp-ns}-input {
+        border-radius: 9999px;
+        background: #fff;
+        border: 1px solid rgba($black, 0.12);
+        color: $black;
+        padding: 18px 24px;
+        font-size: 1.1em;
+        height: auto;
+        transition: border-color 0.3s ease;
+        box-shadow: 0 2px 8px rgba($black, 0.06);
+
+        &::placeholder {
+          color: rgba($black, 0.35);
+        }
+
+        &:focus {
+          border-color: $darc-orange-500;
+          box-shadow: 0 2px 12px rgba($darc-orange-500, 0.15);
+        }
+      }
+
+      .#{$bp-ns}-input-action .#{$bp-ns}-button {
+        border-radius: 9999px;
+        margin-right: 6px;
+        margin-top: 6px;
+      }
+
+      .#{$bp-ns}-icon {
+        margin: 14px 8px 14px 16px;
+      }
+    }
+  }
+
+  &__stats {
+    display: flex;
+    justify-content: center;
+    max-width: 600px;
+    margin: 0 auto;
+
+    @media screen and (max-width: $aleph-screen-sm-max-width) {
+      flex-direction: column;
+      gap: $aleph-grid-size;
+    }
+
+    .AnimatedCount {
+      flex: 1;
+      border-right: 1px solid rgba($black, 0.1);
+      color: $darc-orange-500;
+      text-align: center;
+
+      &:last-child {
+        border-right: none;
+      }
+
+      @media screen and (max-width: $aleph-screen-sm-max-width) {
+        border-right: none;
+      }
+
+      &__count {
+        font-size: 32px;
+        font-weight: 700;
+        font-family: var(--font-family-mono, monospace);
+      }
+
+      &__label {
+        font-size: 13px;
+        color: rgba($black, 0.45);
+        font-weight: 400;
+      }
     }
   }
 
@@ -204,5 +268,247 @@ $vertical-spacing: $aleph-grid-size * 5;
     padding-bottom: $aleph-grid-size;
     margin-top: $aleph-grid-size * 0.5;
     border-bottom: 1px solid;
+  }
+
+  .oa-stat-card {
+    border-radius: 12px;
+    border: 1px solid rgba($black, 0.08);
+    background: #fff;
+    overflow: hidden;
+    transition: border-color 0.3s ease;
+
+    &:hover {
+      border-color: rgba($black, 0.15);
+    }
+
+    .Statistics.#{$bp-ns}-callout {
+      border: none;
+      background: transparent;
+      border-radius: 0;
+      padding: 24px;
+      display: block;
+      width: 100%;
+
+      &.dark {
+        background: transparent;
+      }
+    }
+
+    .Statistics__headline.#{$bp-ns}-heading {
+      font-size: 1em;
+      font-weight: 600;
+      color: $black !important;
+      border-bottom: 1px solid rgba($black, 0.08);
+      padding-bottom: 14px;
+      margin: 0 0 8px;
+    }
+
+    .Statistics__list-item {
+      margin: 4px 0;
+
+      a {
+        color: rgba($black, 0.7) !important;
+        padding: 6px 8px;
+        border-radius: 6px;
+        transition: background 0.2s ease;
+
+        &:hover {
+          background: rgba($black, 0.04) !important;
+          color: $darc-orange-500 !important;
+        }
+      }
+
+      .value {
+        color: rgba($black, 0.4) !important;
+        font-size: 0.9em;
+        font-family: var(--font-family-mono, monospace);
+      }
+    }
+  }
+
+  // ── OpenAleph home page custom styles ──────────────
+
+  .oa-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 48px;
+
+    @media screen and (max-width: $aleph-screen-sm-max-width) {
+      grid-template-columns: 1fr;
+    }
+    @media screen and (min-width: $aleph-screen-sm-max-width + 1) and (max-width: $aleph-screen-md-max-width) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  .oa-card {
+    border-radius: 12px;
+    border: 1px solid rgba($white, 0.1);
+    background: #252525;
+    padding: 28px 24px;
+    text-align: center;
+    transition: border-color 0.3s ease;
+
+    &:hover {
+      border-color: rgba($white, 0.25);
+    }
+
+    &__icon {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+
+      img {
+        width: 64px;
+        height: 64px;
+        border-radius: 0 !important;
+        background: transparent !important;
+        filter: invert(1);
+        opacity: 0.85;
+      }
+    }
+
+    h3 {
+      font-size: 1.1em;
+      font-weight: 600;
+      color: $white;
+      margin: 0 0 8px;
+      line-height: 1.3;
+    }
+
+    p {
+      font-size: 0.9em;
+      color: rgba($white, 0.6) !important;
+      line-height: 1.6;
+      margin: 0 !important;
+      padding: 0 !important;
+      text-align: center !important;
+      max-width: none !important;
+      width: auto;
+    }
+  }
+
+  .oa-header {
+    text-align: center;
+    margin-bottom: 0;
+
+    p {
+      color: rgba($white, 0.6) !important;
+      max-width: 600px !important;
+      font-size: 1.05em;
+    }
+
+    &--light p {
+      color: rgba($black, 0.6) !important;
+    }
+  }
+
+  .oa-pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    padding: 6px 16px;
+    font-size: 0.85em;
+    font-weight: 500;
+    margin-bottom: 20px;
+    background: rgba($darc-orange-500, 0.1);
+    border: 1px solid rgba($darc-orange-500, 0.3);
+    color: $darc-orange-500;
+  }
+
+  .oa-values {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 48px;
+    margin-top: 48px;
+    text-align: left;
+
+    @media screen and (max-width: $aleph-screen-sm-max-width) {
+      grid-template-columns: 1fr;
+      gap: 36px;
+    }
+  }
+
+  .oa-value {
+    &__num {
+      font-size: 3em;
+      font-weight: 700;
+      color: $darc-orange-500;
+      line-height: 1;
+      margin-bottom: 16px;
+      font-family: var(--font-family-mono, monospace);
+      opacity: 0.85;
+    }
+
+    h3 {
+      font-size: 1.15em;
+      font-weight: 600;
+      color: $black;
+      margin: 0 0 8px;
+    }
+
+    p {
+      color: rgba($black, 0.55) !important;
+      font-size: 0.9em;
+      line-height: 1.6;
+      text-align: left !important;
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+  }
+
+  .oa-cta {
+    padding: 20px 0;
+
+    p {
+      color: rgba($white, 0.6) !important;
+      max-width: 540px !important;
+      margin: 0 auto 36px !important;
+      padding: 0 !important;
+    }
+  }
+
+  .oa-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .oa-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 9999px;
+    padding: 14px 32px;
+    font-weight: 500;
+    font-size: 1em;
+    text-decoration: none !important;
+    transition: background 0.3s ease, border-color 0.3s ease;
+    cursor: pointer;
+
+    &--primary {
+      background: $darc-orange-500;
+      color: #fff !important;
+
+      &:hover {
+        background: $darc-orange-900;
+      }
+    }
+
+    &--ghost {
+      background: transparent;
+      border: 1px solid rgba($white, 0.2);
+      color: $white !important;
+
+      &:hover {
+        background: rgba($white, 0.05);
+      }
+    }
   }
 }
