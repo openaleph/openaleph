@@ -90,6 +90,7 @@ RUN apt-get -qq -y update \
         libicu76 \
         curl \
         jq \
+        unzip \
     && apt-get -qq -y autoremove \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \

@@ -8,6 +8,7 @@ export ALEPH_DEBUG := true
 export ALEPH_SECRET_KEY := development
 export ALEPH_SINGLE_USER := true
 export ALEPH_UI_URL := http://localhost:3000
+export ALEPH_UI_API_URL := http://localhost:5000
 export ARCHIVE_TYPE := file
 export ARCHIVE_PATH := data
 export OPENALEPH_ELASTICSEARCH_URI := http://localhost:9200
@@ -18,6 +19,13 @@ export REDIS_URL := redis://localhost:6379
 export PROCRASTINATE_APP := aleph.procrastinate.tasks.app
 export OPENALEPH_SEARCH_AUTH := 1
 export OPENALEPH_SEARCH_AUTH_FIELD := collection_id
+
+# =============================================================================
+# Example Demo
+# =============================================================================
+
+up:
+	$(COMPOSE) -f docker-compose.example.yml up
 
 # =============================================================================
 # Development (local)
@@ -137,4 +145,4 @@ migrations:
 documentation:
 	mkdocs build
 
-.PHONY: services stop api worker ui upgrade update shell tail test lint format build install dev clean
+.PHONY: services stop api worker ui upgrade update shell tail test lint format build install dev clean up

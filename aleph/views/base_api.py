@@ -1,24 +1,25 @@
 import logging
-from babel import Locale
 from functools import lru_cache
-from flask import Blueprint, request, current_app
-from flask_babel import gettext, get_locale
-from elasticsearch import TransportError
-from followthemoney import model
-from followthemoney import __version__ as ftm_version
-from followthemoney.exc import InvalidData
-from jwt import ExpiredSignatureError, DecodeError
+
+from babel import Locale
 from banal import as_bool
+from elasticsearch import TransportError
+from flask import Blueprint, current_app, request
+from flask_babel import get_locale, gettext
+from followthemoney import __version__ as ftm_version
+from followthemoney import model
+from followthemoney.exc import InvalidData
+from jwt import DecodeError, ExpiredSignatureError
 
 from aleph import __version__
-from aleph.core import url_for, cache, archive
-from aleph.settings import SETTINGS
 from aleph.authz import Authz
-from aleph.model import Collection, Role
+from aleph.core import archive, cache, url_for
 from aleph.logic.pages import load_pages
 from aleph.logic.util import collection_url
+from aleph.model import Collection, Role
+from aleph.settings import SETTINGS
 from aleph.validation import get_openapi_spec
-from aleph.views.context import enable_cache, NotModified
+from aleph.views.context import NotModified, enable_cache
 from aleph.views.util import jsonify, render_xml
 
 blueprint = Blueprint("base_api", __name__)
@@ -70,6 +71,9 @@ def _metadata_locale(locale):
         "auth": auth,
         "feature_flags": {
             "bookmarks": as_bool(SETTINGS.ENABLE_EXPERIMENTAL_BOOKMARKS_FEATURE),
+            "timelines": as_bool(SETTINGS.ENABLE_TIMELINES),
+            "lists": as_bool(SETTINGS.ENABLE_LISTS),
+            "diagrams": as_bool(SETTINGS.ENABLE_NETWORK_DIAGRAMS),
         },
         "feedback_urls": {
             "documents": SETTINGS.FEEDBACK_URL_DOCUMENTS,
@@ -125,14 +129,14 @@ def openapi():
 
 @blueprint.route("/api/2/statistics")
 def statistics():
-    """Get a summary of the data acessible to an anonymous user.
+    """Get a summary of the data accessible to an anonymous user.
 
     Changed [3.9]: Previously, this would return user-specific stats.
     ---
     get:
       summary: System-wide user statistics.
       description: >
-        Get a summary of the data acessible to an anonymous user.
+        Get a summary of the data accessible to an anonymous user.
       responses:
         '200':
           description: OK

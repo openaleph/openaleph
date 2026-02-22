@@ -28,11 +28,26 @@ def _prop_agg_key(prop: Property, suffix: str | None = "values") -> str:
     return f"properties.{prop.name}.{suffix or 'values'}"
 
 
+def _unpack_significant_terms(agg: dict[str, Any], base_field: str) -> dict[str, Any]:
+    """Unwrap sampler/filter wrappers to get the significant_terms agg."""
+    filtered_key = f"{base_field}.significant_filtered"
+    sampler_key = f"{base_field}.significant_sampled"
+    terms_key = f"{base_field}.significant_terms"
+
+    container = agg
+    if filtered_key in container:
+        container = container[filtered_key]
+    if sampler_key in container:
+        container = container[sampler_key]
+    return container.get(terms_key, {})
+
+
 def _unpack_buckets(agg: dict[str, Any], ignore_term: str) -> MentionedTerms:
     data: dict[str, list[Term]] = defaultdict(list)
     for prop in PROPS:
-        key = _prop_agg_key(prop, "significant_terms")
-        buckets = agg.get(key, {}).get("buckets", [])
+        base_field = f"properties.{prop.name}"
+        sig_terms = _unpack_significant_terms(agg, base_field)
+        buckets = sig_terms.get("buckets", [])
         for bucket in buckets:
             if bucket["key"] != ignore_term:
                 data[prop.name].append(

@@ -28,13 +28,29 @@ class Facet(object):
         return data or aggregations.get(field, {})
 
     def extract_significant_terms(self):
-        """Extract significant terms aggregation data"""
+        """Extract significant terms aggregation data.
+
+        Unwraps the sampler/filter wrappers around significant_terms aggs.
+        The ES response structure is:
+          <field>.significant_filtered (optional) ->
+            <field>.significant_sampled ->
+              <field>.significant_terms -> {buckets: [...]}
+        """
         if self.aggregations is None:
             return {}
 
-        # For significant terms, we need to access the aggregation directly
-        # The name format is 'field.significant_terms'
-        return self.aggregations.get(self.name, {})
+        # self.name is e.g. "names.significant_terms"
+        base_field = self.name.rsplit(".significant_terms", 1)[0]
+        filtered_key = f"{base_field}.significant_filtered"
+        sampler_key = f"{base_field}.significant_sampled"
+
+        aggs = self.aggregations
+        if filtered_key in aggs:
+            aggs = aggs[filtered_key]
+        if sampler_key in aggs:
+            aggs = aggs[sampler_key]
+
+        return aggs.get(self.name, {})
 
     def expand(self, keys):
         pass
