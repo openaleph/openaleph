@@ -32,13 +32,9 @@ class TranslationViewer extends PureComponent {
     }
 
     return (
-      <div className="outer">
-        <div className="inner">
-          <Pre className="TextViewer" dir={dir}>
-            {text}
-          </Pre>
-        </div>
-      </div>
+      <Pre className="TextViewer" dir={dir}>
+        {text}
+      </Pre>
     );
   }
 }

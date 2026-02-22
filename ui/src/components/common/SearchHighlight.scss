@@ -9,3 +9,22 @@
   display: block;
   margin-bottom: 10px;
 }
+
+.SearchHighlight__translation {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: $gray3;
+
+  &-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: $gray3;
+    background: rgba($gray5, 0.15);
+    border-radius: 3px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+}

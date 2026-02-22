@@ -203,7 +203,15 @@ class EntityViews extends React.Component {
                   />
                 </>
               }
-              panel={<TranslationViewer document={entity} />}
+              panel={
+                <section className="DocumentViewMode">
+                  <div className="outer">
+                    <div className="inner">
+                      <TranslationViewer document={entity} />
+                    </div>
+                  </div>
+                </section>
+              }
             />
           )}
           {hasBrowseMode && (
@@ -366,7 +374,11 @@ const mapStateToProps = (state, ownProps) => {
   if (isPreview && location && entity.schema && entity.schema.isDocument()) {
     const parsedHash = queryString.parse(location.hash);
     const parsedSearch = queryString.parse(location.search);
-    isSearchPreview = !!(parsedHash['preview:id'] && parsedHash.q && (parsedSearch.q || parsedSearch.csq));
+    isSearchPreview = !!(
+      parsedHash['preview:id'] &&
+      parsedHash.q &&
+      (parsedSearch.q || parsedSearch.csq)
+    );
 
     if (isSearchPreview) {
       // Create the same query that PdfViewer uses to get search count
@@ -374,10 +386,18 @@ const mapStateToProps = (state, ownProps) => {
       const queryText = hashQuery.q;
 
       if (queryText) {
-        const baseQuery = Query.fromLocation('entities', location, {}, 'document')
+        const baseQuery = Query.fromLocation(
+          'entities',
+          location,
+          {},
+          'document'
+        )
           .setFilter('properties.document', entity.id)
           .setFilter('schema', 'Page');
-        const countQuery = baseQuery.setString('q', undefined).offset(0).limit(0);
+        const countQuery = baseQuery
+          .setString('q', undefined)
+          .offset(0)
+          .limit(0);
         const searchCountQuery = baseQuery
           .set('highlight', true)
           .set('q', queryText)
