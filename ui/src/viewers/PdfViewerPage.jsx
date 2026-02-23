@@ -43,15 +43,21 @@ class PdfViewerPage extends Component {
           numberOfPages={numPages}
           page={page}
           showRotateButtons={false}
-          extraButtons={hasTranslation ? (
-            <Button
-              icon="translate"
-              minimal
-              small
-              active={showTranslation}
-              onClick={() => this.setState({ showTranslation: !showTranslation })}
-            />
-          ) : null}
+          extraButtons={
+            hasTranslation ? (
+              <Button
+                icon="translate"
+                minimal
+                small
+                active={showTranslation}
+                onClick={() =>
+                  this.setState({ showTranslation: !showTranslation })
+                }
+              >
+                {`Show ${showTranslation ? 'original' : 'translation'}`}
+              </Button>
+            ) : null
+          }
         />
         {displayTranslation ? (
           <Pre className="TextViewer" dir={dir}>
