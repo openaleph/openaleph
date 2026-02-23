@@ -105,7 +105,7 @@ class PagingButtons extends React.Component {
   }
 
   render() {
-    const { document, numberOfPages, page, showRotateButtons } = this.props;
+    const { document, numberOfPages, page, showRotateButtons, extraButtons } = this.props;
     const { pageInputVal } = this.state;
 
     if (document.isPending || !document.links) {
@@ -152,6 +152,8 @@ class PagingButtons extends React.Component {
           </div>
           <div className="PagingButtons__right">
             <ButtonGroup>
+              {extraButtons}
+              {extraButtons && <Divider />}
               {this.renderFeedback()}
               {showRotateButtons && (
                 <>

@@ -66,6 +66,22 @@ def queue_analyze(collection: Collection, proxy: EntityProxy, **context: Any) ->
         defer.analyze(app, dataset, [proxy], **context)
 
 
+def queue_transcribe(
+    collection: Collection, proxy: EntityProxy, **context: Any
+) -> None:
+    context = {**context, **get_context(collection)}
+    dataset = get_aggregator_name(collection)
+    with app.open():
+        defer.transcribe(app, dataset, [proxy], **context)
+
+
+def queue_translate(collection: Collection, proxy: EntityProxy, **context: Any) -> None:
+    context = {**context, **get_context(collection)}
+    dataset = get_aggregator_name(collection)
+    with app.open():
+        defer.translate(app, dataset, [proxy], **context)
+
+
 def queue_index(
     collection: Collection, entities: list[EntityProxy], **context: Any
 ) -> None:

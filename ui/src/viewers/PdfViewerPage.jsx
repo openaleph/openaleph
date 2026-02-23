@@ -1,11 +1,17 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
+import { Button, Pre } from '@blueprintjs/core';
 import { PagingButtons } from 'components/Toolbar';
 import { queryEntities } from 'actions';
 import { selectEntitiesResult, selectEntity } from 'selectors';
 import TextViewer from 'viewers/TextViewer';
 
 class PdfViewerPage extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { showTranslation: false };
+  }
+
   componentDidMount() {
     this.fetchPage();
   }
@@ -26,6 +32,9 @@ class PdfViewerPage extends Component {
 
   render() {
     const { document, dir, entity, numPages, page } = this.props;
+    const { showTranslation } = this.state;
+    const hasTranslation = !!entity?.getFirst?.('translatedText');
+    const displayTranslation = showTranslation && hasTranslation;
 
     return (
       <>
@@ -34,8 +43,23 @@ class PdfViewerPage extends Component {
           numberOfPages={numPages}
           page={page}
           showRotateButtons={false}
+          extraButtons={hasTranslation ? (
+            <Button
+              icon="translate"
+              minimal
+              small
+              active={showTranslation}
+              onClick={() => this.setState({ showTranslation: !showTranslation })}
+            />
+          ) : null}
         />
-        <TextViewer document={entity} dir={dir} noStyle />
+        {displayTranslation ? (
+          <Pre className="TextViewer" dir={dir}>
+            {entity?.getFirst?.('translatedText')}
+          </Pre>
+        ) : (
+          <TextViewer document={entity} dir={dir} noStyle />
+        )}
       </>
     );
   }

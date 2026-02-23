@@ -83,3 +83,19 @@ export const deleteEntity = asyncActionCreator(
   },
   { name: 'DELETE_ENTITY' }
 );
+
+export const triggerEntityTranscribe = asyncActionCreator(
+  (entityId) => async () => {
+    await endpoint.post(`entities/${entityId}/transcribe`);
+    return { id: entityId };
+  },
+  { name: 'TRIGGER_ENTITY_TRANSCRIBE' }
+);
+
+export const triggerEntityTranslate = asyncActionCreator(
+  (entityId) => async () => {
+    await endpoint.post(`entities/${entityId}/translate`);
+    return { id: entityId };
+  },
+  { name: 'TRIGGER_ENTITY_TRANSLATE' }
+);

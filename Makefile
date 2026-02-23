@@ -32,7 +32,7 @@ up:
 # =============================================================================
 
 services:
-	$(COMPOSE) up -d postgres elasticsearch redis ingest-file ftm-analyze
+	$(COMPOSE) up -d postgres elasticsearch redis ingest-file ftm-analyze ftm-translate
 
 stop:
 	$(COMPOSE) down --remove-orphans

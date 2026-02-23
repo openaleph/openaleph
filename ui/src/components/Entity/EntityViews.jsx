@@ -40,6 +40,7 @@ import EntityMoreLikeThisMode from 'components/Entity/EntityMoreLikeThisMode';
 import EntityMappingMode from 'components/Entity/EntityMappingMode';
 import EntityNearbyMode from 'components/Entity/EntityNearbyMode';
 import DocumentViewMode from 'components/Document/DocumentViewMode';
+import TranslationViewer from 'viewers/TranslationViewer';
 
 import './EntityViews.scss';
 
@@ -99,6 +100,7 @@ class EntityViews extends React.Component {
     const hasDocumentViewMode =
       hasViewer || (!hasBrowseMode && !hasTextOnlyMode);
     const hasViewMode = entity.schema.isDocument() && hasDocumentViewMode;
+    const hasTranslation = !!entity.getFirst('translatedText');
     const processingError = entity.getProperty('processingError');
     const entityParent = entity.getFirst('parent');
     const showWorkbookWarning =
@@ -186,6 +188,29 @@ class EntityViews extends React.Component {
                   activeMode={activeMode}
                   textMode
                 />
+              }
+            />
+          )}
+          {hasTranslation && (
+            <Tab
+              id="translation"
+              title={
+                <>
+                  <Icon icon="translate" className="left-icon" />
+                  <FormattedMessage
+                    id="entity.info.translation"
+                    defaultMessage="Translation"
+                  />
+                </>
+              }
+              panel={
+                <section className="DocumentViewMode">
+                  <div className="outer">
+                    <div className="inner">
+                      <TranslationViewer document={entity} />
+                    </div>
+                  </div>
+                </section>
               }
             />
           )}
@@ -357,7 +382,12 @@ const mapStateToProps = (state, ownProps) => {
       const queryText = hashQuery.q;
 
       if (queryText) {
-        const baseQuery = Query.fromLocation('entities', location, {}, 'document')
+        const baseQuery = Query.fromLocation(
+          'entities',
+          location,
+          {},
+          'document'
+        )
           .setFilter('properties.document', entity.id)
           .setFilter('schema', 'Page');
         const searchCountQuery = baseQuery

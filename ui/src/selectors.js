@@ -94,6 +94,24 @@ export function selectExperimentalBookmarksFeatureEnabled(state) {
   return loggedIn && featureFlag;
 }
 
+export function selectTimelinesFeatureEnabled(state) {
+  const loggedIn = !!selectSession(state).loggedIn;
+  const featureFlag = !!selectFeatureFlags(state).timelines;
+  return loggedIn && featureFlag;
+}
+
+export function selectListsFeatureEnabled(state) {
+  const loggedIn = !!selectSession(state).loggedIn;
+  const featureFlag = !!selectFeatureFlags(state).lists;
+  return loggedIn && featureFlag;
+}
+
+export function selectNetworksFeatureEnabled(state) {
+  const loggedIn = !!selectSession(state).loggedIn;
+  const featureFlag = !!selectFeatureFlags(state).networks;
+  return loggedIn && featureFlag;
+}
+
 export function selectFeedbackUrls(state) {
   return selectMetadata(state)?.feedback_urls;
 }
@@ -409,7 +427,11 @@ export function selectEntityView(state, entityId, mode, isPreview, location) {
   if (isPreview && location && schema && schema.isDocument()) {
     const parsedHash = queryString.parse(location.hash);
     const parsedSearch = queryString.parse(location.search);
-    const isSearchPreview = !!(parsedHash['preview:id'] && parsedHash.q && (parsedSearch.q || parsedSearch.csq));
+    const isSearchPreview = !!(
+      parsedHash['preview:id'] &&
+      parsedHash.q &&
+      (parsedSearch.q || parsedSearch.csq)
+    );
 
     if (isSearchPreview) {
       return 'text';

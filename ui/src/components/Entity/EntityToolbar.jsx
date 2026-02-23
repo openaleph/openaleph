@@ -5,7 +5,7 @@ import { ButtonGroup, Classes, Icon } from '@blueprintjs/core';
 import c from 'classnames';
 
 import { BookmarkButton } from 'components/common';
-import { DownloadButton } from 'components/Toolbar';
+import { DownloadButton, TranscribeButton, TranslateButton } from 'components/Toolbar';
 import getEntityLink from 'util/getEntityLink';
 
 import './EntityToolbar.scss';
@@ -20,6 +20,8 @@ class EntityToolbar extends React.Component {
     const isDocument = entity && entity.schema.isDocument();
     const showDownloadButton =
       isDocument && entity && entity.links && entity.links.file;
+    const showTranscribeButton = entity?.links?.transcribe;
+    const showTranslateButton = entity?.links?.translate;
 
     return (
       <div className="EntityToolbar">
@@ -37,6 +39,8 @@ class EntityToolbar extends React.Component {
             </Link>
           )}
           {showDownloadButton && <DownloadButton document={entity} />}
+          {showTranscribeButton && <TranscribeButton entity={entity} />}
+          {showTranslateButton && <TranslateButton entity={entity} />}
           <BookmarkButton entity={entity} />
         </ButtonGroup>
       </div>
