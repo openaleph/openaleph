@@ -9,7 +9,7 @@ import c from 'classnames';
 import withRouter from 'app/withRouter';
 import SearchField from 'components/SearchField/SearchField';
 import { getGroupField } from 'components/SearchField/util';
-import { Country, Numeric, Schema, Statistics } from 'components/common';
+import { Country, Numeric, Panel, Schema, Statistics } from 'components/common';
 import { selectCollection, selectModel } from 'selectors';
 import { collectionSearchQuery } from 'queries';
 import getCollectionLink from 'util/getCollectionLink';
@@ -64,11 +64,9 @@ class CollectionStatistics extends PureComponent {
       field === 'schema' ? Object.keys(filteredValues).length : total;
 
     return (
-      <div
+      <Panel
         className={c(
           'CollectionStatistics',
-          Classes.CARD,
-          Classes.ELEVATION_1,
           !values && Classes.SKELETON
         )}
       >
@@ -98,7 +96,7 @@ class CollectionStatistics extends PureComponent {
           ItemContentContainer={this.renderItem}
           styleType="dark"
         />
-      </div>
+      </Panel>
     );
   }
 }

@@ -1,11 +1,31 @@
 @import 'app/variables.scss';
 
-.SearchHighlight em {
-  background-color: $aleph-text-highlight-color;
-  font-style: inherit;
+.SearchHighlight {
+  background-color: rgba($darc-yellow-500, 0.08);
+  border-left: 3px solid rgba($darc-yellow-500, 0.5);
+  padding: 6px 10px;
+  border-radius: 0 4px 4px 0;
+
+  em {
+    background-color: $aleph-text-highlight-color;
+    font-style: inherit;
+  }
 }
 
 .SearchHighlight__names {
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-bottom: 10px;
+
+  .#{$bp-ns}-tag {
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.3;
+    border-radius: 4px;
+    background: none;
+    border: 1px solid $darc-gray-200;
+    color: $darc-gray-500;
+  }
 }

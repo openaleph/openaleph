@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Classes, Menu, MenuDivider } from '@blueprintjs/core';
+import { Classes, Menu } from '@blueprintjs/core';
 import { defineMessages, injectIntl, FormattedMessage } from 'react-intl';
 import { Count, Skeleton, AppItem, LinkMenuItem } from 'components/common';
 
@@ -74,86 +74,87 @@ class Dashboard extends React.Component {
       <div className="Dashboard">
         <div className="Dashboard__inner-container">
           <div className="Dashboard__menu">
-            <Menu>
-              <MenuDivider
-                title={
+            <div className="Dashboard__menu-card">
+              <h6 className="Dashboard__menu-card-title">
+                <FormattedMessage
+                  id="dashboard.activity"
+                  defaultMessage="Activity"
+                />
+              </h6>
+              <Menu>
+                <LinkMenuItem
+                  icon="notifications"
+                  text={intl.formatMessage(messages.notifications)}
+                  to="/notifications"
+                  active={current === '/notifications'}
+                />
+                <LinkMenuItem
+                  icon="feed"
+                  text={intl.formatMessage(messages.alerts)}
+                  label={<Count count={role?.counts?.alerts} />}
+                  to="/alerts"
+                  active={current === '/alerts'}
+                />
+                <LinkMenuItem
+                  icon="export"
+                  text={intl.formatMessage(messages.exports)}
+                  label={<Count count={role?.counts?.exports} />}
+                  to="/exports"
+                  active={current === '/exports'}
+                />
+              </Menu>
+            </div>
+            <div className="Dashboard__menu-card">
+              <h6 className="Dashboard__menu-card-title">
+                <FormattedMessage
+                  id="dashboard.workspace"
+                  defaultMessage="Workspace"
+                />
+              </h6>
+              <Menu>
+                <LinkMenuItem
+                  icon="briefcase"
+                  text={intl.formatMessage(messages.cases)}
+                  label={<Count count={role?.counts?.casefiles} />}
+                  to="/investigations"
+                  active={current === '/investigations'}
+                />
+                <LinkMenuItem
+                  icon="graph"
+                  text={intl.formatMessage(messages.diagrams)}
+                  label={<Count count={role?.counts?.entitysets?.diagram} />}
+                  to="/diagrams"
+                  active={current === '/diagrams'}
+                />
+                <LinkMenuItem
+                  icon="gantt-chart"
+                  text={intl.formatMessage(messages.timelines)}
+                  label={<Count count={role?.counts?.entitysets?.timeline} />}
+                  to="/timelines"
+                  active={current === '/timelines'}
+                />
+                <LinkMenuItem
+                  icon="list"
+                  text={intl.formatMessage(messages.lists)}
+                  label={<Count count={role?.counts?.entitysets?.list} />}
+                  to="/lists"
+                  active={current === '/lists'}
+                />
+              </Menu>
+            </div>
+            {(groupsResult.total === undefined || groupsResult.total > 0) && (
+              <div className="Dashboard__menu-card">
+                <h6
+                  className={`Dashboard__menu-card-title ${
+                    groupsResult.total === undefined ? Classes.SKELETON : ''
+                  }`}
+                >
                   <FormattedMessage
-                    id="dashboard.activity"
-                    defaultMessage="Activity"
+                    id="dashboard.groups"
+                    defaultMessage="Groups"
                   />
-                }
-              />
-              <LinkMenuItem
-                icon="notifications"
-                text={intl.formatMessage(messages.notifications)}
-                to="/notifications"
-                active={current === '/notifications'}
-              />
-              <LinkMenuItem
-                icon="feed"
-                text={intl.formatMessage(messages.alerts)}
-                label={<Count count={role?.counts?.alerts} />}
-                to="/alerts"
-                active={current === '/alerts'}
-              />
-              <LinkMenuItem
-                icon="export"
-                text={intl.formatMessage(messages.exports)}
-                label={<Count count={role?.counts?.exports} />}
-                to="/exports"
-                active={current === '/exports'}
-              />
-              <MenuDivider />
-              <MenuDivider
-                title={
-                  <FormattedMessage
-                    id="dashboard.workspace"
-                    defaultMessage="Workspace"
-                  />
-                }
-              />
-              <LinkMenuItem
-                icon="briefcase"
-                text={intl.formatMessage(messages.cases)}
-                label={<Count count={role?.counts?.casefiles} />}
-                to="/investigations"
-                active={current === '/investigations'}
-              />
-              <LinkMenuItem
-                icon="graph"
-                text={intl.formatMessage(messages.diagrams)}
-                label={<Count count={role?.counts?.entitysets?.diagram} />}
-                to="/diagrams"
-                active={current === '/diagrams'}
-              />
-              <LinkMenuItem
-                icon="gantt-chart"
-                text={intl.formatMessage(messages.timelines)}
-                label={<Count count={role?.counts?.entitysets?.timeline} />}
-                to="/timelines"
-                active={current === '/timelines'}
-              />
-              <LinkMenuItem
-                icon="list"
-                text={intl.formatMessage(messages.lists)}
-                label={<Count count={role?.counts?.entitysets?.list} />}
-                to="/lists"
-                active={current === '/lists'}
-              />
-              {(groupsResult.total === undefined || groupsResult.total > 0) && (
-                <>
-                  <MenuDivider />
-                  <MenuDivider
-                    className={
-                      groupsResult.total === undefined && Classes.SKELETON
-                    }
-                    title={
-                      <FormattedMessage
-                        id="dashboard.groups"
-                        defaultMessage="Groups"
-                      />
-                    }
-                  />
+                </h6>
+                <Menu>
                   {groupsResult.results !== undefined &&
                     groupsResult.results.map((group) => (
                       <LinkMenuItem
@@ -171,24 +172,32 @@ class Dashboard extends React.Component {
                       className={Classes.MENU_ITEM}
                     />
                   )}
-                </>
-              )}
-              <MenuDivider />
-              <LinkMenuItem
-                icon="dashboard"
-                text={intl.formatMessage(messages.status)}
-                to="/status"
-                active={current === '/status'}
-              />
-              <LinkMenuItem
-                icon="cog"
-                text={intl.formatMessage(messages.settings)}
-                to="/settings"
-                active={current === '/settings'}
-              />
-              <MenuDivider />
-              <AppItem />
-            </Menu>
+                </Menu>
+              </div>
+            )}
+            <div className="Dashboard__menu-card">
+              <h6 className="Dashboard__menu-card-title">
+                <FormattedMessage
+                  id="dashboard.system"
+                  defaultMessage="System"
+                />
+              </h6>
+              <Menu>
+                <LinkMenuItem
+                  icon="dashboard"
+                  text={intl.formatMessage(messages.status)}
+                  to="/status"
+                  active={current === '/status'}
+                />
+                <LinkMenuItem
+                  icon="cog"
+                  text={intl.formatMessage(messages.settings)}
+                  to="/settings"
+                  active={current === '/settings'}
+                />
+                <AppItem />
+              </Menu>
+            </div>
           </div>
           <div className="Dashboard__body">{this.props.children}</div>
         </div>

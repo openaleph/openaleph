@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Tag } from '@blueprintjs/core';
 import { endpoint } from 'app/api';
+import './EntitySearchDiscovery.scss';
 
 interface EntitySearchDiscoveryProps {
   result: {
@@ -191,14 +192,13 @@ const EntitySearchDiscovery: React.FC<EntitySearchDiscoveryProps> = ({
   return (
     <div className="EntitySearchDiscovery">
       {queryPhrases.length > 0 && (
-        <div style={{ marginBottom: '10px' }}>
+        <div className="EntitySearchDiscovery__query">
           <span>Search terms: </span>
           {queryPhrases.map((phrase, index) => (
             <Tag
               key={index}
               intent="primary"
               onRemove={() => removePhrase(phrase)}
-              style={{ marginRight: '5px' }}
             >
               {phrase}
             </Tag>
@@ -208,30 +208,19 @@ const EntitySearchDiscovery: React.FC<EntitySearchDiscoveryProps> = ({
       {discoveryResult.loading && <p>Loading discovery results...</p>}
       {discoveryResult.error && <p>Error: {discoveryResult.error}</p>}
       {filteredSignificantTerms && filteredSignificantTerms.length > 0 && (
-        <div>
-          <p>
+        <div className="EntitySearchDiscovery__terms">
+          <span>
             Your search query is often mentioned with these related terms:{' '}
-            {filteredSignificantTerms.map((term, index) => (
-              <span key={term.id || index}>
-                <button
-                  onClick={() => handleTermClick(term.label)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#137cbd',
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    padding: 0,
-                    margin: 0,
-                    font: 'inherit',
-                  }}
-                >
-                  {term.label}
-                </button>
-                {index < filteredSignificantTerms.length - 1 && ', '}
-              </span>
-            ))}
-          </p>
+          </span>
+          {filteredSignificantTerms.map((term, index) => (
+            <button
+              key={term.id || index}
+              className="EntitySearchDiscovery__term"
+              onClick={() => handleTermClick(term.label)}
+            >
+              {term.label}
+            </button>
+          ))}
         </div>
       )}
     </div>

@@ -16,7 +16,7 @@
       display: flex;
 
       &.deleted {
-        color: $red1;
+        color: $aleph-error-highlight-color;
       }
 
       &__icon {

@@ -8,11 +8,12 @@ import {
   injectIntl,
 } from 'react-intl';
 import queryString from 'query-string';
-import { Button, Card, Icon, Intent, Spinner } from '@blueprintjs/core';
+import { Button, Icon, Intent, Spinner } from '@blueprintjs/core';
 import { Histogram } from 'react-ftm';
 import moment from 'moment';
 
 import withRouter from 'app/withRouter';
+import { Panel } from 'components/common';
 import {
   DEFAULT_START_INTERVAL,
   filterDateIntervals,
@@ -233,7 +234,7 @@ export class DateFilter extends Component {
     }
 
     return (
-      <Card className="DateFacet">
+      <Panel className="DateFacet">
         {showLabel && (
           <div className="DateFacet__label">
             <Icon icon="calendar" className="left-icon" />
@@ -247,7 +248,7 @@ export class DateFilter extends Component {
           </div>
         )}
         {content}
-      </Card>
+      </Panel>
     );
   }
 }

@@ -12,18 +12,12 @@
   }
 
   &__menu {
-    flex-grow: 0;
-    width: 20%;
+    flex: none;
+    width: $aleph-sidebar-width;
     @include rtlSupportInvertedProp(
       border,
       right,
-      1px solid $aleph-border-color,
-      null
-    );
-    @include rtlSupportInvertedProp(
-      margin,
-      right,
-      $aleph-content-padding,
+      1px solid rgba($black, 0.08),
       null
     );
     @include rtlSupportInvertedProp(
@@ -32,27 +26,43 @@
       $aleph-content-padding,
       null
     );
-    min-width: 235px;
+
+    @media screen and (max-width: $aleph-screen-md-max-width) and (min-width: $aleph-screen-sm-max-width) {
+      width: 40%;
+    }
 
     @media screen and (max-width: $aleph-screen-sm-max-width) {
       display: none;
     }
+  }
 
-    .#{$bp-ns}-menu-header {
-      border: none;
-      @include rtlSupportInvertedProp(margin, left, 0, null);
-      margin-bottom: $aleph-grid-size;
+  &__menu-card {
+    background: #fff;
+    border: 1px solid rgba($black, 0.08);
+    border-radius: $aleph-border-radius;
+    margin-bottom: $aleph-grid-size * 1.5;
+    overflow: hidden;
+    transition: border-color 0.2s ease;
 
-      .#{$bp-ns}-heading {
-        color: $blue1;
-        padding-top: 2px;
+    &:hover {
+      border-color: rgba($black, 0.15);
+    }
+
+    .#{$bp-ns}-menu {
+      padding: $aleph-grid-size * 0.5 0;
+
+      .#{$bp-ns}-menu-item {
+        padding: $aleph-grid-size * 0.8 $aleph-grid-size * 1.5;
       }
     }
+  }
 
-    .#{$bp-ns}-menu-divider {
-      margin: $aleph-grid-size * 1.5 0;
-      border-color: $aleph-border-color;
-    }
+  &__menu-card-title {
+    padding: $aleph-grid-size $aleph-grid-size * 1.5;
+    font-size: 1.1em;
+    font-weight: bold;
+    margin: 0;
+    color: $aleph-link-color;
   }
 
   &__actions {
@@ -65,12 +75,12 @@
 
   &__title {
     font-size: 22px;
-    color: $dark-gray1;
+    color: $black;
     margin: 0 0 $aleph-grid-size;
   }
 
   &__subheading {
-    color: $dark-gray5;
+    color: $darc-gray-600;
     line-height: 1.5;
     clear: both;
     max-width: 700px;
@@ -84,8 +94,8 @@
     @include rtlSupportInvertedProp(
       padding,
       left,
-      $aleph-grid-size * 0.5,
-      $aleph-grid-size * 0.5
+      $aleph-content-padding * 1.2,
+      null
     );
   }
 }

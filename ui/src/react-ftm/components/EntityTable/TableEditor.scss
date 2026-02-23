@@ -28,11 +28,11 @@
     min-height: 30px;
     vertical-align: middle;
     text-align: left;
-    background-color: $light-gray5;
+    background-color: rgba(26, 26, 26, 0.03);
     color: black;
 
     &.selected {
-      background-color: rgba(33, 133, 208, 0.15) !important;
+      background-color: rgba($accent-color, 0.12) !important;
       box-shadow: none;
     }
 

@@ -1,5 +1,6 @@
 import React, { PureComponent } from 'react';
 import { FormattedMessage } from 'react-intl';
+import { Link } from 'react-router-dom';
 import { Classes, Icon, H4 } from '@blueprintjs/core';
 import {
   Date,
@@ -12,6 +13,7 @@ import {
   Skeleton,
   Frequency,
 } from 'components/common';
+import getCollectionLink from 'util/getCollectionLink';
 
 class CollectionIndexItem extends PureComponent {
   renderSkeleton = () => (
@@ -44,72 +46,74 @@ class CollectionIndexItem extends PureComponent {
   );
 
   render() {
-    const { collection, isPending, preview = true } = this.props;
+    const { collection, isPending } = this.props;
 
     if (isPending || !collection.id) {
       return this.renderSkeleton();
     }
 
+    const link = getCollectionLink({ collection });
+
     return (
       <li className="index-item" key={collection.id}>
-        <div className="index-item__count">
-          <Count
-            className={Classes.INTENT_PRIMARY}
-            count={collection.count}
-            full
-          />
-        </div>
-        <H4 className="index-item__title">
-          <Collection.Link
-            className="index-item__title__text"
-            preview={preview}
-            collection={collection}
-            icon
-          />
-        </H4>
-        {collection.summary && (
-          <Summary
-            text={collection.summary}
-            className="index-item__summary"
-            truncate={2}
-          />
-        )}
-        <p className="index-item__details">
-          <span className="index-item__details__item">
-            <Category.Label category={collection.category} icon="list" />
-          </span>
-          <span className="index-item__details__item">
-            <Icon icon="time" />
-            <FormattedMessage
-              id="collection.last_updated"
-              defaultMessage="Last updated {date}"
-              values={{
-                date: <Date value={collection.updated_at} />,
-              }}
+        <Link to={link} className="index-item__link">
+          <div className="index-item__count">
+            <Count
+              className={Classes.INTENT_PRIMARY}
+              count={collection.count}
+              full
             />
-            {collection.frequency !== 'never' &&
-              collection.frequency !== 'unknown' && (
-                <Frequency.Label frequency={collection.frequency} />
-              )}
-          </span>
-          {collection.countries && collection.countries.length > 0 && (
-            <span className="index-item__details__item">
-              <Icon icon="globe" />
-              <Country.List codes={collection.countries} truncate={3} />
-            </span>
+          </div>
+          <H4 className="index-item__title">
+            <Collection.Label
+              className="index-item__title__text"
+              collection={collection}
+              icon
+            />
+          </H4>
+          {collection.summary && (
+            <Summary
+              text={collection.summary}
+              className="index-item__summary"
+              truncate={2}
+            />
           )}
-          {collection.casefile && (
+          <p className="index-item__details">
             <span className="index-item__details__item">
-              <Role.List
-                roles={collection.team}
-                icon={false}
-                truncate={3}
-                truncateItem={20}
-                separateItems
+              <Category.Label category={collection.category} />
+            </span>
+            <span className="index-item__details__item">
+              <Icon icon="time" />
+              <FormattedMessage
+                id="collection.last_updated"
+                defaultMessage="Last updated {date}"
+                values={{
+                  date: <Date value={collection.updated_at} />,
+                }}
               />
+              {collection.frequency !== 'never' &&
+                collection.frequency !== 'unknown' && (
+                  <Frequency.Label frequency={collection.frequency} />
+                )}
             </span>
-          )}
-        </p>
+            {collection.countries && collection.countries.length > 0 && (
+              <span className="index-item__details__item">
+                <Country.List codes={collection.countries} truncate={3} />
+              </span>
+            )}
+            {collection.casefile && (
+              <span className="index-item__details__item">
+                <Role.List
+                  roles={collection.team}
+                  icon={false}
+                  truncate={3}
+                  truncateItem={20}
+                  separateItems
+                />
+              </span>
+            )}
+          </p>
+        </Link>
       </li>
     );
   }

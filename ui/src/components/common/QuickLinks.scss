@@ -5,10 +5,10 @@
   display: flex;
   flex-wrap: wrap;
 
-  padding: 0 5px;
+  padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
-  gap: $aleph-grid-size * 1.5 $aleph-grid-size * 1.5;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: $aleph-grid-size * 2;
   @media screen and (max-width: $aleph-screen-sm-max-width) {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
@@ -19,49 +19,46 @@
     text-decoration: none !important;
 
     &__content {
-      border-radius: 5px;
-      box-shadow: $pt-elevation-shadow-2 !important;
-      transition: box-shadow 0.1s ease-in-out;
+      border-radius: $aleph-border-radius !important;
+      border: 1px solid rgba($black, 0.08) !important;
+      background: #fff !important;
+      box-shadow: none !important;
+      transition: box-shadow 0.2s ease, border-color 0.2s ease;
       cursor: pointer !important;
       height: 100%;
       width: 100%;
       text-align: center;
       align-self: center;
-      padding: $aleph-grid-size * 0.5 $aleph-grid-size;
+      padding: $aleph-grid-size * 1.5 $aleph-grid-size * 1.5 !important;
+      display: block !important;
 
       &:hover {
-        background: $white !important;
-        box-shadow: $pt-elevation-shadow-3 !important;
+        box-shadow: 0 4px 12px rgba($black, 0.1) !important;
+        border-color: rgba($black, 0.12) !important;
+        background: #fff !important;
       }
     }
 
-    &__image {
-      min-height: $aleph-grid-size * 10;
-      margin: $aleph-grid-size;
-      background-size: cover;
-      background-repeat: no-repeat;
-      background-position: 50% 50%;
-      position: relative;
-      border-radius: 5px;
+    &__icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: $aleph-grid-size * 2 0 $aleph-grid-size;
 
-      &:after {
-        background: rgba($white, 0.6);
-        height: 100%;
-        width: 100%;
-        position: absolute;
-        top: 0;
-        left: 0;
-        content: '';
+      img {
+        width: 64px;
+        height: 64px;
+        filter: invert(1) sepia(0.5) saturate(0.4) hue-rotate(213deg) brightness(0.65) contrast(1.2);
       }
     }
 
     &__text {
       text-align: center;
-      padding: 5px 15px 15px;
+      padding: 0 15px 15px;
       margin: 0;
       line-height: 1.4;
-      color: $blue1 !important;
-      font-weight: bold;
+      color: $aleph-accent-color !important;
+      font-weight: 600;
       display: table;
       width: 100%;
 

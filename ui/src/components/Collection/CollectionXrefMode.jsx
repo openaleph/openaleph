@@ -2,7 +2,7 @@ import React from 'react';
 import { defineMessages, injectIntl } from 'react-intl';
 import { compose } from 'redux';
 import { connect } from 'react-redux';
-import { Button, Intent } from '@blueprintjs/core';
+import { Button } from '@blueprintjs/core';
 import queryString from 'query-string';
 
 import withRouter from 'app/withRouter';
@@ -130,7 +130,6 @@ export class CollectionXrefMode extends React.Component {
                   )}
                   onClick={this.toggleSort}
                   minimal
-                  intent={Intent.PRIMARY}
                 />
               }
             />

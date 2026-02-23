@@ -1,0 +1,95 @@
+@import 'app/variables.scss';
+
+.SearchBox {
+  display: flex;
+  align-items: center;
+  gap: $aleph-grid-size * 1.5;
+
+  &__form {
+    flex: 1;
+    display: flex;
+    align-items: stretch;
+  }
+
+  // Shared style for all bar buttons (search, alert, etc.)
+  &__form:has(.SearchBox__search-button) {
+    .#{$bp-ns}-input-group {
+      flex: 1;
+
+      .#{$bp-ns}-input {
+        border-radius: $aleph-border-radius 0 0 $aleph-border-radius;
+      }
+    }
+
+    .#{$bp-ns}-button.#{$bp-ns}-button {
+      background: $darc-gray-900 !important;
+      color: $white !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      border: none;
+      padding: 0;
+      width: 40px;
+      min-height: 100%;
+      min-width: 0;
+      margin: 0;
+      flex-shrink: 0;
+
+      &:hover {
+        background: $darc-gray-800 !important;
+      }
+
+      .#{$bp-ns}-icon,
+      &::before {
+        color: $white !important;
+        margin: 0;
+      }
+
+      &.#{$bp-ns}-intent-primary {
+        background: $aleph-accent-color !important;
+
+        &:hover {
+          background: darken($aleph-accent-color, 8%) !important;
+        }
+      }
+    }
+
+    .SearchBox__synonyms-toggle.#{$bp-ns}-control.#{$bp-ns}-switch {
+      display: flex;
+      align-items: center;
+      gap: $aleph-grid-size * 0.5;
+      background: $darc-gray-900;
+      color: $white;
+      margin: 0;
+      padding: 0 $aleph-grid-size * 1.2;
+      white-space: nowrap;
+      font-size: $aleph-font-size - 1;
+      border-radius: 0 !important;
+
+      &:hover {
+        background: $darc-gray-800;
+      }
+
+      .#{$bp-ns}-control-indicator {
+        margin: 0 !important;
+      }
+    }
+  }
+
+  &__synonyms-toggle {
+    margin-bottom: 0;
+    white-space: nowrap;
+    font-size: $aleph-font-size - 1;
+
+    &--light-label {
+      color: rgba(#ffffff, 0.85);
+
+      .#{$bp-ns}-control-indicator {
+        background-color: rgba(#ffffff, 0.25) !important;
+      }
+
+      &.#{$bp-ns}-control.#{$bp-ns}-switch input:checked ~ .#{$bp-ns}-control-indicator {
+        background-color: rgba(#ffffff, 0.5) !important;
+      }
+    }
+  }
+}

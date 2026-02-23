@@ -23,6 +23,7 @@
     "d3-scale": "^4.0.2",
     "dagre": "^0.8.5",
     "date-fns": "^2.30.0",
+    "flag-icons": "^7.5.0",
     "google-libphonenumber": "^3.2.33",
     "http-proxy-middleware": "^2.0.0",
     "js-file-download": "^0.4.9",
@@ -87,9 +88,11 @@
   },
   "browserslist": {
     "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
+      "last 2 chrome versions",
+      "last 2 firefox versions",
+      "last 2 safari versions",
+      "last 2 edge versions",
+      "not dead"
     ],
     "development": [
       "last 5 chrome version",

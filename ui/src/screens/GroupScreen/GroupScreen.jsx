@@ -101,11 +101,10 @@ export class GroupScreen extends Component {
                 id="group.page.search.description"
                 defaultMessage="If you would like to search for specific entities or documents within the datasets that this group has access to, <link>click here</link> instead."
                 values={{
-                  // eslint-disable-next-line
                   link: (chunks) => (
-                    <a role="button" onClick={this.goToEntitySearch}>
+                    <button type="button" className="bp4-button bp4-minimal bp4-intent-primary" style={{ display: 'inline', padding: 0, minHeight: 'auto' }} onClick={this.goToEntitySearch}>
                       {chunks}
-                    </a>
+                    </button>
                   ),
                 }}
               />

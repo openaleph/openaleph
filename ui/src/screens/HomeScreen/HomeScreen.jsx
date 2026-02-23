@@ -102,23 +102,23 @@ export class HomeScreen extends Component {
                   })}
                   inputProps={{ large: true, autoFocus: true }}
                 />
-                <div className="HomeScreen__thirds">
-                  <AnimatedCount
-                    count={statistics?.things}
-                    isPending={statistics.isPending}
-                    label={intl.formatMessage(messages.count_entities)}
-                  />
-                  <AnimatedCount
-                    count={statistics?.collections}
-                    isPending={statistics.isPending}
-                    label={intl.formatMessage(messages.count_datasets)}
-                  />
-                  <AnimatedCount
-                    count={_.size(statistics?.countries)}
-                    isPending={statistics.isPending}
-                    label={intl.formatMessage(messages.count_countries)}
-                  />
-                </div>
+              </div>
+              <div className="HomeScreen__stats">
+                <AnimatedCount
+                  count={statistics?.things}
+                  isPending={statistics.isPending}
+                  label={intl.formatMessage(messages.count_entities)}
+                />
+                <AnimatedCount
+                  count={statistics?.collections}
+                  isPending={statistics.isPending}
+                  label={intl.formatMessage(messages.count_datasets)}
+                />
+                <AnimatedCount
+                  count={_.size(statistics?.countries)}
+                  isPending={statistics.isPending}
+                  label={intl.formatMessage(messages.count_countries)}
+                />
               </div>
             </div>
           </section>
@@ -129,14 +129,28 @@ export class HomeScreen extends Component {
           )}
           <section className="HomeScreen__section">
             <div className="HomeScreen__section__content">
-              <h1 className="HomeScreen__title">
-                <FormattedMessage
-                  id="home.stats.title"
-                  defaultMessage="Get started exploring public data"
-                />
-              </h1>
-              <div className="HomeScreen__thirds">
-                <div>
+              <div className="oa-header oa-header--light">
+                <div className="oa-pill">
+                  <FormattedMessage
+                    id="home.stats.pill"
+                    defaultMessage="Explore"
+                  />
+                </div>
+                <h1 className="HomeScreen__title">
+                  <FormattedMessage
+                    id="home.stats.title"
+                    defaultMessage="Get started exploring public data"
+                  />
+                </h1>
+                <p>
+                  <FormattedMessage
+                    id="home.stats.subtitle"
+                    defaultMessage="Browse by entity type, dataset category, or country."
+                  />
+                </p>
+              </div>
+              <div className="oa-grid">
+                <div className="oa-stat-card">
                   <Statistics
                     styleType="dark"
                     headline={
@@ -156,7 +170,7 @@ export class HomeScreen extends Component {
                     )}
                   />
                 </div>
-                <div>
+                <div className="oa-stat-card">
                   <Statistics
                     styleType="dark"
                     headline={
@@ -176,7 +190,7 @@ export class HomeScreen extends Component {
                     itemLabel={(name) => <Category.Label category={name} />}
                   />
                 </div>
-                <div>
+                <div className="oa-stat-card">
                   <Statistics
                     styleType="dark"
                     headline={

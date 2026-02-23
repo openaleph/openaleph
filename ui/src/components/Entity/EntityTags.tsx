@@ -68,6 +68,7 @@ const EntityTags: React.FC<IEntityTagsProps> = ({ entity }) => {
     if (entity.id) {
       fetchTags();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entity.id]);
 
   // Generate URL for tag search
@@ -169,7 +170,6 @@ const EntityTags: React.FC<IEntityTagsProps> = ({ entity }) => {
               >
                 <Tag
                   icon={isDeleting ? 'time' : 'tag'}
-                  intent="primary"
                   minimal
                   className={`EntityTags__tag ${
                     isDeleting ? 'EntityTags__tag--deleting' : ''
