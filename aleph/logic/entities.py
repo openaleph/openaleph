@@ -7,6 +7,7 @@ from followthemoney.exc import InvalidData
 from followthemoney.types import registry
 from openaleph_procrastinate.defer import tasks
 from openaleph_search.index import entities as index
+from rigour.langs import iso_639_alpha2
 
 from aleph.core import cache, db
 from aleph.index import xref as xref_index
@@ -140,7 +141,7 @@ def should_translate(proxy: EntityProxy) -> bool:
     if not tasks.translate.defer:
         return False
     if proxy.schema.is_a("Document"):
-        source_lang = proxy.get("detectedLanguage")
+        source_lang = iso_639_alpha2(proxy.first("detectedLanguage") or "")
         if source_lang and SETTINGS.FTM_TRANSLATE_TARGET_LANGUAGE != source_lang:
             return True
     return False
