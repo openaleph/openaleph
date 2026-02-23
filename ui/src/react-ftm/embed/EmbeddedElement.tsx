@@ -53,7 +53,6 @@ export class EmbeddedElement extends React.Component<IEmbeddedElementProps> {
         break;
       case 'Histogram':
         return <HistogramWrapper />;
-        break;
       default:
         Element = NetworkDiagramWrapper;
         break;

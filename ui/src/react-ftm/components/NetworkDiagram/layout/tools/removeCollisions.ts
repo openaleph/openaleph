@@ -37,4 +37,5 @@
 //
 // export default removeCollisions;
 
-export default () => {};
+const removeCollisions = () => {};
+export default removeCollisions;

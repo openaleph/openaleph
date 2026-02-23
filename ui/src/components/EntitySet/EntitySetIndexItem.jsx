@@ -1,5 +1,6 @@
 import React from 'react';
 import { FormattedMessage } from 'react-intl';
+import { Link } from 'react-router-dom';
 import { Alignment, Button, Classes, Icon, H6 } from '@blueprintjs/core';
 import {
   Collection,
@@ -8,6 +9,7 @@ import {
   Skeleton,
   Summary,
 } from 'components/common';
+import getEntitySetLink from 'util/getEntitySetLink';
 
 import './EntitySetIndexItem.scss';
 
@@ -46,7 +48,7 @@ class EntitySetIndexItem extends React.PureComponent {
 
     if (isPending) {
       return (
-        <>
+        <div className="index-item__link">
           <div className="EntitySetIndexItem__flex-content">
             <H6 className="index-item__title">
               <Skeleton.Text type="span" length={30} />
@@ -66,15 +68,15 @@ class EntitySetIndexItem extends React.PureComponent {
               />
             </p>
           </div>
-        </>
+        </div>
       );
     }
 
     return (
-      <>
+      <Link to={getEntitySetLink(entitySet)} className="index-item__link">
         <div className="EntitySetIndexItem__flex-content">
           <H6 className="index-item__title">
-            <EntitySet.Link
+            <EntitySet.Label
               className="index-item__title__text"
               entitySet={entitySet}
               icon
@@ -83,7 +85,7 @@ class EntitySetIndexItem extends React.PureComponent {
           <span className="index-item__details">
             {showCollection && (
               <span className="index-item__details__item">
-                <Collection.Link
+                <Collection.Label
                   collection={entitySet.collection}
                   className={Classes.TEXT_MUTED}
                 />
@@ -108,7 +110,7 @@ class EntitySetIndexItem extends React.PureComponent {
             truncate={2}
           />
         )}
-      </>
+      </Link>
     );
   }
 

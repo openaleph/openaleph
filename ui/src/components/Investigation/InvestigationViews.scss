@@ -12,13 +12,13 @@
     align-items: center;
 
     .#{$bp-ns}-icon {
-      color: $gray1;
+      color: $aleph-greyed-text;
       vertical-align: initial;
     }
   }
 
   &__subheading {
-    color: $dark-gray5;
+    color: $darc-gray-600;
     line-height: 1.5;
     clear: both;
     max-width: $aleph-content-width-limit;

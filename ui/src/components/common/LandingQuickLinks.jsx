@@ -12,10 +12,9 @@ class LandingQuickLinks extends React.Component {
       <QuickLinks>
         <Link to="/search" className="QuickLinks__item">
           <div className="QuickLinks__item__content">
-            <div
-              className="QuickLinks__item__image"
-              style={{ backgroundImage: 'url(/static/home_search.svg)' }}
-            />
+            <div className="QuickLinks__item__icon">
+              <img src="/static/1F50D.svg" alt="" />
+            </div>
             <div className="QuickLinks__item__text">
               <p>
                 <FormattedMessage
@@ -28,10 +27,9 @@ class LandingQuickLinks extends React.Component {
         </Link>
         <Link to="/datasets" className="QuickLinks__item">
           <div className="QuickLinks__item__content">
-            <div
-              className="QuickLinks__item__image"
-              style={{ backgroundImage: 'url(/static/home_datasets.svg)' }}
-            />
+            <div className="QuickLinks__item__icon">
+              <img src="/static/1F5C3.svg" alt="" />
+            </div>
             <div className="QuickLinks__item__text">
               <p>
                 <FormattedMessage
@@ -44,10 +42,9 @@ class LandingQuickLinks extends React.Component {
         </Link>
         <Link to="/investigations" className="QuickLinks__item">
           <div className="QuickLinks__item__content">
-            <div
-              className="QuickLinks__item__image"
-              style={{ backgroundImage: 'url(/static/home_documents.svg)' }}
-            />
+            <div className="QuickLinks__item__icon">
+              <img src="/static/1F52C.svg" alt="" />
+            </div>
             <div className="QuickLinks__item__text">
               <p>
                 <FormattedMessage
@@ -60,10 +57,9 @@ class LandingQuickLinks extends React.Component {
         </Link>
         <Link to="/alerts" className="QuickLinks__item">
           <div className="QuickLinks__item__content">
-            <div
-              className="QuickLinks__item__image"
-              style={{ backgroundImage: 'url(/static/home_alerts.svg)' }}
-            />
+            <div className="QuickLinks__item__icon">
+              <img src="/static/1F514.svg" alt="" />
+            </div>
             <div className="QuickLinks__item__text">
               <p>
                 <FormattedMessage

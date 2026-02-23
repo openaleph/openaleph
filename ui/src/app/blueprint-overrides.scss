@@ -345,9 +345,269 @@ table {
     }
   }
 }
-// When mapping excel coloumns to properties
+// When mapping excel columns to properties
 [dir='rtl'] .#{$bp-ns}-table-header-content {
   direction: rtl;
 }
 
 // =================> End Overrides from react-ftm - diagrams <===================
+
+// =================> Begin: Override pre-compiled Blueprint blues <===================
+// Pre-compiled CSS from @blueprintjs/core/lib/css/blueprint.css,
+// @blueprintjs/table/lib/css/table.css, and @blueprintjs/popover2/lib/css/blueprint-popover2.css
+// contain hardcoded Blueprint blue (#2d72d2, #215db0, #184a90).
+// We override them here with our design tokens.
+
+// --- Intent-primary buttons (filled) → accent color ---
+.#{$bp-ns}-button.#{$bp-ns}-intent-primary {
+  background-color: $aleph-accent-color !important;
+}
+.#{$bp-ns}-button.#{$bp-ns}-intent-primary:hover {
+  background-color: darken($aleph-accent-color, 8%) !important;
+}
+.#{$bp-ns}-button.#{$bp-ns}-intent-primary:active,
+.#{$bp-ns}-button.#{$bp-ns}-intent-primary.#{$bp-ns}-active {
+  background-color: darken($aleph-accent-color, 15%) !important;
+}
+.#{$bp-ns}-button.#{$bp-ns}-intent-primary:disabled,
+.#{$bp-ns}-button.#{$bp-ns}-intent-primary.#{$bp-ns}-disabled {
+  background-color: rgba($aleph-accent-color, 0.5) !important;
+}
+
+// --- Intent-primary minimal buttons → accent color ---
+.#{$bp-ns}-button.#{$bp-ns}-minimal.#{$bp-ns}-intent-primary {
+  color: $aleph-accent-color !important;
+  background-color: transparent !important;
+}
+.#{$bp-ns}-button.#{$bp-ns}-minimal.#{$bp-ns}-intent-primary:hover,
+.#{$bp-ns}-button.#{$bp-ns}-minimal.#{$bp-ns}-intent-primary:active,
+.#{$bp-ns}-button.#{$bp-ns}-minimal.#{$bp-ns}-intent-primary.#{$bp-ns}-active {
+  color: $aleph-accent-color !important;
+}
+.#{$bp-ns}-button.#{$bp-ns}-minimal.#{$bp-ns}-intent-primary:hover {
+  background: rgba($aleph-accent-color, 0.12) !important;
+  color: darken($aleph-accent-color, 8%) !important;
+}
+.#{$bp-ns}-button.#{$bp-ns}-minimal.#{$bp-ns}-intent-primary:active,
+.#{$bp-ns}-button.#{$bp-ns}-minimal.#{$bp-ns}-intent-primary.#{$bp-ns}-active {
+  background: rgba($aleph-accent-color, 0.2) !important;
+  color: darken($aleph-accent-color, 15%) !important;
+}
+.#{$bp-ns}-button.#{$bp-ns}-minimal.#{$bp-ns}-intent-primary .#{$bp-ns}-button-spinner .#{$bp-ns}-spinner-head {
+  stroke: $aleph-accent-color !important;
+}
+
+// --- Outlined intent-primary buttons → accent color ---
+.#{$bp-ns}-button.#{$bp-ns}-outlined.#{$bp-ns}-intent-primary {
+  color: $aleph-accent-color !important;
+  background-color: transparent !important;
+  border-color: rgba($aleph-accent-color, 0.6) !important;
+}
+.#{$bp-ns}-button.#{$bp-ns}-outlined.#{$bp-ns}-intent-primary:hover {
+  background: rgba($aleph-accent-color, 0.12) !important;
+  color: darken($aleph-accent-color, 8%) !important;
+}
+.#{$bp-ns}-button.#{$bp-ns}-outlined.#{$bp-ns}-intent-primary:active,
+.#{$bp-ns}-button.#{$bp-ns}-outlined.#{$bp-ns}-intent-primary.#{$bp-ns}-active {
+  background: rgba($aleph-accent-color, 0.2) !important;
+  color: darken($aleph-accent-color, 15%) !important;
+}
+
+// --- Tabs → accent color ---
+.#{$bp-ns}-tab[aria-selected=true] {
+  box-shadow: inset 0 -3px 0 $aleph-accent-color !important;
+}
+.#{$bp-ns}-tab[aria-selected=true],
+.#{$bp-ns}-tab:not([aria-disabled=true]):hover {
+  color: $aleph-accent-color !important;
+}
+.#{$bp-ns}-tab-indicator-wrapper .#{$bp-ns}-tab-indicator {
+  background-color: $aleph-accent-color !important;
+}
+
+// --- Checkboxes/radios → accent color ---
+.#{$bp-ns}-control input:checked ~ .#{$bp-ns}-control-indicator {
+  background-color: $aleph-accent-color !important;
+}
+.#{$bp-ns}-control:hover input:checked ~ .#{$bp-ns}-control-indicator {
+  background-color: darken($aleph-accent-color, 8%) !important;
+}
+.#{$bp-ns}-control input:not(:disabled):active:checked ~ .#{$bp-ns}-control-indicator {
+  background: darken($aleph-accent-color, 15%) !important;
+}
+// Switch track when checked
+.#{$bp-ns}-control.#{$bp-ns}-switch input:checked ~ .#{$bp-ns}-control-indicator {
+  background: $aleph-accent-color !important;
+}
+.#{$bp-ns}-control.#{$bp-ns}-switch:hover input:checked ~ .#{$bp-ns}-control-indicator {
+  background: darken($aleph-accent-color, 8%) !important;
+}
+.#{$bp-ns}-control.#{$bp-ns}-switch input:checked:not(:disabled):active ~ .#{$bp-ns}-control-indicator {
+  background: darken($aleph-accent-color, 15%) !important;
+}
+// Dark mode switch
+.#{$bp-ns}-dark .#{$bp-ns}-control input:checked ~ .#{$bp-ns}-control-indicator {
+  background-color: $aleph-accent-color !important;
+}
+.#{$bp-ns}-dark .#{$bp-ns}-control:hover input:checked ~ .#{$bp-ns}-control-indicator {
+  background-color: darken($aleph-accent-color, 8%) !important;
+}
+.#{$bp-ns}-dark .#{$bp-ns}-control input:not(:disabled):active:checked ~ .#{$bp-ns}-control-indicator {
+  background-color: darken($aleph-accent-color, 15%) !important;
+}
+
+// --- Remove default inset shadow from inputs ---
+.#{$bp-ns}-input {
+  box-shadow: inset 0 0 0 1px rgba($black, 0.15) !important;
+}
+.#{$bp-ns}-tag-input {
+  box-shadow: inset 0 0 0 1px rgba($black, 0.15) !important;
+}
+
+// --- Input focus rings → accent color ---
+.#{$bp-ns}-input:focus {
+  box-shadow: inset 0 0 0 1px $aleph-accent-color, 0 0 0 2px rgba($aleph-accent-color, 0.3) !important;
+}
+.#{$bp-ns}-editable-text.#{$bp-ns}-editable-text-editing::before {
+  box-shadow: inset 0 0 0 1px $aleph-accent-color, 0 0 0 2px rgba($aleph-accent-color, 0.3) !important;
+}
+// Tag input focus
+.#{$bp-ns}-tag-input.#{$bp-ns}-active {
+  box-shadow: inset 0 0 0 1px $aleph-accent-color, 0 0 0 2px rgba($aleph-accent-color, 0.3) !important;
+}
+// Numeric input focus
+.#{$bp-ns}-numeric-input .#{$bp-ns}-input-group .#{$bp-ns}-input:focus {
+  box-shadow: inset 0 0 0 1px $aleph-accent-color, 0 0 0 2px rgba($aleph-accent-color, 0.3) !important;
+}
+
+// --- Editable text intent-primary → accent color ---
+.#{$bp-ns}-editable-text.#{$bp-ns}-intent-primary .#{$bp-ns}-editable-text-content,
+.#{$bp-ns}-editable-text.#{$bp-ns}-intent-primary .#{$bp-ns}-editable-text-input,
+.#{$bp-ns}-editable-text.#{$bp-ns}-intent-primary .#{$bp-ns}-editable-text-input::placeholder {
+  color: $aleph-accent-color !important;
+}
+
+// --- Spinners → accent color ---
+.#{$bp-ns}-spinner.#{$bp-ns}-intent-primary .#{$bp-ns}-spinner-head {
+  stroke: $aleph-accent-color !important;
+}
+
+// --- Progress bars → accent color ---
+.#{$bp-ns}-progress-bar.#{$bp-ns}-intent-primary .#{$bp-ns}-progress-meter {
+  background-color: $aleph-accent-color !important;
+}
+
+// --- Sliders → accent color ---
+.#{$bp-ns}-slider-progress.#{$bp-ns}-intent-primary {
+  background-color: $aleph-accent-color !important;
+}
+
+// --- Tags → accent color ---
+.#{$bp-ns}-tag.#{$bp-ns}-intent-primary {
+  background: $aleph-accent-color !important;
+}
+.#{$bp-ns}-tag.#{$bp-ns}-intent-primary.#{$bp-ns}-interactive:hover {
+  background-color: darken($aleph-accent-color, 8%) !important;
+}
+.#{$bp-ns}-tag.#{$bp-ns}-intent-primary.#{$bp-ns}-interactive:active,
+.#{$bp-ns}-tag.#{$bp-ns}-intent-primary.#{$bp-ns}-interactive.#{$bp-ns}-active {
+  background-color: darken($aleph-accent-color, 15%) !important;
+}
+
+// --- Toasts → accent color ---
+.#{$bp-ns}-toast.#{$bp-ns}-intent-primary {
+  background-color: $aleph-accent-color;
+}
+.#{$bp-ns}-toast.#{$bp-ns}-intent-primary .#{$bp-ns}-button {
+  background-color: $aleph-accent-color !important;
+}
+.#{$bp-ns}-toast.#{$bp-ns}-intent-primary .#{$bp-ns}-button:hover {
+  background-color: darken($aleph-accent-color, 8%) !important;
+}
+.#{$bp-ns}-toast.#{$bp-ns}-intent-primary .#{$bp-ns}-button:active {
+  background-color: darken($aleph-accent-color, 15%) !important;
+}
+
+// --- Callout intent-primary → accent color ---
+.#{$bp-ns}-callout.#{$bp-ns}-intent-primary {
+  color: $aleph-accent-color !important;
+
+  &[class*="#{$bp-ns}-icon-"] > .#{$bp-ns}-icon:first-child {
+    color: $aleph-accent-color !important;
+  }
+}
+
+// --- Menu items intent-primary → accent color ---
+.#{$bp-ns}-menu-item.#{$bp-ns}-intent-primary {
+  color: $aleph-accent-color !important;
+  .#{$bp-ns}-icon {
+    color: $aleph-accent-color !important;
+  }
+}
+.#{$bp-ns}-menu-item.#{$bp-ns}-intent-primary:hover,
+.#{$bp-ns}-menu-item.#{$bp-ns}-intent-primary.#{$bp-ns}-active {
+  background-color: $aleph-accent-color !important;
+}
+
+// --- Menu items active (no intent) → accent color ---
+.#{$bp-ns}-menu-item.#{$bp-ns}-active {
+  background-color: rgba($aleph-accent-color, 0.12) !important;
+  color: $aleph-accent-color !important;
+  .#{$bp-ns}-icon {
+    color: $aleph-accent-color !important;
+  }
+}
+
+// --- Icon intent-primary → accent color ---
+.#{$bp-ns}-icon.#{$bp-ns}-intent-primary,
+.#{$bp-ns}-icon-standard.#{$bp-ns}-intent-primary,
+.#{$bp-ns}-icon-large.#{$bp-ns}-intent-primary {
+  color: $aleph-accent-color !important;
+}
+
+// --- Tree node selected → accent color ---
+.#{$bp-ns}-tree-node.#{$bp-ns}-tree-node-selected > .#{$bp-ns}-tree-node-content {
+  background-color: $aleph-accent-color !important;
+}
+
+// --- Blueprint table (from table.css) → accent color ---
+.#{$bp-ns}-table-selection-region {
+  border-color: $aleph-accent-color !important;
+  background-color: rgba($aleph-accent-color, 0.1) !important;
+}
+.#{$bp-ns}-table-focus-region {
+  border-color: $aleph-accent-color !important;
+}
+.#{$bp-ns}-table-th-menu.#{$bp-ns}-popover-open .#{$bp-ns}-icon {
+  background-color: $aleph-accent-color !important;
+}
+.#{$bp-ns}-table-reorder-handle-target:active {
+  color: $aleph-accent-color !important;
+}
+.#{$bp-ns}-table-resize-handle,
+.#{$bp-ns}-table-resize-handle.#{$bp-ns}-table-dragging {
+  background-color: $aleph-accent-color !important;
+}
+.#{$bp-ns}-table-resize-guides .#{$bp-ns}-table-horizontal-guide,
+.#{$bp-ns}-table-resize-guides .#{$bp-ns}-table-vertical-guide {
+  background-color: $aleph-accent-color !important;
+}
+.#{$bp-ns}-table-truncated-popover-target.#{$bp-ns}-popover-open .#{$bp-ns}-icon-standard {
+  color: $aleph-accent-color !important;
+}
+
+// --- Popover2 tooltip intent-primary → accent color ---
+.#{$bp-ns}-tooltip2.#{$bp-ns}-intent-primary .#{$bp-ns}-popover2-content {
+  background: $aleph-accent-color !important;
+}
+.#{$bp-ns}-tooltip2.#{$bp-ns}-intent-primary .#{$bp-ns}-popover2-arrow-fill {
+  fill: $aleph-accent-color !important;
+}
+
+// --- Focus outline → accent color ---
+.#{$bp-ns}-focus-style-manager-ignore *:focus,
+.#{$bp-ns}-button:focus {
+  outline-color: rgba($aleph-accent-color, 0.6) !important;
+}
+
+// =================> End: Override pre-compiled Blueprint blues <===================

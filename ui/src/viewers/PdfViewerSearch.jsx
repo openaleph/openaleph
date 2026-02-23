@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 import { FormattedMessage } from 'react-intl';
-import classNames from 'classnames';
 import { connect } from 'react-redux';
 import queryString from 'query-string';
 import {
@@ -46,7 +45,7 @@ class PdfViewerSearch extends Component {
       const parsedHash = queryString.parse(location.hash);
       const parsedSearch = queryString.parse(location.search);
       const isPreviewFromSearch = parsedHash['preview:id'] && (parsedSearch.q || parsedSearch.csq);
-      
+
       if (isPreviewFromSearch && document) {
         return `/entities/${document.id}#${queryString.stringify(hashQuery)}`;
       }

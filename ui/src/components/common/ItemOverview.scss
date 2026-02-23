@@ -42,6 +42,17 @@
           border-radius: 50%;
           object-fit: cover;
         }
+
+        &--fallback {
+          width: 100px;
+          height: 100px;
+          flex-shrink: 0;
+          border-radius: 50%;
+          background-color: rgba($black, 0.06);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
       }
       .ftm-assets__ImageAttribution {
         display: none;
@@ -92,7 +103,10 @@
 
     .ftm-assets__Image-wrapper {
       img {
-        max-width: 100%;
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        object-fit: cover;
+        border-radius: $aleph-border-radius;
       }
     }
   }

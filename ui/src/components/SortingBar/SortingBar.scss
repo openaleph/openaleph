@@ -33,9 +33,9 @@ $font-size: 13px;
   }
   &__control {
     .#{$bp-ns}-button {
-      color: $blue2 !important;
+      color: $aleph-link-color !important;
       border-bottom: 1px solid $aleph-border-color;
-      border-radius: 0;
+      border-radius: $aleph-border-radius;
       font-size: $font-size;
 
       &:hover {

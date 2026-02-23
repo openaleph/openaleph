@@ -1,7 +1,7 @@
 import React from 'react';
 import { compose } from 'redux';
 import { connect } from 'react-redux';
-import { Card, H3, H4, Classes, Spinner, Icon } from '@blueprintjs/core';
+import { H3, H4, Classes, Spinner, Icon } from '@blueprintjs/core';
 import c from 'classnames';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -184,7 +184,7 @@ const CollectionDiscoveryMode: React.FC<CollectionDiscoveryModeProps> = ({
     const schemaName = getSchemaForCategory(category);
 
     return (
-      <Card className="CollectionDiscoveryMode__section">
+      <div className="CollectionDiscoveryMode__section">
         <H3 className="CollectionDiscoveryMode__section-title">
           <span className="CollectionDiscoveryMode__section-title-icon">
             {renderIcon(schemaName)}
@@ -235,7 +235,7 @@ const CollectionDiscoveryMode: React.FC<CollectionDiscoveryModeProps> = ({
               )
           )}
         </div>
-      </Card>
+      </div>
     );
   };
 
@@ -247,16 +247,17 @@ const CollectionDiscoveryMode: React.FC<CollectionDiscoveryModeProps> = ({
       </div>
       <div className="CollectionDiscoveryMode__content">
         {[...Array(4)].map((_, index) => (
-          <Card
+          <div
             key={index}
             className={c('CollectionDiscoveryMode__section', Classes.SKELETON)}
           >
             <div
-              className={Classes.SKELETON}
-              style={{ height: '20px', marginBottom: '10px' }}
+              className={c('CollectionDiscoveryMode__skeleton-block', 'CollectionDiscoveryMode__skeleton-block--sm')}
             />
-            <div className={Classes.SKELETON} style={{ height: '40px' }} />
-          </Card>
+            <div
+              className={c('CollectionDiscoveryMode__skeleton-block', 'CollectionDiscoveryMode__skeleton-block--md')}
+            />
+          </div>
         ))}
       </div>
     </div>
@@ -273,10 +274,10 @@ const CollectionDiscoveryMode: React.FC<CollectionDiscoveryModeProps> = ({
   if (!discovery || !discovery.name) {
     return (
       <div className="CollectionDiscoveryMode">
-        <Card>
+        <div className="CollectionDiscoveryMode__section">
           <H3>Dataset Discovery Analysis</H3>
           <p>No discovery analysis available for this collection.</p>
-        </Card>
+        </div>
       </div>
     );
   }
