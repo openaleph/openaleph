@@ -51,6 +51,7 @@ const ICONS = {
   ingest: 'add-to-folder',
   analyze: 'predictive-analysis',
   index_entities: 'database',
+  index_entities_by_ids: 'database',
   transcribe: 'volume-up',
   geocode: 'geosearch',
   xref_collection: 'comparison',
