@@ -41,6 +41,7 @@ const LABELS = {
   ingest: 'Import source documents',
   analyze: 'Analyze and extract',
   index_entities: 'Index entities',
+  index_entities_by_ids: 'Index entities',
   transcribe: 'Speech to text',
   geocode: 'Geocode addresses',
   xref_collection: 'Cross-referencing',
