@@ -504,9 +504,12 @@ export function selectMoreLikeThisResult(state, query) {
 
 export function selectNearbyResult(state, query) {
   const result = selectResult(state, query, undefined);
-  result.results.forEach((obj) => {
-    obj.entity = selectEntity(state, obj.id);
-  });
+  result.results = result.results
+    .filter((obj) => obj && typeof obj === 'object')
+    .map((obj) => ({
+      ...obj,
+      entity: selectEntity(state, obj.id),
+    }));
   return result;
 }
 

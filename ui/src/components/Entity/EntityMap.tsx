@@ -11,6 +11,7 @@ interface IComponent {
 }
 
 export default function EntityMap(props: IComponent) {
+  if (!props.entity || typeof props.entity.getFirst !== 'function') return null;
   const [lon, lat] = [
     props.entity.getFirst('longitude'),
     props.entity.getFirst('latitude'),

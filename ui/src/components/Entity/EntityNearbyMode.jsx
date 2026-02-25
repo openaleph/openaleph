@@ -20,7 +20,7 @@ import {
 } from 'components/common';
 import EntityProperties from 'components/Entity/EntityProperties';
 import ensureArray from 'util/ensureArray';
-import { queryEntities } from 'actions/index';
+import { queryNearby } from 'actions/index';
 import EntityActionBar from './EntityActionBar';
 
 const messages = defineMessages({
@@ -222,7 +222,7 @@ class EntityNearbyMode extends React.Component {
             <QueryInfiniteLoad
               query={query}
               result={result}
-              fetch={this.props.queryEntities}
+              fetch={this.props.queryNearby}
             />
           </>
         )}
@@ -254,6 +254,6 @@ const mapStateToProps = (state, ownProps) => {
 
 export default compose(
   withRouter,
-  connect(mapStateToProps, { queryEntities }),
+  connect(mapStateToProps, { queryNearby }),
   injectIntl
 )(EntityNearbyMode);
