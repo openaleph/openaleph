@@ -3708,13 +3708,13 @@ files = [
 
 [[package]]
 name = "nomenklatura"
-version = "4.6.8"
+version = "4.6.9"
 description = "Make record linkages in followthemoney data."
 optional = false
 python-versions = ">=3.11"
 groups = ["main"]
 files = [
-    {file = "nomenklatura-4.6.8-py3-none-any.whl", hash = "sha256:85cd6e038ea180856fd413b3047fd8c7c24ac58536333408850ce4b2efba6862"},
+    {file = "nomenklatura-4.6.9-py3-none-any.whl", hash = "sha256:8d0fca04c5f0e2aad6189014cebc4ce1c0f95ad781b83dab7b071476ae2f533a"},
 ]
 
 [package.dependencies]
@@ -3876,7 +3876,7 @@ pydantic-settings = ">=2.10.1,<3.0.0"
 type = "git"
 url = "https://github.com/openaleph/openaleph-procrastinate.git"
 reference = "HEAD"
-resolved_reference = "ae62213c635151e8a36a99597acb3a4753381eea"
+resolved_reference = "7d2a7e0a3336025a02886f13addca0f735034b4c"
 
 [[package]]
 name = "openaleph-search"
@@ -3902,7 +3902,7 @@ werkzeug = ">=3.1.3,<4.0.0"
 type = "git"
 url = "https://github.com/openaleph/openaleph-search.git"
 reference = "HEAD"
-resolved_reference = "00cf6953d0e10374d1e31b9a03ac9fe423bab952"
+resolved_reference = "1bdc303ec7bf598c2a2c589ee54ca1918835e871"
 
 [[package]]
 name = "openaleph-servicelayer"
