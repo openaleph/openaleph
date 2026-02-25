@@ -8,8 +8,8 @@
 
   &__item {
     padding: $aleph-grid-size * 2;
-    background: $darc-gray-50;
-    border: 1px solid $darc-gray-200;
+    background: rgba($aleph-accent-color, 0.1);
+    border: none;
     border-radius: $aleph-border-radius;
     flex: 1 1 auto;
     margin: $aleph-content-padding * 0.5;

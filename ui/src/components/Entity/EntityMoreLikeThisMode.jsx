@@ -13,6 +13,7 @@ import {
   Entity,
   Collection,
   Skeleton,
+  SearchHighlight,
 } from 'components/common';
 import { entityMoreLikeThisQuery } from 'queries';
 
@@ -87,15 +88,23 @@ class EntityMoreLikeThisMode extends Component {
   }
 
   renderRow(entity) {
+    console.log(entity); // eslint-disable-line
     return (
-      <tr key={entity.id}>
-        <td className="entity bordered">
-          <Entity.Link entity={entity} />
-        </td>
-        <td className="collection">
-          <Collection.Link collection={entity.collection} icon />
-        </td>
-      </tr>
+      <>
+        <tr key={entity.id}>
+          <td className="entity bordered">
+            <Entity.Link entity={entity} />
+          </td>
+          <td className="collection">
+            <Collection.Link collection={entity.collection} icon />
+          </td>
+        </tr>
+        <tr key={`${entity.id}-hl`}>
+          <td colSpan="100%" className="highlights">
+            <SearchHighlight highlight={entity.highlight} />
+          </td>
+        </tr>
+      </>
     );
   }
 

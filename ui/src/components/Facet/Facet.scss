@@ -4,14 +4,8 @@
 .Facet {
   margin-bottom: $aleph-grid-size * 1.5;
   background: #fff;
-  border: 1px solid rgba($black, 0.08);
   border-radius: $aleph-border-radius;
   overflow: hidden;
-  transition: border-color 0.2s ease;
-
-  &:hover {
-    border-color: rgba($black, 0.15);
-  }
 
   & > .opener {
     display: flex;

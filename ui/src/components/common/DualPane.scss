@@ -33,7 +33,7 @@
   @include rtlSupportInvertedProp(
     border,
     right,
-    1px solid rgba($black, 0.08),
+    1px solid $darc-gray-300,
     null
   );
   @include rtlSupportInvertedProp(padding, right, $aleph-content-padding, null);

@@ -169,7 +169,10 @@ export function entityMoreLikeThisQuery(location, entityId) {
   return Query.fromLocation(
     path,
     location,
-    { dehydrate: true }, // this excludes entity properties from the response
+    {
+      dehydrate: true, // this excludes entity properties from the response
+      highlight: true, // this renders some nice preview snippets
+    },
     'more_like_this'
   )
     .defaultFacet('collection_id', true)

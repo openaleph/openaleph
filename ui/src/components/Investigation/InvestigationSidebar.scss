@@ -7,7 +7,7 @@
   @include rtlSupportInvertedProp(
     border,
     right,
-    1px solid rgba($black, 0.08),
+    1px solid $darc-gray-300,
     none
   );
   @include rtlSupportInvertedProp(margin, right, $aleph-content-padding, 0);
@@ -40,7 +40,6 @@
     padding: $aleph-grid-size * 2;
     border-radius: $aleph-border-radius;
     background: #fff;
-    border: 1px solid rgba($black, 0.08);
     margin: $aleph-content-padding 0;
 
     &:last-child {
