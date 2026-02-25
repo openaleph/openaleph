@@ -88,7 +88,6 @@ class EntityMoreLikeThisMode extends Component {
   }
 
   renderRow(entity) {
-    console.log(entity); // eslint-disable-line
     return (
       <>
         <tr key={entity.id}>
