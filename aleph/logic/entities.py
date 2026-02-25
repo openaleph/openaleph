@@ -140,6 +140,10 @@ def should_translate(proxy: EntityProxy) -> bool:
     """Check if an entity is eligible for translation."""
     if not tasks.translate.defer:
         return False
+    if proxy.has(
+        "translatedText", quiet=True
+    ):  # already translated, don't allow user-side retrigger
+        return False
     if proxy.schema.is_a("Document"):
         source_lang = iso_639_alpha2(proxy.first("detectedLanguage") or "")
         if source_lang and SETTINGS.FTM_TRANSLATE_TARGET_LANGUAGE != source_lang:
