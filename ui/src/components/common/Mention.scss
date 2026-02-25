@@ -5,11 +5,11 @@
   text-decoration: none !important;
 
   .#{$bp-ns}-tag {
-    background-color: $aleph-breadcrumbs-background !important;
+    background-color: $darc-gray-200 !important;
     margin: 2px 0;
 
     &:hover {
-      background-color: $darc-gray-200 !important;
+      background-color: $darc-gray-300 !important;
     }
 
     .Count {
