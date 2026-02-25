@@ -199,7 +199,7 @@ class Settings:
         ###############################################################################
         # XREF Model Selection
         self.XREF_MODEL = env.get("FTM_COMPARE_MODEL", None)
-        self.XREF_ALGORITHM = env.get("NOMENKLATURA_XREF_ALGORITHM", None)
+        self.XREF_ALGORITHM = env.get("NOMENKLATURA_XREF_ALGORITHM", "regression-v1")
 
         ###############################################################################
         # Feature flags
