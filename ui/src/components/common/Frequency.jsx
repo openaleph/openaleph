@@ -4,6 +4,8 @@ import { connect } from 'react-redux';
 
 import { selectMetadata } from 'selectors';
 
+import './Frequency.scss';
+
 class FrequencyLabel extends PureComponent {
   render() {
     const { frequency, frequencies } = this.props;

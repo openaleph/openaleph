@@ -134,9 +134,7 @@ export default class Breadcrumbs extends Component {
     return (
       <>
         {status}
-        {status && search && <Divider />}
         {search}
-        {search && operation && <Divider />}
         {operation}
       </>
     );

@@ -11,18 +11,57 @@
     min-width: 0 !important;
   }
 
-  &__popover {
-    &__menu {
-      background-color: $black !important;
+}
+
+// Popover renders in a portal outside .AuthButtons, so target via top-level popoverClassName
+.AuthButtons__popover {
+  .#{$bp-ns}-popover2-arrow-fill {
+    fill: $black !important;
+  }
+
+  .#{$bp-ns}-popover2-content {
+    border-radius: 12px !important;
+    overflow: hidden;
+  }
+
+  .#{$bp-ns}-menu-item.mobile-show {
+    @media screen and (min-width: $aleph-navbar-mobile-max-width) {
+      display: none;
     }
-    .#{$bp-ns}-popover2-arrow-fill {
-      fill: $black !important;
+  }
+
+  .AuthButtons__popover__menu.#{$bp-ns}-menu {
+    background-color: $black !important;
+    border-radius: 12px !important;
+    padding: 6px !important;
+    min-width: 210px;
+
+    .#{$bp-ns}-menu-item {
+      border-radius: 8px !important;
+      padding: 8px 12px !important;
+      margin: 1px 0;
+      font-size: 13.5px;
+      color: rgba($white, 0.85) !important;
+      transition: background 0.15s ease;
+
+      .#{$bp-ns}-icon {
+        color: rgba($white, 0.5) !important;
+      }
+
+      &:hover,
+      &.#{$bp-ns}-active {
+        background: rgba($white, 0.08) !important;
+        color: $white !important;
+
+        .#{$bp-ns}-icon {
+          color: rgba($white, 0.75) !important;
+        }
+      }
     }
 
-    .#{$bp-ns}-menu-item.mobile-show {
-      @media screen and (min-width: $aleph-navbar-mobile-max-width) {
-        display: none;
-      }
+    .#{$bp-ns}-menu-divider {
+      margin: 4px 8px !important;
+      border-color: rgba($white, 0.1) !important;
     }
   }
 }

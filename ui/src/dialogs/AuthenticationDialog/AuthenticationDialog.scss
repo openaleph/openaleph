@@ -1,3 +1,4 @@
+@import 'app/variables.scss';
 @import 'app/mixins.scss';
 
 .AuthenticationScreen.AuthenticationScreen {
@@ -11,6 +12,10 @@
 
   .signin-button {
     @include rtl(float, right, left);
+  }
+
+  .#{$bp-ns}-button {
+    @include pillButton;
   }
 
   .hide {

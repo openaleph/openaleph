@@ -352,11 +352,51 @@ table {
 
 // =================> End Overrides from react-ftm - diagrams <===================
 
+// --- Modern dropdown menus (global) ---
+.#{$bp-ns}-popover2,
+.#{$bp-ns}-popover {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 20px rgba($black, 0.12), 0 0 0 1px rgba($black, 0.06) !important;
+
+  .#{$bp-ns}-popover2-content,
+  .#{$bp-ns}-popover-content {
+    border-radius: 12px !important;
+    overflow: hidden;
+  }
+}
+
+.#{$bp-ns}-menu {
+  border-radius: 12px !important;
+  padding: 6px !important;
+  min-width: 200px;
+}
+
+.#{$bp-ns}-menu-item {
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  margin: 1px 0 !important;
+  font-size: 13.5px !important;
+  transition: background 0.1s ease;
+}
+
+.#{$bp-ns}-menu .#{$bp-ns}-menu-divider {
+  margin: 4px 8px !important;
+}
+
 // =================> Begin: Override pre-compiled Blueprint blues <===================
 // Pre-compiled CSS from @blueprintjs/core/lib/css/blueprint.css,
 // @blueprintjs/table/lib/css/table.css, and @blueprintjs/popover2/lib/css/blueprint-popover2.css
 // contain hardcoded Blueprint blue (#2d72d2, #215db0, #184a90).
 // We override them here with our design tokens.
+
+// --- Pill shape for form submit / dialog action / alert buttons ---
+.#{$bp-ns}-button[type='submit'],
+.#{$bp-ns}-dialog-footer-actions .#{$bp-ns}-button,
+.#{$bp-ns}-alert-footer .#{$bp-ns}-button,
+.#{$bp-ns}-form-group .#{$bp-ns}-button.#{$bp-ns}-intent-primary,
+.#{$bp-ns}-form-group .#{$bp-ns}-button.#{$bp-ns}-intent-danger {
+  @include pillButton;
+}
 
 // --- Intent-primary buttons (filled) → accent color ---
 .#{$bp-ns}-button.#{$bp-ns}-intent-primary {

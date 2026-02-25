@@ -19,7 +19,16 @@
     flex: 0 0 auto !important;
 
     .#{$bp-ns}-button {
-      border-radius: $aleph-border-radius !important;
+      @include pillButton;
+      background: $white !important;
+      box-shadow: none !important;
+      border: 1px solid $darc-gray-300 !important;
+      color: $darc-gray-600 !important;
+
+      &:hover {
+        background: $darc-gray-50 !important;
+        border-color: $darc-gray-400 !important;
+      }
     }
   }
 

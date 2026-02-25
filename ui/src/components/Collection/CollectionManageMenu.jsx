@@ -9,6 +9,8 @@ import CollectionDeleteDialog from 'dialogs/CollectionDeleteDialog/CollectionDel
 import CollectionReingestAlert from './CollectionReingestAlert';
 import CollectionReindexAlert from './CollectionReindexAlert';
 
+import './CollectionManageMenu.scss';
+
 const messages = defineMessages({
   access: {
     id: 'collection.info.access',
@@ -95,7 +97,11 @@ class CollectionManageMenu extends React.Component {
             </Menu>
           }
         >
-          <Button icon="cog" rightIcon="caret-down" />
+          <Button
+            icon="cog"
+            rightIcon="caret-down"
+            className="CollectionManageMenu__trigger"
+          />
         </Popover>
         <CollectionEditDialog
           isOpen={!!this.state.isEditOpen}

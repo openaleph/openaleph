@@ -27,6 +27,10 @@
     .text-markdown p:last-child {
       margin: 0 !important;
     }
+
+    input {
+      background-color: $darc-gray-100;
+    }
   }
 
   .CollectionStatus {

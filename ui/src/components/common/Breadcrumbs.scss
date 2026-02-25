@@ -53,6 +53,7 @@
 
   &__right {
     display: flex;
+    gap: $aleph-grid-size * 2;
 
     .#{$bp-ns}-button-group {
       align-items: center;
@@ -62,11 +63,11 @@
       display: none;
     }
 
-    .#{$bp-ns}-control-group,
-    .#{$bp-ns}-input,
-    .#{$bp-ns}-button-group {
-      border-radius: $aleph-border-radius !important;
-    }
+    // .#{$bp-ns}-control-group,
+    // .#{$bp-ns}-input,
+    // .#{$bp-ns}-button-group {
+    //   border-radius: $aleph-border-radius !important;
+    // }
 
     .#{$bp-ns}-input-group {
       min-width: $aleph-grid-size * 20.5;

@@ -22,7 +22,7 @@
     }
 
     .#{$bp-ns}-button.#{$bp-ns}-button {
-      background: $darc-gray-900 !important;
+      background: rgba($white, 0.1) !important;
       color: $white !important;
       border-radius: 0 !important;
       box-shadow: none !important;
@@ -35,7 +35,7 @@
       flex-shrink: 0;
 
       &:hover {
-        background: $darc-gray-800 !important;
+        background: rgba($white, 0.2) !important;
       }
 
       .#{$bp-ns}-icon,
@@ -45,10 +45,10 @@
       }
 
       &.#{$bp-ns}-intent-primary {
-        background: $aleph-accent-color !important;
+        background: rgba($white, 0.15) !important;
 
         &:hover {
-          background: darken($aleph-accent-color, 8%) !important;
+          background: rgba($white, 0.25) !important;
         }
       }
     }
@@ -57,16 +57,16 @@
       display: flex;
       align-items: center;
       gap: $aleph-grid-size * 0.5;
-      background: $darc-gray-900;
+      background: rgba($white, 0.1);
       color: $white;
       margin: 0;
       padding: 0 $aleph-grid-size * 1.2;
       white-space: nowrap;
       font-size: $aleph-font-size - 1;
-      border-radius: 0 !important;
+      border-radius: 0 $aleph-border-radius $aleph-border-radius 0 !important;
 
       &:hover {
-        background: $darc-gray-800;
+        background: rgba($white, 0.2);
       }
 
       .#{$bp-ns}-control-indicator {

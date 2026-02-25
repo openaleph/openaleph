@@ -34,6 +34,7 @@ const EntitySearchDiscovery: React.FC<EntitySearchDiscoveryProps> = ({
   const [discoveryResult, setDiscoveryResult] = useState<DiscoveryResult>({
     loading: false,
   });
+  const [fetched, setFetched] = useState(false);
 
   const parseSearchQuery = (query: string): string[] => {
     const phrases: string[] = [];
@@ -115,53 +116,56 @@ const EntitySearchDiscovery: React.FC<EntitySearchDiscoveryProps> = ({
     });
   };
 
+  const fetchDiscoveryData = async () => {
+    if (!result.query_q?.trim() && !result.filters?.names?.length) {
+      setDiscoveryResult({ loading: false });
+      return;
+    }
+
+    setDiscoveryResult({ loading: true });
+    setFetched(true);
+
+    try {
+      const params: Record<string, any> = {
+        q: result.query_q,
+        limit: 5,
+        facet_significant: 'names',
+      };
+
+      // Add collection_id filter if it exists in the result filters
+      if (result.filters?.collection_id?.length) {
+        params['filter:collection_id'] = result.filters.collection_id;
+      }
+
+      // Add names filter if it exists in the result filters
+      if (result.filters?.names?.length) {
+        params['filter:names'] = result.filters.names;
+      }
+
+      const response = await endpoint.get('entities', {
+        params,
+      });
+
+      const significantTerms =
+        response.data.facets?.['names.significant_terms']?.values || [];
+
+      setDiscoveryResult({
+        loading: false,
+        results: significantTerms,
+        total: significantTerms.length,
+      });
+    } catch (error) {
+      setDiscoveryResult({
+        loading: false,
+        error: 'Failed to load discovery results',
+      });
+    }
+  };
+
+  // Reset when query/filters change so the user can fetch again
   useEffect(() => {
-    const fetchDiscoveryData = async () => {
-      if (!result.query_q?.trim() && !result.filters?.names?.length) {
-        setDiscoveryResult({ loading: false });
-        return;
-      }
-
-      setDiscoveryResult({ loading: true });
-
-      try {
-        const params: Record<string, any> = {
-          q: result.query_q,
-          limit: 5,
-          facet_significant: 'names',
-        };
-
-        // Add collection_id filter if it exists in the result filters
-        if (result.filters?.collection_id?.length) {
-          params['filter:collection_id'] = result.filters.collection_id;
-        }
-
-        // Add names filter if it exists in the result filters
-        if (result.filters?.names?.length) {
-          params['filter:names'] = result.filters.names;
-        }
-
-        const response = await endpoint.get('entities', {
-          params,
-        });
-
-        const significantTerms =
-          response.data.facets?.['names.significant_terms']?.values || [];
-
-        setDiscoveryResult({
-          loading: false,
-          results: significantTerms,
-          total: significantTerms.length,
-        });
-      } catch (error) {
-        setDiscoveryResult({
-          loading: false,
-          error: 'Failed to load discovery results',
-        });
-      }
-    };
-
-    fetchDiscoveryData();
+    setFetched(false);
+    setDiscoveryResult({ loading: false });
   }, [result.query_q, result.filters?.names, result.filters?.collection_id]);
 
   if (!result.query_q?.trim() && !result.filters?.names?.length) {
@@ -193,7 +197,7 @@ const EntitySearchDiscovery: React.FC<EntitySearchDiscoveryProps> = ({
     <div className="EntitySearchDiscovery">
       {queryPhrases.length > 0 && (
         <div className="EntitySearchDiscovery__query">
-          <span>Search terms: </span>
+          <div className="EntitySearchDiscovery__label">Search terms</div>
           {queryPhrases.map((phrase, index) => (
             <Tag
               key={index}
@@ -205,13 +209,19 @@ const EntitySearchDiscovery: React.FC<EntitySearchDiscoveryProps> = ({
           ))}
         </div>
       )}
-      {discoveryResult.loading && <p>Loading discovery results...</p>}
+      {!fetched && (
+        <button
+          className={`EntitySearchDiscovery__discover-btn${discoveryResult.loading ? ' EntitySearchDiscovery__discover-btn--loading' : ''}`}
+          onClick={fetchDiscoveryData}
+          disabled={discoveryResult.loading}
+        >
+          {discoveryResult.loading ? 'Loading...' : 'Discover related terms'}
+        </button>
+      )}
       {discoveryResult.error && <p>Error: {discoveryResult.error}</p>}
       {filteredSignificantTerms && filteredSignificantTerms.length > 0 && (
         <div className="EntitySearchDiscovery__terms">
-          <span>
-            Your search query is often mentioned with these related terms:{' '}
-          </span>
+          <div className="EntitySearchDiscovery__label">Related terms</div>
           {filteredSignificantTerms.map((term, index) => (
             <button
               key={term.id || index}

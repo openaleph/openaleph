@@ -97,7 +97,7 @@ export class CollectionWrapper extends Component {
         query={query}
         inputProps={{ disabled: !collection?.id }}
         showSynonymsToggle={true}
-        synonymsToggleLightLabel={true}
+        searchButton
       />
     );
 

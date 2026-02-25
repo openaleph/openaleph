@@ -253,7 +253,7 @@ export class Navbar extends React.Component {
                   {menuPages.length > 0 && (
                     <Popover
                       content={
-                        <Menu>
+                        <Menu className="Navbar__menu">
                           {menuPages.map((page) => (
                             <LinkMenuItem
                               key={page.name}
@@ -264,6 +264,7 @@ export class Navbar extends React.Component {
                           ))}
                         </Menu>
                       }
+                      popoverClassName="Navbar__popover"
                       placement="bottom-end"
                       minimal
                     >

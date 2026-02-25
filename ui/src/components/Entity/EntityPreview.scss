@@ -49,6 +49,12 @@ $preview-padding: $aleph-grid-size * 1.5;
     }
   }
 
+  table.data-table td {
+    padding-top: $aleph-grid-size * 0.75;
+    padding-bottom: $aleph-grid-size * 0.75;
+    border-bottom: 1px solid $darc-gray-200;
+  }
+
   td.entity {
     width: 40%;
   }

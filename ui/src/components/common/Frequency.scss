@@ -1,0 +1,7 @@
+@import 'app/variables.scss';
+
+.FrequencyLabel .#{$bp-ns}-tag {
+  border-radius: 9999px;
+  padding: 4px 12px;
+  font-size: 12px;
+}
