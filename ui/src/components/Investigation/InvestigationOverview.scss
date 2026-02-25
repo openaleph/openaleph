@@ -41,11 +41,8 @@
     .#{$bp-ns}-button {
       margin: $guides-button-margin * 0.5;
       background-color: rgba($black, 0.04) !important;
-      border: 1px solid rgba($black, 0.08);
-      transition: border-color 0.2s ease;
 
       &:hover {
-        border-color: rgba($black, 0.15);
         background-color: rgba($black, 0.02) !important;
       }
     }

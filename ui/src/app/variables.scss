@@ -7,7 +7,7 @@ $pt-font-family: var(--font-family-sans);
 
 // darc-black and darc-white
 $black: #1a1a1a;
-$white: #fff8f1;
+$white: #fff;
 
 // darc grays
 $darc-gray-50: #F9F9F9;
@@ -108,8 +108,8 @@ $aleph-navbar-mobile-max-width: $aleph-screen-sm-max-width + $aleph-grid-size *
   12;
 
 // DARC-aligned semantic tokens
-$aleph-breadcrumbs-background: $darc-gray-50;
-$aleph-page-background: $white;
+$aleph-breadcrumbs-background: $darc-gray-100;
+$aleph-page-background: $darc-gray-100;
 $aleph-link-color: $aleph-accent-color;
 $aleph-sidebar-background: $black;
 $aleph-sidebar-foreground: $white;

@@ -157,11 +157,16 @@ table.data-table {
     opacity: 0.5;
   }
 
+  th,
+  td {
+    box-shadow: none !important;
+  }
+
   td {
     background-color: #fff;
     border-bottom: none;
-    padding-top: $aleph-grid-size;
-    padding-bottom: $aleph-grid-size;
+    padding-top: $aleph-grid-size * 1.5;
+    padding-bottom: $aleph-grid-size * 1.5;
 
     &:first-child {
       border-radius: 6px 0 0 6px;

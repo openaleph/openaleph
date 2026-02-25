@@ -3,6 +3,6 @@
 .Panel {
   background-color: #fff;
   border-radius: $aleph-border-radius;
-  box-shadow: 0 0 0 1px rgba($black, 0.06), 0 1px 1px rgba($black, 0.08);
+  box-shadow: none;
   padding: $aleph-grid-size * 2;
 }

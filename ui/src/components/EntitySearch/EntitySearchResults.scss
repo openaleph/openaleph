@@ -13,7 +13,7 @@
 }
 
 .EntitySearchResults {
-  border-color: $aleph-border-color;
+  border-color: transparent;
 
   .#{$bp-ns}-control {
     margin-bottom: 0 !important;
@@ -62,19 +62,17 @@
     }
   }
 
-  .highlights {
-    @include rtlSupportInvertedProp(
-      padding,
-      left,
-      $aleph-grid-size * 3.2,
-      null
-    );
-    border-radius: 0 0 6px 6px;
-    // Pull up into the prefix row to close the border-spacing gap
-    box-shadow: 0 -6px 0 0 #fff;
+  // Highlights row: collapse gap with prefix row above
+  &:has(> td.highlights) {
+    transform: translateY(-12px);
+    margin-bottom: -6px;
 
-    &__content {
-      max-width: $aleph-grid-size * 100;
+    td.highlights {
+      border-radius: 0 0 6px 6px;
+
+      .highlights__content {
+        max-width: $aleph-grid-size * 100;
+      }
     }
   }
 
