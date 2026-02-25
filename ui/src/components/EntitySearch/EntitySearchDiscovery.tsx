@@ -196,17 +196,19 @@ const EntitySearchDiscovery: React.FC<EntitySearchDiscoveryProps> = ({
   return (
     <div className="EntitySearchDiscovery">
       {queryPhrases.length > 0 && (
-        <div className="EntitySearchDiscovery__query">
+        <div className="EntitySearchDiscovery__row">
           <div className="EntitySearchDiscovery__label">Search terms</div>
-          {queryPhrases.map((phrase, index) => (
-            <Tag
-              key={index}
-              intent="primary"
-              onRemove={() => removePhrase(phrase)}
-            >
-              {phrase}
-            </Tag>
-          ))}
+          <div className="EntitySearchDiscovery__pills">
+            {queryPhrases.map((phrase, index) => (
+              <Tag
+                key={index}
+                intent="primary"
+                onRemove={() => removePhrase(phrase)}
+              >
+                {phrase}
+              </Tag>
+            ))}
+          </div>
         </div>
       )}
       {!fetched && (
@@ -220,17 +222,19 @@ const EntitySearchDiscovery: React.FC<EntitySearchDiscoveryProps> = ({
       )}
       {discoveryResult.error && <p>Error: {discoveryResult.error}</p>}
       {filteredSignificantTerms && filteredSignificantTerms.length > 0 && (
-        <div className="EntitySearchDiscovery__terms">
+        <div className="EntitySearchDiscovery__row">
           <div className="EntitySearchDiscovery__label">Related terms</div>
-          {filteredSignificantTerms.map((term, index) => (
-            <button
-              key={term.id || index}
-              className="EntitySearchDiscovery__term"
-              onClick={() => handleTermClick(term.label)}
-            >
-              {term.label}
-            </button>
-          ))}
+          <div className="EntitySearchDiscovery__pills">
+            {filteredSignificantTerms.map((term, index) => (
+              <button
+                key={term.id || index}
+                className="EntitySearchDiscovery__term"
+                onClick={() => handleTermClick(term.label)}
+              >
+                {term.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
