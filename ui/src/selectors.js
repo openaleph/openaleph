@@ -267,6 +267,7 @@ export function selectEntity(state, entityId) {
   result.bookmarked = entity.bookmarked;
   result.caption = entity.caption;
   result.tags = entity.tags;
+  result.processing_status = entity.processing_status;
 
   return result;
 }

@@ -17,6 +17,10 @@ const messages = defineMessages({
     id: 'entity.toolbar.translate.tooltip',
     defaultMessage: 'Translate entity text',
   },
+  processing: {
+    id: 'entity.toolbar.translate.processing',
+    defaultMessage: 'Translation in progress',
+  },
   success: {
     id: 'entity.toolbar.translate.success',
     defaultMessage: 'Translation has been queued.',
@@ -26,7 +30,7 @@ const messages = defineMessages({
 class TranslateButton extends Component {
   constructor(props) {
     super(props);
-    this.state = { blocking: false };
+    this.state = { blocking: false, processing: false };
     this.onTranslate = this.onTranslate.bind(this);
   }
 
@@ -38,6 +42,7 @@ class TranslateButton extends Component {
     try {
       await this.props.triggerEntityTranslate(entity.id);
       showSuccessToast(intl.formatMessage(messages.success));
+      this.setState({ processing: true });
     } catch (e) {
       showWarningToast(e.message);
     } finally {
@@ -47,15 +52,18 @@ class TranslateButton extends Component {
 
   render() {
     const { entity, intl } = this.props;
-    const { blocking } = this.state;
-    const isProcessing = blocking || entity?.processing_status?.translate;
+    const { blocking, processing } = this.state;
+    const isProcessing = processing || entity?.processing_status?.translate;
+    const tooltipMessage = isProcessing
+      ? intl.formatMessage(messages.processing)
+      : intl.formatMessage(messages.tooltip);
 
     return (
-      <Tooltip content={intl.formatMessage(messages.tooltip)}>
+      <Tooltip content={tooltipMessage}>
         <Button
           icon="translate"
-          disabled={isProcessing}
-          loading={isProcessing}
+          disabled={blocking || isProcessing}
+          loading={blocking}
           onClick={this.onTranslate}
           text={intl.formatMessage(messages.translate)}
         />
