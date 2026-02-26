@@ -131,7 +131,10 @@ class PropertyValue extends React.PureComponent<IPropertyValueProps> {
     }
     if (prop.type.name === 'country') {
       return (
-        <Country.Label code={value as string} fullList={prop.type.values} />
+        <span>
+          <span className={`CountryFlag fi fi-${(value as string).toLowerCase()}`} />
+          <Country.Label code={value as string} fullList={prop.type.values} />
+        </span>
       );
     }
     if (prop.type.name === 'topic') {

@@ -18,14 +18,18 @@ function CountryFlag({ code }) {
   return <span className={`CountryFlag fi fi-${code.toLowerCase()}`} />;
 }
 
-function CountryNameWithFlag({ code, fullList, locale }) {
+function CountryLabel({ code, fullList, locale, flag = false }) {
   if (!code) return null;
   return (
     <span>
-      <CountryFlag code={code} />
+      {flag && <CountryFlag code={code} />}
       <VLCountry.Label code={code} fullList={fullList} locale={locale} />
     </span>
   );
+}
+
+function CountryNameWithFlag({ code, fullList, locale }) {
+  return <CountryLabel code={code} fullList={fullList} locale={locale} flag />;
 }
 
 function CountryListWithFlags({ codes, truncate = Infinity, fullList, locale }) {
@@ -45,6 +49,8 @@ function CountryListWithFlags({ codes, truncate = Infinity, fullList, locale }) 
 }
 
 class Country {
+  static Label = connect(mapStateToProps)(CountryLabel);
+
   static Name = connect(mapStateToProps)(CountryNameWithFlag);
 
   static List = connect(mapStateToProps)(CountryListWithFlags);
