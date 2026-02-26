@@ -5,6 +5,7 @@ import Breadcrumbs from './Breadcrumbs';
 import SignInCallout from './SignInCallout';
 import ClipboardInput from './ClipboardInput';
 import Category from './Category';
+import DatasetGroup from './DatasetGroup';
 import EntityDecisionHotkeys from './EntityDecisionHotkeys';
 import EntityDecisionRow from './EntityDecisionRow';
 import Frequency from './Frequency';
@@ -63,6 +64,7 @@ export {
   SignInCallout,
   ClipboardInput,
   Category,
+  DatasetGroup,
   Frequency,
   Restricted,
   csvContextLoader,

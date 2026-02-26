@@ -41,7 +41,7 @@ $white: #fff8f1;
       }
     }
 
-    &:nth-child(even) {
+    &--dark {
       background-color: $black;
       color: $white;
 
@@ -58,7 +58,7 @@ $white: #fff8f1;
         color: $white;
       }
     }
-    &:nth-child(odd) {
+    &--light {
       background-color: $white;
     }
   }
@@ -514,4 +514,134 @@ $white: #fff8f1;
       }
     }
   }
+}
+
+// Dataset group cards (used inside markdown via <DatasetGroup>)
+.oa-dataset-group {
+  background: #fff;
+  border: 1px solid rgba($black, 0.08);
+  border-radius: 12px;
+  padding: 24px;
+  text-align: left;
+  transition: border-color 0.3s ease;
+
+  &:hover {
+    border-color: rgba($black, 0.15);
+  }
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  &__icon {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+
+    img {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &__meta {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__label {
+    font-size: 1.1em;
+    font-weight: 600;
+    margin: 0 0 2px;
+    color: $black;
+  }
+
+  &__description {
+    font-size: 0.85em;
+    color: $darc-gray-500;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    text-align: left !important;
+  }
+
+  &__body {
+    font-size: 0.9em;
+    line-height: 1.6;
+    color: $darc-gray-600;
+    margin-bottom: 16px;
+
+    p {
+      margin: 0 0 8px !important;
+      padding: 0 !important;
+      max-width: none !important;
+      text-align: left !important;
+
+      &:last-child {
+        margin-bottom: 0 !important;
+      }
+    }
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: 6px;
+    color: $black;
+    text-decoration: none !important;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background-color: rgba($black, 0.04);
+      color: $darc-orange-500;
+    }
+
+    &__label {
+      font-weight: 500;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &__info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+
+    &__category {
+      font-size: 0.85em;
+      color: $darc-gray-500;
+    }
+
+    &__count {
+      font-size: 0.85em;
+      color: $darc-gray-400;
+      font-variant-numeric: tabular-nums;
+      font-family: var(--font-family-mono, monospace);
+    }
+  }
+}
+
+// Stacked layout for dataset groups within markdown sections
+.oa-dataset-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 48px;
 }
