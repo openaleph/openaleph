@@ -46,15 +46,16 @@ class TranslateButton extends Component {
   }
 
   render() {
-    const { intl } = this.props;
+    const { entity, intl } = this.props;
     const { blocking } = this.state;
+    const isProcessing = blocking || entity?.processing_status?.translate;
 
     return (
       <Tooltip content={intl.formatMessage(messages.tooltip)}>
         <Button
           icon="translate"
-          disabled={blocking}
-          loading={blocking}
+          disabled={isProcessing}
+          loading={isProcessing}
           onClick={this.onTranslate}
           text={intl.formatMessage(messages.translate)}
         />

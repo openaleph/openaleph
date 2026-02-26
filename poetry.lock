@@ -3875,8 +3875,8 @@ pydantic-settings = ">=2.10.1,<3.0.0"
 [package.source]
 type = "git"
 url = "https://github.com/openaleph/openaleph-procrastinate.git"
-reference = "HEAD"
-resolved_reference = "7d2a7e0a3336025a02886f13addca0f735034b4c"
+reference = "feat/tracer"
+resolved_reference = "b2d52e20a82675c9040db1cb737d618012aeec69"
 
 [[package]]
 name = "openaleph-search"
@@ -6706,4 +6706,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "09d42e5f098144812d0e42ddcb25303bae44a9b76387eb052a8a85304e8e2366"
+content-hash = "0ef8b619278719f71bf4e9efa8853f66caa75f0c2ca608d3b930b9cb0eb74957"

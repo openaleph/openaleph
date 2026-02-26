@@ -28,6 +28,7 @@ from aleph.model import (
     Export,
     Role,
 )
+from aleph.procrastinate.queues import TRACER_URI, defer
 from aleph.util import make_entity_proxy
 from aleph.views.util import clean_object, jsonify
 
@@ -282,6 +283,16 @@ class EntitySerializer(Serializer):
         # Phasing out multi-values here (2021-01):
         obj["created_at"] = min(ensure_list(obj.get("created_at")), default=None)
         obj["updated_at"] = max(ensure_list(obj.get("updated_at")), default=None)
+
+        # Adding processing status
+        # This is a quick shot for now to give the user feedback that the
+        # translation is happening. But useful for other things as well, e.g.
+        # ingesting, analyze, transcribe. We are currently only using the
+        # tracing at this point so we hack it in here, but this should be
+        # refactored properly at one point. :)
+        tracer = defer.tasks.translate.get_tracer(TRACER_URI)
+        obj["processing_status"] = {"translate": tracer.is_processing(obj["id"])}
+
         return obj
 
 

@@ -8,6 +8,7 @@ from openaleph_procrastinate.app import make_app
 from openaleph_procrastinate.model import DatasetJob
 from openaleph_procrastinate.settings import DeferSettings
 from openaleph_procrastinate.tasks import Priorities
+from servicelayer import env
 
 from aleph.logic.aggregator import get_aggregator_name
 from aleph.model.collection import Collection
@@ -29,6 +30,8 @@ OP_EXPORT_SEARCH = "exportsearch"
 OP_EXPORT_XREF = "exportxref"
 OP_UPDATE_ENTITY = "updateentity"
 OP_PRUNE_ENTITY = "pruneentity"
+
+TRACER_URI = env.get("REDIS_URI")
 
 
 class Context(TypedDict):
@@ -80,6 +83,9 @@ def queue_translate(collection: Collection, proxy: EntityProxy, **context: Any) 
     dataset = get_aggregator_name(collection)
     with app.open():
         defer.translate(app, dataset, [proxy], **context)
+    # we want to trace the processing status for the UI:
+    tracer = defer.tasks.translate.get_tracer(TRACER_URI)
+    tracer.add(proxy.id)
 
 
 def queue_index(
