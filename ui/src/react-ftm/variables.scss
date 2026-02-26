@@ -1,17 +1,32 @@
-$black-90: #182026;
-$black-80: #2e363d;
-$black-70: #464e55;
-$black-60: #5e676f;
-$black-50: #788289;
-$black-40: #939da5;
-$black-30: #afb9c1;
-$black-20: #ccd6de;
-$black-10: #eaf4fc;
+// darc-black and darc-white (aligned with app/variables.scss)
+$black: #1a1a1a;
+$white: #fff;
 
-$white: #fff8f1;
-$white-3: #fff8f1;
-$white-5: #fff8f1;
-$white-10: #fff8f1;
+// darc grays
+$darc-gray-50: #F9F9F9;
+$darc-gray-100: #F2F2F2;
+$darc-gray-200: #E8E8E8;
+$darc-gray-300: #D8D8D8;
+$darc-gray-400: #B4B4B4;
+$darc-gray-500: #949494;
+$darc-gray-600: #6C6C6C;
+$darc-gray-700: #595959;
+$darc-gray-800: #3A3A3A;
+$darc-gray-900: #1A1A1A;
+
+// legacy aliases (mapped to darc-gray equivalents)
+$black-90: $darc-gray-900;
+$black-80: $darc-gray-800;
+$black-70: $darc-gray-700;
+$black-60: $darc-gray-600;
+$black-50: $darc-gray-500;
+$black-40: $darc-gray-400;
+$black-30: $darc-gray-300;
+$black-20: $darc-gray-200;
+$black-10: $darc-gray-100;
+$white-3: $white;
+$white-5: $white;
+$white-10: $white;
 
 // darc greens
 $darc-green-50: #F1FFF8;
@@ -69,7 +84,7 @@ $blue2: $accent-color;
 
 @import '@blueprintjs/core/lib/scss/variables';
 
-$editor-background-color: $black-90;
+$editor-background-color: $black;
 // $editor-border-color: $light-gray1;
 $editor-border-radius: 5px;
 $editor-box-shadow:
@@ -81,9 +96,9 @@ $standard-border-radius: 5px;
 $sidebar-width: 270px;
 $sidebar-gutter: 15px;
 
-$text-color-main: white;
-$text-color-secondary: rgba(255, 248, 241, 0.6);
-$disabled-color: $black-60;
+$text-color-main: $black;
+$text-color-secondary: $darc-gray-600;
+$disabled-color: $darc-gray-400;
 
 .error-text {
   font-style: italic;

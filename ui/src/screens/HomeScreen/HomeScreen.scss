@@ -1,9 +1,10 @@
 @import 'app/variables.scss';
 
 $vertical-spacing: $aleph-grid-size * 5;
+$white: #fff8f1;
 
 .HomeScreen {
-  background-color: #fff8f1;
+  background-color: $white;
   font-family: $pt-font-family;
   font-size: 16px;
   @media screen and (max-width: $aleph-screen-sm-max-width) {
@@ -38,7 +39,6 @@ $vertical-spacing: $aleph-grid-size * 5;
         margin: 0 auto;
         padding-bottom: $aleph-grid-size;
       }
-
     }
 
     &:nth-child(even) {
@@ -490,7 +490,9 @@ $vertical-spacing: $aleph-grid-size * 5;
     font-weight: 500;
     font-size: 1em;
     text-decoration: none !important;
-    transition: background 0.3s ease, border-color 0.3s ease;
+    transition:
+      background 0.3s ease,
+      border-color 0.3s ease;
     cursor: pointer;
 
     &--primary {
