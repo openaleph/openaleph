@@ -211,13 +211,13 @@ const EntitySearchDiscovery: React.FC<EntitySearchDiscoveryProps> = ({
           </div>
         </div>
       )}
-      {!fetched && (
+      {(!fetched || discoveryResult.loading) && (
         <button
           className={`EntitySearchDiscovery__discover-btn${discoveryResult.loading ? ' EntitySearchDiscovery__discover-btn--loading' : ''}`}
           onClick={fetchDiscoveryData}
           disabled={discoveryResult.loading}
         >
-          {discoveryResult.loading ? 'Loading...' : 'Discover related terms'}
+          {discoveryResult.loading ? 'Loading\u2026' : 'Discover related terms'}
         </button>
       )}
       {discoveryResult.error && <p>Error: {discoveryResult.error}</p>}
