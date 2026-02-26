@@ -7,6 +7,7 @@ from followthemoney import model
 from followthemoney.helpers import entity_filename
 from followthemoney.types import registry
 from rigour.mime.types import CSV, PDF
+from servicelayer import env
 
 from aleph.core import url_for
 from aleph.logic import resolver
@@ -28,11 +29,13 @@ from aleph.model import (
     Export,
     Role,
 )
-from aleph.procrastinate.queues import TRACER_URI, defer
+from aleph.procrastinate.queues import defer
 from aleph.util import make_entity_proxy
 from aleph.views.util import clean_object, jsonify
 
 log = logging.getLogger(__name__)
+
+TRACER_URI = env.get("REDIS_URL")
 
 
 class Serializer(object):
