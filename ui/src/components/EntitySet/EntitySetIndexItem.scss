@@ -7,7 +7,6 @@ $wrap-breakpoint: 800px;
 
 .EntitySetIndexItem {
   &.index-item {
-    padding: 0;
     width: 100%;
 
     &.#{$bp-ns}-button {
