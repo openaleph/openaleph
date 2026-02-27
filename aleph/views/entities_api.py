@@ -357,7 +357,7 @@ def view(entity_id):
         ).first()
         entity["bookmarked"] = True if bookmark else False
 
-    return EntitySerializer.jsonify(entity)
+    return EntitySerializer.jsonify(entity, include_processing=True)
 
 
 @blueprint.route("/api/2/entities/<entity_id>/nearby", methods=["GET"])

@@ -39,8 +39,9 @@ TRACER_URI = env.get("REDIS_URL")
 
 
 class Serializer(object):
-    def __init__(self, nested=False):
+    def __init__(self, nested=False, include_processing=False):
         self.nested = nested
+        self.include_processing = include_processing
 
     def collect(self, obj):
         pass
@@ -99,8 +100,8 @@ class Serializer(object):
         return obj
 
     @classmethod
-    def jsonify(cls, obj, **kwargs):
-        data = cls().serialize(obj)
+    def jsonify(cls, obj, include_processing=False, **kwargs):
+        data = cls(include_processing=include_processing).serialize(obj)
         return jsonify(data, **kwargs)
 
     @classmethod
@@ -218,7 +219,7 @@ class EntitySerializer(Serializer):
             for value in ensure_list(values):
                 self.queue(Entity, value, schema=prop.range)
 
-    def _serialize(self, obj):
+    def _serialize(self, obj):  # noqa: C901
         proxy = make_entity_proxy(dict(obj))
         properties = {}
         for prop, value in proxy.itervalues():
@@ -264,12 +265,6 @@ class EntitySerializer(Serializer):
                     csv_hash, file_name=name, mime_type=CSV, role_id=request.authz.id
                 )
 
-        if should_transcribe(proxy):
-            links["transcribe"] = url_for("entities_api.transcribe", entity_id=proxy.id)
-
-        if should_translate(proxy):
-            links["translate"] = url_for("entities_api.translate", entity_id=proxy.id)
-
         collection = obj.get("collection") or {}
         coll_id = obj.pop("collection_id", collection.get("id"))
         # This is a last resort catcher for entities nested in other
@@ -287,14 +282,19 @@ class EntitySerializer(Serializer):
         obj["created_at"] = min(ensure_list(obj.get("created_at")), default=None)
         obj["updated_at"] = max(ensure_list(obj.get("updated_at")), default=None)
 
-        # Adding processing status
-        # This is a quick shot for now to give the user feedback that the
-        # translation is happening. But useful for other things as well, e.g.
-        # ingesting, analyze, transcribe. We are currently only using the
-        # tracing at this point so we hack it in here, but this should be
-        # refactored properly at one point. :)
-        tracer = defer.tasks.translate.get_tracer(TRACER_URI)
-        obj["processing_status"] = {"translate": tracer.is_processing(obj["id"])}
+        # Adding processing triggers and status for documents only (detail view)
+        if self.include_processing and proxy.schema.is_a(Document.SCHEMA):
+            if should_transcribe(proxy):
+                links["transcribe"] = url_for(
+                    "entities_api.transcribe", entity_id=proxy.id
+                )
+            if should_translate(proxy):
+                links["translate"] = url_for(
+                    "entities_api.translate", entity_id=proxy.id
+                )
+
+            tracer = defer.tasks.translate.get_tracer(TRACER_URI)
+            obj["processing_status"] = {"translate": tracer.is_processing(obj["id"])}
 
         return obj
 
