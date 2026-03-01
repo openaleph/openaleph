@@ -9,6 +9,8 @@ interface IImageAttribution {
   readonly license: string;
   readonly license_url: string;
   readonly author?: string;
+  readonly source?: string;
+  readonly source_url?: string;
 }
 
 interface IImageAlt {
@@ -65,7 +67,8 @@ const getImage = async (
   fetchImageMeta(makeMetaUrl(api, id), opts) as Promise<IImageMeta>;
 
 export function ImageAttribution(props: { attribution: IImageAttribution }) {
-  const { license, license_url, author } = props.attribution;
+  const { license, license_url, author, source, source_url } =
+    props.attribution;
   return (
     <span className="ftm-assets__ImageAttribution">
       <span className="ftm-assets__ImageAttribution__license">
@@ -74,6 +77,12 @@ export function ImageAttribution(props: { attribution: IImageAttribution }) {
       {author ? (
         <span className="ftm-assets__ImageAttribution__author">
           Author: {author}
+        </span>
+      ) : null}
+      {source ? (
+        <span className="ftm-assets__ImageAttribution__source">
+          Source:{' '}
+          {source_url ? <a href={source_url}>{source}</a> : source}
         </span>
       ) : null}
     </span>
