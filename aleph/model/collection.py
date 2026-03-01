@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
+from functools import cache
 
-from anystore.functools import weakref_cache
 from banal import ensure_dict, ensure_list
 from flask_babel import lazy_gettext
 from followthemoney.dataset.util import dataset_name_check
@@ -19,7 +19,7 @@ from aleph.model.role import Role
 log = logging.getLogger(__name__)
 
 
-@weakref_cache
+@cache
 def cached_dataset_name_check(dataset: str) -> str:
     return dataset_name_check(dataset)
 
