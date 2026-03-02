@@ -81,7 +81,7 @@ export function ImageAttribution(props: { attribution: IImageAttribution }) {
       ) : null}
       {source ? (
         <span className="ftm-assets__ImageAttribution__source">
-          Source:{' '}
+          {' / '}
           {source_url ? <a href={source_url}>{source}</a> : source}
         </span>
       ) : null}
