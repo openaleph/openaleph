@@ -312,13 +312,15 @@ trio = ["trio (>=0.31.0) ; python_version < \"3.10\"", "trio (>=0.32.0) ; python
 
 [[package]]
 name = "anystore"
-version = "1.1.2"
+version = "1.1.3"
 description = "Store and cache things anywhere"
 optional = false
-python-versions = ">=3.11,<4"
+python-versions = "<4,>=3.11"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "anystore-1.1.3-py3-none-any.whl", hash = "sha256:0bc326a3d6b2b4b3173f4280ee8d456f501a4b724d7880c2d7947b77cab540b8"},
+    {file = "anystore-1.1.3.tar.gz", hash = "sha256:ae09acae163773b5a85ce77d6d61e68051f21fa857b933d881793877213ee026"},
+]
 
 [package.dependencies]
 banal = ">=1.0.6,<2.0.0"
@@ -342,12 +344,6 @@ uuid7 = ">=0.1.0,<0.2.0"
 api = ["fastapi (>=0.115.0,<1.0.0)", "uvicorn (>=0.34.0,<1.0.0)"]
 redis = ["fakeredis (>=2.26.2,<3.0.0)", "redis (>=4.0.0)"]
 sql = ["sqlalchemy (>=2.0.36,<3.0.0)"]
-
-[package.source]
-type = "git"
-url = "https://github.com/dataresearchcenter/anystore.git"
-reference = "HEAD"
-resolved_reference = "b8781e091b132dcfa4e00377168e90907e6ad93a"
 
 [[package]]
 name = "apispec"
@@ -1837,18 +1833,18 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "ftmq"
-version = "4.5.5"
+version = "4.5.7"
 description = "followthemoney query dsl and io helpers"
 optional = false
 python-versions = "<3.14,>=3.11"
 groups = ["main"]
 files = [
-    {file = "ftmq-4.5.5-py3-none-any.whl", hash = "sha256:3f48d5821bfe47c23d5984bf16e5281301fd5c66988024543eb9ef2a72b80b45"},
-    {file = "ftmq-4.5.5.tar.gz", hash = "sha256:85b4e5ec9f80e899a3a0d8371d56d3c0f12c41a931c14b751ac21dd9cf9ef1d8"},
+    {file = "ftmq-4.5.7-py3-none-any.whl", hash = "sha256:2298aec9a5ca4b244dfcb005ee89f47789d96454b66be37b3d9c730bb83c2954"},
+    {file = "ftmq-4.5.7.tar.gz", hash = "sha256:72307beda4763de34ec8a3281cc5bc6dfc9033d16640cadb40357868a72756f9"},
 ]
 
 [package.dependencies]
-anystore = ">=1.1.2,<2.0.0"
+anystore = ">=1.1.3,<2.0.0"
 click = ">=8.2.1,<9.0.0"
 click-default-group = ">=1.2.4,<2.0.0"
 followthemoney = ">=4.5.3,<5.0.0"
@@ -3866,10 +3862,10 @@ files = []
 develop = false
 
 [package.dependencies]
-anystore = {git = "https://github.com/dataresearchcenter/anystore.git"}
+anystore = ">=1.1.3,<2.0.0"
 cachetools = "<6"
 followthemoney = ">=4.5.3,<5.0.0"
-ftmq = ">=4.5.5,<5.0.0"
+ftmq = ">=4.5.7,<5.0.0"
 procrastinate = ">=3.7.2,<4.0.0"
 psycopg = ">=3.3.2,<4.0.0"
 psycopg-pool = ">=3.3.0,<4.0.0"
@@ -3880,33 +3876,29 @@ pydantic-settings = ">=2.10.1,<3.0.0"
 type = "git"
 url = "https://github.com/openaleph/openaleph-procrastinate.git"
 reference = "HEAD"
-resolved_reference = "34d400793dd50b105a322f1bf741aab24cf5b894"
+resolved_reference = "e254b8851318c5b045b56b44ae7293da75ad660a"
 
 [[package]]
 name = "openaleph-search"
-version = "5.1.2"
+version = "5.2.0"
 description = "OpenAleph index & search module"
 optional = false
-python-versions = ">=3.12,<3.14"
+python-versions = "<3.14,>=3.12"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "openaleph_search-5.2.0-py3-none-any.whl", hash = "sha256:7c7643ccdf40e5beed587fb3a04c7864b5a1358c3b9758241fd2a4c8e8fa4683"},
+    {file = "openaleph_search-5.2.0.tar.gz", hash = "sha256:bf44ddd8c289d25cffc7f8e8508a72ed280c4101c71921a17490782f8700a5dd"},
+]
 
 [package.dependencies]
 cachetools = "<6"
 elasticsearch = ">=9.2.0,<10.0.0"
 followthemoney = ">=4.5.3,<5.0.0"
-ftmq = ">=4.5.5,<5.0.0"
+ftmq = ">=4.5.7,<5.0.0"
 pydantic = ">=2.11.9,<3.0.0"
 pydantic-settings = ">=2.10.1,<3.0.0"
 rigour = ">=1.7.2,<2.0.0"
 werkzeug = ">=3.1.3,<4.0.0"
-
-[package.source]
-type = "git"
-url = "https://github.com/openaleph/openaleph-search.git"
-reference = "HEAD"
-resolved_reference = "01a43a6b36d6a4c783c129ff466e6a2c83aa65e9"
 
 [[package]]
 name = "openaleph-servicelayer"
@@ -6708,4 +6700,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "f18bc01f7f18e39adac415170299d342667cbfbc3b0e183295a70250b0a5bd76"
+content-hash = "eba00b7f73cb9c376a5a0ec64c1115edd34f3e3c89293f86ae9d67c21c71956c"
