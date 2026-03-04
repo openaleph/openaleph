@@ -1,10 +1,13 @@
 import logging
+from typing import Generator
 
 from banal import ensure_dict
 from flask_babel import gettext
 from followthemoney import EntityProxy, model
 from followthemoney.exc import InvalidData
+from followthemoney.namespace import Namespace
 from followthemoney.types import registry
+from followthemoney.util import make_entity_id
 from openaleph_procrastinate.defer import tasks
 from openaleph_search.index import entities as index
 from rigour.langs import iso_639_alpha2
@@ -25,6 +28,18 @@ from aleph.settings import SETTINGS
 from aleph.util import make_entity_proxy
 
 log = logging.getLogger(__name__)
+
+
+def _deduct_page_ids(e: EntityProxy, dataset: str) -> Generator[str, None, None]:
+    """This is an endless generator of child "Page" entity IDs. This doesn't
+    mean they exist. Consumers are responsible to stop at one point."""
+    if e.schema.name == "Pages":
+        ns = Namespace(dataset)
+        i = 1
+        while True:
+            id_ = make_entity_id(e.id, i, key_prefix=dataset)
+            yield ns.sign(id_)
+            i += 1
 
 
 def upsert_entity(data, collection, authz=None, sync=False, sign=False, job_id=None):
@@ -136,8 +151,10 @@ def should_transcribe(proxy: EntityProxy) -> bool:
     return proxy.schema.is_a("Video") or proxy.schema.is_a("Audio")
 
 
-def should_translate(proxy: EntityProxy) -> bool:
-    """Check if an entity is eligible for translation."""
+def should_translate(proxy: EntityProxy, dataset: str) -> bool:
+    """Check if an entity is eligible for translation. Should be used on 'detail
+    views' and not in lists for many entities because of the costly call for
+    Pages schemata."""
     if not tasks.translate.defer:
         return False
     if proxy.has(
@@ -148,6 +165,18 @@ def should_translate(proxy: EntityProxy) -> bool:
         source_lang = iso_639_alpha2(proxy.first("detectedLanguage") or "")
         if source_lang and SETTINGS.FTM_TRANSLATE_TARGET_LANGUAGE != source_lang:
             return True
+    # this is hacky but the most efficient way to do this. For "Pages" schemata,
+    # we deduct the first few child Page ids, try to get them from the index and
+    # look if they have translated text. We test the first 3 possible pages.
+    if proxy.schema.name == "Pages":
+        for ix, page_id in enumerate(_deduct_page_ids(proxy, dataset)):
+            if ix > 3:
+                return False
+            page_entity = index.get_entity(page_id)
+            if page_entity is None:
+                return False
+            if "translatedText" in page_entity.get("properties", {}):
+                return True
     return False
 
 

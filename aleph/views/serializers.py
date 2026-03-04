@@ -284,11 +284,12 @@ class EntitySerializer(Serializer):
 
         # Adding processing triggers and status for documents only (detail view)
         if self.include_processing and proxy.schema.is_a(Document.SCHEMA):
+            dataset = obj["collection"]["foreign_id"]
             if should_transcribe(proxy):
                 links["transcribe"] = url_for(
                     "entities_api.transcribe", entity_id=proxy.id
                 )
-            if should_translate(proxy):
+            if should_translate(proxy, dataset):
                 links["translate"] = url_for(
                     "entities_api.translate", entity_id=proxy.id
                 )

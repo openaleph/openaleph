@@ -936,7 +936,7 @@ def translate(entity_id):
     collection = get_db_collection(entity.get("collection_id"), request.authz.WRITE)
     tag_request(collection_id=collection.id, entity_id=entity_id)
     proxy = make_entity_proxy(entity)
-    if not should_translate(proxy):
+    if not should_translate(proxy, collection.foreign_id):
         raise BadRequest("Entity is not eligible for translation")
     queue_translate(collection, proxy)
     return ("", 202)
