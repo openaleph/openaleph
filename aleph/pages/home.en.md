@@ -6,7 +6,7 @@ html: true
 samples: ["Vladimir Putin", "TeliaSonera"]
 ---
 
-<section className="HomeScreen__section">
+<section className="HomeScreen__section HomeScreen__section--darc">
   <div className="HomeScreen__section__content">
     <h1 className="HomeScreen__title">About OpenAleph</h1>
     <div className="HomeScreen__title-divider"></div>
