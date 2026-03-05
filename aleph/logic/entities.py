@@ -30,14 +30,16 @@ from aleph.util import make_entity_proxy
 log = logging.getLogger(__name__)
 
 
-def _deduct_page_ids(e: EntityProxy, dataset: str) -> Generator[str, None, None]:
+def _deduce_page_ids(e: EntityProxy, dataset: str) -> Generator[str, None, None]:
     """This is an endless generator of child "Page" entity IDs. This doesn't
     mean they exist. Consumers are responsible to stop at one point."""
     if e.schema.name == "Pages":
+        # unsign entity id:
+        entity_id = e.id.split(".")[0]
         ns = Namespace(dataset)
         i = 1
         while True:
-            id_ = make_entity_id(e.id, i, key_prefix=dataset)
+            id_ = make_entity_id(entity_id, i, key_prefix=dataset)
             yield ns.sign(id_)
             i += 1
 
@@ -161,15 +163,11 @@ def should_translate(proxy: EntityProxy, dataset: str) -> bool:
         "translatedText", quiet=True
     ):  # already translated, don't allow user-side retrigger
         return False
-    if proxy.schema.is_a("Document"):
-        source_lang = iso_639_alpha2(proxy.first("detectedLanguage") or "")
-        if source_lang and SETTINGS.FTM_TRANSLATE_TARGET_LANGUAGE != source_lang:
-            return True
     # this is hacky but the most efficient way to do this. For "Pages" schemata,
-    # we deduct the first few child Page ids, try to get them from the index and
+    # we deduce the first few child Page ids, try to get them from the index and
     # look if they have translated text. We test the first 3 possible pages.
     if proxy.schema.name == "Pages":
-        for ix, page_id in enumerate(_deduct_page_ids(proxy, dataset)):
+        for ix, page_id in enumerate(_deduce_page_ids(proxy, dataset)):
             if ix > 3:
                 return False
             page_entity = index.get_entity(page_id)
@@ -177,6 +175,10 @@ def should_translate(proxy: EntityProxy, dataset: str) -> bool:
                 return False
             if "translatedText" in page_entity.get("properties", {}):
                 return True
+    if proxy.schema.is_a("Document"):
+        source_lang = iso_639_alpha2(proxy.first("detectedLanguage") or "")
+        if source_lang and SETTINGS.FTM_TRANSLATE_TARGET_LANGUAGE != source_lang:
+            return True
     return False
 
 
