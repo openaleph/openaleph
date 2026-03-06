@@ -39,3 +39,8 @@ class BaseApiTestCase(TestCase):
         assert res.status_code == 200, res
         assert res.json["collections"] == 1, res.json
         assert res.json["things"] == 2, res.json
+
+    def test_healthz(self):
+        res = self.client.get("/api/2/healthz")
+        assert res.status_code == 200, res
+        assert res.json["status"] == "ok", res.json

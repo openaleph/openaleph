@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from functools import lru_cache
 
 from babel import Locale
@@ -13,7 +14,7 @@ from jwt import DecodeError, ExpiredSignatureError
 
 from aleph import __version__
 from aleph.authz import Authz
-from aleph.core import archive, cache, url_for
+from aleph.core import archive, cache, get_cache, url_for
 from aleph.logic.pages import load_pages
 from aleph.logic.util import collection_url
 from aleph.model import Collection, Role
@@ -184,15 +185,15 @@ def sitemap():
     return render_xml("sitemap.xml", collections=collections)
 
 
-@blueprint.route("/healthz")
+@blueprint.route("/api/2/healthz")
 def healthz():
     """
     ---
     get:
       summary: Health check endpoint.
       description: >
-        This can be used e.g. for Kubernetes health checks, but it doesn't
-        do any internal checks.
+        Use health checks, this checks connections to Database, Archive, Redis
+        and Elasticsearch.
       responses:
         '200':
           description: OK
@@ -207,7 +208,43 @@ def healthz():
       tags:
       - System
     """
+    from openaleph_procrastinate.archive import get_archive
+    from openaleph_procrastinate.settings import OpenAlephSettings
+    from openaleph_search.core import get_es
+    from sqlalchemy import create_engine, text
+
     request.rate_limit = None
+    settings = OpenAlephSettings()
+
+    try:
+        for db_uri in set(
+            [settings.db_uri, settings.fragments_uri, settings.procrastinate_db_uri]
+        ):
+            engine = create_engine(db_uri)
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            engine.dispose()
+    except Exception as exc:
+        raise RuntimeError(f"PostgreSQL health check failed: {exc}")
+
+    try:
+        es = get_es()
+        es.cluster.health()
+    except Exception as exc:
+        raise RuntimeError(f"Elasticsearch health check failed: {exc}")
+
+    try:
+        redis = get_cache()
+        redis.kv.ping()
+    except Exception as exc:
+        raise RuntimeError(f"Redis health check failed: {exc}")
+
+    try:
+        archive = get_archive()
+        archive.put("healthz", datetime.now())
+    except Exception as exc:
+        raise RuntimeError(f"Archive health check failed: {exc}")
+
     return jsonify({"status": "ok"})
 
 
@@ -264,7 +301,10 @@ def handle_jwt_expired(err):
 
 @blueprint.app_errorhandler(TransportError)
 def handle_es_error(err):
-    message = err.error
+    if hasattr(err, "errors"):  # FIXME why
+        message = err.errors
+    else:
+        message = err.error
     if hasattr(err, "info") and isinstance(err.info, dict):
         error = err.info.get("error", {})
         for root_cause in error.get("root_cause", []):
