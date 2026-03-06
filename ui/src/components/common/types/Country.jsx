@@ -57,7 +57,7 @@ function CountryListWithFlags({ codes, truncate = Infinity, fullList, locale }) 
   if (names.length > truncate) {
     names = [...names.slice(0, truncate), '…'];
   }
-  return wordList(names, ', ');
+  return wordList(names, ' · ');
 }
 
 class Country {
