@@ -213,7 +213,6 @@ def healthz():
     from openaleph_search.core import get_es
     from sqlalchemy import create_engine, text
 
-    request.rate_limit = None
     settings = OpenAlephSettings()
 
     try:
