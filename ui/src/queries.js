@@ -171,7 +171,7 @@ export function entityMoreLikeThisQuery(location, entityId) {
     location,
     {
       dehydrate: true, // this excludes entity properties from the response
-      highlight: true, // this renders some nice preview snippets
+      highlight: false, // this renders some nice preview snippets but is expensive
     },
     'more_like_this'
   )
