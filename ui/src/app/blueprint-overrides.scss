@@ -363,6 +363,14 @@ table {
     border-radius: 12px !important;
     overflow: hidden;
   }
+
+  // Allow submenus to overflow the popover (e.g. MappingEditor property assign)
+  &:has(.#{$bp-ns}-submenu) {
+    .#{$bp-ns}-popover2-content,
+    .#{$bp-ns}-popover-content {
+      overflow: visible;
+    }
+  }
 }
 
 .#{$bp-ns}-menu {
