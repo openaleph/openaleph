@@ -3,4 +3,8 @@
   margin-right: 5px;
   vertical-align: baseline;
   font-size: 0.9em;
+
+  &--global svg {
+    vertical-align: -0.125em;
+  }
 }
