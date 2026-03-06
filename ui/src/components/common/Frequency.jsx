@@ -12,7 +12,7 @@ class FrequencyLabel extends PureComponent {
     const label = frequencies[frequency];
     return (
       <span className="FrequencyLabel">
-        <Tag icon="automatic-updates" title={label}>
+        <Tag icon="automatic-updates" title={label} minimal>
           {label}
         </Tag>
       </span>
