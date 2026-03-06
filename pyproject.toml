@@ -13,7 +13,7 @@ readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "followthemoney @ git+https://github.com/dataresearchcenter/followthemoney.git@fix/pickle",
-    "openaleph-search (>=5.2.0,<6.0.0)",
+    "openaleph-search @ git+https://github.com/openaleph/openaleph-search.git",
     "openaleph-procrastinate (>=5.2.1,<6.0.0)",
     "ftmq[postgres] (>=4.5.7,<5.0.0)",
     "nomenklatura (>4.6,<4.7)",
