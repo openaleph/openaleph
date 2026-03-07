@@ -98,7 +98,7 @@ class EntityMoreLikeThisMode extends Component {
             <Collection.Link collection={entity.collection} icon />
           </td>
         </tr>
-        {entity.highlight.length ? (
+        {entity.highlight ? (
           <tr key={`${entity.id}-hl`}>
             <td colSpan="100%" className="highlights">
               <SearchHighlight highlight={entity.highlight} />
