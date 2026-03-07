@@ -62,6 +62,9 @@ class NotificationsQuery(Query):
     TEXT_FIELDS = ["text"]
     SORT_DEFAULT = [{"created_at": {"order": "desc"}}]
 
+    def get_sort(self):
+        return self.SORT_DEFAULT
+
     def get_text_query(self):
         return [{"match_all": {}}]
 
