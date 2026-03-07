@@ -1953,14 +1953,14 @@ grpc = ["grpcio (>=1.33.2,<2.0.0)", "grpcio (>=1.49.1,<2.0.0) ; python_version >
 
 [[package]]
 name = "google-auth"
-version = "2.48.0"
+version = "2.49.0"
 description = "Google Authentication Library"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "google_auth-2.48.0-py3-none-any.whl", hash = "sha256:2e2a537873d449434252a9632c28bfc268b0adb1e53f9fb62afc5333a975903f"},
-    {file = "google_auth-2.48.0.tar.gz", hash = "sha256:4f7e706b0cd3208a3d940a19a822c37a476ddba5450156c3e6624a71f7c841ce"},
+    {file = "google_auth-2.49.0-py3-none-any.whl", hash = "sha256:f893ef7307f19cf53700b7e2f61b5a6affe3aa0edf9943b13788920ab92d8d87"},
+    {file = "google_auth-2.49.0.tar.gz", hash = "sha256:9cc2d9259d3700d7a257681f81052db6737495a1a46b610597f4b8bafe5286ae"},
 ]
 
 [package.dependencies]
@@ -2086,14 +2086,14 @@ requests = ["requests (>=2.18.0,<3.0.0)"]
 
 [[package]]
 name = "googleapis-common-protos"
-version = "1.72.0"
+version = "1.73.0"
 description = "Common protobufs used in Google APIs"
 optional = false
 python-versions = ">=3.7"
 groups = ["main"]
 files = [
-    {file = "googleapis_common_protos-1.72.0-py3-none-any.whl", hash = "sha256:4299c5a82d5ae1a9702ada957347726b167f9f8d1fc352477702a1e851ff4038"},
-    {file = "googleapis_common_protos-1.72.0.tar.gz", hash = "sha256:e55a601c1b32b52d7a3e65f43563e2aa61bcd737998ee672ac9b951cd49319f5"},
+    {file = "googleapis_common_protos-1.73.0-py3-none-any.whl", hash = "sha256:dfdaaa2e860f242046be561e6d6cb5c5f1541ae02cfbcb034371aadb2942b4e8"},
+    {file = "googleapis_common_protos-1.73.0.tar.gz", hash = "sha256:778d07cd4fbeff84c6f7c72102f0daf98fa2bfd3fa8bea426edc545588da0b5a"},
 ]
 
 [package.dependencies]
@@ -3909,7 +3909,7 @@ werkzeug = ">=3.1.3,<4.0.0"
 type = "git"
 url = "https://github.com/openaleph/openaleph-search.git"
 reference = "HEAD"
-resolved_reference = "ed36037d39575525352103f879ca3bca6a590ae4"
+resolved_reference = "dd90963efac2b1000188b558397e0aa7c78ed3bb"
 
 [[package]]
 name = "openaleph-servicelayer"
@@ -4987,14 +4987,14 @@ six = ">=1.5"
 
 [[package]]
 name = "python-discovery"
-version = "1.1.0"
+version = "1.1.1"
 description = "Python interpreter discovery"
 optional = false
 python-versions = ">=3.8"
 groups = ["dev"]
 files = [
-    {file = "python_discovery-1.1.0-py3-none-any.whl", hash = "sha256:a162893b8809727f54594a99ad2179d2ede4bf953e12d4c7abc3cc9cdbd1437b"},
-    {file = "python_discovery-1.1.0.tar.gz", hash = "sha256:447941ba1aed8cc2ab7ee3cb91be5fc137c5bdbb05b7e6ea62fbdcb66e50b268"},
+    {file = "python_discovery-1.1.1-py3-none-any.whl", hash = "sha256:69f11073fa2392251e405d4e847d60ffffd25fd762a0dc4d1a7d6b9c3f79f1a3"},
+    {file = "python_discovery-1.1.1.tar.gz", hash = "sha256:584c08b141c5b7029f206b4e8b78b1a1764b22121e21519b89dec56936e95b0a"},
 ]
 
 [package.dependencies]
@@ -5537,13 +5537,13 @@ jupyter = ["ipywidgets (>=7.5.1,<9)"]
 
 [[package]]
 name = "rigour"
-version = "1.7.3"
+version = "1.7.4"
 description = "Financial crime domain data validation and normalization library."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "rigour-1.7.3-py3-none-any.whl", hash = "sha256:549972a30c1f7fba40bf5f99d9c4aa0190b71b605e263c34b4eb54655aa846aa"},
+    {file = "rigour-1.7.4-py3-none-any.whl", hash = "sha256:e3f6e9f27b98ee37bf45134b70c6bfa36211613117a0eb8713e6acc1632bb533"},
 ]
 
 [package.dependencies]
