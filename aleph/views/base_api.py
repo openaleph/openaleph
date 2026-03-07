@@ -219,6 +219,8 @@ def healthz():
         for db_uri in set(
             [settings.db_uri, settings.fragments_uri, settings.procrastinate_db_uri]
         ):
+            # Use psycopg3 driver, matching core.py
+            db_uri = db_uri.replace("postgresql://", "postgresql+psycopg://", 1)
             engine = create_engine(db_uri)
             with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
