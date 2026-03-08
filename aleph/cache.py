@@ -1,9 +1,10 @@
-import json
 import logging
+
+import orjson
 from servicelayer import settings
 from servicelayer.cache import make_key
 
-from aleph.util import JSONEncoder
+from aleph.util import json_default
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ class Cache(object):
         self.kv.set(key, value, ex=expires)
 
     def set_complex(self, key, value, expires=None):
-        value = json.dumps(value, cls=JSONEncoder)
+        value = orjson.dumps(value, default=json_default)
         return self.set(key, value, expires=expires)
 
     def set_list(self, key, values, expires=None):
@@ -44,14 +45,14 @@ class Cache(object):
     def get_complex(self, key):
         value = self.get(key)
         if value is not None:
-            return json.loads(value)
+            return orjson.loads(value)
 
     def get_many_complex(self, keys, default=None):
         if not len(keys):
             return
         values = self.kv.mget(keys)
         for key, v in zip(keys, values):
-            v = json.loads(v) if v is not None else default
+            v = orjson.loads(v) if v is not None else default
             yield key, v
 
     def get_list(self, key):

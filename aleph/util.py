@@ -49,6 +49,21 @@ class JSONEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
+def json_default(obj):
+    """Default handler for orjson.dumps(). Mirrors JSONEncoder.default()."""
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    if isinstance(obj, bytes):
+        return obj.decode("utf-8")
+    if isinstance(obj, LazyString):
+        return str(obj)
+    if isinstance(obj, set):
+        return list(obj)
+    if hasattr(obj, "to_dict"):
+        return obj.to_dict()
+    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+
+
 class Stub(object):
     pass
 

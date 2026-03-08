@@ -4,6 +4,7 @@ import logging
 import string
 from urllib.parse import urlparse
 
+import orjson
 from banal import as_bool, ensure_dict, is_listish, is_mapping
 from flask import Response, render_template, request
 from flask_babel import gettext
@@ -15,7 +16,7 @@ from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 from aleph.authz import Authz
 from aleph.index.collections import get_collection as _get_index_collection
 from aleph.model import Collection, EntitySet
-from aleph.util import JSONEncoder
+from aleph.util import json_default
 from aleph.validation import get_validator
 
 log = logging.getLogger(__name__)
@@ -141,27 +142,26 @@ def get_url_path(url):
         return "/"
 
 
-def jsonify(obj, status=200, headers=None, encoder=JSONEncoder):
+def jsonify(obj, status=200, headers=None):
     """Serialize to JSON and also dump from the given schema."""
-    data = encoder().encode(obj)
+    data = orjson.dumps(obj, default=json_default)
     mimetype = "application/json"
     if "callback" in request.args:
         cb = request.args.get("callback")
         cb = "".join((c for c in cb if c in CALLBACK_VALID))
-        data = "%s && %s(%s)" % (cb, cb, data)
-        # mime cf. https://stackoverflow.com/questions/24528211/
+        data = b"%s && %s(%s)" % (cb.encode(), cb.encode(), data)
         mimetype = "application/javascript"
     return Response(data, headers=headers, status=status, mimetype=mimetype)
 
 
-def stream_ijson(iterable, encoder=JSONEncoder):
+def stream_ijson(iterable):
     """Stream JSON line-based data."""
 
     def _generate_stream():
         for row in iterable:
             row.pop("_index", None)
-            yield encoder().encode(row)
-            yield "\n"
+            yield orjson.dumps(row, default=json_default)
+            yield b"\n"
 
     return Response(_generate_stream(), mimetype="application/json+stream")
 
