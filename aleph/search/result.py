@@ -119,6 +119,17 @@ class SearchQueryResult(QueryResult):
             if doc is not None:
                 self.results.append(doc)
 
+    def get_metrics(self):
+        """Extract metric aggregation results from ES response."""
+        metrics = {}
+        if not self.aggregations:
+            return metrics
+        for key, value in self.aggregations.items():
+            for metric_type in ("sum", "avg", "min", "max"):
+                if key.endswith(f".{metric_type}") and isinstance(value, dict):
+                    metrics[key] = value.get("value")
+        return metrics
+
     def get_facets(self):
         facets = {}
         for name in self.parser.facet_names:
@@ -137,6 +148,7 @@ class SearchQueryResult(QueryResult):
     def to_dict(self, serializer=None):
         data = super(SearchQueryResult, self).to_dict(serializer=serializer)
         data["facets"] = self.get_facets()
+        data["metrics"] = self.get_metrics()
         data["query_text"] = self.query.to_text()
         data["query_q"] = self.query.parser.text
         data["filters"] = {
