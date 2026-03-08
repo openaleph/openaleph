@@ -17,6 +17,7 @@ import {
   QueryInfiniteLoad,
   Schema,
   Skeleton,
+  SortableTH,
 } from 'components/common';
 import EntityProperties from 'components/Entity/EntityProperties';
 import ensureArray from 'util/ensureArray';
@@ -50,11 +51,29 @@ class EntityReferencesMode extends React.Component {
   constructor(props) {
     super(props);
     this.onSearchSubmit = this.onSearchSubmit.bind(this);
+    this.sortColumn = this.sortColumn.bind(this);
   }
 
   onSearchSubmit(queryText) {
     const { query, navigate, location } = this.props;
     const newQuery = query.set('q', queryText);
+    navigate({
+      pathname: location.pathname,
+      search: newQuery.toLocation(),
+      hash: location.hash,
+    });
+  }
+
+  sortColumn(newField) {
+    const { query, navigate, location } = this.props;
+    const { field: currentField, direction } = query.getSort();
+
+    let newQuery;
+    if (currentField !== newField) {
+      newQuery = query.sortBy(newField, 'asc');
+    } else {
+      newQuery = query.sortBy(currentField, direction === 'asc' ? 'desc' : 'asc');
+    }
     navigate({
       pathname: location.pathname,
       search: newQuery.toLocation(),
@@ -189,6 +208,7 @@ class EntityReferencesMode extends React.Component {
             schema: schemaLabel,
           });
     const skeletonItems = [...Array(15).keys()];
+    const { field: sortedField, direction } = query.getSort();
 
     return (
       <section className="EntityReferencesTable">
@@ -203,11 +223,21 @@ class EntityReferencesMode extends React.Component {
               <thead>
                 <tr>
                   {!isThing && <th key="expand" />}
-                  {columns.map((prop) => (
-                    <th key={prop.name} className={prop.type}>
-                      <Property.Name prop={prop} />
-                    </th>
-                  ))}
+                  {columns.map((prop) => {
+                    const fieldName = `properties.${prop.name}`;
+                    const isSortable = prop.type.name !== 'text';
+                    return (
+                      <SortableTH
+                        key={prop.name}
+                        sortable={isSortable}
+                        sorted={sortedField === fieldName && (direction === 'desc' ? 'desc' : 'asc')}
+                        onClick={() => this.sortColumn(fieldName)}
+                        className={prop.type.name}
+                      >
+                        <Property.Name prop={prop} />
+                      </SortableTH>
+                    );
+                  })}
                   {!hideCollection && (
                     <th>
                       <FormattedMessage
@@ -258,11 +288,16 @@ const mapStateToProps = (state, ownProps) => {
   const { location, reference, query } = ownProps;
   const parsedHash = queryString.parse(location.hash);
   const schema = selectSchema(state, reference.schema);
+
+  // Default sort by most recent dates
+  const sortedQuery = query.defaultSortBy('dates', 'desc');
+
   return {
     schema,
     parsedHash,
     expandedId: parsedHash.expand,
-    result: selectEntitiesResult(state, query),
+    query: sortedQuery,
+    result: selectEntitiesResult(state, sortedQuery),
     isThing: schema.isThing(),
   };
 };
