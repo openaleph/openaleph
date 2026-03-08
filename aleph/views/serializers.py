@@ -39,9 +39,9 @@ TRACER_URI = env.get("REDIS_URL")
 
 
 class Serializer(object):
-    def __init__(self, nested=False, include_processing=False):
+    def __init__(self, nested=False, detail_view=False):
         self.nested = nested
-        self.include_processing = include_processing
+        self.detail_view = detail_view
 
     def collect(self, obj):
         pass
@@ -100,8 +100,8 @@ class Serializer(object):
         return obj
 
     @classmethod
-    def jsonify(cls, obj, include_processing=False, **kwargs):
-        data = cls(include_processing=include_processing).serialize(obj)
+    def jsonify(cls, obj, detail_view=False, **kwargs):
+        data = cls(detail_view=detail_view).serialize(obj)
         return jsonify(data, **kwargs)
 
     @classmethod
@@ -239,7 +239,7 @@ class EntitySerializer(Serializer):
             "ui": entity_url(proxy.id),
         }
 
-        if proxy.schema.is_a(Document.SCHEMA):
+        if self.detail_view and proxy.schema.is_a(Document.SCHEMA):
             content_hash = proxy.first("contentHash", quiet=True)
             if content_hash:
                 name = entity_filename(proxy)
@@ -283,7 +283,7 @@ class EntitySerializer(Serializer):
         obj["updated_at"] = max(ensure_list(obj.get("updated_at")), default=None)
 
         # Adding processing triggers and status for documents only (detail view)
-        if self.include_processing and proxy.schema.is_a(Document.SCHEMA):
+        if self.detail_view and proxy.schema.is_a(Document.SCHEMA):
             if should_transcribe(proxy):
                 links["transcribe"] = url_for(
                     "entities_api.transcribe", entity_id=proxy.id
