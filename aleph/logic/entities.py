@@ -171,7 +171,7 @@ def should_translate(collection_id: int, foreign_id: str, proxy: EntityProxy) ->
             _deduce_page_ids(collection_id, foreign_id, proxy)
         ):
             if ix > 3:
-                return False
+                break
             page_entity = index.get_entity(page_id)
             if page_entity is None:
                 return False
