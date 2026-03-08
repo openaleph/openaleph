@@ -189,10 +189,10 @@ def check_write_entity(entity, authz):
     system for serialisers and API."""
     if authz.is_admin:
         return True
-    collection_id = ensure_dict(entity.get("collection")).get("id")
-    collection_id = entity.get("collection_id", collection_id)
     if not entity.get("mutable"):
         return False
+    collection_id = ensure_dict(entity.get("collection")).get("id")
+    collection_id = entity.get("collection_id", collection_id)
     return authz.can(collection_id, authz.WRITE)
 
 
