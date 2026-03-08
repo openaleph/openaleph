@@ -1,12 +1,7 @@
 import React, { Component } from 'react';
 import { compose } from 'redux';
 import { connect } from 'react-redux';
-import {
-  defineMessages,
-  FormattedMessage,
-  FormattedDate,
-  injectIntl,
-} from 'react-intl';
+import { defineMessages, FormattedMessage, injectIntl } from 'react-intl';
 import queryString from 'query-string';
 import { Button, Icon, Intent, Spinner } from '@blueprintjs/core';
 import { Histogram } from 'react-ftm';
@@ -147,13 +142,14 @@ export class DateFilter extends Component {
     const { facetInterval, filteredIntervals } = this.props;
 
     const sampleDate = filteredIntervals[0].label;
+    const parsed = moment.utc(sampleDate);
+
+    if (!parsed.isValid()) {
+      return null;
+    }
 
     const content =
-      facetInterval === 'month' ? (
-        moment.utc(sampleDate).year()
-      ) : (
-        <FormattedDate value={sampleDate} year="numeric" month="long" />
-      );
+      facetInterval === 'month' ? parsed.year() : parsed.format('MMMM YYYY');
     return <span className="DateFacet__parent-label">{content}</span>;
   }
 
