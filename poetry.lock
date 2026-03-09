@@ -1891,7 +1891,7 @@ sql = ["sqlalchemy (>=2.0.36,<3.0.0)"]
 type = "git"
 url = "https://github.com/dataresearchcenter/ftmq.git"
 reference = "HEAD"
-resolved_reference = "e3a655219c036af4ace8af246f33358dd699efa4"
+resolved_reference = "b8614abc54754780ac3400a762ed588ac96be7a2"
 
 [[package]]
 name = "fuzzywuzzy"
@@ -3877,7 +3877,7 @@ werkzeug = ">=3.1.3,<4.0.0"
 type = "git"
 url = "https://github.com/openaleph/openaleph-search.git"
 reference = "HEAD"
-resolved_reference = "d84ca6c1fadcb6908d300773aa14001bc65284d6"
+resolved_reference = "f15249e9f982c7e693c85cfa781a43947e0e4d69"
 
 [[package]]
 name = "openaleph-servicelayer"
