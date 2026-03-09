@@ -150,17 +150,27 @@ def validate_entity(data):
     # followthemoney 4.6.0: We need to turn entity references (nested payload)
     # to their IDs first:
     properties = {}
-    for prop, values in data.pop("properties", {}).items():
+    _data = {k: v for k, v in data.items()}
+    for prop, values in _data.pop("properties", {}).items():
         properties[prop] = []
         for value in values:
             if is_mapping(value):
+                schema.validate(value)
                 id_ = value.get("id")
                 if id_:
                     properties[prop].append(id_)
             else:
                 properties[prop].append(value)
-    data["properties"] = properties
-    schema.validate(data)
+    _data["properties"] = properties
+    # FTM 4.6.0 only validates properties present in the dict, so missing
+    # required properties would slip through. Check explicitly:
+    for req in schema.required:
+        if not properties.get(req):
+            raise InvalidData(
+                gettext("Entity validation failed"),
+                errors={"properties": {req: gettext("Required")}},
+            )
+    schema.validate(_data)
 
 
 def should_transcribe(proxy: EntityProxy) -> bool:
