@@ -1612,7 +1612,7 @@ files = [
 
 [[package]]
 name = "followthemoney"
-version = "4.5.3"
+version = "4.6.0"
 description = "A data model for anti corruption data modeling and analysis."
 optional = false
 python-versions = ">= 3.10"
@@ -1625,7 +1625,7 @@ babel = ">=2.14.0,<3.0.0"
 banal = ">=1.0.6,<1.1.0"
 click = ">=8.0,<9.0.0"
 networkx = ">=2.5,<3.5"
-normality = ">=3.0.1,<4.0.0"
+normality = ">=3.1.0,<4.0.0"
 openpyxl = ">=3.0.5,<4.0.0"
 orjson = ">=3.10.0,<4.0"
 phonenumbers = ">=8.12.22,<10.0.0"
@@ -1633,7 +1633,7 @@ prefixdate = ">=0.5.0,<1.0.0"
 pydantic = ">=2.11.0,<3.0.0"
 pytz = ">=2021.1"
 pyyaml = ">=5.0.0,<7.0.0"
-rdflib = ">=6.2.0,<7.6.0"
+rdflib = ">=6.2.0,<7.7.0"
 requests = ">=2.21.0,<3.0.0"
 rigour = ">=1.6.0,<2.0.0"
 sqlalchemy = {version = ">=2.0.0,<3.0.0", extras = ["mypy"]}
@@ -1646,7 +1646,7 @@ docs = ["mkdocs (>=1.4.0)", "mkdocs-gen-files", "mkdocs-macros-plugin", "mkdocs-
 type = "git"
 url = "https://github.com/dataresearchcenter/followthemoney.git"
 reference = "fix/pickle"
-resolved_reference = "fba01fef7f65d389246451efc870265e974eda5a"
+resolved_reference = "ec36e5bef830dacec9f29fee828800241622b3cb"
 
 [[package]]
 name = "followthemoney-compare"
@@ -1861,25 +1861,23 @@ name = "ftmq"
 version = "4.5.7"
 description = "followthemoney query dsl and io helpers"
 optional = false
-python-versions = "<3.14,>=3.11"
+python-versions = ">=3.11,<3.14"
 groups = ["main"]
-files = [
-    {file = "ftmq-4.5.7-py3-none-any.whl", hash = "sha256:2298aec9a5ca4b244dfcb005ee89f47789d96454b66be37b3d9c730bb83c2954"},
-    {file = "ftmq-4.5.7.tar.gz", hash = "sha256:72307beda4763de34ec8a3281cc5bc6dfc9033d16640cadb40357868a72756f9"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 anystore = ">=1.1.3,<2.0.0"
 click = ">=8.2.1,<9.0.0"
 click-default-group = ">=1.2.4,<2.0.0"
-followthemoney = ">=4.5.3,<5.0.0"
-nomenklatura = ">=4.6.7,<5.0.0"
+followthemoney = ">=4.6.0,<5.0.0"
+nomenklatura = ">=4.7.1,<5.0.0"
 orjson = ">=3.10.18,<4.0.0"
-psycopg = {version = ">=3.2.9,<4.0.0", extras = ["pool"], optional = true, markers = "extra == \"postgres\""}
+psycopg = {version = ">=3.2.9,<4.0.0", extras = ["pool"], optional = true}
 pydantic = ">=2.11.3,<3.0.0"
 pyicu = ">=2.15.2,<3.0.0"
-rigour = ">=1.7.2,<2.0.0"
-sqlalchemy = {version = ">=2.0.36,<3.0.0", optional = true, markers = "extra == \"postgres\""}
+rigour = ">=1.7.5,<2.0.0"
+sqlalchemy = {version = ">=2.0.36,<3.0.0", optional = true}
 
 [package.extras]
 aleph = ["alephclient (>=2.6.0,<3.0.0)", "furl (>=2.1.4,<3.0.0)"]
@@ -1888,6 +1886,12 @@ level = ["plyvel (>=1.5.1,<2.0.0)"]
 postgres = ["psycopg[pool] (>=3.2.9,<4.0.0)", "sqlalchemy (>=2.0.36,<3.0.0)"]
 redis = ["fakeredis (>=2.26.2,<3.0.0)", "redis (>=5.2.1,<6.0.0)"]
 sql = ["sqlalchemy (>=2.0.36,<3.0.0)"]
+
+[package.source]
+type = "git"
+url = "https://github.com/dataresearchcenter/ftmq.git"
+reference = "HEAD"
+resolved_reference = "e3a655219c036af4ace8af246f33358dd699efa4"
 
 [[package]]
 name = "fuzzywuzzy"
@@ -3719,13 +3723,13 @@ files = [
 
 [[package]]
 name = "nomenklatura"
-version = "4.6.9"
+version = "4.7.1"
 description = "Make record linkages in followthemoney data."
 optional = false
 python-versions = ">=3.11"
 groups = ["main"]
 files = [
-    {file = "nomenklatura-4.6.9-py3-none-any.whl", hash = "sha256:8d0fca04c5f0e2aad6189014cebc4ce1c0f95ad781b83dab7b071476ae2f533a"},
+    {file = "nomenklatura-4.7.1-py3-none-any.whl", hash = "sha256:7c31218b1060cfe5cc0ee550da816cfa14936a2b2128cb0da8d7ede29a06c8e6"},
 ]
 
 [package.dependencies]
@@ -3743,7 +3747,7 @@ sqlalchemy = ">=2.0.0"
 textual = ">=3.0.0,<7.0.0"
 
 [package.extras]
-dev = ["build", "bump2version", "coverage (>=4.1)", "fakeredis", "flake8 (>=2.6.0)", "lxml-stubs", "mypy", "plyvel (<2.0.0)", "psycopg2-binary", "pytest", "pytest-cov", "redis (>5.0.0,<8.0.0)", "requests-mock", "twine", "types-pyyaml", "types-redis", "types-requests", "types-setuptools", "wheel (>=0.29.0)"]
+dev = ["build", "bump2version", "coverage (>=4.1)", "fakeredis", "flake8 (>=2.6.0)", "lxml-stubs", "mypy", "plyvel (<2.0.0)", "prek", "psycopg2-binary", "pytest", "pytest-cov", "redis (>5.0.0,<8.0.0)", "requests-mock", "twine", "types-pyyaml", "types-redis", "types-requests", "types-setuptools", "wheel (>=0.29.0)"]
 leveldb = ["plyvel (<2.0.0)"]
 redis = ["redis (>5.0.0,<8.0.0)"]
 
@@ -5312,14 +5316,14 @@ all = ["numpy"]
 
 [[package]]
 name = "rdflib"
-version = "7.5.0"
+version = "7.6.0"
 description = "RDFLib is a Python library for working with RDF, a simple yet powerful language for representing information."
 optional = false
 python-versions = ">=3.8.1"
 groups = ["main"]
 files = [
-    {file = "rdflib-7.5.0-py3-none-any.whl", hash = "sha256:b011dfc40d0fc8a44252e906dcd8fc806a7859bc231be190c37e9568a31ac572"},
-    {file = "rdflib-7.5.0.tar.gz", hash = "sha256:663083443908b1830e567350d72e74d9948b310f827966358d76eebdc92bf592"},
+    {file = "rdflib-7.6.0-py3-none-any.whl", hash = "sha256:30c0a3ebf4c0e09215f066be7246794b6492e054e782d7ac2a34c9f70a15e0dd"},
+    {file = "rdflib-7.6.0.tar.gz", hash = "sha256:6c831288d5e4a5a7ece85d0ccde9877d512a3d0f02d7c06455d00d6d0ea379df"},
 ]
 
 [package.dependencies]
@@ -5327,6 +5331,7 @@ pyparsing = ">=2.1.0,<4"
 
 [package.extras]
 berkeleydb = ["berkeleydb (>=18.1.0,<19.0.0)"]
+graphdb = ["httpx (>=0.28.1,<0.29.0)"]
 html = ["html5rdf (>=1.2,<2)"]
 lxml = ["lxml (>=4.3,<6.0)"]
 networkx = ["networkx (>=2,<4)"]
@@ -5537,13 +5542,13 @@ jupyter = ["ipywidgets (>=7.5.1,<9)"]
 
 [[package]]
 name = "rigour"
-version = "1.7.4"
+version = "1.7.5"
 description = "Financial crime domain data validation and normalization library."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "rigour-1.7.4-py3-none-any.whl", hash = "sha256:e3f6e9f27b98ee37bf45134b70c6bfa36211613117a0eb8713e6acc1632bb533"},
+    {file = "rigour-1.7.5-py3-none-any.whl", hash = "sha256:240591d88d2cf0d667b798ae2bfaa1cfd5ba07d7cf6ab64cc87fea30c9965455"},
 ]
 
 [package.dependencies]
@@ -6727,4 +6732,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "16d7dae18dd974acce1d84549f2573bd94444de386b48ef55221edfedcb86fba"
+content-hash = "e288d12b290b220d70be89180edc8af990c22e825a15b24d6c785380c0c2cc66"
