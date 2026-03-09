@@ -1,7 +1,7 @@
 import logging
 from typing import Generator
 
-from banal import ensure_dict
+from banal import ensure_dict, is_mapping
 from flask_babel import gettext
 from followthemoney import EntityProxy, model
 from followthemoney.exc import InvalidData
@@ -143,6 +143,23 @@ def validate_entity(data):
     # only those values that can be inserted for each property,
     # making it valid -- all this does, therefore, is to raise an
     # exception that notifies the user.
+    # FIXME the following seems a bit hacky/unnecessary, but `validate_entity` is
+    # only called from the api if `?validate=true` only, which defaults to
+    # `false`, and who knows how long we will have this user edits in this
+    # stack anyways ;)
+    # followthemoney 4.6.0: We need to turn entity references (nested payload)
+    # to their IDs first:
+    properties = {}
+    for prop, values in data.pop("properties", {}).items():
+        properties[prop] = []
+        for value in values:
+            if is_mapping(value):
+                id_ = value.get("id")
+                if id_:
+                    properties[prop].append(id_)
+            else:
+                properties[prop].append(value)
+    data["properties"] = properties
     schema.validate(data)
 
 
