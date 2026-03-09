@@ -102,8 +102,7 @@ export class CollectionXrefMode extends React.Component {
   }
 
   actions() {
-    const { collection, result, query, isTester, isRandomSort, intl } =
-      this.props;
+    const { collection, result, query, isRandomSort, intl } = this.props;
     const exportLink = collection?.links?.xref_export;
 
     return (
@@ -120,20 +119,18 @@ export class CollectionXrefMode extends React.Component {
             this.props.triggerCollectionXrefDownload(collection.id)
           }
         >
-          {isTester && (
-            <SortingBar
-              filterButtonLabel={intl.formatMessage(messages.sort_label)}
-              filterButton={
-                <Button
-                  text={intl.formatMessage(
-                    messages[isRandomSort ? 'sort_random' : 'sort_default']
-                  )}
-                  onClick={this.toggleSort}
-                  minimal
-                />
-              }
-            />
-          )}
+          <SortingBar
+            filterButtonLabel={intl.formatMessage(messages.sort_label)}
+            filterButton={
+              <Button
+                text={intl.formatMessage(
+                  messages[isRandomSort ? 'sort_random' : 'sort_default']
+                )}
+                onClick={this.toggleSort}
+                minimal
+              />
+            }
+          />
         </SearchActionBar>
       </div>
     );
@@ -146,7 +143,6 @@ const mapStateToProps = (state, ownProps) => {
   return {
     collection: selectCollection(state, collectionId),
     query,
-    isTester: selectTester(state),
     isRandomSort: query.getSort()?.field === 'random',
     result: selectCollectionXrefResult(state, query),
   };
