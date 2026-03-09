@@ -878,10 +878,13 @@ def update():
 
 @cli.command()
 @click.argument("foreign_id")
-def xref(foreign_id):
+@click.option(
+    "--clear", is_flag=True, default=False, help="Clear existing xref results first."
+)
+def xref(foreign_id, clear):
     """Cross-reference all entities and documents in a collection."""
     collection = get_collection(foreign_id)
-    xref_collection(collection)
+    xref_collection(collection, clear_existing=clear)
 
 
 @cli.command("load-entities")

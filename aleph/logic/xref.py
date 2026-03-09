@@ -287,15 +287,16 @@ def xref_entity(collection, proxy):
     index_matches(collection, _query_item(proxy))
 
 
-def xref_collection(collection):
+def xref_collection(collection, clear_existing=False):
     """Cross-reference all the entities and documents in a collection."""
     log.info(
         f"[{collection}] xref_collection scroll settings: scroll={SETTINGS.XREF_SCROLL}, "
         f"scroll_size={SETTINGS.XREF_SCROLL_SIZE}"
     )
-    log.info(f"[{collection}] Clearing previous xref state....")
-    delete_xref(collection, sync=True)
-    delete_entities(collection.id, origin=ORIGIN, sync=True)
+    if clear_existing:
+        log.info(f"[{collection}] Clearing previous xref state....")
+        delete_xref(collection, sync=True)
+        delete_entities(collection.id, origin=ORIGIN, sync=True)
     index_matches(collection, _query_entities(collection))
     index_matches(collection, _query_mentions(collection))
     log.info(f"[{collection}] Xref done, re-indexing to reify mentions...")
