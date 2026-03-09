@@ -114,6 +114,11 @@ class XrefQuery(Query):
         parser.highlight = False
         super(XrefQuery, self).__init__(parser)
 
+    def get_sort(self):
+        if not len(self.parser.sorts):
+            return self.SORT_DEFAULT
+        return super().get_sort()
+
     def get_filters(self, **kwargs):
         filters = super(XrefQuery, self).get_filters(**kwargs)
         filters.append({"term": {"collection_id": self.collection_id}})
