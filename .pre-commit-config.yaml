@@ -33,13 +33,13 @@ repos:
       - id: absolufy-imports
 
   - repo: https://github.com/pycqa/isort
-    rev: 7.0.0
+    rev: 8.0.1
     hooks:
       - id: isort
         args: ["--profile", "black"]
 
   - repo: https://github.com/psf/black
-    rev: 26.1.0
+    rev: 26.3.0
     hooks:
       - id: black
         args: ["--extend-exclude", "aleph/migrate"]
@@ -53,13 +53,13 @@ repos:
         exclude: (test_[\w]+\.py|\.csv|\.json|\.lock|migrate/versions/[\w]+\.py)$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.0
+    rev: v0.15.5
     hooks:
       - id: ruff
         args: [ --fix ]
 
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.1
+    rev: v2.4.2
     hooks:
       - id: codespell
         exclude: (tests/.*|\.lock|package\.json|package-lock\.json)$
