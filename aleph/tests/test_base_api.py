@@ -41,6 +41,13 @@ class BaseApiTestCase(TestCase):
         assert res.json["things"] == 2, res.json
 
     def test_healthz(self):
-        res = self.client.get("/api/2/healthz")
+        res = self.client.get("/api/2/healthz?api_key=test-health-key")
         assert res.status_code == 200, res
         assert res.json["status"] == "ok", res.json
+
+    def test_healthz_unauthorized(self):
+        res = self.client.get("/api/2/healthz")
+        assert res.status_code == 401, res
+
+        res = self.client.get("/api/2/healthz?api_key=wrong-key")
+        assert res.status_code == 401, res

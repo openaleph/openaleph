@@ -142,6 +142,9 @@ class Settings:
         self.API_RATE_LIMIT = env.to_int("ALEPH_API_RATE_LIMIT", 30)
         self.API_RATE_WINDOW = 15  # minutes
 
+        # Health check API key (required for /api/2/healthz)
+        self.HEALTH_CHECK_API_KEY = env.get("ALEPH_HEALTH_CHECK_API_KEY")
+
         # Export file size limit
         self.EXPORT_MAX_SIZE = env.to_int(
             "EXPORT_MAX_SIZE", 1 * 1024 * 1024 * 1024  # 1 GB

@@ -11,6 +11,7 @@ from followthemoney import __version__ as ftm_version
 from followthemoney import model
 from followthemoney.exc import InvalidData
 from jwt import DecodeError, ExpiredSignatureError
+from werkzeug.exceptions import Unauthorized
 
 from aleph import __version__
 from aleph.authz import Authz
@@ -208,6 +209,11 @@ def healthz():
       tags:
       - System
     """
+    if SETTINGS.HEALTH_CHECK_API_KEY:
+        api_key = request.args.get("api_key")
+        if api_key != SETTINGS.HEALTH_CHECK_API_KEY:
+            raise Unauthorized("Invalid or missing API key")
+
     from openaleph_procrastinate.archive import get_archive
     from openaleph_procrastinate.settings import OpenAlephSettings
     from openaleph_search.core import get_es
