@@ -12,6 +12,7 @@ import withRouter from 'app/withRouter';
 import {
   AnimatedCount,
   DatasetGroup,
+  HighlightTopics,
   SearchBox,
   Category,
   Country,
@@ -141,7 +142,10 @@ export class HomeScreen extends Component {
           {appHomePage?.content && (
             <ReactMarkdown
               rehypePlugins={[rehypeRaw]}
-              components={{ datasetgroup: DatasetGroup }}
+              components={{
+                datasetgroup: DatasetGroup,
+                highlighttopics: HighlightTopics,
+              }}
             >
               {preprocessCustomElements(appHomePage.content)}
             </ReactMarkdown>
