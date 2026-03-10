@@ -236,7 +236,7 @@ def healthz():
 
     try:
         es = get_es()
-        es.cluster.health()
+        es.info()
     except Exception as exc:
         raise RuntimeError(f"Elasticsearch health check failed: {exc}")
 
