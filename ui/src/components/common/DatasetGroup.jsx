@@ -6,7 +6,7 @@ import c from 'classnames';
 
 import { fetchCollection } from 'actions';
 import { selectCollection } from 'selectors';
-import { Category, Count, Skeleton } from 'components/common';
+import { Category, Count } from 'components/common';
 import getCollectionLink from 'util/getCollectionLink';
 
 class DatasetGroup extends Component {
