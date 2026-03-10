@@ -17,7 +17,6 @@ import { collectionXrefFacetsQuery } from 'queries';
 import {
   selectCollection,
   selectCollectionXrefResult,
-  selectTester,
 } from 'selectors';
 import {
   queryCollectionXref,
