@@ -266,6 +266,7 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
     @classmethod
     def create(cls, data, authz, created_at=None):
         foreign_id = data.get("foreign_id") or make_textid()
+        dataset_name_check(foreign_id)
         collection = cls.by_foreign_id(foreign_id, deleted=True)
 
         # A collection with the given foreign ID already exists
