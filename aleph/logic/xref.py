@@ -380,7 +380,7 @@ def export_matches(export_id):
         sheet = excel.make_sheet("Cross-reference", headers)
         batch = []
 
-        for match in iter_matches(collection.name, authz.search_auth):
+        for match in iter_matches(collection, authz):
             batch.append(match)
             if len(batch) >= BULK_PAGE:
                 _iter_match_batch(excel, sheet, batch)
