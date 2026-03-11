@@ -3,7 +3,7 @@ home: true
 title: 'OpenAleph'
 description: 'The open source platform that securely stores large amounts of data and makes it searchable for easy collaboration.'
 html: true
-samples: ["Vladimir Putin", "TeliaSonera"]
+samples: ["Donald Trump", "Владимир Путин", "习近平"]
 ---
 
 <section className="HomeScreen__section HomeScreen__section--dark">
@@ -18,13 +18,12 @@ samples: ["Vladimir Putin", "TeliaSonera"]
     </p>
     <h3>More information</h3>
     <p>
-      <a href="https://openaleph.org">openaleph.org</a> | 
-      <a href="https://openaleph.org/docs">Documentation</a> | 
+      <a href="https://openaleph.org">openaleph.org</a> |
+      <a href="https://openaleph.org/docs">Documentation</a> |
       <a href="https://openaleph.org/faq">Frequently asked questions</a> |
       <a href="https://openaleph.org/blog/">Blog</a> |
       <a href="https://darc.social">Community</a>
-    </p> 
-    
+    </p>
+
   </div>
 </section>
-
