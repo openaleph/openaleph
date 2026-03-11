@@ -110,15 +110,17 @@ class Serializer(object):
         if extra is not None:
             data.update(extra)
         # Sometimes part of the result might be missing because of some
-        # inconsistency (eg: a failed re-indexing). We try to spot those
-        # inconsistencies.
+        # inconsistency (eg: a failed re-indexing, stale xref docs). We try
+        # to spot those inconsistencies.
         total = data.get("total", 0)
         limit = data.get("limit", 0)
         offset = data.get("offset", 0)
-        # we have calls that doesn't include hits but aggregagtions, that's fine
+        # Significant aggregation queries set ES size=0 (no hits) but still
+        # have parser limit > 0 and facets present, so we skip when facets
+        # are returned.
         if total > 0 and not data.get("results") and not data.get("facets"):
             if not (limit == 0 or offset >= total):
-                log.exception(f"Expected more results in the response: {data}")
+                log.error(f"Expected more results in the response: {data}")
                 data = {
                     "status": "error",
                     "message": gettext(
@@ -318,6 +320,13 @@ class XrefSerializer(Serializer):
         obj["writeable"] = request.authz.can(collection_id, request.authz.WRITE)
         if obj["entity"] and obj["match"]:
             return obj
+        log.warning(
+            "Dropping xref result: entity=%s (resolved=%s) match=%s (resolved=%s)",
+            entity_id,
+            bool(obj["entity"]),
+            match_id,
+            bool(obj["match"]),
+        )
 
 
 class SimilarSerializer(Serializer):
