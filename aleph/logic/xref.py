@@ -299,7 +299,14 @@ def xref_collection(collection):
     index_matches(collection, _query_entities(collection))
     index_matches(collection, _query_mentions(collection))
     log.info(f"[{collection}] Xref done, re-indexing to reify mentions...")
-    reindex_collection(collection, sync=False, model=False)
+    reindex_collection(
+        collection,
+        sync=False,
+        model=False,
+        mappings=False,
+        profiles=False,
+        origin="xref",
+    )
 
 
 def _format_date(proxy):

@@ -1852,21 +1852,21 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "ftmq"
-version = "4.6.0"
+version = "4.6.1"
 description = "followthemoney query dsl and io helpers"
 optional = false
 python-versions = "<3.14,>=3.11"
 groups = ["main"]
 files = [
-    {file = "ftmq-4.6.0-py3-none-any.whl", hash = "sha256:5568c742d4b27f16de5ab8c62de6d46f606ac9d564973a9da729540261af851c"},
-    {file = "ftmq-4.6.0.tar.gz", hash = "sha256:02d99f3d508220dcdf9f4948264ac2bc4aba8e926fe8ebd3a74faaec483fc266"},
+    {file = "ftmq-4.6.1-py3-none-any.whl", hash = "sha256:e3b1e16c59e15d09759e016f60554b9a8f9179504847ffac88d688a502ccd8e2"},
+    {file = "ftmq-4.6.1.tar.gz", hash = "sha256:0f8f6563465a1d0aa7fc7dc455f45b342d60aa7f6fc22e65c757a270487859fa"},
 ]
 
 [package.dependencies]
 anystore = ">=1.1.4,<2.0.0"
 click = ">=8.2.1,<9.0.0"
 click-default-group = ">=1.2.4,<2.0.0"
-followthemoney = ">=4.6.0,<5.0.0"
+followthemoney = ">=4.6.2,<5.0.0"
 nomenklatura = ">=4.7.1,<5.0.0"
 orjson = ">=3.10.18,<4.0.0"
 psycopg = {version = ">=3.2.9,<4.0.0", extras = ["pool"], optional = true, markers = "extra == \"postgres\""}
@@ -6718,4 +6718,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "6f12540f069d2637de089d87f46a464a099a9ccfc3c3b7babda34f0c06204d30"
+content-hash = "9e26528186dc1874c1fd105e749e91ff07dba8f6016c18ab50059b66844415cf"

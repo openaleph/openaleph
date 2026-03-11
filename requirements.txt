@@ -50,7 +50,7 @@ followthemoney @ git+https://github.com/dataresearchcenter/followthemoney.git@a4
 followthemoney-compare @ git+https://github.com/dataresearchcenter/followthemoney-compare.git@3684650862d2b26f30ae74fe5383539dbb567077 ; python_version >= "3.12" and python_version < "3.14"
 frozenlist==1.8.0 ; python_version >= "3.12" and python_version < "3.14"
 fsspec==2026.2.0 ; python_version >= "3.12" and python_version < "3.14"
-ftmq==4.6.0 ; python_version >= "3.12" and python_version < "3.14"
+ftmq==4.6.1 ; python_version >= "3.12" and python_version < "3.14"
 fuzzywuzzy==0.18.0 ; python_version >= "3.12" and python_version < "3.14"
 google-api-core==2.30.0 ; python_version >= "3.12" and python_version < "3.14"
 google-auth==2.49.0 ; python_version >= "3.12" and python_version < "3.14"

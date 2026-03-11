@@ -236,6 +236,7 @@ def _reindex_collection(
     schema=None,
     since=None,
     until=None,
+    origin=None,
 ):
     log.info("[%s] Starting to re-index", collection)
     try:
@@ -251,6 +252,7 @@ def _reindex_collection(
             schema=schema,
             since=since,
             until=until,
+            origin=origin,
         )
     except Exception:
         log.exception("Failed to re-index: %s", collection)
@@ -305,6 +307,12 @@ def _reindex_collection(
         "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
     ),
 )
+@click.option(
+    "--origin",
+    type=str,
+    default=None,
+    help="Filter entities by aggregator origin (e.g., 'xref', 'aleph')",
+)
 def reindex(
     foreign_id,
     flush=False,
@@ -317,6 +325,7 @@ def reindex(
     schema=None,
     since=None,
     until=None,
+    origin=None,
 ):
     """Index all the aggregator contents for a collection."""
     collection = get_collection(foreign_id)
@@ -332,6 +341,7 @@ def reindex(
         schema=schema,
         since=since,
         until=until,
+        origin=origin,
     )
 
 
