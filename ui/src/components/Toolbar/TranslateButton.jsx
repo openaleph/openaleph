@@ -31,6 +31,10 @@ const messages = defineMessages({
     id: 'entity.toolbar.translate.source_language',
     defaultMessage: 'Translate from…',
   },
+  translate_from: {
+    id: 'entity.toolbar.translate.translate_from',
+    defaultMessage: 'Translate from: {language}',
+  },
   auto_detect: {
     id: 'entity.toolbar.translate.auto_detect',
     defaultMessage: 'Auto-detect language',
@@ -82,7 +86,7 @@ class TranslateButton extends Component {
             return (
               <MenuItem
                 key={code}
-                text={label}
+                text={intl.formatMessage(messages.translate_from, { language: label })}
                 onClick={() => this.onTranslate(code)}
               />
             );
