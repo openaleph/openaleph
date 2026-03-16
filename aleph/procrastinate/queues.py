@@ -64,7 +64,7 @@ def queue_analyze(collection: Collection, proxy: EntityProxy, **context: Any) ->
     context = {**context, **get_context(collection)}
     dataset = get_aggregator_name(collection)
     with app.open():
-        defer.analyze(app, dataset, [proxy], **context)
+        defer.analyze(app, dataset, [proxy], priority=Priorities.USER, **context)
 
 
 def queue_transcribe(
@@ -73,14 +73,18 @@ def queue_transcribe(
     context = {**context, **get_context(collection)}
     dataset = get_aggregator_name(collection)
     with app.open():
-        defer.transcribe(app, dataset, [proxy], **context)
+        defer.transcribe(app, dataset, [proxy], priority=Priorities.USER, **context)
 
 
-def queue_translate(collection: Collection, proxy: EntityProxy, **context: Any) -> None:
+def queue_translate(
+    collection: Collection,
+    proxy: EntityProxy,
+    **context: Any,
+) -> None:
     context = {**context, **get_context(collection)}
     dataset = get_aggregator_name(collection)
     with app.open():
-        defer.translate(app, dataset, [proxy], **context)
+        defer.translate(app, dataset, [proxy], priority=Priorities.USER, **context)
     # we want to trace the processing status for the UI:
     tracer = defer.tasks.translate.get_tracer(oa_settings.redis_url)
     tracer.add(proxy.id)
