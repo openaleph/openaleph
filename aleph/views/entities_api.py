@@ -932,8 +932,8 @@ def translate(entity_id):
     """
     if not tasks.translate.defer:
         raise BadRequest("Translation queue is not enabled on this OpenAleph instance")
-    entity = get_index_entity(entity_id, request.authz.WRITE)
-    collection = get_db_collection(entity.get("collection_id"), request.authz.WRITE)
+    entity = get_index_entity(entity_id, request.authz.READ)
+    collection = get_db_collection(entity.get("collection_id"), request.authz.READ)
     tag_request(collection_id=collection.id, entity_id=entity_id)
     proxy = make_entity_proxy(entity)
     if not should_translate(collection.id, collection.foreign_id, proxy):
