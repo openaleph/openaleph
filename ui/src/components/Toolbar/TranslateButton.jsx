@@ -82,7 +82,7 @@ class TranslateButton extends Component {
             onClick={() => this.onTranslate(null)}
           />
           {languages.map((code) => {
-            const label = languageValues?.[code] || code;
+            const label = languageValues?.get?.(code) || code;
             return (
               <MenuItem
                 key={code}
