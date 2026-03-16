@@ -944,5 +944,7 @@ def translate(entity_id):
         raise BadRequest(
             f"source_language '{source_language}' is not configured for this collection"
         )
+    elif not source_language and not proxy.has("detectedLanguage"):
+        raise BadRequest("Couldn't auto-detect language, please select one.")
     queue_translate(collection, proxy, source_language=source_language)
     return ("", 202)
