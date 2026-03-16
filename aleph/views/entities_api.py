@@ -938,5 +938,11 @@ def translate(entity_id):
     proxy = make_entity_proxy(entity)
     if not should_translate(collection.id, collection.foreign_id, proxy):
         raise BadRequest("Entity is not eligible for translation")
-    queue_translate(collection, proxy)
+    data = request.get_json(silent=True) or {}
+    source_language = data.get("source_language")
+    if source_language and source_language not in (collection.languages or []):
+        raise BadRequest(
+            f"source_language '{source_language}' is not configured for this collection"
+        )
+    queue_translate(collection, proxy, source_language=source_language)
     return ("", 202)
