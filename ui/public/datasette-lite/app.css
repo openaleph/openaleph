@@ -72,6 +72,14 @@ header a:hover, header a:focus, header a:active {
 header .actor { display: none; }
 details.nav-menu { display: none; }
 p.crumbs { display: none; }
+#output header { display: none; }
+#export { display: none; }
+.page-header { display: none; }
+a.not-underlined { display: none; }
+pre.wrapped-sql { display: none; }
+footer.ft { display: none; }
+footer#documentation { display: none; }
+
 
 /* Footer ================================================================= */
 
@@ -306,14 +314,6 @@ svg.dropdown-menu-icon { display: inline-block; position: relative; top: 2px; cu
 
 /* Misc =================================================================== */
 
-.advanced-export {
-  margin-top: 1em;
-  padding: 0.75rem 1.5rem 0.75rem 1rem;
-  display: inline-block;
-  border: 1px solid var(--gray-200);
-  border-radius: var(--border-radius);
-  background: var(--white);
-}
 
 p.zero-results {
   border: 1px solid var(--gray-200);

@@ -27,7 +27,6 @@ import {
   Schema,
 } from 'components/common';
 import {
-  DatasetteButton,
   DialogToggleButton,
   DownloadButton,
   TranscribeButton,
@@ -116,7 +115,6 @@ class EntityScreen extends Component {
       <ButtonGroup>
         <BookmarkButton entity={entity} />
         <DownloadButton document={entity} />
-        {entity.schema.isA('Table') && <DatasetteButton document={entity} />}
         {entity?.links?.transcribe && <TranscribeButton entity={entity} />}
         {entity?.links?.translate && <TranslateButton entity={entity} />}
         {entity?.collection?.writeable && (

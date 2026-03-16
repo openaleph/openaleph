@@ -1,5 +1,4 @@
 import CloseButton from './CloseButton';
-import DatasetteButton from './DatasetteButton';
 import DownloadButton from './DownloadButton';
 import PagingButtons from './PagingButtons';
 import DialogToggleButton from './DialogToggleButton';
@@ -8,7 +7,6 @@ import TranslateButton from './TranslateButton';
 
 export {
   CloseButton,
-  DatasetteButton,
   DownloadButton,
   PagingButtons,
   DialogToggleButton,

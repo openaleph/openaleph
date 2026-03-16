@@ -1,31 +1,28 @@
 import React, { Component } from 'react';
 import { Button, FormGroup } from '@blueprintjs/core';
-import { Popover2 as Popover } from '@blueprintjs/popover2';
 import { defineMessages, injectIntl, FormattedMessage } from 'react-intl';
 
+import './DatasetteViewer.scss';
+
 const messages = defineMessages({
-  label: {
-    id: 'document.datasette',
-    defaultMessage: 'Explore data',
-  },
   skiprows_label: {
     id: 'document.datasette.skiprows',
-    defaultMessage: 'Skip first N rows',
+    defaultMessage: 'Skip rows (if headers below first row)',
   },
   generic_headers_label: {
     id: 'document.datasette.generic_headers',
-    defaultMessage: 'Add generic headers (col1, col2, …)',
+    defaultMessage: 'Add generic headers (if file has data in first row)',
   },
   open: {
     id: 'document.datasette.open',
-    defaultMessage: 'Open',
+    defaultMessage: 'Load',
   },
 });
 
-class DatasetteButton extends Component {
+class DatasetteViewer extends Component {
   constructor(props) {
     super(props);
-    this.state = { skiprows: 0, genericHeaders: false };
+    this.state = { skiprows: 0, genericHeaders: false, src: null };
     this.onOpen = this.onOpen.bind(this);
   }
 
@@ -38,18 +35,28 @@ class DatasetteButton extends Component {
     } else if (skiprows > 0) {
       params.set('skiprows', skiprows);
     }
-    window.open(`/datasette-lite/index.html?${params}#/main/table`, '_blank', 'noopener,noreferrer');
+    this.setState({ src: `/datasette-lite/index.html?${params}#/main/table` });
   }
 
   render() {
     const { intl } = this.props;
-    const { skiprows, genericHeaders } = this.state;
+    const { skiprows, genericHeaders, src } = this.state;
 
-    const content = (
-      <div style={{ padding: '12px', minWidth: '220px' }}>
+    if (src) {
+      return (
+        <iframe
+          className="DatasetteViewer__frame"
+          src={src}
+          title="Datasette"
+        />
+      );
+    }
+
+    return (
+      <div className="DatasetteViewer__settings">
         <FormGroup label={intl.formatMessage(messages.skiprows_label)}>
           <input
-            className="bp4-input bp4-fill"
+            className="bp4-input"
             type="number"
             min={0}
             value={skiprows}
@@ -68,18 +75,12 @@ class DatasetteButton extends Component {
             {intl.formatMessage(messages.generic_headers_label)}
           </label>
         </FormGroup>
-        <Button fill intent="primary" onClick={this.onOpen}>
+        <Button intent="primary" onClick={this.onOpen}>
           <FormattedMessage {...messages.open} />
         </Button>
       </div>
     );
-
-    return (
-      <Popover content={content} placement="bottom-start">
-        <Button icon="database" text={intl.formatMessage(messages.label)} />
-      </Popover>
-    );
   }
 }
 
-export default injectIntl(DatasetteButton);
+export default injectIntl(DatasetteViewer);
