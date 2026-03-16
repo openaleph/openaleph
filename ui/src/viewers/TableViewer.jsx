@@ -12,8 +12,6 @@ class TableViewer extends Component {
   }
 
   componentDidUpdate(prevProps) {
-    // Blueprint Table doesn't consistently re-render on initial data load.
-    //  so force reloads the component to render the table correctly with incoming data
     const initialDataLoad =
       prevProps.rows.length === 0 && this.props.rows.length !== 0;
     if (initialDataLoad) {
@@ -23,7 +21,6 @@ class TableViewer extends Component {
 
   onVisibleCellsChange(row) {
     const { fetchMoreRows, requestedRow } = this.props;
-    // If we are scrolling to the end. Time to load more rows.
     if (row.rowIndexEnd + 50 > requestedRow) {
       fetchMoreRows();
     }
@@ -31,11 +28,9 @@ class TableViewer extends Component {
 
   renderCell(rowIndex, colIndex) {
     const { rows } = this.props;
-
     const row = rows[rowIndex];
     const value = row ? row[colIndex] : undefined;
     const loading = rowIndex >= rows.length;
-
     return (
       <Cell loading={loading}>
         <TruncatedFormat detectTruncation>{value || ''}</TruncatedFormat>
