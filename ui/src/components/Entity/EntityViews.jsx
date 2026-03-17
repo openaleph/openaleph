@@ -41,7 +41,7 @@ import EntityMappingMode from 'components/Entity/EntityMappingMode';
 import EntityNearbyMode from 'components/Entity/EntityNearbyMode';
 import DocumentViewMode from 'components/Document/DocumentViewMode';
 import TranslationViewer from 'viewers/TranslationViewer';
-import DatasetteViewer from 'viewers/DatasetteViewer';
+import CSVExplorer from 'viewers/CSVExplorer';
 
 import './EntityViews.scss';
 
@@ -91,7 +91,7 @@ class EntityViews extends React.Component {
     const hasTextMode =
       hasTextOnlyMode || entity.schema.isAny(['Video', 'Audio']);
     const hasBrowseMode = entity.schema.isA('Folder');
-    const hasDatasetteMode = !isPreview && entity.schema.isA('Table');
+    const hasCSVExplorer = !isPreview && entity.schema.isA('Table');
     const hasViewer = entity.schema.isAny([
       'Pages',
       'Email',
@@ -165,19 +165,19 @@ class EntityViews extends React.Component {
               }
             />
           )}
-          {hasDatasetteMode && (
+          {hasCSVExplorer && (
             <Tab
-              id="datasette"
+              id="csv-explorer"
               title={
                 <>
                   <Icon icon="database" className="left-icon" />
                   <FormattedMessage
-                    id="entity.info.datasette"
+                    id="entity.info.csv_explorer"
                     defaultMessage="Explore data"
                   />
                 </>
               }
-              panel={<DatasetteViewer document={entity} />}
+              panel={<CSVExplorer document={entity} />}
             />
           )}
           {hasTextMode && (
