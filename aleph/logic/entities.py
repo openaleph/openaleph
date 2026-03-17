@@ -201,7 +201,7 @@ def should_translate(collection_id: int, foreign_id: str, proxy: EntityProxy) ->
                 break
             page_entity = index.get_entity(page_id)
             if page_entity is None:
-                return False
+                continue
             if "translatedText" in page_entity.get("properties", {}):
                 return False
     if proxy.schema.is_a("Document"):
