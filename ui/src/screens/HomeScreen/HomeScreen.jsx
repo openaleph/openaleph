@@ -27,21 +27,6 @@ import wordList from 'util/wordList';
 
 import './HomeScreen.scss';
 
-// Preprocess markdown to move DatasetGroup body content into a `body` attribute.
-// This prevents the markdown parser from breaking the HTML structure when it
-// encounters blank lines inside custom elements.
-function preprocessCustomElements(content) {
-  return content.replace(
-    /<DatasetGroup([^>]*)>([\s\S]*?)<\/DatasetGroup>/gi,
-    (match, attrs, body) => {
-      const trimmed = body.trim();
-      if (!trimmed) return `<DatasetGroup${attrs}></DatasetGroup>`;
-      const encoded = btoa(unescape(encodeURIComponent(trimmed)));
-      return `<DatasetGroup${attrs} body="${encoded}"></DatasetGroup>`;
-    }
-  );
-}
-
 const messages = defineMessages({
   title: {
     id: 'home.title',
@@ -140,28 +125,7 @@ export class HomeScreen extends Component {
               </div>
             </div>
           </section>
-          <section className="HomeScreen__section HomeScreen__section--dark">
-            <div className="HomeScreen__section__content">
-              <div className="oa-header">
-                <div className="oa-pill">Explore</div>
-                <h1 className="HomeScreen__title">In the News</h1>
-                <p>We got the data you need to kick off your next investigation.</p>
-              </div>
-              <HighlightTopics url="/static/topics.json" />
-            </div>
-          </section>
-          <section className="HomeScreen__section HomeScreen__section--light">
-            <div className="HomeScreen__section__content">
-              <div className="oa-header oa-header--light">
-                <div className="oa-pill">Datasets</div>
-                <h1 className="HomeScreen__title">Curated Collections</h1>
-                <p>We provide pre-compiled datasets for different investigative scopes,
-                covering lobbying and funding in the EU, sanctions lists, company registries
-                and comprehensive document libraries from public sources.</p>
-              </div>
-              <DatasetGroups url="/static/dataset-groups.json" />
-            </div>
-          </section>
+
           {appHomePage?.content && (
             <ReactMarkdown
               rehypePlugins={[rehypeRaw]}
@@ -170,9 +134,7 @@ export class HomeScreen extends Component {
                 datasetgroups: DatasetGroups,
                 highlighttopics: HighlightTopics,
               }}
-            >
-              {preprocessCustomElements(appHomePage.content)}
-            </ReactMarkdown>
+            />
           )}
           <section className="HomeScreen__section HomeScreen__section--light">
             <div className="HomeScreen__section__content">
