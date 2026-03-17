@@ -12,6 +12,7 @@ import withRouter from 'app/withRouter';
 import {
   AnimatedCount,
   DatasetGroup,
+  DatasetGroups,
   HighlightTopics,
   SearchBox,
   Category,
@@ -139,11 +140,34 @@ export class HomeScreen extends Component {
               </div>
             </div>
           </section>
+          <section className="HomeScreen__section HomeScreen__section--dark">
+            <div className="HomeScreen__section__content">
+              <div className="oa-header">
+                <div className="oa-pill">Explore</div>
+                <h1 className="HomeScreen__title">In the News</h1>
+                <p>We got the data you need to kick off your next investigation.</p>
+              </div>
+              <HighlightTopics url="/static/topics.json" />
+            </div>
+          </section>
+          <section className="HomeScreen__section HomeScreen__section--light">
+            <div className="HomeScreen__section__content">
+              <div className="oa-header oa-header--light">
+                <div className="oa-pill">Datasets</div>
+                <h1 className="HomeScreen__title">Curated Collections</h1>
+                <p>We provide pre-compiled datasets for different investigative scopes,
+                covering lobbying and funding in the EU, sanctions lists, company registries
+                and comprehensive document libraries from public sources.</p>
+              </div>
+              <DatasetGroups url="/static/dataset-groups.json" />
+            </div>
+          </section>
           {appHomePage?.content && (
             <ReactMarkdown
               rehypePlugins={[rehypeRaw]}
               components={{
                 datasetgroup: DatasetGroup,
+                datasetgroups: DatasetGroups,
                 highlighttopics: HighlightTopics,
               }}
             >

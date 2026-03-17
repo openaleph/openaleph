@@ -8,6 +8,8 @@ import { selectCollection } from 'selectors';
 import { Category, Count } from 'components/common';
 import getCollectionLink from 'util/getCollectionLink';
 
+import './CollectionList.scss';
+
 class CollectionListItemBase extends Component {
   componentDidMount() {
     const { collection } = this.props;
@@ -28,18 +30,18 @@ class CollectionListItemBase extends Component {
     if (!collection.id) return null;
     const link = getCollectionLink({ collection });
     return (
-      <Link to={link} className="oa-collection-list__item">
+      <Link to={link} className="CollectionList__item">
         {collection.category && (
-          <span className="oa-collection-list__item__category">
+          <span className="CollectionList__category">
             <Category.Label category={collection.category} />
           </span>
         )}
-        <span className="oa-collection-list__item__label">
+        <span className="CollectionList__label">
           {collection.label}
         </span>
-        <span className="oa-collection-list__item__info">
+        <span className="CollectionList__info">
           {collection.count !== undefined && (
-            <span className="oa-collection-list__item__count">
+            <span className="CollectionList__count">
               <Count count={collection.count} />
             </span>
           )}
@@ -59,7 +61,7 @@ const CollectionListItem = connect(
 export default function CollectionList({ ids, dark }) {
   if (!ids || !ids.length) return null;
   return (
-    <div className={c('oa-collection-list', { 'oa-collection-list--dark': dark })}>
+    <div className={c('CollectionList', { 'CollectionList--dark': dark })}>
       {ids.map((id) => (
         <CollectionListItem key={id} id={id} />
       ))}

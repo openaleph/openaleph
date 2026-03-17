@@ -7,6 +7,7 @@ import ClipboardInput from './ClipboardInput';
 import Category from './Category';
 import CollectionList from './CollectionList';
 import DatasetGroup from './DatasetGroup';
+import DatasetGroups from './DatasetGroups';
 import HighlightTopics from './HighlightTopics';
 import EntityDecisionHotkeys from './EntityDecisionHotkeys';
 import EntityDecisionRow from './EntityDecisionRow';
@@ -68,6 +69,7 @@ export {
   Category,
   CollectionList,
   DatasetGroup,
+  DatasetGroups,
   HighlightTopics,
   Frequency,
   Restricted,

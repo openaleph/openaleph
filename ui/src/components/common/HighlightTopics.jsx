@@ -6,6 +6,8 @@ import ReactMarkdown from 'react-markdown';
 import { Country } from 'components/common';
 import CollectionList from './CollectionList';
 
+import './HighlightTopics.scss';
+
 class HighlightTopics extends Component {
   constructor(props) {
     super(props);
@@ -37,21 +39,21 @@ class HighlightTopics extends Component {
 
   renderTopic(topic, index) {
     return (
-      <div key={index} className="oa-highlight-topic">
+      <div key={index} className="HighlightTopic">
         {topic.countries && topic.countries.length > 0 && (
-          <div className="oa-highlight-topic__countries">
+          <div className="HighlightTopic__countries">
             <Country.List codes={topic.countries} />
           </div>
         )}
         {topic.image && (
-          <div className="oa-highlight-topic__image">
+          <div className="HighlightTopic__image">
             <img
               src={topic.image.thumbnail_url || topic.image.url}
               alt={(topic.image.alt && topic.image.alt[0]?.text) || topic.title}
             />
             {topic.image.attribution && (
-              <span className="oa-highlight-topic__attribution">
-                <span className="oa-highlight-topic__attribution__license">
+              <span className="HighlightTopic__attribution">
+                <span className="HighlightTopic__attribution__license">
                   {topic.image.attribution.license_url ? (
                     <a href={topic.image.attribution.license_url}>
                       {topic.image.attribution.license}
@@ -61,13 +63,13 @@ class HighlightTopics extends Component {
                   )}
                 </span>
                 {topic.image.attribution.author && (
-                  <span className="oa-highlight-topic__attribution__author">
+                  <span className="HighlightTopic__attribution__author">
                     {' '}
                     {topic.image.attribution.author}
                   </span>
                 )}
                 {topic.image.attribution.source && (
-                  <span className="oa-highlight-topic__attribution__source">
+                  <span className="HighlightTopic__attribution__source">
                     {' / '}
                     {topic.image.attribution.source_url ? (
                       <a href={topic.image.attribution.source_url}>
@@ -82,27 +84,40 @@ class HighlightTopics extends Component {
             )}
           </div>
         )}
-        <div className="oa-highlight-topic__content">
-          <h4 className="oa-highlight-topic__title">{topic.title}</h4>
+        <div className="HighlightTopic__content">
+          <h4 className="HighlightTopic__title">{topic.title}</h4>
           {topic.description && (
-            <div className="oa-highlight-topic__description">
+            <div className="HighlightTopic__description">
               <ReactMarkdown>{topic.description}</ReactMarkdown>
             </div>
           )}
           {topic.search_terms && topic.search_terms.length > 0 && (
-            <div className="oa-highlight-topic__terms">
-              {topic.search_terms.map((term) => (
-                <Link
-                  key={term}
-                  to={{
-                    pathname: '/search',
-                    search: queryString.stringify({ q: `"${term}"` }),
-                  }}
-                  className="oa-highlight-topic__term"
-                >
-                  {term}
-                </Link>
-              ))}
+            <div className="HighlightTopic__terms">
+              {topic.search_terms.map((term, idx) => {
+                if (typeof term === 'object' && term.label && term.url) {
+                  return (
+                    <Link
+                      key={idx}
+                      to={term.url}
+                      className="HighlightTopic__term HighlightTopic__term--query"
+                    >
+                      {term.label}
+                    </Link>
+                  );
+                }
+                return (
+                  <Link
+                    key={term}
+                    to={{
+                      pathname: '/search',
+                      search: queryString.stringify({ q: `"${term}"` }),
+                    }}
+                    className="HighlightTopic__term"
+                  >
+                    {term}
+                  </Link>
+                );
+              })}
             </div>
           )}
           {topic.collections && topic.collections.length > 0 && (
@@ -118,7 +133,7 @@ class HighlightTopics extends Component {
     if (error || !topics) return null;
 
     return (
-      <div className="oa-highlight-topics">
+      <div className="HighlightTopics">
         {topics.map((topic, i) => this.renderTopic(topic, i))}
       </div>
     );
