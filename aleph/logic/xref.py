@@ -107,7 +107,7 @@ def _bulk_compare_ftmc_model(proxies):
 
 def _bulk_compare_nomenklatura(
     proxies: list[tuple[E, E]],
-) -> typing.Generator[tuple[float, None, str], None, None]:
+) -> typing.Generator[tuple[float, None, str]]:
     algorithm = _get_nk_algorithm()
     if algorithm is not None:
         for entity, candidate in proxies:

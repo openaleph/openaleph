@@ -51,7 +51,6 @@ services:
 
   ingest-file:
     image: ghcr.io/openaleph/ingest-file:main
-    platform: linux/amd64
     command: procrastinate worker -q ingest --concurrency 2
     hostname: ingest
     tmpfs: /tmp
@@ -66,7 +65,6 @@ services:
 
   ftm-analyze:
     image: ghcr.io/openaleph/ftm-analyze:main-spacy
-    platform: linux/amd64
     entrypoint: procrastinate worker -q analyze --concurrency 2
     restart: on-failure
     depends_on:
@@ -78,7 +76,6 @@ services:
 
   ftm-translate:
     image: ghcr.io/openaleph/ftm-translate:main-argos
-    platform: linux/amd64
     entrypoint: procrastinate worker -q translate --concurrency 2
     restart: on-failure
     depends_on:
