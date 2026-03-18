@@ -114,7 +114,7 @@ class EntityViews extends React.Component {
           <Callout className="EntityViews__workbook-warning">
             <FormattedMessage
               id="entity.info.workbook_warning"
-              defaultMessage="This sheet is part of workbook {link}"
+              defaultMessage="This sheet may include values from formulas. It is part of the workbook {link}"
               values={{
                 link: <Entity.Link entity={entityParent} icon />,
               }}
