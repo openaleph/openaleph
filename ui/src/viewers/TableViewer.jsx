@@ -19,12 +19,7 @@ class TableViewer extends Component {
     }
   }
 
-  onVisibleCellsChange(row) {
-    const { fetchMoreRows, requestedRow } = this.props;
-    if (row.rowIndexEnd + 50 > requestedRow) {
-      fetchMoreRows();
-    }
-  }
+  onVisibleCellsChange() {}
 
   renderCell(rowIndex, colIndex) {
     const { rows } = this.props;
@@ -40,11 +35,17 @@ class TableViewer extends Component {
 
   render() {
     const { columns, totalRowCount } = this.props;
+    const hiddenRows = totalRowCount - 50;
 
     return (
       <div className="TableViewer">
+        {hiddenRows > 0 && (
+          <p className="TableViewer__hidden-rows">
+            {hiddenRows.toLocaleString()} rows hidden, use Explore data to view all
+          </p>
+        )}
         <Table
-          numRows={totalRowCount}
+          numRows={Math.min(totalRowCount, 50)}
           enableGhostCells
           enableRowHeader
           onVisibleCellsChange={this.onVisibleCellsChange}
@@ -63,4 +64,4 @@ class TableViewer extends Component {
   }
 }
 
-export default csvContextLoader(TableViewer);
+export default csvContextLoader(TableViewer, { maxRows: 50 });
