@@ -20,6 +20,7 @@
 .DualPane .ContentPane {
   @extend .pane-layout-main;
   padding: 0;
+  overflow-x: hidden;
   @include rtlSupportInvertedProp(padding, left, $aleph-content-padding * 1.2, null);
 
   @media screen and (max-width: $aleph-screen-sm-max-width) {
