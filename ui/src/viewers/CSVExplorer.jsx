@@ -88,7 +88,7 @@ class CSVExplorer extends Component {
 
     this.worker.postMessage({
       type: 'init',
-      csvUrl: document.links.file,
+      csvUrl: document.links.file || document.links.csv,
       skiprows,
       genericHeaders,
       separator,
@@ -281,9 +281,9 @@ class CSVExplorer extends Component {
               <table className="CSVExplorer__table">
                 <thead>
                   <tr>
-                    {columns.map((col) => (
+                    {columns.map((col, i) => (
                       <th
-                        key={col}
+                        key={i}
                         onClick={() => this.onSort(col)}
                         className={sortCol === col ? `sorted-${sortDir.toLowerCase()}` : ''}
                       >
