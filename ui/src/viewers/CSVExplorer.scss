@@ -2,19 +2,20 @@
   &__settings-popover {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 16px;
+    gap: 8px;
+    padding: 12px;
     min-width: 200px;
 
-    label {
+    > label {
       display: flex;
-      flex-direction: column;
-      gap: 4px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
       font-size: 0.85em;
       color: #5c7080;
 
       input[type=number] {
-        width: 80px;
+        width: 60px;
       }
     }
 

@@ -74,7 +74,9 @@ class CSVExplorer extends Component {
     this.worker.onmessage = (event) => {
       const { type } = event.data;
       if (type === 'ready') {
-        this.setState({ columns: event.data.columns, total: event.data.total, loading: false }, () => {
+        const { columns, total, delimiter } = event.data;
+        const separatorUpdate = this.state.separator === 'auto' ? { separator: delimiter } : {};
+        this.setState({ columns, total, loading: false, ...separatorUpdate }, () => {
           this.runQuery();
         });
       } else if (type === 'results') {
@@ -86,7 +88,7 @@ class CSVExplorer extends Component {
 
     this.worker.postMessage({
       type: 'init',
-      csvUrl: document.links.csv,
+      csvUrl: document.links.file,
       skiprows,
       genericHeaders,
       separator,
@@ -139,7 +141,7 @@ class CSVExplorer extends Component {
     return (
       <div className="CSVExplorer__settings-popover">
         <label>
-          Skip rows
+          <span>Skip rows</span>
           <input
             className="bp4-input bp4-small"
             type="number"
@@ -150,14 +152,15 @@ class CSVExplorer extends Component {
           />
         </label>
         <label>
-          Separator
+          <span>Separator</span>
           <div className="bp4-html-select bp4-small">
             <select value={separator} onChange={(e) => this.onSettingsChange({ separator: e.target.value })}>
-              <option value="auto">auto-detect</option>
-              <option value=",">comma (,)</option>
-              <option value=";">semicolon (;)</option>
+              <option value="auto">auto</option>
+              <option value=",">,</option>
+              <option value=";">;</option>
+              <option value=":">:</option>
               <option value="\t">tab</option>
-              <option value="|">pipe (|)</option>
+              <option value="|">|</option>
             </select>
             <span className="bp4-icon bp4-icon-double-caret-vertical" />
           </div>

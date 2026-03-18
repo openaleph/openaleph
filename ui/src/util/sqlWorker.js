@@ -19,6 +19,7 @@ async function init(csvUrl, skiprows, genericHeaders, separator) {
   const parsed = Papa.parse(csv, {
     skipEmptyLines: true,
     delimiter: separator === 'auto' ? '' : separator,
+    delimitersToGuess: separator === 'auto' ? [',', '\t', '|', ';'] : undefined,
   });
   if (!parsed.data.length) {
     self.postMessage({ type: 'error', message: 'No data found in CSV' });
@@ -49,7 +50,7 @@ async function init(csvUrl, skiprows, genericHeaders, separator) {
   db.run(`INSERT INTO data_fts SELECT rowid, ${colAliases.map(a => `COALESCE(${a}, '')`).join(` || ' ' || `)} FROM data`);
 
   const total = db.exec('SELECT COUNT(*) FROM data')[0].values[0][0];
-  self.postMessage({ type: 'ready', columns, total });
+  self.postMessage({ type: 'ready', columns, total, delimiter: parsed.meta.delimiter });
 }
 
 function sanitizeSearch(search) {
