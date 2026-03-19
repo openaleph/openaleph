@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from functools import cache
 from tempfile import mkdtemp
 from timeit import default_timer
-from typing import Generator, Iterable, TypeAlias
+from typing import Generator, Iterable, TypeAlias, TypedDict
 
 import followthemoney
 from followthemoney import E, Schema, compare, model
@@ -71,10 +71,23 @@ XREF_CANDIDATES_QUERY_ROUNDTRIP_DURATION = Histogram(
     "Roundtrip duration of the candidates query (incl. network, serialization etc.)",
 )
 
-Pair: TypeAlias = tuple[E, E]
-Pairs: TypeAlias = Iterable[Pair]
 Result: TypeAlias = tuple[float, float | None, str]
-Results: TypeAlias = Generator[Result, None, None]
+
+
+class Suggestion(TypedDict):
+    left_id: str | None
+    right_id: str | None
+    score: float
+    user: str | None
+    source_collection_id: int | None
+    target_collection_id: int | None
+    method: str | None
+    schema: str
+    text: list[str]
+    countries: list[str]
+
+
+MAX_NAMES = 30
 
 
 @cache
@@ -84,33 +97,6 @@ def _get_nk_algorithm() -> type[ScoringAlgorithm] | None:
 
 
 NK_SCORING_CONFIG = ScoringConfig.defaults()
-
-
-@dataclass
-class Match:
-    score: float
-    method: str
-    entity: EntityProxy
-    collection_id: str
-    match: EntityProxy
-
-
-Matches: TypeAlias = Generator[Match, None, None]
-
-
-def _compare_ftm(left: E, right: E) -> Result:
-    return compare.compare(left, right), None, FTM_VERSION_STR
-
-
-def _compare_nomenklatura(left: E, right: E) -> Result:
-    algorithm = _get_nk_algorithm()
-    result = algorithm.compare(left, right, NK_SCORING_CONFIG)
-    return result.score, None, algorithm.NAME
-
-
-def _compare_ftmc_model(left: E, right: E) -> Result:
-    score, confidence = next(zip(*MODEL.predict_proba_std([(left, right)])))
-    return score, confidence, MODEL.version
 
 
 def _load_model():
@@ -128,17 +114,23 @@ def _load_model():
         return None
 
 
+# -- Public API --
+
+
 def compare_entities(left: E, right: E) -> Result:
     """Compare two entities using the configured algorithm/model.
 
-    Returns (score, confidence, method). Uses the same dispatch logic
-    as bulk xref processing:
-    nomenklatura algorithm > ML model > followthemoney compare.
+    Returns (score, confidence, method).
+    Dispatch: nomenklatura algorithm > ML model > followthemoney compare.
     """
-    return _compare(left, right)
-
-
-Suggestion: TypeAlias = dict
+    algorithm = _get_nk_algorithm()
+    if algorithm is not None:
+        result = algorithm.compare(left, right, NK_SCORING_CONFIG)
+        return result.score, None, algorithm.NAME
+    if SETTINGS.XREF_MODEL is not None and _load_model() is not None:
+        score, confidence = next(zip(*MODEL.predict_proba_std([(left, right)])))
+        return score, confidence, MODEL.version
+    return compare.compare(left, right), None, FTM_VERSION_STR
 
 
 def make_suggestion(
@@ -147,13 +139,16 @@ def make_suggestion(
     source_collection_id: int | None = None,
     target_collection_id: int | None = None,
     user: str | None = None,
+    score: float | None = None,
+    method: str | None = None,
 ) -> Suggestion:
-    """Compare two entities and build a full suggestion dict.
+    """Compare two entities and build a suggestion dict.
 
-    Wraps compare + metadata assembly for use in API endpoints and xref
-    processing. The returned dict can be passed directly to resolver.suggest().
+    The returned dict can be passed directly to resolver.suggest(**suggestion).
+    If score/method are provided, skips re-comparing (used by batch xref).
     """
-    score, _, method = _compare(left, right)
+    if score is None:
+        score, _, method = compare_entities(left, right)
     text = set([left.caption, right.caption])
     text.update(left.get_type_values(registry.name)[:MAX_NAMES])
     text.update(right.get_type_values(registry.name)[:MAX_NAMES])
@@ -174,18 +169,19 @@ def make_suggestion(
     }
 
 
-def _compare(left: E, right: E) -> Result:
-    """Single-pair compare with full dispatch logic."""
-    if _get_nk_algorithm() is not None:
-        return _compare_nomenklatura(left, right)
-    if SETTINGS.XREF_MODEL is not None and _load_model() is not None:
-        return _compare_ftmc_model(left, right)
-    return _compare_ftm(left, right)
+# -- Internal --
 
 
-def _bulk_compare(pairs: Pairs) -> Results:
-    for left, right in pairs:
-        yield _compare(left, right)
+@dataclass
+class Match:
+    score: float
+    method: str
+    entity: EntityProxy
+    collection_id: str
+    match: EntityProxy
+
+
+Matches: TypeAlias = Generator[Match, None, None]
 
 
 def _merge_schemata(proxy: EntityProxy, schemata: Iterable[Schema]):
@@ -228,23 +224,23 @@ def _query_item(entity: EntityProxy) -> Matches:
         len(candidates),
     )
 
-    results = _bulk_compare([(entity, c) for c in candidates])
     match_count = 0
-    for match, (score, _, method) in zip(candidates, results):
+    for candidate in candidates:
+        score, _, method = compare_entities(entity, candidate)
         log.debug(
             "Match: %s: %s <[%.2f]> %s",
             method,
             entity.caption,
             score or 0.0,
-            match.caption,
+            candidate.caption,
         )
         if score > 0:
             yield Match(
                 score=score,
                 method=method,
                 entity=entity,
-                collection_id=match.context["collection_id"],
-                match=match,
+                collection_id=candidate.context["collection_id"],
+                match=candidate,
             )
         if score > SCORE_CUTOFF:
             match_count += 1
@@ -280,9 +276,6 @@ def _iter_mentions(collection: Collection) -> Generator[EntityProxy, None, None]
         yield proxy
 
 
-MAX_NAMES = 30
-
-
 def _suggest_match(
     collection: Collection, xref_resolver: ElasticsearchResolver, match: Match
 ):
@@ -292,10 +285,9 @@ def _suggest_match(
         match.match,
         source_collection_id=collection.id,
         target_collection_id=int(match.collection_id),
+        score=match.score,
+        method=match.method,
     )
-    # Use the score/method from the batch compare, not re-computed
-    suggestion["score"] = match.score
-    suggestion["method"] = match.method
     xref_resolver.suggest(**suggestion)
 
 
