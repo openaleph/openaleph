@@ -13,7 +13,12 @@ from openaleph_search.query.queries import EXCLUDE_DEHYDRATE, expand_include_fie
 
 from aleph.index.collections import collections_index
 from aleph.index.notifications import notifications_index
-from aleph.index.xref import XREF_SOURCE, auth_filters, xref_index
+from aleph.index.xref import (
+    XREF_SOURCE,
+    _collections_filter,
+    auth_filters,
+    xref_index,
+)
 from aleph.logic.notifications import get_role_channels
 from aleph.logic.xref import SCORE_CUTOFF
 
@@ -131,7 +136,7 @@ class XrefQuery(Query):
         if self.parser.auth and not self.parser.auth.is_admin:
             filters.extend(auth_filters(self.parser.auth))
         # Bidirectional collection filter
-        filters.append({"term": {"collection_id": str(self.collection_id)}})
+        filters.append(_collections_filter(self.collection_id))
         # Only active edges (not soft-deleted)
         filters.append({"bool": {"must_not": {"exists": {"field": "deleted_at"}}}})
         # Score cutoff

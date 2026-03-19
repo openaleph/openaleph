@@ -10,6 +10,7 @@ Architecture:
 """
 
 import logging
+from collections import defaultdict
 from datetime import timedelta
 from typing import Generator, Optional, Set
 
@@ -148,9 +149,9 @@ class ElasticsearchResolver(Resolver[SE]):
         self._auth = auth
         self._sync = sync or SETTINGS.TESTING
         self._metadata: dict[Pair, dict] = {}
-        # Maps entity_id -> collection_id for propagating collection metadata
+        # Maps entity_id -> collection_ids for propagating collection metadata
         # during recursive canonical creation (decide -> entity->NK-* edges)
-        self._entity_collections: dict[str, int] = {}
+        self._entity_collections: defaultdict[str, set[int]] = defaultdict(set)
         self.edges = ESEdgeProxy(auth)
         self.nodes = ESNodeProxy(auth)
 
@@ -224,8 +225,12 @@ class ElasticsearchResolver(Resolver[SE]):
         NO_JUDGEMENT edges or updates scores on existing NO_JUDGEMENT edges.
         """
         metadata = {
-            "source_collection_id": source_collection_id,
-            "target_collection_id": target_collection_id,
+            "source_collection_id": (
+                {source_collection_id} if source_collection_id else set()
+            ),
+            "target_collection_id": (
+                {target_collection_id} if target_collection_id else set()
+            ),
             "method": method,
             "schema": schema,
             "text": text or [],
@@ -246,6 +251,39 @@ class ElasticsearchResolver(Resolver[SE]):
             left_id, right_id, Judgement.NO_JUDGEMENT, score=score, user=user
         )
 
+    def _update_collection_metadata(
+        self,
+        left_id: StrIdent,
+        right_id: StrIdent,
+        source_collection_id: int | None = None,
+        target_collection_id: int | None = None,
+    ) -> None:
+        """Track collection_ids for entities and build edge metadata."""
+        if source_collection_id is not None:
+            self._entity_collections[str(left_id)].add(source_collection_id)
+        if target_collection_id is not None:
+            self._entity_collections[str(right_id)].add(target_collection_id)
+
+        key = Identifier.pair(left_id, right_id)
+        metadata = self._metadata.get(key, {})
+        left_colls = self._entity_collections[str(left_id)]
+        right_colls = self._entity_collections[str(right_id)]
+        _, pair_source = key
+        if left_colls:
+            left_ident = Identifier.get(left_id)
+            if left_ident == pair_source:
+                metadata["source_collection_id"] = left_colls
+            else:
+                metadata["target_collection_id"] = left_colls
+        if right_colls:
+            right_ident = Identifier.get(right_id)
+            if right_ident == pair_source:
+                metadata["source_collection_id"] = right_colls
+            else:
+                metadata["target_collection_id"] = right_colls
+        if metadata:
+            self._metadata[key] = metadata
+
     def decide(
         self,
         left_id: StrIdent,
@@ -263,31 +301,9 @@ class ElasticsearchResolver(Resolver[SE]):
         collection_id metadata via _entity_collections so the entity side
         of entity->NK-* edges gets the correct collection_id.
         """
-        if source_collection_id is not None:
-            self._entity_collections[str(left_id)] = source_collection_id
-        if target_collection_id is not None:
-            self._entity_collections[str(right_id)] = target_collection_id
-
-        key = Identifier.pair(left_id, right_id)
-
-        metadata = self._metadata.get(key, {})
-        left_coll = source_collection_id or self._entity_collections.get(str(left_id))
-        right_coll = target_collection_id or self._entity_collections.get(str(right_id))
-        _, pair_source = key
-        if left_coll is not None:
-            left_ident = Identifier.get(left_id)
-            if left_ident == pair_source:
-                metadata["source_collection_id"] = left_coll
-            else:
-                metadata["target_collection_id"] = left_coll
-        if right_coll is not None:
-            right_ident = Identifier.get(right_id)
-            if right_ident == pair_source:
-                metadata["source_collection_id"] = right_coll
-            else:
-                metadata["target_collection_id"] = right_coll
-        if metadata:
-            self._metadata[key] = metadata
+        self._update_collection_metadata(
+            left_id, right_id, source_collection_id, target_collection_id
+        )
 
         edge = self.get_edge(left_id, right_id)
         if edge is None:
@@ -299,6 +315,11 @@ class ElasticsearchResolver(Resolver[SE]):
             target = max(connected)
             if not target.canonical:
                 canonical = Identifier.make()
+                # Register NK-* with all collection_ids from the cluster
+                for node in connected:
+                    self._entity_collections[str(canonical)].update(
+                        self._entity_collections[node.id]
+                    )
                 self._remove_edge(edge)
                 self.decide(edge.source, canonical, judgement=judgement, user=user)
                 self.decide(edge.target, canonical, judgement=judgement, user=user)

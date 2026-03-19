@@ -317,25 +317,31 @@ class EntitySerializer(Serializer):
 class XrefSerializer(Serializer):
     def collect(self, obj):
         matchable = tuple([s for s in model if s.matchable])
-        self.queue(Entity, obj.get("entity_id"), matchable)
-        self.queue(Entity, obj.get("match_id"), matchable)
-        self.queue(Collection, obj.get("collection_id"))
-        self.queue(Collection, obj.pop("match_collection_id"))
+        self.queue(Entity, obj.get("source"), matchable)
+        self.queue(Entity, obj.get("target"), matchable)
+        # collection_id is the merged copy_to field with all IDs from both sides
+        for coll_id in ensure_list(obj.get("collection_id")):
+            self.queue(Collection, coll_id)
 
     def _serialize(self, obj):
-        entity_id = obj.pop("entity_id")
-        obj["entity"] = self.resolve(Entity, entity_id, EntitySerializer)
-        match_id = obj.pop("match_id")
-        obj["match"] = self.resolve(Entity, match_id, EntitySerializer)
-        collection_id = obj.get("collection_id")
-        obj["writeable"] = request.authz.can(collection_id, request.authz.WRITE)
+        source_id = obj.pop("source", None)
+        obj["entity"] = self.resolve(Entity, source_id, EntitySerializer)
+        target_id = obj.pop("target", None)
+        obj["match"] = self.resolve(Entity, target_id, EntitySerializer)
+        coll_ids = ensure_list(obj.get("collection_id"))
+        obj["collections"] = [
+            self.resolve(Collection, cid, CollectionSerializer) for cid in coll_ids
+        ]
+        obj["writeable"] = any(
+            request.authz.can(c, request.authz.WRITE) for c in coll_ids
+        )
         if obj["entity"] and obj["match"]:
             return obj
         log.warning(
-            "Dropping xref result: entity=%s (resolved=%s) match=%s (resolved=%s)",
-            entity_id,
+            "Dropping xref result: source=%s (resolved=%s) target=%s (resolved=%s)",
+            source_id,
             bool(obj["entity"]),
-            match_id,
+            target_id,
             bool(obj["match"]),
         )
 
@@ -400,14 +406,14 @@ class EntitySetItemSerializer(Serializer):
         return obj
 
 
-class ProfileSerializer(Serializer):
+class CanonicalSerializer(Serializer):
+    """Serializer for canonical clusters (replaces ProfileSerializer)."""
+
     def collect(self, obj):
         self.queue(Collection, obj.get("collection_id"))
 
     def _serialize(self, obj):
         collection_id = obj.pop("collection_id", None)
-        obj["writeable"] = request.authz.can(collection_id, request.authz.WRITE)
-        obj["shallow"] = obj.get("shallow", True)
         obj["collection"] = self.resolve(
             Collection, collection_id, CollectionSerializer
         )
@@ -415,10 +421,9 @@ class ProfileSerializer(Serializer):
         data = proxy.to_dict()
         data["latinized"] = transliterate_values(proxy)
         obj["merged"] = data
-        items = obj.pop("items", [])
-        entities = [i.get("entity") for i in items]
-        obj["entities"] = [e.get("id") for e in entities if e is not None]
+        obj["shallow"] = obj.get("shallow", True)
         obj.pop("proxies", None)
+        # Keep entity_details so the frontend reducer can pre-populate entities
         return obj
 
 

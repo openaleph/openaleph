@@ -89,8 +89,8 @@ class XrefTestCase(TestCase):
             assert edge.source != edge.target
             entity_ids.add(edge.source)
             entity_ids.add(edge.target)
-            collection_ids.add(edge.source_collection_id)
-            collection_ids.add(edge.target_collection_id)
+            collection_ids.update(edge.source_collection_id)
+            collection_ids.update(edge.target_collection_id)
             # All should be suggestions
             assert edge.judgement == "no_judgement", edge
 

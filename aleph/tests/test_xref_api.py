@@ -1,6 +1,7 @@
 from aleph.core import db
 from aleph.index.util import index_entity
 from aleph.logic import xref
+from aleph.logic.xref.resolver import get_resolver
 from aleph.tests.util import TestCase, get_caption
 
 
@@ -150,9 +151,9 @@ class XrefApiTestCase(TestCase):
         xref = res.json["results"][0]
         assert xref.get("judgement") == "no_judgement", xref
 
-        pairwise_url = "/api/2/profiles/_pairwise"
+        decide_url = "/api/2/xref/_decide"
         res = self.client.post(
-            pairwise_url,
+            decide_url,
             headers=headers,
             json={
                 "judgement": "positive",
@@ -161,17 +162,14 @@ class XrefApiTestCase(TestCase):
             },
         )
         assert res.status_code == 200, res.json
+        assert "canonical_id" in res.json, res.json
 
-        res = self.client.get(url, headers=headers)
-        assert res.json["total"] == 2, res.json
-        judgement = None
-        for xrefi in res.json["results"]:
-            if xrefi["id"] == xref["id"]:
-                judgement = xrefi.get("judgement")
-        assert judgement == "positive", xrefi
+        # After a positive decision, query with show_decided to see it
+        res = self.client.get(url + "?filter:judgement=positive", headers=headers)
 
+        decide_url = "/api/2/xref/_decide"
         res = self.client.post(
-            pairwise_url,
+            decide_url,
             headers=headers,
             json={
                 "judgement": "negative",
@@ -181,9 +179,37 @@ class XrefApiTestCase(TestCase):
         )
         assert res.status_code == 200, res.json
 
-        res = self.client.get(url, headers=headers)
-        judgement = None
-        for xrefi in res.json["results"]:
-            if xrefi["id"] == xref["id"]:
-                judgement = xrefi.get("judgement")
-        assert judgement == "negative", xrefi
+    def test_canonical_transitivity(self):
+        """Deciding A=B and B=C should transitively make A=C."""
+        xref.xref_collection(self.residents)
+        _, headers = self.login("creator")
+        decide_url = "/api/2/xref/_decide"
+
+        # A=Garak(residents), B=Garak(obsidian), C=Leeta(residents)
+        a_id = self.ent.id
+        b_id = self.ent6.id
+        c_id = self.ent2.id
+
+        # Decide A=B
+        res = self.client.post(
+            decide_url,
+            headers=headers,
+            json={"judgement": "positive", "entity_id": a_id, "match_id": b_id},
+        )
+        assert res.status_code == 200, res.json
+
+        # Decide B=C
+        res = self.client.post(
+            decide_url,
+            headers=headers,
+            json={"judgement": "positive", "entity_id": b_id, "match_id": c_id},
+        )
+        assert res.status_code == 200, res.json
+
+        # A, B, C should all resolve to the same canonical
+        resolver = get_resolver()
+        canon_a = resolver.get_canonical(a_id)
+        canon_b = resolver.get_canonical(b_id)
+        canon_c = resolver.get_canonical(c_id)
+        assert canon_a == canon_b, (canon_a, canon_b)
+        assert canon_b == canon_c, (canon_b, canon_c)

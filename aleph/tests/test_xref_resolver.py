@@ -264,8 +264,8 @@ def test_suggest_metadata(resolver: ElasticsearchResolver):
     edge = edges[0]
     assert {edge.source, edge.target} == {"e1", "e2"}
     assert edge.score == 0.85
-    assert edge.source_collection_id == 10
-    assert edge.target_collection_id == 20
+    assert edge.source_collection_id == {10}
+    assert edge.target_collection_id == {20}
     assert edge.method == "logic-v1"
     assert edge.schema_ == "Person"
     assert set(edge.text) == {"Alice", "Alicia"}
@@ -296,8 +296,25 @@ def test_suggest_metadata(resolver: ElasticsearchResolver):
     filters = [{"term": {"judgement": "negative"}}]
     neg_edges = list(scan_edges(filters))
     assert len(neg_edges) == 1
-    assert neg_edges[0].source_collection_id == 30
-    assert neg_edges[0].target_collection_id == 40
+    assert neg_edges[0].source_collection_id == {30}
+    assert neg_edges[0].target_collection_id == {40}
+
+    # POSITIVE decision propagates cluster collection_ids to canonical edges
+    resolver.decide(
+        "e5",
+        "e6",
+        Judgement.POSITIVE,
+        source_collection_id=50,
+        target_collection_id=60,
+    )
+    pos_filters = [{"term": {"judgement": "positive"}}]
+    pos_edges = list(scan_edges(pos_filters))
+    # Two canonical edges: e5→NK-* and e6→NK-*
+    assert len(pos_edges) == 2, pos_edges
+    for edge in pos_edges:
+        # The NK-* side carries both cluster collection_ids
+        all_colls = edge.source_collection_id | edge.target_collection_id
+        assert {50, 60} == all_colls, (edge, all_colls)
 
 
 def test_resolver_statements(resolver: ElasticsearchResolver):

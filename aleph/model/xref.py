@@ -29,8 +29,8 @@ class ESEdge(BaseModel):
     user: str = SYSTEM_USER
     created_at: datetime | None = None
     deleted_at: datetime | None = None
-    source_collection_id: int | None = None
-    target_collection_id: int | None = None
+    source_collection_id: set[int] = set()
+    target_collection_id: set[int] = set()
     method: str | None = None
     schema_: str | None = Field(None, alias="schema")
     text: list[str] = []
