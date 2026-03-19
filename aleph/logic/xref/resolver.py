@@ -11,6 +11,7 @@ Architecture:
 
 import logging
 from collections import defaultdict
+from contextlib import contextmanager
 from datetime import timedelta
 from typing import Generator, Optional, Set
 
@@ -154,6 +155,37 @@ class ElasticsearchResolver(Resolver[SE]):
         self._entity_collections: defaultdict[str, set[int]] = defaultdict(set)
         self.edges = ESEdgeProxy(auth)
         self.nodes = ESNodeProxy(auth)
+        self._edge_buffer: list[ESEdge] = []
+        self._bulk_mode = False
+        self._bulk_size = 10_000
+
+    # -- bulk mode ---
+
+    @contextmanager
+    def bulk(self, size: int = 10_000):
+        """Buffer edge writes and flush in batches."""
+        self._bulk_mode = True
+        self._bulk_size = size
+        try:
+            yield self
+            self.flush()
+        finally:
+            self._bulk_mode = False
+            self._edge_buffer.clear()
+
+    def flush(self):
+        if self._edge_buffer:
+            bulk_index_edges(self._edge_buffer, sync=self._sync)
+            self._edge_buffer.clear()
+
+    def _index_edge(self, es_edge: ESEdge) -> None:
+        """Index or buffer a single ES edge document."""
+        if self._bulk_mode:
+            self._edge_buffer.append(es_edge)
+            if len(self._edge_buffer) >= self._bulk_size:
+                self.flush()
+        else:
+            index_edge(es_edge, sync=self._sync)
 
     # -- cache / invalidation ---
 
@@ -187,7 +219,7 @@ class ElasticsearchResolver(Resolver[SE]):
         if edge.judgement != Judgement.NO_JUDGEMENT:
             edge.score = None
         metadata = self._metadata.get(edge.key, {})
-        index_edge(ESEdge.from_edge(edge, **metadata), sync=self._sync)
+        self._index_edge(ESEdge.from_edge(edge, **metadata))
 
     def _remove_edge(self, edge: Edge) -> None:
         soft_delete_edge(edge.source.id, edge.target.id, sync=self._sync)
@@ -241,7 +273,7 @@ class ElasticsearchResolver(Resolver[SE]):
             if edge.judgement == Judgement.NO_JUDGEMENT:
                 edge_ = ESEdge.from_edge(edge, **metadata)
                 edge_.score = score
-                index_edge(edge_, sync=self._sync)
+                self._index_edge(edge_)
             return edge.target
 
         key = Identifier.pair(left_id, right_id)

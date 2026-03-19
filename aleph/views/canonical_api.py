@@ -10,7 +10,7 @@ from flask import Blueprint, request
 
 from aleph.logic.expand import entity_tags, expand_proxies
 from aleph.logic.xref.canonical import get_canonical_cluster
-from aleph.logic.xref.process import compare_entities
+from aleph.logic.xref.compare import compare_entities
 from aleph.model import Judgement
 from aleph.search import MatchQuery, QueryParser
 from aleph.search.result import get_query_result

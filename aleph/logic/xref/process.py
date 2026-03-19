@@ -1,28 +1,24 @@
 """
 Cross-reference processing logic. Moved from aleph/logic/xref.py.
 
-Handles entity comparison, scoring, and match generation for xref.
+Handles xref pipeline orchestration: candidate querying, match generation,
+mention processing, and export.
 """
 
 import logging
 import shutil
 from dataclasses import dataclass
-from functools import cache
 from tempfile import mkdtemp
 from timeit import default_timer
-from typing import Generator, Iterable, TypeAlias, TypedDict
+from typing import Generator, Iterable, TypeAlias
 
-import followthemoney
-from followthemoney import E, Schema, compare, model
+from followthemoney import Schema, model
 from followthemoney.exc import InvalidData
 from followthemoney.export.excel import ExcelWriter
 from followthemoney.helpers import name_entity
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
-from followthemoney_compare.models import GLMBernoulli2EEvaluator
-from nomenklatura.matching import ScoringConfig, get_algorithm
-from nomenklatura.matching.types import ScoringAlgorithm
-from openaleph_search.index.entities import ENTITY_SOURCE, iter_proxies
+from openaleph_search.index.entities import ENTITY_SOURCE, index_bulk, iter_proxies
 from openaleph_search.index.indexes import entities_read_index
 from openaleph_search.index.util import unpack_result
 from openaleph_search.query import none_query
@@ -36,9 +32,9 @@ from aleph.core import db, es
 from aleph.index.xref import iter_edges
 from aleph.logic import resolver
 from aleph.logic.aggregator import get_aggregator
-from aleph.logic.collections import reindex_collection
 from aleph.logic.export import complete_export
 from aleph.logic.util import entity_url
+from aleph.logic.xref.compare import compare_entities, make_suggestion
 from aleph.logic.xref.resolver import ElasticsearchResolver, get_resolver
 from aleph.model import Collection, Entity, Export, Role, Status
 from aleph.settings import SETTINGS
@@ -46,9 +42,8 @@ from aleph.util import make_entity_proxy
 
 log = logging.getLogger(__name__)
 ORIGIN = "xref"
-MODEL = None
-FTM_VERSION_STR = f"ftm-{followthemoney.__version__}"
 SCORE_CUTOFF = 0.5
+MSEARCH_BATCH_SIZE = 20
 
 XREF_ENTITIES = Counter(
     "aleph_xref_entities_total",
@@ -70,103 +65,6 @@ XREF_CANDIDATES_QUERY_ROUNDTRIP_DURATION = Histogram(
     "aleph_xref_candidates_query_roundtrip_duration_seconds",
     "Roundtrip duration of the candidates query (incl. network, serialization etc.)",
 )
-
-Result: TypeAlias = tuple[float, float | None, str]
-
-
-class Suggestion(TypedDict):
-    left_id: str | None
-    right_id: str | None
-    score: float
-    user: str | None
-    source_collection_id: int | None
-    target_collection_id: int | None
-    method: str | None
-    schema: str
-    text: list[str]
-    countries: list[str]
-
-
-MAX_NAMES = 30
-
-
-@cache
-def _get_nk_algorithm() -> type[ScoringAlgorithm] | None:
-    if SETTINGS.XREF_ALGORITHM is not None:
-        return get_algorithm(SETTINGS.XREF_ALGORITHM)
-
-
-NK_SCORING_CONFIG = ScoringConfig.defaults()
-
-
-def _load_model():
-    """Load the FTM-compare ML model, falling back to None on failure."""
-    global MODEL
-    if MODEL is not None:
-        return MODEL
-    try:
-        with open(SETTINGS.XREF_MODEL, "rb") as fd:
-            MODEL = GLMBernoulli2EEvaluator.from_pickles(fd.read())
-        return MODEL
-    except FileNotFoundError:
-        log.exception(f"Could not find model file: {SETTINGS.XREF_MODEL}")
-        SETTINGS.XREF_MODEL = None
-        return None
-
-
-# -- Public API --
-
-
-def compare_entities(left: E, right: E) -> Result:
-    """Compare two entities using the configured algorithm/model.
-
-    Returns (score, confidence, method).
-    Dispatch: nomenklatura algorithm > ML model > followthemoney compare.
-    """
-    algorithm = _get_nk_algorithm()
-    if algorithm is not None:
-        result = algorithm.compare(left, right, NK_SCORING_CONFIG)
-        return result.score, None, algorithm.NAME
-    if SETTINGS.XREF_MODEL is not None and _load_model() is not None:
-        score, confidence = next(zip(*MODEL.predict_proba_std([(left, right)])))
-        return score, confidence, MODEL.version
-    return compare.compare(left, right), None, FTM_VERSION_STR
-
-
-def make_suggestion(
-    left: EntityProxy,
-    right: EntityProxy,
-    source_collection_id: int | None = None,
-    target_collection_id: int | None = None,
-    user: str | None = None,
-    score: float | None = None,
-    method: str | None = None,
-) -> Suggestion:
-    """Compare two entities and build a suggestion dict.
-
-    The returned dict can be passed directly to resolver.suggest(**suggestion).
-    If score/method are provided, skips re-comparing (used by batch xref).
-    """
-    if score is None:
-        score, _, method = compare_entities(left, right)
-    text = set([left.caption, right.caption])
-    text.update(left.get_type_values(registry.name)[:MAX_NAMES])
-    text.update(right.get_type_values(registry.name)[:MAX_NAMES])
-    text.discard(None)
-    countries = set(left.get_type_values(registry.country))
-    countries.update(right.get_type_values(registry.country))
-    return {
-        "left_id": left.id,
-        "right_id": right.id,
-        "score": score,
-        "user": user,
-        "source_collection_id": source_collection_id,
-        "target_collection_id": target_collection_id,
-        "method": method,
-        "schema": right.schema.name,
-        "text": list(text),
-        "countries": list(countries),
-    }
 
 
 # -- Internal --
@@ -252,6 +150,60 @@ def _query_item(entity: EntityProxy) -> Matches:
         XREF_CANDIDATES_QUERY_DURATION.observe(query_duration)
 
 
+def _query_batch(entities: list[EntityProxy]) -> Matches:
+    """Send batched candidate queries via msearch."""
+    body = []
+    query_entities = []
+    for entity in entities:
+        query = match_query(entity)
+        if query == none_query():
+            continue
+        schemata = list(entity.schema.matchable_schemata)
+        index = entities_read_index(schema=schemata, expand=False)
+        body.append({"index": index})
+        body.append({"query": query, "size": 50, "_source": ENTITY_SOURCE})
+        query_entities.append(entity)
+
+    if not body:
+        return
+
+    start_time = default_timer()
+    response = es.msearch(body=body)
+    roundtrip_duration = max(0, default_timer() - start_time)
+
+    for entity, resp in zip(query_entities, response.get("responses", [])):
+        query_duration = resp.get("took")
+        if query_duration is not None:
+            query_duration = query_duration / 1000
+
+        candidates = []
+        for hit in resp.get("hits", {}).get("hits", []):
+            hit = unpack_result(hit)
+            if hit is None:
+                continue
+            candidates.append(make_entity_proxy(hit))
+
+        match_count = 0
+        for candidate in candidates:
+            score, _, method = compare_entities(entity, candidate)
+            if score > 0:
+                yield Match(
+                    score=score,
+                    method=method,
+                    entity=entity,
+                    collection_id=candidate.context["collection_id"],
+                    match=candidate,
+                )
+            if score > SCORE_CUTOFF:
+                match_count += 1
+
+        XREF_ENTITIES.inc()
+        XREF_MATCHES.observe(match_count)
+        XREF_CANDIDATES_QUERY_ROUNDTRIP_DURATION.observe(roundtrip_duration)
+        if query_duration:
+            XREF_CANDIDATES_QUERY_DURATION.observe(query_duration)
+
+
 def _iter_mentions(collection: Collection) -> Generator[EntityProxy, None, None]:
     """Combine mentions into pseudo-entities used for xref."""
     log.info("[%s] Generating mention-based xref...", collection)
@@ -291,10 +243,14 @@ def _suggest_match(
     xref_resolver.suggest(**suggestion)
 
 
+MENTION_INDEX_BATCH_SIZE = 10_000
+
+
 def _query_mentions(collection: Collection, xref_resolver: ElasticsearchResolver):
     aggregator = get_aggregator(collection, origin=ORIGIN)
     aggregator.delete(origin=ORIGIN)
     writer = aggregator.bulk()
+    mention_batch: list[EntityProxy] = []
     for proxy in _iter_mentions(collection):
         schemata = set()
         countries = set()
@@ -309,20 +265,41 @@ def _query_mentions(collection: Collection, xref_resolver: ElasticsearchResolver
             proxy = name_entity(proxy)
             log.debug("Reifying [%s]: %s", proxy.schema.name, proxy)
             writer.put(proxy, fragment="mention")
+            mention_batch.append(proxy)
+            if len(mention_batch) >= MENTION_INDEX_BATCH_SIZE:
+                index_bulk(
+                    collection.foreign_id,
+                    mention_batch,
+                    collection_id=collection.id,
+                )
+                mention_batch.clear()
     writer.flush()
+    if mention_batch:
+        index_bulk(
+            collection.foreign_id,
+            mention_batch,
+            collection_id=collection.id,
+        )
 
 
 def _query_entities(collection: Collection, xref_resolver: ElasticsearchResolver):
-    """Generate matches for indexing."""
+    """Generate matches for indexing using batched msearch."""
     log.info("[%s] Generating entity-based xref...", collection)
     matchable = [s.name for s in model if s.matchable]
+    batch: list[EntityProxy] = []
     for proxy in iter_proxies(
         collection_id=collection.id,
         schemata=matchable,
         es_scroll=SETTINGS.XREF_SCROLL,
         es_scroll_size=SETTINGS.XREF_SCROLL_SIZE,
     ):
-        for match in _query_item(proxy):
+        batch.append(proxy)
+        if len(batch) >= MSEARCH_BATCH_SIZE:
+            for match in _query_batch(batch):
+                _suggest_match(collection, xref_resolver, match)
+            batch.clear()
+    if batch:
+        for match in _query_batch(batch):
             _suggest_match(collection, xref_resolver, match)
 
 
@@ -346,17 +323,11 @@ def xref_collection(collection: Collection):
     log.info(f"[{collection}] Running xref (upsert mode, no deletion)...")
     xref_resolver = get_resolver()
 
-    _query_entities(collection, xref_resolver)
-    _query_mentions(collection, xref_resolver)
+    with xref_resolver.bulk():
+        _query_entities(collection, xref_resolver)
+        _query_mentions(collection, xref_resolver)
 
-    log.info(f"[{collection}] Xref done, re-indexing to reify mentions...")
-    reindex_collection(
-        collection,
-        sync=False,
-        model=False,
-        mappings=False,
-        origin=ORIGIN,
-    )
+    log.info(f"[{collection}] Xref done.")
 
 
 def _format_date(proxy: EntityProxy) -> str:

@@ -25,7 +25,7 @@ from aleph.logic.entities import (
 from aleph.logic.expand import entity_tags, expand_proxies
 from aleph.logic.export import create_export
 from aleph.logic.html import sanitize_html
-from aleph.logic.xref.process import make_suggestion
+from aleph.logic.xref.compare import make_suggestion
 from aleph.logic.xref.resolver import get_resolver
 from aleph.model.bookmark import Bookmark
 from aleph.model.entityset import EntitySet, Judgement
