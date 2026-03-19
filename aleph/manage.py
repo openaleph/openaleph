@@ -7,6 +7,7 @@ import click
 from flask.cli import FlaskGroup
 from followthemoney.cli.util import write_object
 from normality import slugify
+from openaleph_procrastinate.util import make_file_entity
 from openaleph_search.index.admin import delete_index
 from openaleph_search.index.entities import get_entity as _get_index_entity
 from openaleph_search.index.entities import iter_proxies
@@ -898,7 +899,7 @@ def reanalyze_collection(
     ingest_data = get_aggregator(collection, origin=OP_INGEST)
     for ingest_entity in ingest_data.iterate(origin=OP_INGEST):
         if ingest_entity.schema.is_a("Analyzable"):
-            to_analyze.append(ingest_entity)
+            to_analyze.append(make_file_entity(ingest_entity, quiet=True))
             if len(to_analyze) == batch_len:
                 queue_analyze(
                     collection,
