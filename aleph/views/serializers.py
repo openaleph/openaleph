@@ -410,20 +410,19 @@ class CanonicalSerializer(Serializer):
     """Serializer for canonical clusters (replaces ProfileSerializer)."""
 
     def collect(self, obj):
-        self.queue(Collection, obj.get("collection_id"))
+        for coll_id in obj.get("collection_ids", []):
+            self.queue(Collection, coll_id)
 
     def _serialize(self, obj):
-        collection_id = obj.pop("collection_id", None)
-        obj["collection"] = self.resolve(
-            Collection, collection_id, CollectionSerializer
-        )
+        obj["collections"] = []
+        for coll_id in obj.pop("collection_ids", []):
+            obj["collections"].append(
+                self.resolve(Collection, coll_id, CollectionSerializer)
+            )
         proxy = obj.pop("merged")
         data = proxy.to_dict()
         data["latinized"] = transliterate_values(proxy)
         obj["merged"] = data
-        obj["shallow"] = obj.get("shallow", True)
-        obj.pop("proxies", None)
-        # Keep entity_details so the frontend reducer can pre-populate entities
         return obj
 
 
