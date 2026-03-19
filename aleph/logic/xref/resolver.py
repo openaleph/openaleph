@@ -256,13 +256,18 @@ class ElasticsearchResolver(Resolver[SE]):
         Won't overwrite existing judgements - only creates new
         NO_JUDGEMENT edges or updates scores on existing NO_JUDGEMENT edges.
         """
+        # Align collection IDs with the edge's source/target ordering.
+        # Identifier.pair determines which entity becomes edge.source;
+        # the caller's left/right order may differ.
+        key = Identifier.pair(left_id, right_id)
+        _, pair_source = key
+        left_is_source = Identifier.get(left_id) == pair_source
+        src_cid = source_collection_id if left_is_source else target_collection_id
+        tgt_cid = target_collection_id if left_is_source else source_collection_id
+
         metadata = {
-            "source_collection_id": (
-                {source_collection_id} if source_collection_id else set()
-            ),
-            "target_collection_id": (
-                {target_collection_id} if target_collection_id else set()
-            ),
+            "source_collection_id": {src_cid} if src_cid else set(),
+            "target_collection_id": {tgt_cid} if tgt_cid else set(),
             "method": method,
             "schema": schema,
             "text": text or [],
@@ -276,11 +281,16 @@ class ElasticsearchResolver(Resolver[SE]):
                 self._index_edge(edge_)
             return edge.target
 
-        key = Identifier.pair(left_id, right_id)
         self._metadata[key] = metadata
 
         return self.decide(
-            left_id, right_id, Judgement.NO_JUDGEMENT, score=score, user=user
+            left_id,
+            right_id,
+            Judgement.NO_JUDGEMENT,
+            score=score,
+            user=user,
+            source_collection_id=source_collection_id,
+            target_collection_id=target_collection_id,
         )
 
     def _update_collection_metadata(

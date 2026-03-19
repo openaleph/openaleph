@@ -437,13 +437,13 @@ def similar(entity_id):
     """
     # enable_cache()
     entity = get_index_entity(entity_id, request.authz.READ)
-    tag_request(collection_id=entity.get("collection_id"))
+    tag_request(collection_id=entity["collection_id"])
     proxy = make_entity_proxy(entity)
     result = get_query_result(MatchQuery, request, entity=proxy)
     entities = list(result.results)
     xref_resolver = get_resolver(request.authz.search_auth)
     result.results = []
-    source_collection_id = entity.get("collection_id")
+    source_collection_id = entity["collection_id"]
     for obj in entities:
         target_collection_id = obj["collection_id"]
         match_proxy = make_entity_proxy(obj)
@@ -455,7 +455,7 @@ def similar(entity_id):
             target_collection_id=target_collection_id,
             user=str(request.authz.role.foreign_id),
         )
-        # while we're on it, update to most recent score
+        # while we're on it, upsert a xref edge:
         if judgement == Judgement.NO_JUDGEMENT:
             xref_resolver.suggest(**suggestion)
         item = {

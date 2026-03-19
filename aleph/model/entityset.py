@@ -1,8 +1,8 @@
 import logging
 from datetime import datetime
-from enum import Enum
 
 from banal import ensure_list
+from nomenklatura.judgement import Judgement  # noqa: F401
 from normality import stringify
 from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import JSONB
@@ -14,23 +14,6 @@ from aleph.model.permission import Permission
 from aleph.model.role import Role
 
 log = logging.getLogger(__name__)
-
-
-class Judgement(Enum):
-    POSITIVE = "positive"
-    NEGATIVE = "negative"
-    UNSURE = "unsure"
-    NO_JUDGEMENT = "no_judgement"
-
-    def __add__(self, other):
-        if self == other:
-            return self
-        if Judgement.NEGATIVE in (self, other):
-            return Judgement.NEGATIVE
-        return Judgement.UNSURE
-
-    def to_dict(self):
-        return str(self.value)
 
 
 class EntitySet(db.Model, SoftDeleteModel):

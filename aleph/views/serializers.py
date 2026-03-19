@@ -315,27 +315,43 @@ class EntitySerializer(Serializer):
 
 
 class XrefSerializer(Serializer):
+    @classmethod
+    def _collection_ids(cls, obj) -> set[int]:
+        return set(map(int, ensure_list(obj.get("collection_id"))))
+
     def collect(self, obj):
         matchable = tuple([s for s in model if s.matchable])
         self.queue(Entity, obj.get("source"), matchable)
         self.queue(Entity, obj.get("target"), matchable)
-        # collection_id is the merged copy_to field with all IDs from both sides
-        for coll_id in ensure_list(obj.get("collection_id")):
+        for coll_id in self._collection_ids(obj):
             self.queue(Collection, coll_id)
 
     def _serialize(self, obj):
         source_id = obj.pop("source", None)
-        obj["entity"] = self.resolve(Entity, source_id, EntitySerializer)
         target_id = obj.pop("target", None)
+
+        # Orient: ensure the perspective collection's entity is "entity" (left).
+        # The edge's source/target is determined by Identifier.pair ordering,
+        # not by which collection the entity belongs to. Swap when the
+        # perspective collection's entity ended up as target.
+        perspective_cid = (request.view_args or {}).get("collection_id")
+        if perspective_cid is not None:
+            perspective_cid = int(perspective_cid)
+            source_cids = set(map(int, ensure_list(obj.get("source_collection_id"))))
+            target_cids = set(map(int, ensure_list(obj.get("target_collection_id"))))
+            if perspective_cid not in source_cids and perspective_cid in target_cids:
+                source_id, target_id = target_id, source_id
+
+        obj["entity"] = self.resolve(Entity, source_id, EntitySerializer)
         obj["match"] = self.resolve(Entity, target_id, EntitySerializer)
-        coll_ids = ensure_list(obj.get("collection_id"))
+        coll_ids = self._collection_ids(obj)
         obj["collections"] = [
             self.resolve(Collection, cid, CollectionSerializer) for cid in coll_ids
         ]
-        obj["writeable"] = any(
-            request.authz.can(c, request.authz.WRITE) for c in coll_ids
-        )
         if obj["entity"] and obj["match"]:
+            obj["writeable"] = obj["entity"].get("writeable") or obj["match"].get(
+                "writeable"
+            )
             return obj
         log.warning(
             "Dropping xref result: source=%s (resolved=%s) target=%s (resolved=%s)",
@@ -406,19 +422,17 @@ class EntitySetItemSerializer(Serializer):
         return obj
 
 
-class CanonicalSerializer(Serializer):
+class CanonicalSerializer(XrefSerializer):
     """Serializer for canonical clusters (replaces ProfileSerializer)."""
 
-    def collect(self, obj):
-        for coll_id in obj.get("collection_ids", []):
-            self.queue(Collection, coll_id)
-
     def _serialize(self, obj):
-        obj["collections"] = []
-        for coll_id in obj.pop("collection_ids", []):
-            obj["collections"].append(
-                self.resolve(Collection, coll_id, CollectionSerializer)
-            )
+        cids = self._collection_ids(obj)
+        obj["collections"] = [
+            self.resolve(Collection, c, CollectionSerializer) for c in cids
+        ]
+        # Signal the frontend a cluster is writeable if any of the source
+        # collections is writeable for the current user
+        obj["writeable"] = any(request.authz.can(c, request.authz.WRITE) for c in cids)
         proxy = obj.pop("merged")
         data = proxy.to_dict()
         data["latinized"] = transliterate_values(proxy)

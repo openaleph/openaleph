@@ -131,7 +131,7 @@ export function collectionMappingsQuery(location, collectionId) {
 export function collectionXrefFacetsQuery(location, collectionId) {
   const path = collectionId ? `collections/${collectionId}/xref` : undefined;
   let query = Query.fromLocation(path, location, {}, 'xref');
-  query = query.defaultFacet('match_collection_id', true);
+  query = query.defaultFacet('collection_id', true);  // this is now bi-directional
   query = query.defaultFacet('countries', false);
   query = query.defaultFacet('schema', false);
   // Show no internal matches:

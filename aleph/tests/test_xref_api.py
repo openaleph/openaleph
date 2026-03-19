@@ -1,5 +1,6 @@
 from aleph.core import db
 from aleph.index.util import index_entity
+from aleph.index.xref import delete_xref
 from aleph.logic import xref
 from aleph.logic.xref.resolver import get_resolver
 from aleph.tests.util import TestCase, get_caption
@@ -8,6 +9,7 @@ from aleph.tests.util import TestCase, get_caption
 class XrefApiTestCase(TestCase):
     def setUp(self):
         super(XrefApiTestCase, self).setUp()
+        delete_xref()
         xref.SCORE_CUTOFF = 0.01
         self.creator = self.create_user(foreign_id="creator")
         self.outsider = self.create_user(foreign_id="outsider")
@@ -122,6 +124,39 @@ class XrefApiTestCase(TestCase):
         assert "Garak" not in get_caption(res1["entity"])
         assert "Tain" not in get_caption(res1["match"])
         assert "MPella" not in get_caption(res1["match"])
+
+    def test_orientation(self):
+        """entity (left) should always belong to the perspective collection."""
+        delete_xref()
+        xref.xref_collection(self.residents)
+        self.grant_publish(self.residents)
+        _, headers = self.login("creator")
+
+        # Query from residents' perspective
+        residents_id = str(self.residents.id)
+        url = "/api/2/collections/%s/xref" % self.residents.id
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res
+        for result in res.json["results"]:
+            assert (
+                result["entity"]["collection"]["id"] == residents_id
+            ), "entity should belong to perspective collection (residents)"
+            assert (
+                result["match"]["collection"]["id"] != residents_id
+            ), "match should belong to the other collection"
+
+        # Query from dabo's perspective — orientation should flip
+        dabo_id = str(self.dabo.id)
+        url = "/api/2/collections/%s/xref" % self.dabo.id
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res
+        for result in res.json["results"]:
+            assert (
+                result["entity"]["collection"]["id"] == dabo_id
+            ), "entity should belong to perspective collection (dabo)"
+            assert (
+                result["match"]["collection"]["id"] != dabo_id
+            ), "match should belong to the other collection"
 
     def test_create_matches(self):
         url = "/api/2/collections/%s/xref" % self.residents.id

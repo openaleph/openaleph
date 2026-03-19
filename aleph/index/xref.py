@@ -65,9 +65,9 @@ def _collections_filter(collection_id: int) -> SDict:
 def auth_filters(auth: SearchAuth) -> Filters:
     """Auth filters requiring BOTH collections on an xref edge to be readable.
 
-    The multi-value ``collection_id`` field (copy_to from source/target) only
-    guarantees that *one* side matches.  Filter on the individual fields instead
-    so that edges are only visible when the user can read both collections.
+    The multi-value ``collection_id`` field only guarantees that *one* side
+    matches.  Filter on the individual fields instead so that edges are only
+    visible when the user can read both collections.
     """
     return [
         auth.datasets_query("source_collection_id"),
@@ -92,14 +92,8 @@ def configure_xref():
             "created_at": {"type": "date"},
             "deleted_at": {"type": "date"},
             # Extended metadata
-            "source_collection_id": {
-                **FieldType.KEYWORD,
-                "copy_to": "collection_id",
-            },
-            "target_collection_id": {
-                **FieldType.KEYWORD,
-                "copy_to": "collection_id",
-            },
+            "source_collection_id": FieldType.KEYWORD,
+            "target_collection_id": FieldType.KEYWORD,
             "method": FieldType.KEYWORD,
             "schema": FieldType.KEYWORD,
             "text": FieldType.TEXT,
@@ -107,7 +101,7 @@ def configure_xref():
             registry.country.group: FieldType.KEYWORD,
             # source/target id copy_to "entities"
             Field.ENTITIES: FieldType.KEYWORD,
-            # source/target coll id copy_to "collection_id"
+            # Union of source + target collection IDs (computed by ESEdge._source)
             Field.COLLECTION_ID: FieldType.KEYWORD,
         },
     }

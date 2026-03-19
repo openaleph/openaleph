@@ -5,6 +5,7 @@ from pprint import pformat
 
 from aleph.core import db
 from aleph.index.util import index_entity
+from aleph.index.xref import delete_xref
 from aleph.model.bookmark import Bookmark
 from aleph.settings import SETTINGS
 from aleph.tests.util import JSON, TestCase, get_caption
@@ -376,6 +377,16 @@ class EntitiesApiTestCase(TestCase):
         obj = self.client.post(
             url, data=json.dumps(data), headers=headers, content_type=JSON
         )
+
+        # the side-effect of calling the similar endpoint is that edges are
+        # created for xref. Clear xref and check that this doesn't exist yet:
+        delete_xref()
+        url = "/api/2/collections/%s/xref" % self.col_id
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res
+        assert res.json["total"] == 0, res.json
+
+        # call the similar endpoint
         url = "/api/2/entities/%s/similar" % obj.json["id"]
         similar = self.client.get(url, headers=headers)
         assert similar.status_code == 200, (similar.status_code, similar.json)
@@ -387,6 +398,13 @@ class EntitiesApiTestCase(TestCase):
         assert "Laden" in get_caption(data["results"][0]["entity"]), data
         assert b"Pooh" not in res.data, res.data
         validate(data["results"][0], "Entity")
+
+        # now an xref edge exists, but undecided
+        url = "/api/2/collections/%s/xref" % self.col_id
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res
+        assert res.json["total"] == 1, res.json
+        assert res.json["results"][0]["judgement"] == "no_judgement"
 
     def test_match(self):
         _, headers = self.login(is_admin=True)

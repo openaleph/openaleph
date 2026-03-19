@@ -6,7 +6,7 @@ from anystore.util.data import model_dump
 from banal import hash_data
 from nomenklatura.resolver.edge import Edge
 from nomenklatura.resolver.identifier import StrIdent
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 SYSTEM_USER = "__system__"
 
@@ -36,6 +36,11 @@ class ESEdge(BaseModel):
     text: list[str] = []
     countries: list[str] = []
 
+    @computed_field
+    @property
+    def collection_id(self) -> set[int]:
+        return self.source_collection_id | self.target_collection_id
+
     @property
     def _id(self) -> str:
         return edge_id(self.source, self.target)
@@ -44,8 +49,7 @@ class ESEdge(BaseModel):
     def _source(self) -> SDict:
         # turn into ES clean doc, but always include score for Edge.from_dict compat
         data = model_dump(self, clean=True)
-        if "score" not in data:
-            data["score"] = None
+        data["score"] = data.get("score")
         return data
 
     @classmethod

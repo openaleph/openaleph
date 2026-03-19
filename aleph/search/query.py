@@ -17,6 +17,7 @@ from aleph.index.xref import (
     XREF_SOURCE,
     _collections_filter,
     auth_filters,
+    entities_filter,
     xref_index,
 )
 from aleph.logic.notifications import get_role_channels
@@ -117,8 +118,9 @@ class XrefQuery(Query):
     SCORE_CUTOFF = SCORE_CUTOFF
     SOURCE = XREF_SOURCE
 
-    def __init__(self, parser, collection_id=None, show_decided=False):
+    def __init__(self, parser, collection_id=None, entity_id=None, show_decided=False):
         self.collection_id = collection_id
+        self.entity_id = entity_id
         self.show_decided = show_decided
         parser.highlight = False
         super(XrefQuery, self).__init__(parser)
@@ -136,13 +138,16 @@ class XrefQuery(Query):
         if self.parser.auth and not self.parser.auth.is_admin:
             filters.extend(auth_filters(self.parser.auth))
         # Bidirectional collection filter
-        filters.append(_collections_filter(self.collection_id))
+        if self.collection_id:
+            filters.append(_collections_filter(self.collection_id))
+        if self.entity_id:
+            filters.append(entities_filter(self.entity_id))
         # Only active edges (not soft-deleted)
         filters.append({"bool": {"must_not": {"exists": {"field": "deleted_at"}}}})
-        # Score cutoff
-        filters.append({"range": {"score": {"gt": self.SCORE_CUTOFF}}})
-        # Default to showing suggestions only, unless show_decided
+        # Undecided suggestions: apply score cutoff and judgement filter.
+        # Decided edges (from _decide) have score=null, so skip cutoff for those.
         if not self.show_decided:
+            filters.append({"range": {"score": {"gt": self.SCORE_CUTOFF}}})
             filters.append({"term": {"judgement": "no_judgement"}})
         return filters
 
