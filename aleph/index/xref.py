@@ -221,7 +221,7 @@ def scan_node_ids(filters: Filters | None = None) -> Iterable[str]:
         after = buckets[-1]["key"]
 
 
-def iter_matches(collection: Collection, auth: SearchAuth) -> Iterable[ESEdge]:
+def iter_edges(collection: Collection, auth: SearchAuth) -> Iterable[ESEdge]:
     """Scan all matching xref results for export. Backcompat wrapper."""
     filters = [_collections_filter(collection.id), auth.datasets_query()]
     yield from scan_edges(filters)
