@@ -93,8 +93,9 @@ export const triggerEntityTranscribe = asyncActionCreator(
 );
 
 export const triggerEntityTranslate = asyncActionCreator(
-  (entityId) => async () => {
-    await endpoint.post(`entities/${entityId}/translate`);
+  (entityId, sourceLanguage) => async () => {
+    const data = sourceLanguage ? { source_language: sourceLanguage } : {};
+    await endpoint.post(`entities/${entityId}/translate`, data);
     return { id: entityId };
   },
   { name: 'TRIGGER_ENTITY_TRANSLATE' }

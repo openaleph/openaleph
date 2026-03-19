@@ -2,10 +2,12 @@ import React, { Component } from 'react';
 import { compose } from 'redux';
 import { connect } from 'react-redux';
 import { defineMessages, injectIntl } from 'react-intl';
-import { Button } from '@blueprintjs/core';
+import { Button, Menu, MenuItem } from '@blueprintjs/core';
+import { Popover2 as Popover } from '@blueprintjs/popover2';
 import { Tooltip2 as Tooltip } from '@blueprintjs/popover2';
 
 import { triggerEntityTranslate } from 'actions';
+import { selectModel } from 'selectors';
 import { showSuccessToast, showWarningToast } from 'app/toast';
 
 const messages = defineMessages({
@@ -25,6 +27,18 @@ const messages = defineMessages({
     id: 'entity.toolbar.translate.success',
     defaultMessage: 'Translation has been queued.',
   },
+  source_language: {
+    id: 'entity.toolbar.translate.source_language',
+    defaultMessage: 'Translate from…',
+  },
+  translate_from: {
+    id: 'entity.toolbar.translate.translate_from',
+    defaultMessage: 'Translate from: {language}',
+  },
+  auto_detect: {
+    id: 'entity.toolbar.translate.auto_detect',
+    defaultMessage: 'Auto-detect language',
+  },
 });
 
 class TranslateButton extends Component {
@@ -34,13 +48,16 @@ class TranslateButton extends Component {
     this.onTranslate = this.onTranslate.bind(this);
   }
 
-  async onTranslate() {
+  async onTranslate(sourceLanguage) {
     const { entity, intl } = this.props;
     const { blocking } = this.state;
     if (blocking) return;
     this.setState({ blocking: true });
     try {
-      await this.props.triggerEntityTranslate(entity.id);
+      await this.props.triggerEntityTranslate(
+        entity.id,
+        sourceLanguage || undefined
+      );
       showSuccessToast(intl.formatMessage(messages.success));
       this.setState({ processing: true });
     } catch (e) {
@@ -51,9 +68,57 @@ class TranslateButton extends Component {
   }
 
   render() {
-    const { entity, intl } = this.props;
+    const { entity, intl, languageValues } = this.props;
     const { blocking, processing } = this.state;
     const isProcessing = processing || entity?.processing_status?.translate;
+    const languages = entity?.collection?.languages || [];
+
+    let menu = null;
+    if (languages.length > 0) {
+      menu = (
+        <Menu>
+          <MenuItem
+            text={intl.formatMessage(messages.auto_detect)}
+            onClick={() => this.onTranslate(null)}
+          />
+          {languages.map((code) => {
+            const label = languageValues?.get?.(code) || code;
+            return (
+              <MenuItem
+                key={code}
+                text={intl.formatMessage(messages.translate_from, { language: label })}
+                onClick={() => this.onTranslate(code)}
+              />
+            );
+          })}
+        </Menu>
+      );
+
+      return (
+        <Popover
+          content={menu}
+          placement="bottom-start"
+          disabled={blocking || isProcessing}
+        >
+          <Tooltip
+            content={
+              isProcessing
+                ? intl.formatMessage(messages.processing)
+                : intl.formatMessage(messages.source_language)
+            }
+          >
+            <Button
+              icon="translate"
+              disabled={blocking || isProcessing}
+              loading={blocking}
+              text={intl.formatMessage(messages.translate)}
+              rightIcon="caret-down"
+            />
+          </Tooltip>
+        </Popover>
+      );
+    }
+
     const tooltipMessage = isProcessing
       ? intl.formatMessage(messages.processing)
       : intl.formatMessage(messages.tooltip);
@@ -64,7 +129,7 @@ class TranslateButton extends Component {
           icon="translate"
           disabled={blocking || isProcessing}
           loading={blocking}
-          onClick={this.onTranslate}
+          onClick={() => this.onTranslate(null)}
           text={intl.formatMessage(messages.translate)}
         />
       </Tooltip>
@@ -72,7 +137,14 @@ class TranslateButton extends Component {
   }
 }
 
+const mapStateToProps = (state) => {
+  const model = selectModel(state);
+  return {
+    languageValues: model?.types?.language?.values || {},
+  };
+};
+
 export default compose(
-  connect(null, { triggerEntityTranslate }),
+  connect(mapStateToProps, { triggerEntityTranslate }),
   injectIntl
 )(TranslateButton);
