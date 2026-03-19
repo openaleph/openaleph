@@ -25,11 +25,12 @@ from openaleph_search.index.mapping import Field
 from openaleph_search.model import SearchAuth
 
 from aleph.index.xref import (
-    _exclude_no_judgement,
     _now,
+    auth_filters,
     bulk_index_edges,
     count_edges,
     entities_filter,
+    exclude_no_judgement,
     index_edge,
     prune_edges,
     query_edges,
@@ -39,6 +40,7 @@ from aleph.index.xref import (
     soft_delete_edge,
 )
 from aleph.model.xref import SYSTEM_USER, ESEdge
+from aleph.settings import SETTINGS
 
 log = logging.getLogger(__name__)
 
@@ -62,7 +64,7 @@ class ESEdgeProxy:
             {"term": {Field.ENTITIES: target.id}},
         ]
         if self._auth:
-            filters.append(self._auth.datasets_query())
+            filters.extend(auth_filters(self._auth))
         docs = query_edges(filters, size=1)
         if not docs:
             return default
@@ -100,7 +102,7 @@ class ESNodeProxy:
     def get(self, node: Identifier, default: list[Edge] | None = None) -> list[Edge]:
         filters = [entities_filter(node.id)]
         if self._auth:
-            filters.append(self._auth.datasets_query())
+            filters.extend(auth_filters(self._auth))
         docs = query_edges(filters, sort=[{"score": "desc"}], size=1000)
         return [Edge.from_dict(d) for d in docs] or (default or [])
 
@@ -108,7 +110,7 @@ class ESNodeProxy:
         """Iterate all distinct node Identifiers from active edges."""
         filters = []
         if self._auth:
-            filters.append(self._auth.datasets_query())
+            filters.extend(auth_filters(self._auth))
         for node_id in scan_node_ids(filters):
             yield Identifier.get(node_id)
 
@@ -144,7 +146,7 @@ class ElasticsearchResolver(Resolver[SE]):
     def __init__(self, auth: SearchAuth | None = None, sync: bool = False):
         # Skip Resolver.__init__ which expects (engine, metadata, ...).
         self._auth = auth
-        self._sync = sync
+        self._sync = sync or SETTINGS.TESTING
         self._metadata: dict[Pair, dict] = {}
         # Maps entity_id -> collection_id for propagating collection metadata
         # during recursive canonical creation (decide -> entity->NK-* edges)
@@ -315,7 +317,7 @@ class ElasticsearchResolver(Resolver[SE]):
 
     def get_judgements(self, limit: int | None = None) -> Generator[Edge, None, None]:
         """Get most recently updated edges other than NO_JUDGEMENT."""
-        filters = [_exclude_no_judgement()]
+        filters = [exclude_no_judgement()]
         sort = [{"created_at": "desc"}]
         docs = query_edges(filters, sort=sort, size=limit or 1000)
         for d in docs:
@@ -358,7 +360,7 @@ class ElasticsearchResolver(Resolver[SE]):
         entities: dict[Identifier, Set[Identifier]] = {}
         filters = [{"term": {"judgement": "positive"}}]
         if self._auth:
-            filters.append(self._auth.datasets_query())
+            filters.extend(auth_filters(self._auth))
         for es_edge in scan_edges(filters):
             source = Identifier.get(str(es_edge.source))
             target = Identifier.get(str(es_edge.target))
@@ -378,7 +380,7 @@ class ElasticsearchResolver(Resolver[SE]):
     def dump(self, uri: Uri):
         """Dump non-NO_JUDGEMENT edges to file. Other than original NK Resolver
         we don't include soft-delete here."""
-        smart_write_models(uri, scan_edges([_exclude_no_judgement()]))
+        smart_write_models(uri, scan_edges([exclude_no_judgement()]))
 
     def load(self, uri: Uri):
         bulk_index_edges(smart_stream_json_models(uri, ESEdge), sync=self._sync)

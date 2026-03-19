@@ -47,7 +47,7 @@ def _active_edges_query(filters: Filters | None = None) -> SDict:
     return q
 
 
-def _exclude_no_judgement() -> SDict:
+def exclude_no_judgement() -> SDict:
     """Exclude NO_JUDGEMENT edges (usable as a bool filter clause)"""
     return {"bool": {"must_not": [{"term": {"judgement": "no_judgement"}}]}}
 
@@ -60,6 +60,19 @@ def entities_filter(entity_id: str) -> SDict:
 def _collections_filter(collection_id: int) -> SDict:
     """Filter by collection id (non directional)"""
     return {"term": {Field.COLLECTION_ID: collection_id}}
+
+
+def auth_filters(auth: SearchAuth) -> Filters:
+    """Auth filters requiring BOTH collections on an xref edge to be readable.
+
+    The multi-value ``collection_id`` field (copy_to from source/target) only
+    guarantees that *one* side matches.  Filter on the individual fields instead
+    so that edges are only visible when the user can read both collections.
+    """
+    return [
+        auth.datasets_query("source_collection_id"),
+        auth.datasets_query("target_collection_id"),
+    ]
 
 
 # -- index configuration ---
@@ -221,9 +234,13 @@ def scan_node_ids(filters: Filters | None = None) -> Iterable[str]:
         after = buckets[-1]["key"]
 
 
-def iter_edges(collection: Collection, auth: SearchAuth) -> Iterable[ESEdge]:
+def iter_edges(
+    collection: Collection, auth: SearchAuth | None = None
+) -> Iterable[ESEdge]:
     """Scan all matching xref results for export. Backcompat wrapper."""
-    filters = [_collections_filter(collection.id), auth.datasets_query()]
+    filters = [_collections_filter(collection.id)]
+    if auth is not None:
+        filters.extend(auth_filters(auth))
     yield from scan_edges(filters)
 
 

@@ -242,6 +242,64 @@ def test_get_judgements(resolver: ElasticsearchResolver):
     ]
 
 
+def test_suggest_metadata(resolver: ElasticsearchResolver):
+    """suggest() persists collection IDs and other metadata on xref edges."""
+    from aleph.index.xref import scan_edges
+
+    resolver.suggest(
+        "e1",
+        "e2",
+        score=0.85,
+        source_collection_id=10,
+        target_collection_id=20,
+        method="logic-v1",
+        schema="Person",
+        text=["Alice", "Alicia"],
+        countries=["us", "mx"],
+    )
+
+    # Read back the raw ES edge
+    edges = list(scan_edges([]))
+    assert len(edges) == 1
+    edge = edges[0]
+    assert {edge.source, edge.target} == {"e1", "e2"}
+    assert edge.score == 0.85
+    assert edge.source_collection_id == 10
+    assert edge.target_collection_id == 20
+    assert edge.method == "logic-v1"
+    assert edge.schema_ == "Person"
+    assert set(edge.text) == {"Alice", "Alicia"}
+    assert set(edge.countries) == {"us", "mx"}
+
+    # Update score on same edge
+    resolver.suggest(
+        "e1",
+        "e2",
+        score=0.95,
+        source_collection_id=10,
+        target_collection_id=20,
+        method="logic-v1",
+        schema="Person",
+    )
+    edges = list(scan_edges([]))
+    assert len(edges) == 1
+    assert edges[0].score == 0.95
+
+    # decide() with collection metadata
+    resolver.decide(
+        "e3",
+        "e4",
+        Judgement.NEGATIVE,
+        source_collection_id=30,
+        target_collection_id=40,
+    )
+    filters = [{"term": {"judgement": "negative"}}]
+    neg_edges = list(scan_edges(filters))
+    assert len(neg_edges) == 1
+    assert neg_edges[0].source_collection_id == 30
+    assert neg_edges[0].target_collection_id == 40
+
+
 def test_resolver_statements(resolver: ElasticsearchResolver):
     canon = resolver.decide("a1", "a2", Judgement.POSITIVE)
     resolver.decide("a2", "b2", Judgement.NEGATIVE)
