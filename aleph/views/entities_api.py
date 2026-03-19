@@ -3,7 +3,6 @@ import logging
 from elasticsearch import ApiError as ElasticsearchApiError
 from flask import Blueprint, request
 from flask_babel import gettext
-from followthemoney.compare import compare
 from openaleph_procrastinate.defer import tasks
 from openaleph_search.query.mentions import MentionsQuery, MultiMentionsQuery
 from openaleph_search.query.queries import PercolatorQuery
@@ -26,7 +25,8 @@ from aleph.logic.entities import (
 from aleph.logic.expand import entity_tags, expand_proxies
 from aleph.logic.export import create_export
 from aleph.logic.html import sanitize_html
-from aleph.logic.profiles import pairwise_judgements
+from aleph.logic.xref.process import make_suggestion
+from aleph.logic.xref.resolver import get_resolver
 from aleph.model.bookmark import Bookmark
 from aleph.model.entityset import EntitySet, Judgement
 from aleph.procrastinate.queues import (
@@ -441,15 +441,27 @@ def similar(entity_id):
     proxy = make_entity_proxy(entity)
     result = get_query_result(MatchQuery, request, entity=proxy)
     entities = list(result.results)
-    pairs = [(entity_id, s.get("id")) for s in entities]
-    judgements = pairwise_judgements(pairs, int(entity.get("collection_id")))
+    xref_resolver = get_resolver(request.authz.search_auth)
     result.results = []
+    source_collection_id = entity.get("collection_id")
     for obj in entities:
-        score = compare(proxy, make_entity_proxy(obj))
+        target_collection_id = obj["collection_id"]
+        match_proxy = make_entity_proxy(obj)
+        judgement = xref_resolver.get_judgement(entity_id, obj.get("id"))
+        suggestion = make_suggestion(
+            proxy,
+            match_proxy,
+            source_collection_id=source_collection_id,
+            target_collection_id=target_collection_id,
+            user=str(request.authz.role.foreign_id),
+        )
+        # while we're on it, update to most recent score
+        if judgement == Judgement.NO_JUDGEMENT:
+            xref_resolver.suggest(**suggestion)
         item = {
-            "score": score,
-            "judgement": judgements.get((entity_id, obj.get("id"))),
-            "collection_id": entity.get("collection_id"),
+            "score": suggestion["score"],
+            "judgement": judgement,
+            "collection_id": target_collection_id,
             "entity": obj,
         }
         result.results.append(item)

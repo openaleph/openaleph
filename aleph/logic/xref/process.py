@@ -98,45 +98,94 @@ class Match:
 Matches: TypeAlias = Generator[Match, None, None]
 
 
-def _bulk_compare_ftm(pairs: Pairs) -> Results:
-    for left, right in pairs:
-        score = compare.compare(left, right)
-        yield score, None, FTM_VERSION_STR
+def _compare_ftm(left: E, right: E) -> Result:
+    return compare.compare(left, right), None, FTM_VERSION_STR
 
 
-def _bulk_compare_ftmc_model(pairs: Pairs) -> Results:
-    for score, confidence in zip(*MODEL.predict_proba_std(pairs)):
-        yield score, confidence, MODEL.version
-
-
-def _bulk_compare_nomenklatura(pairs: Pairs) -> Results:
+def _compare_nomenklatura(left: E, right: E) -> Result:
     algorithm = _get_nk_algorithm()
-    if algorithm is not None:
-        for entity, candidate in pairs:
-            result = algorithm.compare(entity, candidate, NK_SCORING_CONFIG)
-            yield result.score, None, algorithm.NAME
+    result = algorithm.compare(left, right, NK_SCORING_CONFIG)
+    return result.score, None, algorithm.NAME
+
+
+def _compare_ftmc_model(left: E, right: E) -> Result:
+    score, confidence = next(zip(*MODEL.predict_proba_std([(left, right)])))
+    return score, confidence, MODEL.version
+
+
+def _load_model():
+    """Load the FTM-compare ML model, falling back to None on failure."""
+    global MODEL
+    if MODEL is not None:
+        return MODEL
+    try:
+        with open(SETTINGS.XREF_MODEL, "rb") as fd:
+            MODEL = GLMBernoulli2EEvaluator.from_pickles(fd.read())
+        return MODEL
+    except FileNotFoundError:
+        log.exception(f"Could not find model file: {SETTINGS.XREF_MODEL}")
+        SETTINGS.XREF_MODEL = None
+        return None
+
+
+def compare_entities(left: E, right: E) -> Result:
+    """Compare two entities using the configured algorithm/model.
+
+    Returns (score, confidence, method). Uses the same dispatch logic
+    as bulk xref processing:
+    nomenklatura algorithm > ML model > followthemoney compare.
+    """
+    return _compare(left, right)
+
+
+Suggestion: TypeAlias = dict
+
+
+def make_suggestion(
+    left: EntityProxy,
+    right: EntityProxy,
+    source_collection_id: int | None = None,
+    target_collection_id: int | None = None,
+    user: str | None = None,
+) -> Suggestion:
+    """Compare two entities and build a full suggestion dict.
+
+    Wraps compare + metadata assembly for use in API endpoints and xref
+    processing. The returned dict can be passed directly to resolver.suggest().
+    """
+    score, _, method = _compare(left, right)
+    text = set([left.caption, right.caption])
+    text.update(left.get_type_values(registry.name)[:MAX_NAMES])
+    text.update(right.get_type_values(registry.name)[:MAX_NAMES])
+    text.discard(None)
+    countries = set(left.get_type_values(registry.country))
+    countries.update(right.get_type_values(registry.country))
+    return {
+        "left_id": left.id,
+        "right_id": right.id,
+        "score": score,
+        "user": user,
+        "source_collection_id": source_collection_id,
+        "target_collection_id": target_collection_id,
+        "method": method,
+        "schema": right.schema.name,
+        "text": list(text),
+        "countries": list(countries),
+    }
+
+
+def _compare(left: E, right: E) -> Result:
+    """Single-pair compare with full dispatch logic."""
+    if _get_nk_algorithm() is not None:
+        return _compare_nomenklatura(left, right)
+    if SETTINGS.XREF_MODEL is not None and _load_model() is not None:
+        return _compare_ftmc_model(left, right)
+    return _compare_ftm(left, right)
 
 
 def _bulk_compare(pairs: Pairs) -> Results:
-    if not pairs:
-        return
-    if _get_nk_algorithm() is not None:
-        yield from _bulk_compare_nomenklatura(pairs)
-        return
-    if SETTINGS.XREF_MODEL is None:
-        yield from _bulk_compare_ftm(pairs)
-        return
-    global MODEL
-    if MODEL is None:
-        try:
-            with open(SETTINGS.XREF_MODEL, "rb") as fd:
-                MODEL = GLMBernoulli2EEvaluator.from_pickles(fd.read())
-        except FileNotFoundError:
-            log.exception(f"Could not find model file: {SETTINGS.XREF_MODEL}")
-            SETTINGS.XREF_MODEL = None
-            yield from _bulk_compare_ftm(pairs)
-            return
-    yield from _bulk_compare_ftmc_model(pairs)
+    for left, right in pairs:
+        yield _compare(left, right)
 
 
 def _merge_schemata(proxy: EntityProxy, schemata: Iterable[Schema]):
@@ -238,22 +287,16 @@ def _suggest_match(
     collection: Collection, xref_resolver: ElasticsearchResolver, match: Match
 ):
     """Convert a Match object into a resolver.suggest() call."""
-    text = set([match.entity.caption, match.match.caption])
-    text.update(match.entity.get_type_values(registry.name)[:MAX_NAMES])
-    text.update(match.match.get_type_values(registry.name)[:MAX_NAMES])
-    countries = set(match.entity.get_type_values(registry.country))
-    countries.update(match.match.get_type_values(registry.country))
-    xref_resolver.suggest(
-        left_id=match.entity.id,
-        right_id=match.match.id,
-        score=match.score,
+    suggestion = make_suggestion(
+        match.entity,
+        match.match,
         source_collection_id=collection.id,
         target_collection_id=int(match.collection_id),
-        method=match.method,
-        schema=match.match.schema.name,
-        text=list(text),
-        countries=list(countries),
     )
+    # Use the score/method from the batch compare, not re-computed
+    suggestion["score"] = match.score
+    suggestion["method"] = match.method
+    xref_resolver.suggest(**suggestion)
 
 
 def _query_mentions(collection: Collection, xref_resolver: ElasticsearchResolver):
@@ -320,7 +363,6 @@ def xref_collection(collection: Collection):
         sync=False,
         model=False,
         mappings=False,
-        profiles=False,
         origin=ORIGIN,
     )
 

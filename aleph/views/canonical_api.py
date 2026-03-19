@@ -7,10 +7,10 @@ Provides endpoints for viewing merged entity clusters from the resolver.
 import logging
 
 from flask import Blueprint, request
-from followthemoney.compare import compare
 
 from aleph.logic.expand import entity_tags, expand_proxies
 from aleph.logic.xref.canonical import get_canonical_cluster
+from aleph.logic.xref.process import compare_entities
 from aleph.model import Judgement
 from aleph.search import MatchQuery, QueryParser
 from aleph.search.result import get_query_result
@@ -104,7 +104,7 @@ def similar(canonical_id):
     result.results = []
     for obj in entities:
         item = {
-            "score": compare(entity, make_entity_proxy(obj)),
+            "score": compare_entities(entity, make_entity_proxy(obj))[0],
             "judgement": Judgement.NO_JUDGEMENT,
             "collection_id": None,
             "entity": obj,

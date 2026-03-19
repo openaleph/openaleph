@@ -380,7 +380,6 @@ def reindex_collection(
     diff_only=False,
     model=True,
     mappings=True,
-    profiles=True,
     queue_batches=False,
     batch_size=10_000,
     schema=None,
@@ -398,15 +397,12 @@ def reindex_collection(
         diff_only: Only reindex entities that are in aggregator but not in index
         model: Aggregate model from database (Entities, Documents) before indexing
         mappings: Process collection mappings and aggregate to the aggregator
-        profiles: Process profile fragments and aggregate to the aggregator
         queue_batches: Queue batches for parallelization
         schema: Filter entities by schema (e.g., Person, Company)
         since: Optional timestamp filter for aggregator (ISO format or timestamp)
         until: Optional timestamp filter for aggregator (ISO format or timestamp)
         origin: Filter entities by aggregator origin (e.g., 'xref', 'aleph')
     """
-    from aleph.logic.profiles import profile_fragments
-
     # Parse timestamp strings to datetime objects for ftmq
     since_dt = _parse_timestamp(since)
     until_dt = _parse_timestamp(until)
@@ -416,8 +412,6 @@ def reindex_collection(
         _process_mappings(collection, aggregator)
     if model:
         aggregate_model(collection, aggregator)
-    if profiles:
-        profile_fragments(collection, aggregator)
 
     if flush:
         log.debug(f"[{collection}] Flushing...", dataset=collection.name)
