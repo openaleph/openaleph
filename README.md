@@ -1,3 +1,5 @@
+**THIS IS THE SUCCESSOR OF THE DISCONTINUED [Aleph](https://github.com/alephdata/aleph/) VERSION**
+
 > "Truth cannot penetrate a closed mind. If all places in the universe are in the Aleph, then all stars, all lamps, all sources of light are in it, too."
 >
 > — Jorge Luis Borges, [_The Aleph_](http://www.phinnweb.org/links/literature/borges/Aleph.html)

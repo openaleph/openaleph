@@ -12,6 +12,7 @@ import withRouter from 'app/withRouter';
 import {
   AnimatedCount,
   DatasetGroup,
+  DatasetGroups,
   HighlightTopics,
   SearchBox,
   Category,
@@ -25,21 +26,6 @@ import Screen from 'components/Screen/Screen';
 import wordList from 'util/wordList';
 
 import './HomeScreen.scss';
-
-// Preprocess markdown to move DatasetGroup body content into a `body` attribute.
-// This prevents the markdown parser from breaking the HTML structure when it
-// encounters blank lines inside custom elements.
-function preprocessCustomElements(content) {
-  return content.replace(
-    /<DatasetGroup([^>]*)>([\s\S]*?)<\/DatasetGroup>/gi,
-    (match, attrs, body) => {
-      const trimmed = body.trim();
-      if (!trimmed) return `<DatasetGroup${attrs}></DatasetGroup>`;
-      const encoded = btoa(unescape(encodeURIComponent(trimmed)));
-      return `<DatasetGroup${attrs} body="${encoded}"></DatasetGroup>`;
-    }
-  );
-}
 
 const messages = defineMessages({
   title: {
@@ -139,16 +125,16 @@ export class HomeScreen extends Component {
               </div>
             </div>
           </section>
+
           {appHomePage?.content && (
             <ReactMarkdown
               rehypePlugins={[rehypeRaw]}
               components={{
                 datasetgroup: DatasetGroup,
+                datasetgroups: DatasetGroups,
                 highlighttopics: HighlightTopics,
               }}
-            >
-              {preprocessCustomElements(appHomePage.content)}
-            </ReactMarkdown>
+            />
           )}
           <section className="HomeScreen__section HomeScreen__section--light">
             <div className="HomeScreen__section__content">

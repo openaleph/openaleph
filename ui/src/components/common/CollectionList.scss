@@ -1,0 +1,71 @@
+@import 'app/variables.scss';
+
+.CollectionList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  &__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: 6px;
+    gap: 12px;
+    color: $black;
+    text-decoration: none !important;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background-color: rgba($black, 0.04);
+      color: $darc-orange-500;
+    }
+  }
+
+  &__category {
+    font-size: 0.85em;
+    color: $darc-gray-500;
+    flex-shrink: 0;
+  }
+
+  &__label {
+    font-weight: 500;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  &__count {
+    font-size: 0.85em;
+    color: $darc-gray-400;
+    font-variant-numeric: tabular-nums;
+    font-family: var(--font-family-mono, monospace);
+  }
+
+  &--dark &__item {
+    color: rgba($white, 0.8) !important;
+    padding: 6px 10px;
+
+    &:hover {
+      background-color: rgba($white, 0.06);
+      color: $darc-orange-500 !important;
+    }
+  }
+
+  &--dark &__category {
+    color: rgba($white, 0.4);
+  }
+
+  &--dark &__count {
+    color: rgba($white, 0.35);
+  }
+}
