@@ -27,6 +27,7 @@ import {
 import EntityReferencesMode from 'components/Entity/EntityReferencesMode';
 import ProfileSimilarMode from 'components/Profile/ProfileSimilarMode';
 import ProfileItemsMode from './ProfileItemsMode';
+import ProfileProvenanceMode from './ProfileProvenanceMode';
 
 class ProfileViews extends React.Component {
   constructor(props) {
@@ -82,6 +83,19 @@ class ProfileViews extends React.Component {
           panel={
             <ProfileItemsMode canonical={canonical} viaEntityId={viaEntityId} />
           }
+        />
+        <Tab
+          id="provenance"
+          title={
+            <>
+              <Icon icon="document-open" className="left-icon" />
+              <FormattedMessage
+                id="profile.info.provenance"
+                defaultMessage="Data Lineage"
+              />
+            </>
+          }
+          panel={<ProfileProvenanceMode canonical={canonical} />}
         />
         <Tab
           id="similar"

@@ -25,6 +25,15 @@ export const fetchCanonicalTags = asyncActionCreator(
   { name: 'FETCH_CANONICAL_TAGS' }
 );
 
+export const fetchCanonicalStatements = asyncActionCreator(
+  ({ id }) =>
+    async () => {
+      const response = await endpoint.get(`canonical/${id}/statements`);
+      return { id, data: response.data };
+    },
+  { name: 'FETCH_CANONICAL_STATEMENTS' }
+);
+
 export const pairwiseJudgement = asyncActionCreator(
   ({ entity, match, judgement }) =>
     async () => {

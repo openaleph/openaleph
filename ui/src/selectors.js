@@ -515,6 +515,10 @@ export function selectCanonicalView(state, canonicalId, mode) {
   return mode ? mode : 'items';
 }
 
+export function selectCanonicalStatements(state, canonicalId) {
+  return selectObject(state, state.canonicals, `${canonicalId}/statements`);
+}
+
 export function selectCollectionPermissions(state, collectionId) {
   return selectObject(state, state.collectionPermissions, collectionId);
 }

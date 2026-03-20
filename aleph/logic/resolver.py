@@ -11,7 +11,7 @@ from normality import stringify
 from openaleph_search.index.entities import entities_by_ids
 
 from aleph.core import cache
-from aleph.index.collections import get_collection
+from aleph.index.collections import get_collection, get_collection_by_foreign_id
 from aleph.logic.alerts import get_alert
 from aleph.logic.entitysets import get_entityset
 from aleph.logic.export import get_export
@@ -19,9 +19,18 @@ from aleph.logic.roles import get_role
 from aleph.model import Alert, Collection, Entity, EntitySet, Export, Role
 
 log = logging.getLogger(__name__)
+
+
+class CollectionByForeignId:
+    """Sentinel class for resolver queue — Collection lookup by foreign_id."""
+
+    pass
+
+
 LOADERS = {
     Role: get_role,
     Collection: get_collection,
+    CollectionByForeignId: get_collection_by_foreign_id,
     Alert: get_alert,
     EntitySet: get_entityset,
     Export: get_export,

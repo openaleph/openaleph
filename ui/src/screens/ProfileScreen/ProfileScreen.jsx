@@ -18,6 +18,7 @@ import getEntityLink from 'util/getEntityLink';
 import {
   fetchCanonical,
   fetchCanonicalTags,
+  fetchCanonicalStatements,
   querySimilar,
   queryCanonicalExpand,
 } from 'actions';
@@ -25,6 +26,7 @@ import {
   selectCanonical,
   selectCanonicalView,
   selectCanonicalTags,
+  selectCanonicalStatements,
   selectSimilarResult,
   selectCanonicalExpandResult,
 } from 'selectors';
@@ -66,6 +68,10 @@ class ProfileScreen extends Component {
       this.props.querySimilar({ query: similarQuery });
     }
 
+    const { statementsResult } = this.props;
+    if (statementsResult.shouldLoad) {
+      this.props.fetchCanonicalStatements({ id: canonicalId });
+    }
   }
 
   render() {
@@ -141,6 +147,7 @@ const mapStateToProps = (state, ownProps) => {
     similarResult: selectSimilarResult(state, similarQuery),
     expandQuery,
     expandResult: selectCanonicalExpandResult(state, expandQuery),
+    statementsResult: selectCanonicalStatements(state, canonicalId),
   };
 };
 
@@ -149,6 +156,7 @@ const mapDispatchToProps = {
   queryCanonicalExpand,
   fetchCanonical,
   fetchCanonicalTags,
+  fetchCanonicalStatements,
 };
 
 export default compose(

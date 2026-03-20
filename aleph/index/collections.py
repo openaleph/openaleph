@@ -146,6 +146,16 @@ def get_collection(collection_id):
     return data
 
 
+def get_collection_by_foreign_id(foreign_id):
+    """Fetch a collection from the index by its foreign_id."""
+    if foreign_id is None:
+        return
+    collection = Collection.by_foreign_id(foreign_id)
+    if collection is None:
+        return
+    return get_collection(collection.id)
+
+
 def _facet_key(collection_id, facet):
     return cache.object_key(Collection, collection_id, facet)
 

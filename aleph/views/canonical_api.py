@@ -20,6 +20,7 @@ from aleph.views.context import tag_request
 from aleph.views.serializers import (
     CanonicalSerializer,
     SimilarSerializer,
+    StatementSerializer,
 )
 from aleph.views.util import jsonify, obj_or_404
 
@@ -152,6 +153,36 @@ def expand(canonical_id):
         "results": results,
     }
     return jsonify(result)
+
+
+@blueprint.route("/api/2/canonical/<canonical_id>/statements", methods=["GET"])
+def statements(canonical_id):
+    """
+    ---
+    get:
+      summary: Get statements for a canonical cluster
+      description: >-
+        Returns the merged entity's statements with resolved dataset and entity references.
+      parameters:
+      - in: path
+        name: canonical_id
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+      tags:
+      - Canonical
+    """
+    from followthemoney.statement.util import BASE_ID
+
+    cluster = obj_or_404(get_canonical_cluster(canonical_id, request.authz.search_auth))
+    tag_request()
+    merged = cluster["merged"]
+    stmts = [s.to_dict() for s in merged.statements if s.prop != BASE_ID]
+    serialized = StatementSerializer().serialize_many(stmts)
+    return jsonify({"status": "ok", "total": len(serialized), "results": serialized})
 
 
 @blueprint.route("/api/2/entities/<entity_id>/canonical", methods=["GET"])

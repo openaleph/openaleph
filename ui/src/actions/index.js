@@ -64,6 +64,7 @@ export {
   queryCanonicalExpand,
   fetchCanonical,
   fetchCanonicalTags,
+  fetchCanonicalStatements,
   pairwiseJudgement,
 } from './canonicalActions';
 export { fetchMessages, dismissMessage } from './messagesActions';

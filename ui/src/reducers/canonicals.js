@@ -1,6 +1,6 @@
 import { createReducer } from 'redux-act';
 
-import { fetchCanonical } from 'actions';
+import { fetchCanonical, fetchCanonicalStatements } from 'actions';
 import {
   objectLoadComplete,
   objectLoadError,
@@ -18,6 +18,15 @@ export default createReducer(
 
     [fetchCanonical.COMPLETE]: (state, { id, data }) =>
       objectLoadComplete(state, id, data),
+
+    [fetchCanonicalStatements.START]: (state, { id }) =>
+      objectLoadStart(state, `${id}/statements`),
+
+    [fetchCanonicalStatements.ERROR]: (state, { error, args: { id } }) =>
+      objectLoadError(state, `${id}/statements`, error),
+
+    [fetchCanonicalStatements.COMPLETE]: (state, { id, data }) =>
+      objectLoadComplete(state, `${id}/statements`, data),
   },
   initialState
 );

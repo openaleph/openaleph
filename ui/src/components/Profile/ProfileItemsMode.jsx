@@ -93,7 +93,12 @@ class ProfileItemsMode extends Component {
 const mapStateToProps = (state, ownProps) => {
   const { canonical } = ownProps;
   const model = selectModel(state);
-  const entities = (canonical?.entities || []).map((e) => model.getEntity(e));
+  const rawEntities = canonical?.entities || [];
+  const entities = rawEntities.map((e) => {
+    const entity = model.getEntity(e);
+    entity.collection = e.collection;
+    return entity;
+  });
 
   // Each entity is paired against the canonical (NK-*) for pairwise judgement.
   // All are "positive" since they belong to this cluster.

@@ -150,3 +150,21 @@ class CanonicalApiTestCase(TestCase):
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, res.json
         assert res.json["total"] == 2, res.json
+
+    def test_canonical_statements(self):
+        url = "/api/2/canonical/%s/statements" % self.canonical_id
+        res = self.client.get(url)
+        assert res.status_code == 404, res.json
+
+        _, headers = self.login(foreign_id="rolex")
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res.json
+        assert res.json["total"] > 0, res.json
+        # Each statement should have a resolved dataset (Collection object)
+        for stmt in res.json["results"]:
+            assert "dataset" in stmt
+            assert stmt["dataset"] is not None, stmt
+            assert "id" in stmt["dataset"], stmt  # resolved to collection dict
+            assert "prop" in stmt
+            assert "value" in stmt
+            assert "schema" in stmt

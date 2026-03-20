@@ -6,6 +6,7 @@ from flask import request
 from flask_babel import gettext
 from followthemoney import model
 from followthemoney.helpers import entity_filename
+from followthemoney.statement.util import get_prop_type
 from followthemoney.types import registry
 from rigour.mime.types import CSV, PDF
 from servicelayer import env
@@ -456,6 +457,33 @@ class CanonicalSerializer(Serializer):
             entity_serializer._serialize_common(entity)
             for entity in obj.get("entities", [])
         ]
+        return obj
+
+
+class StatementSerializer(Serializer):
+    """Serializer for FtM statements — resolves dataset and entity references."""
+
+    def collect(self, obj):
+        from aleph.logic.resolver import CollectionByForeignId
+
+        self.queue(CollectionByForeignId, obj.get("dataset"))
+        prop_type = get_prop_type(obj.get("schema"), obj.get("prop"))
+        if prop_type == "entity":
+            self.queue(Entity, obj.get("value"))
+
+    def _serialize(self, obj):
+        from aleph.logic.resolver import CollectionByForeignId
+
+        dataset_fid = obj.pop("dataset", None)
+        obj["dataset"] = self.resolve(
+            CollectionByForeignId, dataset_fid, CollectionSerializer
+        )
+        prop_type = get_prop_type(obj.get("schema"), obj.get("prop"))
+        if prop_type == "entity":
+            entity = self.resolve(Entity, obj.get("value"), EntitySerializer)
+            if entity is not None:
+                entity["shallow"] = True
+                obj["value"] = entity
         return obj
 
 
