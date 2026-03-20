@@ -46,12 +46,12 @@ function nestedEntityObjects(state, result) {
   return state;
 }
 
-function updateEntityProfile(state, entityId, profileId) {
+function updateEntityCanonical(state, entityId, canonicalId) {
   return {
     ...state,
     [entityId]: {
       ...state[entityId],
-      profile_id: profileId,
+      canonical_id: canonicalId,
     },
   };
 }
@@ -111,8 +111,8 @@ export default createReducer(
 
     [deleteEntity.COMPLETE]: (state, { id }) => objectDelete(state, id),
 
-    [pairwiseJudgement.COMPLETE]: (state, { entityId, profileId }) =>
-      updateEntityProfile(state, entityId, profileId),
+    [pairwiseJudgement.COMPLETE]: (state, { entityId, canonicalId }) =>
+      updateEntityCanonical(state, entityId, canonicalId),
 
     [createBookmark.START]: (state, entity) => ({
       ...state,

@@ -61,11 +61,11 @@ export {
   updateEntitySet,
 } from './entitySetActions';
 export {
-  queryProfileExpand,
-  fetchProfile,
-  fetchProfileTags,
+  queryCanonicalExpand,
+  fetchCanonical,
+  fetchCanonicalTags,
   pairwiseJudgement,
-} from './profileActions';
+} from './canonicalActions';
 export { fetchMessages, dismissMessage } from './messagesActions';
 export {
   fetchMetadata,

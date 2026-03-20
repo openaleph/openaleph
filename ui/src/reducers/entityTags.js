@@ -1,6 +1,6 @@
 import { createReducer } from 'redux-act';
 
-import { fetchEntityTags, fetchProfileTags } from 'actions';
+import { fetchEntityTags, fetchCanonicalTags } from 'actions';
 import {
   objectLoadStart,
   objectLoadError,
@@ -17,10 +17,10 @@ export default createReducer(
     [fetchEntityTags.COMPLETE]: (state, { id, data }) =>
       objectLoadComplete(state, id, data),
 
-    [fetchProfileTags.START]: (state, { id }) => objectLoadStart(state, id),
-    [fetchProfileTags.ERROR]: (state, { error, args: { id } }) =>
+    [fetchCanonicalTags.START]: (state, { id }) => objectLoadStart(state, id),
+    [fetchCanonicalTags.ERROR]: (state, { error, args: { id } }) =>
       objectLoadError(state, id, error),
-    [fetchProfileTags.COMPLETE]: (state, { id, data }) =>
+    [fetchCanonicalTags.COMPLETE]: (state, { id, data }) =>
       objectLoadComplete(state, id, data),
   },
   initialState

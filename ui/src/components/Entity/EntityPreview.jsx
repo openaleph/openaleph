@@ -99,7 +99,7 @@ export class EntityPreview extends React.Component {
             <EntityHeading entity={entity} isPreview />
           </span>
         </div>
-        {entity.profileId && profile && (
+        {entity.canonicalId && profile && (
           <div className="ItemOverview__callout">
             <ProfileCallout entity={entity} />
           </div>
