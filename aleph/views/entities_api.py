@@ -443,7 +443,7 @@ def similar(entity_id):
     proxy = make_entity_proxy(entity)
     result = get_query_result(MatchQuery, request, entity=proxy)
     entities = list(result.results)
-    xref_resolver = get_resolver(request.authz.search_auth)
+    xref_resolver = get_resolver(request.authz.search_auth, sync=True)
     result.results = []
     source_collection_id = {entity["collection_id"]}
     for obj in entities:

@@ -10,7 +10,6 @@ from anystore.types import SDict
 from followthemoney import StatementEntity
 from ftmq.util import get_dehydrated_entity, make_entity
 from nomenklatura.resolver.identifier import Identifier
-from openaleph_search.index.entities import get_entity
 from openaleph_search.model import SearchAuth
 
 from aleph.logic import resolver
@@ -31,22 +30,45 @@ def resolve_entity_or_canonical(
       - schema: str | None — schema name (None for canonicals)
 
     Returns None if the entity/cluster is not found.
+
+    Unlike get_canonical_cluster(), this does NOT require ≥2 entities.
+    A canonical with a single remaining referent is still valid for
+    operations like re-deciding an undecided edge.
     """
     if Identifier.get(id_).canonical:
-        cluster = get_canonical_cluster(id_, auth)
-        if cluster is None:
+        xref_resolver = get_resolver(auth)
+        referents = xref_resolver.get_referents(id_, canonicals=False)
+        # Only namespaced IDs (<id>.<namespace_hash>) are real entities
+        entity_ids = [rid for rid in referents if "." in rid]
+        if not entity_ids:
+            return None
+        # Batch-fetch via resolver queue/resolve/get
+        stub = Stub()
+        for rid in entity_ids:
+            resolver.queue(stub, Entity, rid)
+        resolver.resolve(stub)
+        collection_ids: set[int] = set()
+        for rid in entity_ids:
+            entity_data = resolver.get(stub, Entity, rid)
+            if entity_data is not None:
+                collection_ids.add(entity_data["collection_id"])
+        if not collection_ids:
             return None
         return {
-            "collection_ids": cluster["collection_ids"],
+            "collection_ids": collection_ids,
             "schema": None,
         }
     else:
-        entity = get_entity(id_)
-        if entity is None:
+        # Single entity — batch not needed, but use same resolver pattern
+        stub = Stub()
+        resolver.queue(stub, Entity, id_)
+        resolver.resolve(stub)
+        entity_data = resolver.get(stub, Entity, id_)
+        if entity_data is None:
             return None
         return {
-            "collection_ids": {entity["collection_id"]},
-            "schema": entity.get("schema"),
+            "collection_ids": {entity_data["collection_id"]},
+            "schema": entity_data.get("schema"),
         }
 
 

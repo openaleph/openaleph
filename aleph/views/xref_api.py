@@ -186,7 +186,7 @@ def decide():
         if entity_info["schema"] and match_info["schema"]:
             model.common_schema(entity_info["schema"], match_info["schema"])
 
-    xref_resolver = get_resolver()
+    xref_resolver = get_resolver(sync=True)
     canonical = xref_resolver.decide(
         entity_id,
         match_id,
