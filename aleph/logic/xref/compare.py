@@ -31,8 +31,8 @@ class Suggestion(TypedDict):
     right_id: str | None
     score: float
     user: str | None
-    source_collection_id: int | None
-    target_collection_id: int | None
+    source_collection_id: set[int] | None
+    target_collection_id: set[int] | None
     method: str | None
     schema: str
     text: list[str]
@@ -85,8 +85,8 @@ def compare_entities(left: E, right: E) -> Result:
 def make_suggestion(
     left: EntityProxy,
     right: EntityProxy,
-    source_collection_id: int | None = None,
-    target_collection_id: int | None = None,
+    source_collection_id: set[int] | None = None,
+    target_collection_id: set[int] | None = None,
     user: str | None = None,
     score: float | None = None,
     method: str | None = None,

@@ -244,8 +244,8 @@ class ElasticsearchResolver(Resolver[SE]):
         right_id: StrIdent,
         score: float,
         user: str = SYSTEM_USER,
-        source_collection_id: int | None = None,
-        target_collection_id: int | None = None,
+        source_collection_id: set[int] | None = None,
+        target_collection_id: set[int] | None = None,
         method: str | None = None,
         schema: str | None = None,
         text: list[str] | None = None,
@@ -262,12 +262,12 @@ class ElasticsearchResolver(Resolver[SE]):
         key = Identifier.pair(left_id, right_id)
         _, pair_source = key
         left_is_source = Identifier.get(left_id) == pair_source
-        src_cid = source_collection_id if left_is_source else target_collection_id
-        tgt_cid = target_collection_id if left_is_source else source_collection_id
+        src_cids = source_collection_id if left_is_source else target_collection_id
+        tgt_cids = target_collection_id if left_is_source else source_collection_id
 
         metadata = {
-            "source_collection_id": {src_cid} if src_cid else set(),
-            "target_collection_id": {tgt_cid} if tgt_cid else set(),
+            "source_collection_id": src_cids or set(),
+            "target_collection_id": tgt_cids or set(),
             "method": method,
             "schema": schema,
             "text": text or [],
@@ -297,14 +297,14 @@ class ElasticsearchResolver(Resolver[SE]):
         self,
         left_id: StrIdent,
         right_id: StrIdent,
-        source_collection_id: int | None = None,
-        target_collection_id: int | None = None,
+        source_collection_id: set[int] | None = None,
+        target_collection_id: set[int] | None = None,
     ) -> None:
         """Track collection_ids for entities and build edge metadata."""
-        if source_collection_id is not None:
-            self._entity_collections[str(left_id)].add(source_collection_id)
-        if target_collection_id is not None:
-            self._entity_collections[str(right_id)].add(target_collection_id)
+        if source_collection_id:
+            self._entity_collections[str(left_id)].update(source_collection_id)
+        if target_collection_id:
+            self._entity_collections[str(right_id)].update(target_collection_id)
 
         key = Identifier.pair(left_id, right_id)
         metadata = self._metadata.get(key, {})
@@ -333,8 +333,8 @@ class ElasticsearchResolver(Resolver[SE]):
         judgement: Judgement,
         user: str = SYSTEM_USER,
         score: float | None = None,
-        source_collection_id: int | None = None,
-        target_collection_id: int | None = None,
+        source_collection_id: set[int] | None = None,
+        target_collection_id: set[int] | None = None,
     ) -> Identifier:
         """Make a decision, with optional collection metadata.
 

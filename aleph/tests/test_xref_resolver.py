@@ -250,8 +250,8 @@ def test_suggest_metadata(resolver: ElasticsearchResolver):
         "e1",
         "e2",
         score=0.85,
-        source_collection_id=10,
-        target_collection_id=20,
+        source_collection_id={10},
+        target_collection_id={20},
         method="logic-v1",
         schema="Person",
         text=["Alice", "Alicia"],
@@ -276,8 +276,8 @@ def test_suggest_metadata(resolver: ElasticsearchResolver):
         "e1",
         "e2",
         score=0.95,
-        source_collection_id=10,
-        target_collection_id=20,
+        source_collection_id={10},
+        target_collection_id={20},
         method="logic-v1",
         schema="Person",
     )
@@ -290,8 +290,8 @@ def test_suggest_metadata(resolver: ElasticsearchResolver):
         "e3",
         "e4",
         Judgement.NEGATIVE,
-        source_collection_id=30,
-        target_collection_id=40,
+        source_collection_id={30},
+        target_collection_id={40},
     )
     filters = [{"term": {"judgement": "negative"}}]
     neg_edges = list(scan_edges(filters))
@@ -304,8 +304,8 @@ def test_suggest_metadata(resolver: ElasticsearchResolver):
         "e5",
         "e6",
         Judgement.POSITIVE,
-        source_collection_id=50,
-        target_collection_id=60,
+        source_collection_id={50},
+        target_collection_id={60},
     )
     pos_filters = [{"term": {"judgement": "positive"}}]
     pos_edges = list(scan_edges(pos_filters))

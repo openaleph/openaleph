@@ -7,8 +7,10 @@ Provides merged entity views for clusters of deduplicated entities.
 import logging
 
 from anystore.types import SDict
-from followthemoney import EntityProxy, StatementEntity
-from ftmq.util import make_entity
+from followthemoney import StatementEntity
+from ftmq.util import get_dehydrated_entity, make_entity
+from nomenklatura.resolver.identifier import Identifier
+from openaleph_search.index.entities import get_entity
 from openaleph_search.model import SearchAuth
 
 from aleph.logic import resolver
@@ -17,6 +19,35 @@ from aleph.model import Entity
 from aleph.util import Stub
 
 log = logging.getLogger(__name__)
+
+
+def resolve_entity_or_canonical(
+    id_: str, auth: SearchAuth | None = None
+) -> SDict | None:
+    """Resolve an entity or canonical ID to its collection info.
+
+    Returns dict with:
+      - collection_ids: set[int] — all collections the ID belongs to
+      - schema: str | None — schema name (None for canonicals)
+
+    Returns None if the entity/cluster is not found.
+    """
+    if Identifier.get(id_).canonical:
+        cluster = get_canonical_cluster(id_, auth)
+        if cluster is None:
+            return None
+        return {
+            "collection_ids": cluster["collection_ids"],
+            "schema": None,
+        }
+    else:
+        entity = get_entity(id_)
+        if entity is None:
+            return None
+        return {
+            "collection_ids": {entity["collection_id"]},
+            "schema": entity.get("schema"),
+        }
 
 
 def get_canonical_cluster(
@@ -40,7 +71,7 @@ def get_canonical_cluster(
         return None
 
     collection_ids: set[int] = set()
-    entities: list[EntityProxy] = []
+    entities: list[SDict] = []
 
     # Fetch entities from ES
     stub = Stub()
@@ -56,15 +87,21 @@ def get_canonical_cluster(
             continue
         entity = make_entity(entity_data, StatementEntity, entity_data["dataset"])
         collection_ids.add(entity_data["collection_id"])
-        entities.append(entity)
         if merged is None:
             merged = entity.clone()
         else:
             merged.merge(entity)
+        entity_data.update(**get_dehydrated_entity(entity).to_dict())
+        entities.append(entity_data)
 
     if merged is None:
         return None
 
     merged.id = canonical_id
-    # merged.caption = pick_name(merged.get_type_values(registry.name))
-    return {"merged": merged, "entities": entities, "collection_ids": collection_ids}
+    return {
+        "id": canonical_id,
+        "label": merged.caption,
+        "merged": merged,
+        "entities": entities,
+        "collection_ids": collection_ids,
+    }

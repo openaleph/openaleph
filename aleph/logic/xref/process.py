@@ -235,8 +235,8 @@ def _suggest_match(
     suggestion = make_suggestion(
         match.entity,
         match.match,
-        source_collection_id=collection.id,
-        target_collection_id=int(match.collection_id),
+        source_collection_id={collection.id},
+        target_collection_id={int(match.collection_id)},
         score=match.score,
         method=match.method,
     )

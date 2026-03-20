@@ -3,6 +3,8 @@ import logging
 from elasticsearch import ApiError as ElasticsearchApiError
 from flask import Blueprint, request
 from flask_babel import gettext
+from followthemoney import StatementEntity
+from ftmq.util import make_entity
 from openaleph_procrastinate.defer import tasks
 from openaleph_search.query.mentions import MentionsQuery, MultiMentionsQuery
 from openaleph_search.query.queries import PercolatorQuery
@@ -22,7 +24,7 @@ from aleph.logic.entities import (
     upsert_entity,
     validate_entity,
 )
-from aleph.logic.expand import entity_tags, expand_proxies
+from aleph.logic.expand import entity_tags, expand_proxy
 from aleph.logic.export import create_export
 from aleph.logic.html import sanitize_html
 from aleph.logic.xref.compare import make_suggestion
@@ -443,9 +445,9 @@ def similar(entity_id):
     entities = list(result.results)
     xref_resolver = get_resolver(request.authz.search_auth)
     result.results = []
-    source_collection_id = entity["collection_id"]
+    source_collection_id = {entity["collection_id"]}
     for obj in entities:
-        target_collection_id = obj["collection_id"]
+        target_collection_id = {obj["collection_id"]}
         match_proxy = make_entity_proxy(obj)
         judgement = xref_resolver.get_judgement(entity_id, obj.get("id"))
         suggestion = make_suggestion(
@@ -461,7 +463,7 @@ def similar(entity_id):
         item = {
             "score": suggestion["score"],
             "judgement": judgement,
-            "collection_id": target_collection_id,
+            "collection_id": obj["collection_id"],
             "entity": obj,
         }
         result.results.append(item)
@@ -1053,15 +1055,15 @@ def expand(entity_id):
       - Entity
     """
     entity = get_index_entity(entity_id, request.authz.READ)
-    proxy = make_entity_proxy(entity)
+    proxy = make_entity(entity, StatementEntity, entity["dataset"])
     collection_id = entity.get("collection_id")
     tag_request(collection_id=collection_id)
     parser = QueryParser(
         request.args, request.authz.search_auth, max_limit=SETTINGS.MAX_EXPAND_ENTITIES
     )
     properties = parser.filters.get("property")
-    results = expand_proxies(
-        [proxy],
+    results = expand_proxy(
+        proxy,
         properties=properties,
         authz=request.authz,
         limit=parser.limit,

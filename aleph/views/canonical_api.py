@@ -8,7 +8,7 @@ import logging
 
 from flask import Blueprint, request
 
-from aleph.logic.expand import entity_tags, expand_proxies
+from aleph.logic.expand import entity_tags, expand_proxy
 from aleph.logic.xref.canonical import get_canonical_cluster
 from aleph.logic.xref.compare import compare_entities
 from aleph.model import Judgement
@@ -17,7 +17,10 @@ from aleph.search.result import get_query_result
 from aleph.settings import SETTINGS
 from aleph.util import make_entity_proxy
 from aleph.views.context import tag_request
-from aleph.views.serializers import CanonicalSerializer, SimilarSerializer
+from aleph.views.serializers import (
+    CanonicalSerializer,
+    SimilarSerializer,
+)
 from aleph.views.util import jsonify, obj_or_404
 
 blueprint = Blueprint("canonical_api", __name__)
@@ -137,8 +140,8 @@ def expand(canonical_id):
         request.args, request.authz, max_limit=SETTINGS.MAX_EXPAND_ENTITIES
     )
     properties = parser.filters.get("property")
-    results = expand_proxies(  # NEEDS FIX
-        cluster["entities"],
+    results = expand_proxy(
+        cluster["merged"],
         properties=properties,
         authz=request.authz,
         limit=parser.limit,

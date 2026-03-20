@@ -69,6 +69,7 @@ class CanonicalApiTestCase(TestCase):
         )
         assert res.status_code == 200, res.json
         self.canonical_id = res.json["canonical_id"]
+        assert self.canonical_id.startswith("NK-")
 
     def test_canonical_view(self):
         res = self.client.get("/api/2/canonical/bananana")

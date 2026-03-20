@@ -8,7 +8,9 @@ from nomenklatura.resolver.edge import Edge
 from nomenklatura.resolver.identifier import StrIdent
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-SYSTEM_USER = "__system__"
+from aleph.settings import SETTINGS
+
+SYSTEM_USER = SETTINGS.SYSTEM_USER
 
 
 def edge_id(source: StrIdent, target: StrIdent) -> str:

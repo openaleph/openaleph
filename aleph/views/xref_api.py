@@ -4,9 +4,10 @@ from flask import Blueprint, request
 from followthemoney import model
 from nomenklatura.judgement import Judgement
 from rigour.mime.types import XLSX
-from werkzeug.exceptions import Forbidden
+from werkzeug.exceptions import Forbidden, NotFound
 
 from aleph.logic.export import create_export
+from aleph.logic.xref.canonical import resolve_entity_or_canonical
 from aleph.logic.xref.resolver import get_resolver
 from aleph.procrastinate.queues import OP_EXPORT_XREF, queue_export_xref, queue_xref
 from aleph.search.query import XrefQuery
@@ -15,7 +16,6 @@ from aleph.views.serializers import XrefSerializer
 from aleph.views.util import (
     get_db_collection,
     get_index_collection,
-    get_index_entity,
     jsonify,
     parse_request,
 )
@@ -164,34 +164,36 @@ def decide():
       - Collection
     """
     data = parse_request("Pairwise")
-    entity = get_index_entity(data.get("entity_id"))
-    collection = get_db_collection(entity["collection_id"], request.authz.READ)
-    match = get_index_entity(data.get("match_id"))
-    match_collection = get_db_collection(match["collection_id"], request.authz.READ)
+    entity_id = data["entity_id"]
+    match_id = data["match_id"]
+    judgement = Judgement(data["judgement"])
 
-    # FIXME the permission check currently is if the user can write to any of
-    # the two collections:
-    if not (
-        request.authz.can(collection, request.authz.WRITE)
-        or request.authz.can(match_collection, request.authz.WRITE)
-    ):
+    # Resolve each ID: real entity → index lookup; canonical → cluster lookup
+    entity_info = resolve_entity_or_canonical(entity_id, request.authz.search_auth)
+    if entity_info is None:
+        raise NotFound("Entity not found: %s" % entity_id)
+    match_info = resolve_entity_or_canonical(match_id, request.authz.search_auth)
+    if match_info is None:
+        raise NotFound("Entity not found: %s" % match_id)
+
+    # Auth: user must have WRITE on at least one collection from either side
+    all_cids = entity_info["collection_ids"] | match_info["collection_ids"]
+    if not any(request.authz.can(c, request.authz.WRITE) for c in all_cids):
         raise Forbidden("Sorry, you're not permitted to do this!")
-
-    judgement_str = data.get("judgement")
-    judgement = Judgement(judgement_str)
 
     # Validate schema compatibility for POSITIVE judgements
     if judgement == Judgement.POSITIVE:
-        model.common_schema(entity.get("schema"), match.get("schema"))
+        if entity_info["schema"] and match_info["schema"]:
+            model.common_schema(entity_info["schema"], match_info["schema"])
 
     xref_resolver = get_resolver()
     canonical = xref_resolver.decide(
-        entity["id"],
-        match["id"],
+        entity_id,
+        match_id,
         judgement,
         user=str(request.authz.role.foreign_id),
-        source_collection_id=collection.id,
-        target_collection_id=match_collection.id,
+        source_collection_id=entity_info["collection_ids"],
+        target_collection_id=match_info["collection_ids"],
     )
 
     return jsonify(

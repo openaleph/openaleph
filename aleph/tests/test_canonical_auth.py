@@ -70,8 +70,8 @@ class CanonicalAuthTestCase(TestCase):
             self.ent_a.id,
             self.ent_b.id,
             Judgement.POSITIVE,
-            source_collection_id=self.col_a.id,
-            target_collection_id=self.col_b.id,
+            source_collection_id={self.col_a.id},
+            target_collection_id={self.col_b.id},
         )
         self.canonical_id = canonical.id
 
@@ -80,8 +80,8 @@ class CanonicalAuthTestCase(TestCase):
             self.ent_b.id,
             self.ent_c.id,
             Judgement.POSITIVE,
-            source_collection_id=self.col_b.id,
-            target_collection_id=self.col_c.id,
+            source_collection_id={self.col_b.id},
+            target_collection_id={self.col_c.id},
         )
 
         # Create test users
@@ -115,6 +115,7 @@ class CanonicalAuthTestCase(TestCase):
         assert (
             canon_a == canon_b == canon_c
         ), f"Admin should see unified canonical: {canon_a}, {canon_b}, {canon_c}"
+        assert canon_a.startswith("NK-")
 
     def test_admin_cluster_has_all_entities(self):
         """Admin: cluster contains all 3 entities and 3 collection_ids."""
@@ -122,7 +123,7 @@ class CanonicalAuthTestCase(TestCase):
         cluster = get_canonical_cluster(self.ent_a.id, auth=auth)
         assert cluster is not None, "Admin cluster should not be None"
 
-        entity_ids = {e.id for e in cluster["entities"]}
+        entity_ids = {e["id"] for e in cluster["entities"]}
         assert self.ent_a.id in entity_ids
         assert self.ent_b.id in entity_ids
         assert self.ent_c.id in entity_ids
@@ -146,7 +147,7 @@ class CanonicalAuthTestCase(TestCase):
         cluster = get_canonical_cluster(self.ent_a.id, auth=auth)
         assert cluster is not None
 
-        entity_ids = {e.id for e in cluster["entities"]}
+        entity_ids = {e["id"] for e in cluster["entities"]}
         assert len(entity_ids) == 3
         assert len(cluster["collection_ids"]) == 3
 

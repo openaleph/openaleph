@@ -19,6 +19,7 @@ from aleph.logic.entities import (
     transliterate_values,
 )
 from aleph.logic.util import archive_url, collection_url, entity_url
+from aleph.logic.xref.resolver import get_resolver
 from aleph.model import (
     Alert,
     Collection,
@@ -295,6 +296,15 @@ class EntitySerializer(Serializer):
         obj["created_at"] = min(ensure_list(obj.get("created_at")), default=None)
         obj["updated_at"] = max(ensure_list(obj.get("updated_at")), default=None)
 
+        if self.detail_view:
+            try:
+                xref_resolver = get_resolver(request.authz.search_auth)
+                canonical_id = xref_resolver.get_canonical(proxy.id)
+                if canonical_id != proxy.id:
+                    obj["canonical_id"] = canonical_id
+            except Exception:
+                pass
+
         # Adding processing triggers and status for documents only (detail view)
         if self.detail_view and proxy.schema.is_a(Document.SCHEMA):
             if should_transcribe(proxy):
@@ -422,21 +432,31 @@ class EntitySetItemSerializer(Serializer):
         return obj
 
 
-class CanonicalSerializer(XrefSerializer):
+class CanonicalSerializer(Serializer):
     """Serializer for canonical clusters (replaces ProfileSerializer)."""
 
+    def collect(self, obj):
+        for coll_id in obj.get("collection_ids", set()):
+            self.queue(Collection, coll_id)
+        entity_serializer = EntitySerializer(nested=True)
+        for entity in obj.get("entities", []):
+            entity_serializer.collect(entity)
+
     def _serialize(self, obj):
-        cids = self._collection_ids(obj)
-        obj["collections"] = [
-            self.resolve(Collection, c, CollectionSerializer) for c in cids
-        ]
-        # Signal the frontend a cluster is writeable if any of the source
-        # collections is writeable for the current user
+        cids = obj.pop("collection_ids", set())
         obj["writeable"] = any(request.authz.can(c, request.authz.WRITE) for c in cids)
+        obj["shallow"] = False
+        # merged.to_dict() already includes `referents` (constituent entity IDs)
         proxy = obj.pop("merged")
         data = proxy.to_dict()
         data["latinized"] = transliterate_values(proxy)
         obj["merged"] = data
+        # Serialize constituent entities (nested/shallow)
+        entity_serializer = EntitySerializer(nested=True)
+        obj["entities"] = [
+            entity_serializer._serialize_common(entity)
+            for entity in obj.get("entities", [])
+        ]
         return obj
 
 
