@@ -355,8 +355,12 @@ class ElasticsearchResolver(Resolver[SE]):
             connected = set(self.connected(edge.target))
             connected.update(self.connected(edge.source))
             target = max(connected)
-            if not target.canonical:
-                canonical = Identifier.make()
+            # When one side of the edge is already the canonical (recursive
+            # call from below), fall through to _register to index the
+            # entity→NK-* edge directly. Otherwise, redirect both sides
+            # through a canonical — either a new NK-* or an existing one.
+            if target not in (edge.source, edge.target) or not target.canonical:
+                canonical = target if target.canonical else Identifier.make()
                 # Register NK-* with all collection_ids from the cluster
                 for node in connected:
                     self._entity_collections[str(canonical)].update(

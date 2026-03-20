@@ -69,6 +69,16 @@ class XrefDecideE2ETestCase(TestCase):
             },
         )
 
+    def _assert_entity_canonical_id(self, headers, entity_id, expected_canonical_id):
+        """Assert the entity detail endpoint returns the expected canonical_id."""
+        res = self.client.get(f"/api/2/entities/{entity_id}", headers=headers)
+        assert res.status_code == 200, res.json
+        actual = res.json.get("canonical_id")
+        assert actual == expected_canonical_id, (
+            f"Entity {entity_id}: expected canonical_id={expected_canonical_id}, "
+            f"got {actual}"
+        )
+
     def test_positive_decide_creates_canonical(self):
         """Decide entity1 = entity2 → NK-* canonical, correct edges in index."""
         _, headers = self.login("creator")
@@ -101,6 +111,12 @@ class XrefDecideE2ETestCase(TestCase):
             assert canonical_id in entity_ids, (edge.source, edge.target, canonical_id)
             other_id = (entity_ids - {canonical_id}).pop()
             assert other_id in (self.ent1.id, self.ent2.id), other_id
+
+        # Entity detail endpoints return canonical_id
+        self._assert_entity_canonical_id(headers, self.ent1.id, canonical_id)
+        self._assert_entity_canonical_id(headers, self.ent2.id, canonical_id)
+        # E3 is not part of the cluster
+        self._assert_entity_canonical_id(headers, self.ent3.id, None)
 
     def test_positive_decide_with_prior_suggestion(self):
         """xref_collection creates a NO_JUDGEMENT suggestion first,
@@ -185,6 +201,10 @@ class XrefDecideE2ETestCase(TestCase):
         assert res.status_code == 200, res.json
         assert res.json["id"] == canonical_id
 
+        # Entity detail endpoints return canonical_id
+        self._assert_entity_canonical_id(headers, self.ent1.id, canonical_id)
+        self._assert_entity_canonical_id(headers, self.ent2.id, canonical_id)
+
     def test_undecide_entity_from_canonical(self):
         """After decide E1=E2, undeciding E1→NK-* breaks the cluster.
 
@@ -242,6 +262,10 @@ class XrefDecideE2ETestCase(TestCase):
         )
         assert res.status_code == 404, res.json
 
+        # Entity detail view should NOT return canonical_id when cluster is broken
+        self._assert_entity_canonical_id(headers, self.ent1.id, None)
+        self._assert_entity_canonical_id(headers, self.ent2.id, None)
+
     def test_redecide_after_undecide_restores_cluster(self):
         """Undecide E1→NK-*, then re-decide E1→NK-* as POSITIVE.
 
@@ -290,6 +314,10 @@ class XrefDecideE2ETestCase(TestCase):
         assert edges_by_entity.get(self.ent1.id) == "positive", edges_by_entity
         assert edges_by_entity.get(self.ent2.id) == "positive", edges_by_entity
 
+        # Entity detail endpoints return canonical_id again
+        self._assert_entity_canonical_id(headers, self.ent1.id, canonical_id)
+        self._assert_entity_canonical_id(headers, self.ent2.id, canonical_id)
+
     def test_undecide_then_negative_kills_canonical(self):
         """After decide E1=E2, undecide E1→NK-*, then NEGATIVE E2→NK-*.
 
@@ -332,6 +360,10 @@ class XrefDecideE2ETestCase(TestCase):
         # Canonical endpoint returns 404
         res = self.client.get(f"/api/2/canonical/{canonical_id}", headers=headers)
         assert res.status_code == 404, res.json
+
+        # Entity detail endpoints should not return canonical_id
+        self._assert_entity_canonical_id(headers, self.ent1.id, None)
+        self._assert_entity_canonical_id(headers, self.ent2.id, None)
 
     def test_add_entity_directly_to_canonical(self):
         """Decide E1=E2, then decide E3→NK-* to add E3 to the cluster.
@@ -380,6 +412,11 @@ class XrefDecideE2ETestCase(TestCase):
             other = ({edge.source, edge.target} - {canonical_id}).pop()
             members.add(other)
         assert members == {self.ent1.id, self.ent2.id, self.ent3.id}
+
+        # Entity detail endpoints return canonical_id for all 3
+        self._assert_entity_canonical_id(headers, self.ent1.id, canonical_id)
+        self._assert_entity_canonical_id(headers, self.ent2.id, canonical_id)
+        self._assert_entity_canonical_id(headers, self.ent3.id, canonical_id)
 
         # Similar endpoint: each entity should see the other 2 with positive judgement
         for ent in [self.ent1, self.ent2, self.ent3]:
@@ -430,3 +467,70 @@ class XrefDecideE2ETestCase(TestCase):
             f"/api/2/entities/{self.ent1.id}/canonical", headers=headers
         )
         assert res.status_code == 404, res.json
+
+        # Entity detail: E1 has no canonical_id, E2 and E3 still do
+        self._assert_entity_canonical_id(headers, self.ent1.id, None)
+        self._assert_entity_canonical_id(headers, self.ent2.id, canonical_id)
+        self._assert_entity_canonical_id(headers, self.ent3.id, canonical_id)
+
+    def test_decide_entity_already_in_cluster(self):
+        """Decide A=B (creates NK-*), then decide A=C.
+
+        C should join the existing NK-* cluster. No direct A→C POSITIVE edge
+        should exist — only entity→NK-* edges.
+        """
+        _, headers = self.login("creator")
+
+        # Create cluster: A=B → NK-*
+        res = self._decide(headers, self.ent1.id, self.ent2.id, "positive")
+        canonical_id = res.json["canonical_id"]
+
+        # Decide A=C — should add C to the existing NK-* cluster
+        res = self._decide(headers, self.ent1.id, self.ent3.id, "positive")
+        assert res.status_code == 200, res.json
+        # Should return the same NK-* canonical
+        assert res.json["canonical_id"] == canonical_id, (
+            f"Expected same canonical {canonical_id}, "
+            f"got {res.json['canonical_id']}"
+        )
+
+        # All three resolve to the same canonical
+        resolver = get_resolver()
+        assert resolver.get_canonical(self.ent1.id) == canonical_id
+        assert resolver.get_canonical(self.ent2.id) == canonical_id
+        assert resolver.get_canonical(self.ent3.id) == canonical_id
+
+        # Verify edges: only entity→NK-* edges, no direct entity→entity POSITIVE
+        active_edges = list(scan_edges([]))
+        for edge in active_edges:
+            if edge.judgement == "positive":
+                ids = {edge.source, edge.target}
+                assert canonical_id in ids, (
+                    f"POSITIVE edge between non-canonical IDs: "
+                    f"{edge.source} → {edge.target}"
+                )
+
+        # Exactly 3 canonical POSITIVE edges
+        canonical_edges = [
+            e
+            for e in active_edges
+            if canonical_id in {e.source, e.target} and e.judgement == "positive"
+        ]
+        assert len(canonical_edges) == 3, [
+            (e.source, e.target, e.judgement) for e in canonical_edges
+        ]
+        members = {
+            ({e.source, e.target} - {canonical_id}).pop() for e in canonical_edges
+        }
+        assert members == {self.ent1.id, self.ent2.id, self.ent3.id}
+
+        # Canonical endpoint shows all 3
+        res = self.client.get(f"/api/2/canonical/{canonical_id}", headers=headers)
+        assert res.status_code == 200, res.json
+        entity_ids = {e["id"] for e in res.json["entities"]}
+        assert entity_ids == {self.ent1.id, self.ent2.id, self.ent3.id}
+
+        # Entity detail endpoints
+        self._assert_entity_canonical_id(headers, self.ent1.id, canonical_id)
+        self._assert_entity_canonical_id(headers, self.ent2.id, canonical_id)
+        self._assert_entity_canonical_id(headers, self.ent3.id, canonical_id)

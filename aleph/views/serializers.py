@@ -19,7 +19,7 @@ from aleph.logic.entities import (
     transliterate_values,
 )
 from aleph.logic.util import archive_url, collection_url, entity_url
-from aleph.logic.xref.resolver import get_resolver
+from aleph.logic.xref.canonical import get_canonical_cluster
 from aleph.model import (
     Alert,
     Collection,
@@ -298,10 +298,9 @@ class EntitySerializer(Serializer):
 
         if self.detail_view:
             try:
-                xref_resolver = get_resolver(request.authz.search_auth)
-                canonical_id = xref_resolver.get_canonical(proxy.id)
-                if canonical_id != proxy.id:
-                    obj["canonical_id"] = canonical_id
+                cluster = get_canonical_cluster(proxy.id, request.authz.search_auth)
+                if cluster is not None:
+                    obj["canonical_id"] = cluster["id"]
             except Exception:
                 pass
 

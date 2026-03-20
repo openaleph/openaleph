@@ -4,7 +4,7 @@ from flask import Blueprint, request
 from followthemoney import model
 from nomenklatura.judgement import Judgement
 from rigour.mime.types import XLSX
-from werkzeug.exceptions import Forbidden, NotFound
+from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
 from aleph.logic.export import create_export
 from aleph.logic.xref.canonical import resolve_entity_or_canonical
@@ -166,7 +166,12 @@ def decide():
     data = parse_request("Pairwise")
     entity_id = data["entity_id"]
     match_id = data["match_id"]
+    if entity_id == match_id:
+        raise BadRequest("entity_id and match_id must be different")
     judgement = Judgement(data["judgement"])
+    log.info(
+        "decide: entity_id=%s match_id=%s judgement=%s", entity_id, match_id, judgement
+    )
 
     # Resolve each ID: real entity → index lookup; canonical → cluster lookup
     entity_info = resolve_entity_or_canonical(entity_id, request.authz.search_auth)
