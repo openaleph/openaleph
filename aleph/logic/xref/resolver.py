@@ -361,13 +361,21 @@ class ElasticsearchResolver(Resolver[SE]):
             # through a canonical — either a new NK-* or an existing one.
             if target not in (edge.source, edge.target) or not target.canonical:
                 canonical = target if target.canonical else Identifier.make()
-                # Register NK-* with all collection_ids from the cluster
-                for node in connected:
-                    self._entity_collections[str(canonical)].update(
-                        self._entity_collections[node.id]
-                    )
                 self._remove_edge(edge)
+                # Create entity→NK-* edges. Each edge carries:
+                #   entity side: the entity's own collection_ids
+                #   NK-* side:   the OTHER entity's collection_ids
+                # This preserves auth chain semantics: to traverse an
+                # entity→NK-* edge, the user must have access to both
+                # the entity's collection AND the collection of the entity
+                # it was paired with in the original decision.
+                source_colls = self._entity_collections.get(edge.source.id, set())
+                target_colls = self._entity_collections.get(edge.target.id, set())
+                # edge.source→NK-*: entity side = source_colls, NK-* side = target_colls
+                self._entity_collections[str(canonical)] = target_colls.copy()
                 self.decide(edge.source, canonical, judgement=judgement, user=user)
+                # edge.target→NK-*: entity side = target_colls, NK-* side = source_colls
+                self._entity_collections[str(canonical)] = source_colls.copy()
                 self.decide(edge.target, canonical, judgement=judgement, user=user)
                 return canonical
 
@@ -378,6 +386,29 @@ class ElasticsearchResolver(Resolver[SE]):
         self._register(edge)
         if judgement != Judgement.NO_JUDGEMENT:
             self._invalidate()
+
+        # When removing an entity from a cluster (undecide/negative on an
+        # entity→NK-* edge), also soft-delete any other positive edges
+        # this entity has to other NK-* identifiers in the same cluster.
+        # These stale edges arise when clusters merge: the old NK-* edges
+        # are never cleaned up, so the entity remains transitively connected.
+        if judgement != Judgement.POSITIVE:
+            left = Identifier.get(left_id)
+            right = Identifier.get(right_id)
+            entity_node = None
+            if right.canonical and not left.canonical:
+                entity_node = left
+            elif left.canonical and not right.canonical:
+                entity_node = right
+            if entity_node is not None:
+                for other_edge in self.nodes.get(entity_node, []):
+                    if other_edge.judgement != Judgement.POSITIVE:
+                        continue
+                    other = other_edge.other(entity_node)
+                    decided = {left, right}
+                    if other.canonical and other not in decided:
+                        self._remove_edge(other_edge)
+
         return edge.target
 
     # -- query methods (ES-backed) ---
