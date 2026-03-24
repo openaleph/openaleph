@@ -179,10 +179,10 @@ class FacetedEntitySearch extends React.Component {
   showPreviousPreview(event) {
     event.preventDefault();
     const currentSelectionIndex = this.getCurrentPreviewIndex();
-    const nextEntity = this.props.result.results[currentSelectionIndex - 1];
-    if (nextEntity && currentSelectionIndex >= 0) {
+    const previousEntity = this.props.result.results[currentSelectionIndex - 1];
+    if (previousEntity && currentSelectionIndex >= 0) {
       event.preventDefault();
-      this.showPreview(nextEntity);
+      this.showPreview(previousEntity);
     }
   }
 
