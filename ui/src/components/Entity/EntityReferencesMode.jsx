@@ -176,12 +176,18 @@ class EntityReferencesMode extends React.Component {
   }
 
   renderRow(columns, entity) {
-    const { isThing, expandedId, hideCollection } = this.props;
+    const { isThing, expandedId, previewId, hideCollection } = this.props;
     const isExpanded = entity.id === expandedId;
     const expandIcon = isExpanded ? 'chevron-up' : 'chevron-down';
 
     const mainRow = (
-      <tr key={entity.id} className={c('nowrap', { prefix: isExpanded })}>
+      <tr
+        key={entity.id}
+        className={c('nowrap', {
+          prefix: isExpanded,
+          active: previewId === entity.id,
+        })}
+      >
         {!isThing && (
           <td className="expand">
             <Button
