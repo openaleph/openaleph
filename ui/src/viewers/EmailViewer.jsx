@@ -13,7 +13,12 @@ class EmailViewer extends PureComponent {
     const prop = document.schema.getProperty(name);
     const values = document.getProperty(prop).map((value) => {
       let result = (
-        <Property.Value key={value.id || value} prop={prop} value={value} />
+        <Property.Value
+          key={value.id || value}
+          prop={prop}
+          value={value}
+          showTime={true}
+        />
       );
       if (entitiesProp) {
         const normValue = value.toLowerCase().trim();
