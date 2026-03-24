@@ -101,6 +101,7 @@ class EntityReferencesMode extends React.Component {
         prop={prop}
         values={entity.getProperty(prop.name)}
         translitLookup={entity.latinized}
+        showTime={schema.isAny(['Message', 'Email'])}
       />
     );
     if (isThing && schema.caption.indexOf(prop.name) !== -1) {
