@@ -55,6 +55,10 @@ const messages = defineMessages({
     id: 'entity.references.previous_preview',
     defaultMessage: 'Preview previous {schema}',
   },
+  close_preview: {
+    id: 'entity.references.close_preview',
+    defaultMessage: 'Close preview',
+  },
 });
 
 class EntityReferencesMode extends React.Component {
@@ -67,6 +71,7 @@ class EntityReferencesMode extends React.Component {
     this.showNextPreview = this.showNextPreview.bind(this);
     this.showPreviousPreview = this.showPreviousPreview.bind(this);
     this.showPreview = this.showPreview.bind(this);
+    this.closePreview = this.closePreview.bind(this);
   }
 
   onSearchSubmit(queryText) {
@@ -146,6 +151,11 @@ class EntityReferencesMode extends React.Component {
   showPreview(entity) {
     const { navigate, location } = this.props;
     togglePreview(navigate, location, entity);
+  }
+
+  closePreview() {
+    const { navigate, location } = this.props;
+    togglePreview(navigate, location);
   }
 
   renderCell(prop, entity) {
@@ -296,6 +306,12 @@ class EntityReferencesMode extends React.Component {
             combo: 'down',
             label: intl.formatMessage(messages.previous_preview, { schema: schemaLabel }),
             onKeyDown: this.showNextPreview,
+            group: schema.plural,
+          },
+          {
+            combo: 'esc',
+            label: intl.formatMessage(messages.close_preview),
+            onKeyDown: this.closePreview,
             group: schema.plural,
           },
         ]}
