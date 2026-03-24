@@ -52,6 +52,7 @@ class EntityReferencesMode extends React.Component {
     super(props);
     this.onSearchSubmit = this.onSearchSubmit.bind(this);
     this.sortColumn = this.sortColumn.bind(this);
+    this.getUniqueResults = this.getUniqueResults.bind(this);
   }
 
   onSearchSubmit(queryText) {
@@ -92,6 +93,10 @@ class EntityReferencesMode extends React.Component {
       },
       { replace: true }
     );
+  }
+
+  getUniqueResults() {
+    return _.uniqBy(ensureArray(this.props.result.results), 'id');
   }
 
   renderCell(prop, entity) {
@@ -197,7 +202,7 @@ class EntityReferencesMode extends React.Component {
       );
     }
     const { property } = reference;
-    const results = _.uniqBy(ensureArray(result.results), 'id');
+    const results = this.getUniqueResults();
     const columns = schema
       .getFeaturedProperties()
       .filter((prop) => prop.name !== property.name);
