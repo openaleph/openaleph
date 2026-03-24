@@ -106,7 +106,7 @@ class EntityReferencesMode extends React.Component {
     if (isThing && schema.caption.indexOf(prop.name) !== -1) {
       return (
         <td key={prop.name} className="entity">
-          <Entity.Link entity={entity}>
+          <Entity.Link entity={entity} preview={true}>
             <Schema.Icon schema={entity.schema} className="left-icon" />
             {propVal}
           </Entity.Link>
