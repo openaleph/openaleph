@@ -5,6 +5,7 @@ import { compose } from 'redux';
 import { connect } from 'react-redux';
 import { Button } from '@blueprintjs/core';
 import queryString from 'query-string';
+import togglePreview from 'util/togglePreview';
 import c from 'classnames';
 
 import withRouter from 'app/withRouter';
@@ -13,6 +14,7 @@ import {
   Collection,
   Entity,
   ErrorSection,
+  HotkeysContainer,
   Property,
   QueryInfiniteLoad,
   Schema,
@@ -45,6 +47,14 @@ const messages = defineMessages({
     id: 'entity.references.search.placeholder_default',
     defaultMessage: 'Search entities',
   },
+  next_preview: {
+    id: 'entity.references.next_preview',
+    defaultMessage: 'Preview next {schema}',
+  },
+  previous_preview: {
+    id: 'entity.references.previous_preview',
+    defaultMessage: 'Preview previous {schema}',
+  },
 });
 
 class EntityReferencesMode extends React.Component {
@@ -53,6 +63,10 @@ class EntityReferencesMode extends React.Component {
     this.onSearchSubmit = this.onSearchSubmit.bind(this);
     this.sortColumn = this.sortColumn.bind(this);
     this.getUniqueResults = this.getUniqueResults.bind(this);
+    this.getCurrentPreviewIndex = this.getCurrentPreviewIndex.bind(this);
+    this.showNextPreview = this.showNextPreview.bind(this);
+    this.showPreviousPreview = this.showPreviousPreview.bind(this);
+    this.showPreview = this.showPreview.bind(this);
   }
 
   onSearchSubmit(queryText) {
@@ -97,6 +111,41 @@ class EntityReferencesMode extends React.Component {
 
   getUniqueResults() {
     return _.uniqBy(ensureArray(this.props.result.results), 'id');
+  }
+
+  getCurrentPreviewIndex() {
+    const { location, previewId } = this.props;
+    const results = this.getUniqueResults();
+    return results.findIndex(
+      (entity) => entity.id === previewId
+    );
+  }
+
+  showNextPreview(event) {
+    const currentSelectionIndex = this.getCurrentPreviewIndex();
+    const results = this.getUniqueResults();
+    const nextEntity = results[1 + currentSelectionIndex];
+
+    if (nextEntity && currentSelectionIndex >= 0) {
+      event.preventDefault();
+      this.showPreview(nextEntity);
+    }
+  }
+
+  showPreviousPreview(event) {
+    const currentSelectionIndex = this.getCurrentPreviewIndex();
+    const results = this.getUniqueResults();
+    const previousEntity = results[currentSelectionIndex - 1];
+
+    if (previousEntity && currentSelectionIndex >= 0) {
+      event.preventDefault();
+      this.showPreview(previousEntity);
+    }
+  }
+
+  showPreview(entity) {
+    const { navigate, location } = this.props;
+    togglePreview(navigate, location, entity);
   }
 
   renderCell(prop, entity) {
@@ -216,75 +265,104 @@ class EntityReferencesMode extends React.Component {
     const { field: sortedField, direction } = query.getSort();
 
     return (
-      <section className="EntityReferencesTable">
-        <EntityActionBar
-          query={query}
-          onSearchSubmit={this.onSearchSubmit}
-          searchPlaceholder={placeholder}
-        ></EntityActionBar>
-        {result.total !== 0 && (
-          <>
-            <table className="data-table references-data-table">
-              <thead>
-                <tr>
-                  {!isThing && <th key="expand" />}
-                  {columns.map((prop) => {
-                    const fieldName = `properties.${prop.name}`;
-                    const isSortable = prop.type.name !== 'text';
-                    return (
-                      <SortableTH
-                        key={prop.name}
-                        sortable={isSortable}
-                        sorted={sortedField === fieldName && (direction === 'desc' ? 'desc' : 'asc')}
-                        onClick={() => this.sortColumn(fieldName)}
-                        className={prop.type.name}
-                      >
-                        <Property.Name prop={prop} />
-                      </SortableTH>
-                    );
-                  })}
-                  {!hideCollection && (
-                    <th>
-                      <FormattedMessage
-                        id="xref.match_collection"
-                        defaultMessage="Dataset"
-                      />
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {results.map((entity) => this.renderRow(columns, entity))}
-                {result.isPending &&
-                  skeletonItems.map((idx) => this.renderSkeleton(columns, idx))}
-              </tbody>
-            </table>
-            <QueryInfiniteLoad
-              query={query}
-              result={result}
-              fetch={this.props.queryEntities}
-            />
-          </>
-        )}
-        {result.total === 0 && (
-          <ErrorSection
-            icon={
-              <Schema.Icon
-                schema={reference.schema}
-                className="left-icon"
-                size={60}
+      <HotkeysContainer
+        hotkeys={[
+          {
+            combo: 'j',
+            label: intl.formatMessage(messages.next_preview, { schema: schemaLabel }),
+            onKeyDown: this.showNextPreview,
+            group: schema.plural,
+          },
+          {
+            combo: 'k',
+            label: intl.formatMessage(messages.previous_preview, { schema: schemaLabel }),
+            onKeyDown: this.showPreviousPreview,
+            group: schema.plural,
+          },
+          {
+            combo: 'up',
+            label: intl.formatMessage(messages.next_preview, { schema: schemaLabel }),
+            onKeyDown: this.showPreviousPreview,
+            group: schema.plural,
+          },
+          {
+            combo: 'down',
+            label: intl.formatMessage(messages.previous_preview, { schema: schemaLabel }),
+            onKeyDown: this.showNextPreview,
+            group: schema.plural,
+          },
+        ]}
+      >
+        <section className="EntityReferencesTable">
+          <EntityActionBar
+            query={query}
+            onSearchSubmit={this.onSearchSubmit}
+            searchPlaceholder={placeholder}
+          ></EntityActionBar>
+          {result.total !== 0 && (
+            <>
+              <table className="data-table references-data-table">
+                <thead>
+                  <tr>
+                    {!isThing && <th key="expand" />}
+                    {columns.map((prop) => {
+                      const fieldName = `properties.${prop.name}`;
+                      const isSortable = prop.type.name !== 'text';
+                      return (
+                        <SortableTH
+                          key={prop.name}
+                          sortable={isSortable}
+                          sorted={sortedField === fieldName && (direction === 'desc' ? 'desc' : 'asc')}
+                          onClick={() => this.sortColumn(fieldName)}
+                          className={prop.type.name}
+                        >
+                          <Property.Name prop={prop} />
+                        </SortableTH>
+                      );
+                    })}
+                    {!hideCollection && (
+                      <th>
+                        <FormattedMessage
+                          id="xref.match_collection"
+                          defaultMessage="Dataset"
+                        />
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.map((entity) => this.renderRow(columns, entity))}
+                  {result.isPending &&
+                    skeletonItems.map((idx) => this.renderSkeleton(columns, idx))}
+                </tbody>
+              </table>
+              <QueryInfiniteLoad
+                query={query}
+                result={result}
+                fetch={this.props.queryEntities}
               />
-            }
-            title={
-              schema.name === 'Thing'
-                ? intl.formatMessage(messages.no_results_default)
-                : intl.formatMessage(messages.no_results, {
-                    schema: schemaLabel,
-                  })
-            }
-          />
-        )}
-      </section>
+            </>
+          )}
+          {result.total === 0 && (
+            <ErrorSection
+              icon={
+                <Schema.Icon
+                  schema={reference.schema}
+                  className="left-icon"
+                  size={60}
+                />
+              }
+              title={
+                schema.name === 'Thing'
+                  ? intl.formatMessage(messages.no_results_default)
+                  : intl.formatMessage(messages.no_results, {
+                      schema: schemaLabel,
+                    })
+              }
+            />
+          )}
+        </section>
+      </HotkeysContainer>
     );
   }
 }
@@ -301,6 +379,7 @@ const mapStateToProps = (state, ownProps) => {
     schema,
     parsedHash,
     expandedId: parsedHash.expand,
+    previewId: parsedHash["preview:id"],
     query: sortedQuery,
     result: selectEntitiesResult(state, sortedQuery),
     isThing: schema.isThing(),
