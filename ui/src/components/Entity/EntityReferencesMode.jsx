@@ -66,7 +66,6 @@ class EntityReferencesMode extends React.Component {
     super(props);
     this.onSearchSubmit = this.onSearchSubmit.bind(this);
     this.sortColumn = this.sortColumn.bind(this);
-    this.getUniqueResults = this.getUniqueResults.bind(this);
     this.getCurrentPreviewIndex = this.getCurrentPreviewIndex.bind(this);
     this.showNextPreview = this.showNextPreview.bind(this);
     this.showPreviousPreview = this.showPreviousPreview.bind(this);
@@ -114,21 +113,16 @@ class EntityReferencesMode extends React.Component {
     );
   }
 
-  getUniqueResults() {
-    return _.uniqBy(ensureArray(this.props.result.results), 'id');
-  }
-
   getCurrentPreviewIndex() {
-    const { location, previewId } = this.props;
-    const results = this.getUniqueResults();
+    const { location, previewId, results } = this.props;
     return results.findIndex(
       (entity) => entity.id === previewId
     );
   }
 
   showNextPreview(event) {
+    const { results } = this.props;
     const currentSelectionIndex = this.getCurrentPreviewIndex();
-    const results = this.getUniqueResults();
     const nextEntity = results[1 + currentSelectionIndex];
 
     if (nextEntity && currentSelectionIndex >= 0) {
@@ -138,8 +132,8 @@ class EntityReferencesMode extends React.Component {
   }
 
   showPreviousPreview(event) {
+    const { results } = this.props;
     const currentSelectionIndex = this.getCurrentPreviewIndex();
-    const results = this.getUniqueResults();
     const previousEntity = results[currentSelectionIndex - 1];
 
     if (previousEntity && currentSelectionIndex >= 0) {
@@ -254,7 +248,7 @@ class EntityReferencesMode extends React.Component {
   }
 
   render() {
-    const { intl, reference, query, result, schema, isThing, hideCollection } =
+    const { intl, reference, query, result, results, schema, isThing, hideCollection } =
       this.props;
 
     if (!reference) {
@@ -266,7 +260,6 @@ class EntityReferencesMode extends React.Component {
       );
     }
     const { property } = reference;
-    const results = this.getUniqueResults();
     const columns = schema
       .getFeaturedProperties()
       .filter((prop) => prop.name !== property.name);
@@ -397,13 +390,17 @@ const mapStateToProps = (state, ownProps) => {
   // Default sort by most recent dates
   const sortedQuery = query.defaultSortBy('dates', 'desc');
 
+  const result = selectEntitiesResult(state, sortedQuery);
+  const results = _.uniqBy(ensureArray(result.results), 'id');
+
   return {
     schema,
     parsedHash,
     expandedId: parsedHash.expand,
     previewId: parsedHash["preview:id"],
     query: sortedQuery,
-    result: selectEntitiesResult(state, sortedQuery),
+    result,
+    results,
     isThing: schema.isThing(),
   };
 };
