@@ -10,7 +10,6 @@ from followthemoney.types import registry
 from followthemoney.util import make_entity_id
 from openaleph_procrastinate.defer import tasks
 from openaleph_search.index import entities as index
-from rigour.langs import iso_639_alpha2
 
 from aleph.core import cache, db
 from aleph.index import xref as xref_index
@@ -24,7 +23,6 @@ from aleph.procrastinate.queues import (
     queue_prune_entity,
     queue_update_entity,
 )
-from aleph.settings import SETTINGS
 from aleph.util import make_entity_proxy
 
 log = logging.getLogger(__name__)
@@ -205,9 +203,7 @@ def should_translate(collection_id: int, foreign_id: str, proxy: EntityProxy) ->
             if "translatedText" in page_entity.get("properties", {}):
                 return False
     if proxy.schema.is_a("Document"):
-        source_lang = iso_639_alpha2(proxy.first("detectedLanguage") or "")
-        if source_lang and SETTINGS.FTM_TRANSLATE_TARGET_LANGUAGE != source_lang:
-            return True
+        return True
     return False
 
 
