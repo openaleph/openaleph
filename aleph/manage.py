@@ -7,6 +7,7 @@ import click
 from flask.cli import FlaskGroup
 from followthemoney.cli.util import write_object
 from normality import slugify
+from openaleph_procrastinate.util import make_file_entity
 from openaleph_search.index.admin import delete_index
 from openaleph_search.index.entities import get_entity as _get_index_entity
 from openaleph_search.index.entities import iter_proxies
@@ -51,6 +52,8 @@ from aleph.migration import cleanup_deleted, destroy_db, upgrade_system
 from aleph.model import Collection, EntitySet, Role
 from aleph.model.document import Document
 from aleph.procrastinate.queues import (
+    OP_INGEST,
+    queue_analyze,
     queue_cancel_collection,
     queue_ingest,
     queue_reindex,
@@ -870,6 +873,55 @@ def reingest_casefiles(index_flush=True, ingest_flush=True):
             index_flush=index_flush,
             ingest_flush=ingest_flush,
         )
+
+
+@cli.command()
+@click.option("--resolve-mentions/--no-resolve-mentions", is_flag=True, default=False)
+@click.option("--annotate/--no-annotate", is_flag=True, default=False)
+@click.option("--validate-names/--no-validate-names", is_flag=True, default=False)
+@click.option("--refine-mentions/--no-refine-mentions", is_flag=True, default=False)
+@click.option("--refine-locations/--no-refine-locations", is_flag=True, default=False)
+@click.option("--overwrite-lang/--no-overwrite-lang", is_flag=True, default=False)
+@click.argument("foreign_id")
+def reanalyze_collection(
+    foreign_id: str,
+    resolve_mentions: bool = False,
+    annotate: bool = False,
+    validate_names: bool = False,
+    refine_mentions: bool = False,
+    refine_locations: bool = False,
+    overwrite_lang: bool = False,
+):
+    """Reanalyze a collection by foreign_id"""
+    to_analyze = []
+    batch_len = 1_000
+    collection = get_collection(foreign_id)
+    ingest_data = get_aggregator(collection, origin=OP_INGEST)
+    for ingest_entity in ingest_data.iterate(origin=OP_INGEST):
+        if ingest_entity.schema.is_a("Analyzable"):
+            to_analyze.append(make_file_entity(ingest_entity, quiet=True))
+            if len(to_analyze) == batch_len:
+                queue_analyze(
+                    collection,
+                    to_analyze,
+                    resolve_mentions=resolve_mentions,
+                    annotate=annotate,
+                    validate_names=validate_names,
+                    refine_mentions=refine_mentions,
+                    refine_locations=refine_locations,
+                    overwrite_lang=overwrite_lang,
+                )
+                to_analyze.clear()
+    queue_analyze(
+        collection,
+        to_analyze,
+        resolve_mentions=resolve_mentions,
+        annotate=annotate,
+        validate_names=validate_names,
+        refine_mentions=refine_mentions,
+        refine_locations=refine_locations,
+        overwrite_lang=overwrite_lang,
+    )
 
 
 @cli.command()

@@ -90,7 +90,7 @@ def update_entity(collection, entity_id=None, job_id=None):
     aggregator = get_aggregator(collection, origin=MODEL_ORIGIN)
     profile_fragments(collection, aggregator, entity_id=entity_id)
     inline_names(aggregator, proxy)
-    queue_analyze(collection, proxy, batch=job_id)
+    queue_analyze(collection, [proxy], batch=job_id)
 
 
 def index_entity(collection, entity_id):

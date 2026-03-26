@@ -211,7 +211,7 @@ class EntitySerializer(Serializer):
         self.queue(Collection, obj.get("collection_id"))
         self.queue(Role, obj.get("role_id"))
         schema = model.get(obj.get("schema"))
-        if schema is None or self.nested:
+        if schema is None or self.nested:  # FIXME what does that
             return
         properties = obj.get("properties", {})
         for name, values in properties.items():
@@ -275,6 +275,11 @@ class EntitySerializer(Serializer):
             return None
         obj["collection"] = self.resolve(Collection, coll_id, CollectionSerializer)
         role_id = obj.pop("role_id", None)
+        # FIXME: some real world ES docs have an array here, we don't know why
+        # currently. If there is ever a bug, this _could_ solve it:
+        # if is_listish(role_id):
+        #     if len(ensure_list(role_id)) == 1:
+        #         role_id = role_id[0]
         obj["role"] = self.resolve(Role, role_id, RoleSerializer)
         obj["links"] = links
         obj["latinized"] = transliterate_values(proxy)
