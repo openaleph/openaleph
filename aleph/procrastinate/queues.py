@@ -60,7 +60,9 @@ def queue_ingest(collection: Collection, proxy: EntityProxy, **context: Any) -> 
         defer.ingest(app, dataset, [proxy], dehydrate=False, **context)
 
 
-def queue_analyze(collection: Collection, entities: list[EntityProxy], **context: Any) -> None:
+def queue_analyze(
+    collection: Collection, entities: list[EntityProxy], **context: Any
+) -> None:
     context = {**context, **get_context(collection, Priorities.USER)}
     dataset = get_aggregator_name(collection)
     with app.open():
