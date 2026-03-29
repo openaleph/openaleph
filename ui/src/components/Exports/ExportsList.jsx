@@ -2,11 +2,12 @@ import React, { Component } from 'react';
 import { defineMessages, FormattedMessage, injectIntl } from 'react-intl';
 import { compose } from 'redux';
 import { connect } from 'react-redux';
+import { Collapse, Icon } from '@blueprintjs/core';
 
 import withRouter from 'app/withRouter';
 import { ErrorSection } from 'src/components/common';
 import { selectExports } from 'selectors';
-import { fetchExports } from 'src/actions';
+import { fetchExports, deleteExport } from 'src/actions';
 import Export from 'src/components/Exports/Export';
 
 const messages = defineMessages({
@@ -17,11 +18,94 @@ const messages = defineMessages({
 });
 
 class ExportsList extends Component {
-  componentDidMount() {
-    // fetch new export on every mount so that we can show recently created
-    // exports without needing a reload
-    this.props.fetchExports();
+  constructor(props) {
+    super(props);
+    this._pollInterval = null;
+    this.state = {
+      openGroups: new Set(),
+    };
   }
+
+  componentDidMount() {
+    this.props.fetchExports();
+    this._startPollingIfNeeded();
+  }
+
+  componentDidUpdate(prevProps) {
+    const hadPending = this._hasPendingExports(prevProps.exports);
+    const hasPending = this._hasPendingExports(this.props.exports);
+    
+    // Keep all groups closed by default - remove auto-opening
+    
+    if (!hadPending && hasPending) {
+      this._startPollingIfNeeded();
+    } else if (hadPending && !hasPending) {
+      this._stopPolling();
+    }
+  }
+
+  componentWillUnmount() {
+    this._stopPolling();
+  }
+
+  handleDeleteExport = async (exportId) => {
+    await this.props.deleteExport(exportId);
+    // Refresh the exports list after deletion
+    this.props.fetchExports();
+  };
+
+  _hasPendingExports(exports) {
+    return !!(
+      exports.results && exports.results.some((e) => e.status === 'pending')
+    );
+  }
+
+  _startPollingIfNeeded() {
+    if (this._pollInterval) return;
+    this._pollInterval = setInterval(() => {
+      if (this._hasPendingExports(this.props.exports)) {
+        this.props.fetchExports();
+      } else {
+        this._stopPolling();
+      }
+    }, 5000);
+  }
+
+  _stopPolling() {
+    if (this._pollInterval) {
+      clearInterval(this._pollInterval);
+      this._pollInterval = null;
+    }
+  }
+
+  groupExportsBySearchTerm = (exports) => {
+    const groups = {};
+    exports.forEach(export_ => {
+      const searchTerm = export_.meta?.search_term || 'All results';
+      if (!groups[searchTerm]) {
+        groups[searchTerm] = [];
+      }
+      groups[searchTerm].push(export_);
+    });
+    
+    // Sort each group by creation date (newest first)
+    Object.keys(groups).forEach(key => {
+      groups[key].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    });
+    
+    return groups;
+  };
+
+  toggleGroup = (searchTerm) => {
+    const newOpenGroups = new Set(this.state.openGroups);
+    if (newOpenGroups.has(searchTerm)) {
+      newOpenGroups.delete(searchTerm);
+    } else {
+      newOpenGroups.add(searchTerm);
+    }
+    this.setState({ openGroups: newOpenGroups });
+  };
+
   render() {
     const { exports, intl } = this.props;
     const skeletonItems = [...Array(15).keys()];
@@ -35,37 +119,105 @@ class ExportsList extends Component {
       );
     }
 
+    const groups = exports.results ? this.groupExportsBySearchTerm(exports.results) : {};
+    // Sort groups chronologically by newest export in each group
+    const groupNames = Object.keys(groups).sort((a, b) => {
+      const aNewest = groups[a][0];
+      const bNewest = groups[b][0];
+      return new Date(bNewest.created_at) - new Date(aNewest.created_at);
+    });
+
     return (
       <>
-        <table className="ExportsTable data-table">
-          <thead>
-            <tr>
-              <th className="wide">
-                <FormattedMessage id="exports.name" defaultMessage="Name" />
-              </th>
-              <th>
-                <FormattedMessage id="exports.size" defaultMessage="Size" />
-              </th>
-              <th>
-                <FormattedMessage id="exports.status" defaultMessage="Status" />
-              </th>
-              <th>
-                <FormattedMessage
-                  id="exports.expiration"
-                  defaultMessage="Expiration"
+        {groupNames.map(searchTerm => {
+          const groupExports = groups[searchTerm];
+          const isOpen = this.state.openGroups.has(searchTerm);
+          const newestExport = groupExports[0];
+          
+          return (
+            <div key={searchTerm} className="ExportGroup">
+              <div 
+                className="ExportGroup__header" 
+                onClick={() => this.toggleGroup(searchTerm)}
+                style={{ 
+                  cursor: 'pointer', 
+                  padding: '12px 16px',
+                  borderBottom: '1px solid #e1e8ed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  backgroundColor: isOpen ? '#f5f8fa' : 'white'
+                }}
+              >
+                <Icon 
+                  icon={isOpen ? 'chevron-down' : 'chevron-right'} 
+                  style={{ marginRight: '8px' }}
                 />
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {exports.results &&
-              exports.results.map((export_) => (
-                <Export key={export_.id} export_={export_} />
-              ))}
-            {exports.isPending &&
-              skeletonItems.map((item) => <Export key={item} isPending />)}
-          </tbody>
-        </table>
+                <Icon icon="search" style={{ marginRight: '8px', color: '#5c7080' }} />
+                <div>
+                  <strong>{searchTerm}</strong>
+                  <div style={{ fontSize: '12px', color: '#5c7080' }}>
+                    Created {newestExport && <span>{new Date(newestExport.created_at).toLocaleDateString()}</span>}
+                    • {groupExports.length} file{groupExports.length !== 1 ? 's' : ''}
+                  </div>
+                </div>
+              </div>
+              <Collapse isOpen={isOpen}>
+                <table className="ExportsTable data-table">
+                  <thead>
+                    <tr>
+                      <th className="wide">
+                        <FormattedMessage id="exports.name" defaultMessage="Name" />
+                      </th>
+                      <th>
+                        <FormattedMessage id="exports.size" defaultMessage="Size" />
+                      </th>
+                      <th>
+                        <FormattedMessage id="exports.status" defaultMessage="Status" />
+                      </th>
+                      <th>
+                        <FormattedMessage
+                          id="exports.created"
+                          defaultMessage="Created"
+                        />
+                      </th>
+                      <th>
+                        <FormattedMessage
+                          id="exports.expiration"
+                          defaultMessage="Expiration"
+                        />
+                      </th>
+                      <th>
+                        <FormattedMessage
+                          id="exports.actions"
+                          defaultMessage="Actions"
+                        />
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {groupExports.map((export_) => (
+                      <Export key={export_.id} export_={export_} onDelete={this.handleDeleteExport} />
+                    ))}
+                  </tbody>
+                </table>
+              </Collapse>
+            </div>
+          );
+        })}
+        
+        {exports.isPending && (
+          <div className="ExportGroup">
+            <div className="ExportGroup__header" style={{ padding: '12px 16px', backgroundColor: '#f5f8fa' }}>
+              <Icon icon="search" style={{ marginRight: '8px', color: '#5c7080' }} />
+              <strong>Loading exports...</strong>
+            </div>
+            <table className="ExportsTable data-table">
+              <tbody>
+                {skeletonItems.map((item) => <Export key={item} isPending />)}
+              </tbody>
+            </table>
+          </div>
+        )}
       </>
     );
   }
@@ -77,6 +229,7 @@ const mapStateToProps = (state) => ({
 
 const mapDispatchToProps = {
   fetchExports,
+  deleteExport,
 };
 
 export default compose(

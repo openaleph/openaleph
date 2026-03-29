@@ -153,11 +153,29 @@ def prune_entity(job: DatasetJob, collection: Collection) -> None:
 
 @aleph_task(retry=defer.tasks.export_search.max_retries)
 def export_search(job: Job) -> None:
+    from aleph.model import Export
+    from aleph.procrastinate.queues import (
+        OP_EXPORT_CSV,
+        OP_EXPORT_ENTITIES,
+        OP_EXPORT_FILES,
+    )
+
     export_id = job.context.get("export_id", None)
     if not export_id:
         job.log.error("No export ID provided for export_search")
         raise InvalidJob
-    export.export_entities(export_id)
+    exp = Export.by_id(export_id)
+    if exp is None:
+        job.log.error("Export not found: %s", export_id)
+        raise InvalidJob
+    if exp.operation == OP_EXPORT_FILES:
+        export.export_files(export_id)
+    elif exp.operation == OP_EXPORT_CSV:
+        export.export_csv(export_id)
+    elif exp.operation == OP_EXPORT_ENTITIES:
+        export.export_entities_jsonl(export_id)
+    else:
+        export.export_entities(export_id)
 
 
 @aleph_task(retry=defer.tasks.export_xref.max_retries)

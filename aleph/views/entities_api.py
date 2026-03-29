@@ -1,4 +1,5 @@
 import logging
+import re
 
 from flask import Blueprint, request
 from flask_babel import gettext
@@ -26,7 +27,9 @@ from aleph.logic.profiles import pairwise_judgements
 from aleph.model.bookmark import Bookmark
 from aleph.model.entityset import EntitySet, Judgement
 from aleph.procrastinate.queues import (
-    OP_EXPORT_SEARCH,
+    OP_EXPORT_CSV,
+    OP_EXPORT_ENTITIES,
+    OP_EXPORT_FILES,
     queue_analyze,
     queue_export_search,
     queue_ingest,
@@ -173,7 +176,7 @@ def index():
     result = get_query_result(EntitiesQuery, request, parser=parser)
     tag_request(query=result.query.to_text(), prefix=parser.prefix)
     links = {}
-    if request.authz.logged_in and result.total <= MAX_PAGE:
+    if request.authz.logged_in and result.total <= 1000:
         query = list(request.args.items(multi=True))
         links["export"] = url_for("entities_api.export", _query=query)
     return EntitySerializer.jsonify_result(result, extra={"links": links})
@@ -205,15 +208,38 @@ def export():
     schemata = parser.getlist("filter:schema")
     if not len(schemata):
         schemata = parser.getlist("filter:schemata")
-    label = gettext("Search: %s") % query.to_text()
-    export = create_export(
-        operation=OP_EXPORT_SEARCH,
-        role_id=request.authz.id,
-        label=label,
-        mime_type=ZIP,
-        meta={"query": query.get_query(), "schemata": schemata},
-    )
-    queue_export_search(export_id=export.id)
+    search_term = parser.text or "(EMPTY_QUERY)"
+    # Clean the search term for use in filenames
+    if search_term != "(EMPTY_QUERY)":
+        search_term = search_term.replace(" ", "_").replace("/", "_").replace("\\", "_")
+        search_term = re.sub(r'[<>:"|?*]', '_', search_term)
+    meta = {
+        "query": query.get_query(), 
+        "schemata": schemata,
+        "search_term": parser.text or "(EMPTY_QUERY)"
+    }
+
+    body = request.get_json(silent=True) or {}
+    export_types = body.get("export_types") or ["files", "results", "entities"]
+
+    type_map = {
+        "files": (OP_EXPORT_FILES, ZIP),
+        "results": (OP_EXPORT_CSV, "text/csv"),
+        "entities": (OP_EXPORT_ENTITIES, "application/x-ndjson"),
+    }
+    for export_type in export_types:
+        if export_type not in type_map:
+            continue
+        operation, mime_type = type_map[export_type]
+        label = f"{search_term}_{export_type}"
+        exp = create_export(
+            operation=operation,
+            role_id=request.authz.id,
+            label=label,
+            mime_type=mime_type,
+            meta=meta,
+        )
+        queue_export_search(export_id=exp.id)
     return ("", 202)
 
 
