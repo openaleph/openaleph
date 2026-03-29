@@ -10,6 +10,8 @@ import { selectExports } from 'selectors';
 import { fetchExports, deleteExport } from 'src/actions';
 import Export from 'src/components/Exports/Export';
 
+import './ExportsList.scss';
+
 const messages = defineMessages({
   no_exports: {
     id: 'exports.no_exports',
@@ -96,6 +98,25 @@ class ExportsList extends Component {
     return groups;
   };
 
+  getExportTypeSummary = (groupExports) => {
+    const types = {};
+    groupExports.forEach(export_ => {
+      const operation = export_.operation;
+      let type = 'Unknown';
+      if (operation === 'exportfiles') type = 'Files';
+      else if (operation === 'exportcsv') type = 'CSV';
+      else if (operation === 'exportentities') type = 'Entities';
+      else if (operation === 'exportjsonl') type = 'JSONL';
+      
+      types[type] = (types[type] || 0) + 1;
+    });
+    
+    const typesList = Object.entries(types)
+      .map(([type, count]) => count > 1 ? `${count} ${type}` : type);
+    
+    return typesList.join(', ');
+  };
+
   toggleGroup = (searchTerm) => {
     const newOpenGroups = new Set(this.state.openGroups);
     if (newOpenGroups.has(searchTerm)) {
@@ -137,27 +158,18 @@ class ExportsList extends Component {
           return (
             <div key={searchTerm} className="ExportGroup">
               <div 
-                className="ExportGroup__header" 
+                className={`ExportGroup__header ${isOpen ? 'ExportGroup__header--open' : ''}`}
                 onClick={() => this.toggleGroup(searchTerm)}
-                style={{ 
-                  cursor: 'pointer', 
-                  padding: '12px 16px',
-                  borderBottom: '1px solid #e1e8ed',
-                  display: 'flex',
-                  alignItems: 'center',
-                  backgroundColor: isOpen ? '#f5f8fa' : 'white'
-                }}
               >
                 <Icon 
                   icon={isOpen ? 'chevron-down' : 'chevron-right'} 
-                  style={{ marginRight: '8px' }}
+                  className="ExportGroup__chevron"
                 />
-                <Icon icon="search" style={{ marginRight: '8px', color: '#5c7080' }} />
                 <div>
-                  <strong>{searchTerm}</strong>
-                  <div style={{ fontSize: '12px', color: '#5c7080' }}>
+                  <div className="ExportGroup__title">{searchTerm}</div>
+                  <div className="ExportGroup__subtitle">
                     Created {newestExport && <span>{new Date(newestExport.created_at).toLocaleDateString()}</span>}
-                    • {groupExports.length} file{groupExports.length !== 1 ? 's' : ''}
+                    • {this.getExportTypeSummary(groupExports)}
                   </div>
                 </div>
               </div>
@@ -182,12 +194,6 @@ class ExportsList extends Component {
                       </th>
                       <th>
                         <FormattedMessage
-                          id="exports.expiration"
-                          defaultMessage="Expiration"
-                        />
-                      </th>
-                      <th>
-                        <FormattedMessage
                           id="exports.actions"
                           defaultMessage="Actions"
                         />
@@ -207,9 +213,8 @@ class ExportsList extends Component {
         
         {exports.isPending && (
           <div className="ExportGroup">
-            <div className="ExportGroup__header" style={{ padding: '12px 16px', backgroundColor: '#f5f8fa' }}>
-              <Icon icon="search" style={{ marginRight: '8px', color: '#5c7080' }} />
-              <strong>Loading exports...</strong>
+            <div className="ExportGroup__header ExportGroup__header--loading">
+              <div className="ExportGroup__title">Loading exports...</div>
             </div>
             <table className="ExportsTable data-table">
               <tbody>

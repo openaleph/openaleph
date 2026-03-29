@@ -50,7 +50,7 @@ def get_export(export_id):
 def write_document(export_dir, zf, collection, entity):
     content_hash = entity.first("contentHash", quiet=True)
     if content_hash is None:
-        return
+        return False
     file_name = entity_filename(entity)
     arcname = "{0}-{1}".format(entity.id, file_name)
     arcname = os.path.join(collection.get("label"), arcname)
@@ -59,6 +59,8 @@ def write_document(export_dir, zf, collection, entity):
         local_path = archive.load_file(content_hash, temp_path=export_dir)
         if local_path is not None and os.path.exists(local_path):
             zf.write(local_path, arcname=arcname)
+            return True
+        return False
     finally:
         archive.cleanup_file(content_hash, temp_path=export_dir)
 
@@ -122,15 +124,44 @@ def export_files(export_id):
     try:
         proxies, collections = _collect_proxies(export)
         file_path = export_dir.joinpath("export.zip")
+        
+        files_written = 0
+        size_exceeded = False
+        
         with ZipFile(file_path, mode="w") as zf:
             for entity in proxies:
                 collection_id = entity.context.get("collection_id")
                 collection = collections[collection_id]
-                write_document(export_dir, zf, collection, entity)
+                if collection is None:
+                    continue
+                    
+                if write_document(export_dir, zf, collection, entity):
+                    files_written += 1
+                    
                 if file_path.stat().st_size >= SETTINGS.EXPORT_MAX_SIZE:
-                    concern = "total size of the"
-                    zf.writestr("EXPORT_TOO_LARGE.txt", WARNING % concern)
+                    size_exceeded = True
                     break
+        
+        if files_written == 0:
+            # No files found
+            export.file_name = None
+            export.file_size = 0
+            export.content_hash = None
+            export.set_status(status=Status.SUCCESS)
+            export.meta = {**export.meta, "no_files": True}
+            db.session.commit()
+            return
+            
+        if size_exceeded:
+            # Export too large
+            export.file_name = None
+            export.file_size = 0
+            export.content_hash = None
+            export.set_status(status=Status.SUCCESS)
+            export.meta = {**export.meta, "too_large": True}
+            db.session.commit()
+            return
+            
         file_name = safe_filename(export.label, extension="zip")
         complete_export(export_id, file_path, file_name)
     except Exception:
@@ -142,7 +173,7 @@ def export_files(export_id):
         shutil.rmtree(export_dir)
 
 
-CSV_HEADERS = ["caption", "schema", "collection", "collection_id", "url", "download_url"]
+CSV_HEADERS = ["caption", "schema", "collection", "collection_fid", "url"]
 
 
 def export_csv(export_id):
@@ -159,21 +190,12 @@ def export_csv(export_id):
             for entity in proxies:
                 collection_id = entity.context.get("collection_id")
                 collection = collections[collection_id]
-                content_hash = entity.first("contentHash", quiet=True)
-                download_url = ""
-                if content_hash:
-                    download_url = archive_url(
-                        content_hash,
-                        file_name=entity_filename(entity),
-                        expire=export.expires_at,
-                    ) or ""
                 writer.writerow([
                     entity.caption,
                     entity.schema.name,
                     collection.get("label"),
                     collection.get("foreign_id"),
                     entity_url(entity.id),
-                    download_url,
                 ])
         complete_export(export_id, file_path, file_name)
     except Exception:

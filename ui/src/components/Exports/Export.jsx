@@ -49,9 +49,6 @@ class Export extends PureComponent {
       <td className="timestamp">
         <Skeleton.Text type="span" length={15} />
       </td>
-      <td className="timestamp">
-        <Skeleton.Text type="span" length={15} />
-      </td>
       <td className="export-actions">
         <Skeleton.Text type="span" length={5} />
       </td>
@@ -66,13 +63,23 @@ class Export extends PureComponent {
       return this.renderSkeleton();
     }
 
-    const { id, expires_at: expiresAt, created_at: createdAt, export_status: status } = export_;
+    const { id, created_at: createdAt, export_status: status } = export_;
 
     return (
       <>
         <tr key={id} className={c('Export nowrap', status)}>
           <td className="export-label wide">
-            <ExportLink export_={export_} icon="package" />
+            {export_.meta?.no_files ? (
+              <span className="export-warning no-files">
+                No downloadable files found
+              </span>
+            ) : export_.meta?.too_large ? (
+              <span className="export-warning too-large">
+                Export too large - contact administrator
+              </span>
+            ) : (
+              <ExportLink export_={export_} />
+            )}
           </td>
           <td className="export-filesize">
             <FileSize value={export_.file_size} />
@@ -80,9 +87,6 @@ class Export extends PureComponent {
           <td className="export-status">{export_.status}</td>
           <td className="timestamp">
             <RelativeTime utcDate={createdAt} />
-          </td>
-          <td className="timestamp">
-            <RelativeTime utcDate={expiresAt} />
           </td>
           <td className="export-actions">
             <Button
