@@ -212,11 +212,11 @@ def export():
     # Clean the search term for use in filenames
     if search_term != "(EMPTY_QUERY)":
         search_term = search_term.replace(" ", "_").replace("/", "_").replace("\\", "_")
-        search_term = re.sub(r'[<>:"|?*]', '_', search_term)
+        search_term = re.sub(r'[<>:"|?*]', "_", search_term)
     meta = {
-        "query": query.get_query(), 
+        "query": query.get_query(),
         "schemata": schemata,
-        "search_term": parser.text or "(EMPTY_QUERY)"
+        "search_term": parser.text or "(EMPTY_QUERY)",
     }
 
     body = request.get_json(silent=True) or {}

@@ -67,7 +67,7 @@ def delete(export_id):
     export = Export.by_id(export_id, role_id=request.authz.id)
     if export is None:
         raise NotFound("Export not found")
-    
+
     export.deleted = True
     db.session.add(export)
     db.session.commit()

@@ -117,6 +117,7 @@ def export_entities(export_id):
     finally:
         shutil.rmtree(export_dir)
 
+
 def export_files(export_id):
     export = Export.by_id(export_id)
     log.info("Export files [%r]...", export)
@@ -124,24 +125,24 @@ def export_files(export_id):
     try:
         proxies, collections = _collect_proxies(export)
         file_path = export_dir.joinpath("export.zip")
-        
+
         files_written = 0
         size_exceeded = False
-        
+
         with ZipFile(file_path, mode="w") as zf:
             for entity in proxies:
                 collection_id = entity.context.get("collection_id")
                 collection = collections[collection_id]
                 if collection is None:
                     continue
-                    
+
                 if write_document(export_dir, zf, collection, entity):
                     files_written += 1
-                    
+
                 if file_path.stat().st_size >= SETTINGS.EXPORT_MAX_SIZE:
                     size_exceeded = True
                     break
-        
+
         if files_written == 0:
             # No files found
             export.file_name = None
@@ -151,7 +152,7 @@ def export_files(export_id):
             export.meta = {**export.meta, "no_files": True}
             db.session.commit()
             return
-            
+
         if size_exceeded:
             # Export too large
             export.file_name = None
@@ -161,7 +162,7 @@ def export_files(export_id):
             export.meta = {**export.meta, "too_large": True}
             db.session.commit()
             return
-            
+
         file_name = safe_filename(export.label, extension="zip")
         complete_export(export_id, file_path, file_name)
     except Exception:
@@ -190,13 +191,15 @@ def export_csv(export_id):
             for entity in proxies:
                 collection_id = entity.context.get("collection_id")
                 collection = collections[collection_id]
-                writer.writerow([
-                    entity.caption,
-                    entity.schema.name,
-                    collection.get("label"),
-                    collection.get("foreign_id"),
-                    entity_url(entity.id),
-                ])
+                writer.writerow(
+                    [
+                        entity.caption,
+                        entity.schema.name,
+                        collection.get("label"),
+                        collection.get("foreign_id"),
+                        entity_url(entity.id),
+                    ]
+                )
         complete_export(export_id, file_path, file_name)
     except Exception:
         log.exception("Failed to process CSV export [%s]", export_id)
