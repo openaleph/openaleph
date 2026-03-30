@@ -2,10 +2,8 @@ import logging
 import re
 
 from flask import Blueprint, request
-from flask_babel import gettext
 from followthemoney.compare import compare
 from openaleph_procrastinate.defer import tasks
-from openaleph_search.settings import MAX_PAGE
 from rigour.mime.types import ZIP
 from werkzeug.exceptions import BadRequest, NotFound
 

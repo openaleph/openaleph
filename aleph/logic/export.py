@@ -6,7 +6,6 @@ from tempfile import mkdtemp
 from zipfile import ZipFile
 
 import orjson
-from flask import render_template
 from followthemoney.export.excel import ExcelExporter
 from followthemoney.helpers import entity_filename
 from normality import safe_filename
@@ -18,9 +17,10 @@ from servicelayer.archive.util import checksum, ensure_path
 from aleph.core import archive, db
 from aleph.index.collections import get_collection
 from aleph.logic.aggregator import get_aggregator_name
-from aleph.logic.mail import email_role
+
+# from aleph.logic.mail import email_role  # Email notifications disabled
 from aleph.logic.notifications import publish
-from aleph.logic.util import archive_url, entity_url, ui_url
+from aleph.logic.util import entity_url
 from aleph.model import Entity, Events, Export, Role, Status
 from aleph.settings import SETTINGS
 
