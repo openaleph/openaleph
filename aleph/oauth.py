@@ -108,7 +108,7 @@ def handle_oauth(provider, oauth_token):
         foreign_id = "group:%s" % group
         group_role = Role.load_or_create(foreign_id, Role.GROUP, group)
         new_group_roles.append(group_role)
-    
+
     role.update_groups(new_group_roles)
     role.update_name(name or email)
 

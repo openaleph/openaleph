@@ -281,10 +281,10 @@ class Role(db.Model, IdModel, SoftDeleteModel):
 
     def update_groups(self, new_groups):
 
-        if set(new_groups) == set(self.roles): 
+        if set(new_groups) == set(self.roles):
             return
 
-        self.clear_roles()     
+        self.clear_roles()
         for group in new_groups:
             self.add_role(group)
             log.debug("User %r is member of %r", self, group)
