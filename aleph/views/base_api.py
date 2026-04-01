@@ -193,8 +193,8 @@ def healthz():
     get:
       summary: Health check endpoint.
       description: >
-        Use health checks, this checks connections to Database, Archive, Redis
-        and Elasticsearch.
+        Use health checks, this checks connections to Database, Archive, Redis,
+        Elasticsearch and the oauth service (if configured).
       responses:
         '200':
           description: OK
@@ -214,13 +214,21 @@ def healthz():
         if api_key != SETTINGS.HEALTH_CHECK_API_KEY:
             raise Unauthorized("Invalid or missing API key")
 
-    from openaleph_procrastinate.archive import get_archive
+    _check_postgres()
+    _check_elasticsearch()
+    _check_redis()
+    _check_archive()
+    if SETTINGS.OAUTH:
+        _check_oauth()
+
+    return jsonify({"status": "ok"})
+
+
+def _check_postgres():
     from openaleph_procrastinate.settings import OpenAlephSettings
-    from openaleph_search.core import get_es
     from sqlalchemy import create_engine, text
 
     settings = OpenAlephSettings()
-
     try:
         for db_uri in set(
             [settings.db_uri, settings.fragments_uri, settings.procrastinate_db_uri]
@@ -234,17 +242,27 @@ def healthz():
     except Exception as exc:
         raise RuntimeError(f"PostgreSQL health check failed: {exc}")
 
+
+def _check_elasticsearch():
+    from openaleph_search.core import get_es
+
     try:
         es = get_es()
         es.info()
     except Exception as exc:
         raise RuntimeError(f"Elasticsearch health check failed: {exc}")
 
+
+def _check_redis():
     try:
         redis = get_cache()
         redis.kv.ping()
     except Exception as exc:
         raise RuntimeError(f"Redis health check failed: {exc}")
+
+
+def _check_archive():
+    from openaleph_procrastinate.archive import get_archive
 
     try:
         archive = get_archive()
@@ -252,7 +270,14 @@ def healthz():
     except Exception as exc:
         raise RuntimeError(f"Archive health check failed: {exc}")
 
-    return jsonify({"status": "ok"})
+
+def _check_oauth():
+    try:
+        from aleph.oauth import oauth
+
+        oauth.provider.load_server_metadata()
+    except Exception as exc:
+        raise RuntimeError(f"OAuth health check failed: {exc}")
 
 
 @blueprint.app_errorhandler(NotModified)
