@@ -5,9 +5,15 @@ from pathlib import Path
 
 import click
 from flask.cli import FlaskGroup
+from followthemoney import EntityProxy
 from followthemoney.cli.util import write_object
+from followthemoney.namespace import Namespace
 from normality import slugify
-from openaleph_procrastinate.util import make_file_entity
+from openaleph_procrastinate.util import (
+    QUERY_LIMIT,
+    get_page_entity_fragments,
+    make_file_entity,
+)
 from openaleph_search.index.admin import delete_index
 from openaleph_search.index.entities import get_entity as _get_index_entity
 from openaleph_search.index.entities import iter_proxies
@@ -16,7 +22,7 @@ from tabulate import tabulate
 from aleph.authz import Authz
 from aleph.core import cache, create_app, db
 from aleph.index.collections import get_collection as _get_index_collection
-from aleph.logic.aggregator import get_aggregator
+from aleph.logic.aggregator import get_aggregator, get_aggregator_name
 from aleph.logic.archive import cleanup_archive
 from aleph.logic.collections import (
     aggregate_model,
@@ -55,6 +61,7 @@ from aleph.procrastinate.queues import (
     OP_INGEST,
     queue_analyze,
     queue_cancel_collection,
+    queue_index,
     queue_ingest,
     queue_reindex,
 )
@@ -922,6 +929,99 @@ def reanalyze_collection(
         refine_locations=refine_locations,
         overwrite_lang=overwrite_lang,
     )
+
+
+@cli.command()
+@click.option(
+    "-f",
+    "--foreign-id",
+    required=True,
+    help="Foreign ID of the collection that translations should be purged from",
+)
+@click.option(
+    "-e",
+    "--entity-id",
+    required=False,
+    help="Entity ID of the entity with translated text that should be deleted",
+)
+@click.option(
+    "-i",
+    "--infile",
+    required=False,
+    type=click.File("r"),
+    help="File path containing entity IDs of the entities \
+        with translated text that should be deleted",
+)
+def delete_translation(entity_id, foreign_id, infile):  # noqa: C901
+    """Delete translations from one entity, one entire collection \
+        or from all entities in a list. Delete FTM-Entities with origin=translate."""
+    if not entity_id and not foreign_id and not infile:
+        raise click.BadParameter("At least one of the following options needs to be \
+                provided: -e [entity_id] / -f [foreign_id] / -f [/path/to/file]")
+
+    collection = get_collection(foreign_id)
+    if not collection:
+        raise click.ClickException(f"Collection {foreign_id} not found")
+
+    ns = Namespace(foreign_id)
+    origin = "translate"
+    to_index: list[EntityProxy] = []
+    to_delete: list[str] = []
+    entity_ids: list[str] = []
+    aggregator = get_aggregator(collection)
+    aggregator_name = get_aggregator_name(collection)
+
+    if entity_id:
+        entity_ids.append(entity_id)
+    if infile:
+        entity_ids.extend(infile.readlines())
+        entity_ids = [e.strip() for e in entity_ids]
+
+    ix = 1
+    for id in entity_ids:
+        entity_data = list(aggregator.fragments(id, fragment="default"))
+        if not entity_data:
+            raise click.ClickException(
+                f"Entity {id} not found in collection {collection.id}"
+            )
+        entity = EntityProxy.from_dict(entity_data[0])
+        if entity.schema.is_a("Pages"):
+            to_delete.append(id)
+            to_index.append(entity)
+            for page_data in get_page_entity_fragments(entity, aggregator_name, ns):
+                page_entity = EntityProxy.from_dict(page_data)
+                to_delete.append(page_entity.id)
+                to_index.append(page_entity)
+                ix += 1
+                if ix >= QUERY_LIMIT:
+                    log.info(
+                        f"Deleting {QUERY_LIMIT} translations, queueing entities for re-index"
+                    )
+                    aggregator.delete_many(to_delete, origin=origin)
+                    queue_index(collection, to_index)
+                    to_delete.clear()
+                    to_index.clear()
+                    ix = 1
+        else:
+            to_delete.append(id)
+            to_index.append(entity)
+
+            if len(to_delete) >= QUERY_LIMIT:
+                log.info(
+                    f"Deleting {QUERY_LIMIT} translations, queueing entities for re-index"
+                )
+                aggregator.delete_many(to_delete, origin=origin)
+                queue_index(collection, to_index)
+                to_delete.clear()
+                to_index.clear()
+
+    if to_delete:
+        aggregator.delete_many(to_delete, origin=origin)
+        queue_index(collection, to_index)
+
+    if not entity_id and not infile:
+        aggregator.delete(origin=origin)
+        queue_reindex(collection)
 
 
 @cli.command()
