@@ -71,7 +71,11 @@ class TranslateButton extends Component {
     const { entity, intl, languageValues } = this.props;
     const { blocking, processing } = this.state;
     const isProcessing = processing || entity?.processing_status?.translate;
-    const languages = entity?.collection?.languages || [];
+    const collectionLanguages = entity?.collection?.languages || [];
+    const detectedLanguages = entity?.getProperty?.('detectedLanguage') || [];
+    const languages = [
+      ...new Set([...detectedLanguages, ...collectionLanguages]),
+    ];
 
     let menu = null;
     if (languages.length > 0) {
