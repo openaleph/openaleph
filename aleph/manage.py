@@ -975,7 +975,7 @@ def delete_translation(entity_id, foreign_id, infile):  # noqa: C901
         entity_ids.append(entity_id)
     if infile:
         entity_ids.extend(infile.readlines())
-        entity_ids = [e.replace("\n", "") for e in entity_ids]
+        entity_ids = [e.strip() for e in entity_ids]
 
     ix = 1
     for id in entity_ids:
