@@ -134,7 +134,9 @@ export class HomeScreen extends Component {
                 datasetgroups: DatasetGroups,
                 highlighttopics: HighlightTopics,
               }}
-            />
+            >
+              {appHomePage.content}
+            </ReactMarkdown>
           )}
           <section className="HomeScreen__section HomeScreen__section--light">
             <div className="HomeScreen__section__content">
