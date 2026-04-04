@@ -70,7 +70,7 @@ export {
   fetchSystemStatus,
 } from './metadataActions';
 export { loginWithToken, loginWithPassword, logout } from './sessionActions';
-export { fetchExports, triggerQueryExport } from './exportActions';
+export { fetchExports, triggerQueryExport, deleteExport } from './exportActions';
 export {
   queryBookmarks,
   createBookmark,

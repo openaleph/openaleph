@@ -20,7 +20,8 @@ const messages = defineMessages({
   },
   export_disabled: {
     id: 'search.screen.export_disabled',
-    defaultMessage: 'Cannot export more than 10,000 results at a time',
+    defaultMessage:
+      'Exports are limited to 1,000 results. Please refine your search.',
   },
   export_disabled_empty: {
     id: 'search.screen.export_disabled_empty',
@@ -42,7 +43,7 @@ class SearchActionBar extends React.Component {
     let tooltipText;
     if (!result.total) {
       tooltipText = intl.formatMessage(messages.export_disabled_empty);
-    } else if (result.total >= 10000) {
+    } else if (result.total > 1000) {
       tooltipText = intl.formatMessage(messages.export_disabled);
     } else {
       tooltipText = intl.formatMessage(messages.export_helptext);
