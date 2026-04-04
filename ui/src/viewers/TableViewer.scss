@@ -1,5 +1,10 @@
 .TableViewer {
   height: 85vh;
   direction: ltr;
-  // height: 20em;
+
+  &__hidden-rows {
+    margin: 8px 16px;
+    font-size: 0.85em;
+    color: #5c7080;
+  }
 }
