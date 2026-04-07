@@ -5,6 +5,7 @@ from flask_babel import gettext
 from followthemoney.compare import compare
 from openaleph_procrastinate.defer import tasks
 from openaleph_search.settings import MAX_PAGE
+from rigour.langs import iso_639_alpha2
 from rigour.mime.types import ZIP
 from werkzeug.exceptions import BadRequest, NotFound
 
@@ -939,7 +940,7 @@ def translate(entity_id):
     if not should_translate(collection.id, collection.foreign_id, proxy):
         raise BadRequest("Entity is not eligible for translation")
     data = request.get_json(silent=True) or {}
-    source_language = data.get("source_language")
+    source_language = iso_639_alpha2(data.get("source_language") or "")
     if source_language and source_language not in (collection.languages or []):
         raise BadRequest(
             f"source_language '{source_language}' is not configured for this collection"
