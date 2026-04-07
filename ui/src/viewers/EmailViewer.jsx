@@ -1,58 +1,26 @@
 import React, { PureComponent } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { Classes, Pre } from '@blueprintjs/core';
-import { Schema } from 'react-ftm';
-import { Property, Skeleton, Entity } from 'components/common';
-import wordList from 'util/wordList';
+import { Skeleton } from 'components/common';
+import EmailPropertyValues from 'components/common/EmailPropertyValues';
 
 import './EmailViewer.scss';
 
 class EmailViewer extends PureComponent {
-  headerProperty(name, entitiesProp) {
+  headerProperty(name) {
     const { document } = this.props;
     const prop = document.schema.getProperty(name);
-    const values = document.getProperty(prop).map((value) => {
-      let result = (
-        <Property.Value
-          key={value.id || value}
-          prop={prop}
-          value={value}
-          showTime={true}
-        />
-      );
-      if (entitiesProp) {
-        const normValue = value.toLowerCase().trim();
-        const eprop = document.schema.getProperty(entitiesProp);
-        document.getProperty(eprop).forEach((entity) => {
-          if (!entity?.id) {
-            return;
-          }
-          entity.getProperty('email').forEach((email) => {
-            if (normValue.indexOf(email.toLowerCase().trim()) !== -1) {
-              result = (
-                <Entity.Link entity={entity} icon>
-                  <Schema.Icon
-                    schema={entity.schema}
-                    className="left-icon"
-                    size={16}
-                  />
-                  {entity.getCaption() !== email && entity.getCaption() + ' '}
-                  {'<' + email + '>'}
-                </Entity.Link>
-              );
-            }
-          });
-        });
-      }
-      return result;
-    });
-    if (values.length === 0) {
+
+    if (!document.hasProperty(name)) {
       return null;
     }
+
     return (
       <tr key={prop.qname}>
         <th>{prop.label}</th>
-        <td>{wordList(values, ', ')}</td>
+        <td>
+          <EmailPropertyValues entity={document} prop={name} separator=", " />
+        </td>
       </tr>
     );
   }
@@ -66,12 +34,12 @@ class EmailViewer extends PureComponent {
       <div className="email-header">
         <table className={Classes.HTML_TABLE}>
           <tbody>
-            {this.headerProperty('from', 'emitters')}
+            {this.headerProperty('from')}
             {this.headerProperty('date')}
             {this.headerProperty('subject')}
-            {this.headerProperty('to', 'recipients')}
-            {this.headerProperty('cc', 'recipients')}
-            {this.headerProperty('bcc', 'recipients')}
+            {this.headerProperty('to')}
+            {this.headerProperty('cc')}
+            {this.headerProperty('bcc')}
             {this.headerProperty('inReplyToEmail')}
           </tbody>
         </table>
