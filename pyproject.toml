@@ -14,8 +14,8 @@ requires-python = ">=3.12,<3.14"
 dependencies = [
     "followthemoney @ git+https://github.com/dataresearchcenter/followthemoney.git@fix/pickle",
     "openaleph-search @ git+https://github.com/openaleph/openaleph-search.git",
-    "openaleph-procrastinate (>=5.2.1,<6.0.0)",
-    "ftmq[postgres] (>=4.6.1,<5.0.0)",
+    "openaleph-procrastinate @ git+https://github.com/openaleph/openaleph-procrastinate.git",
+    "ftmq[postgres] (>=4.7.1,<5.0.0)",
     "nomenklatura (>=4.7.2,<5.0.0)",
     "normality (>=3.0.2,<4.0.0)",
     "pydantic (>=2.10.6,<3.0.0)",
