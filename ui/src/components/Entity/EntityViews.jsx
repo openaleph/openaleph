@@ -259,6 +259,7 @@ class EntityViews extends React.Component {
                   query={referenceQuery}
                   reference={reference}
                   hideCollection={true}
+                  isPreview={isPreview}
                 />
               }
             />

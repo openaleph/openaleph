@@ -153,19 +153,19 @@ class EntityReferencesMode extends React.Component {
   }
 
   renderCell(prop, entity) {
-    const { schema, isThing } = this.props;
+    const { schema, isThing, isPreview } = this.props;
     const propVal = (
       <Property.Values
         prop={prop}
         values={entity.getProperty(prop.name)}
         translitLookup={entity.latinized}
-        preview={true}
+        preview={!isPreview}
       />
     );
     if (isThing && schema.caption.indexOf(prop.name) !== -1) {
       return (
         <td key={prop.name} className="entity">
-          <Entity.Link entity={entity} preview={true}>
+          <Entity.Link entity={entity} preview={!isPreview}>
             <Schema.Icon schema={entity.schema} className="left-icon" />
             {propVal}
           </Entity.Link>
