@@ -11,6 +11,7 @@ from followthemoney import __version__ as ftm_version
 from followthemoney import model
 from followthemoney.exc import InvalidData
 from jwt import DecodeError, ExpiredSignatureError
+from rigour.langs import iso_639_alpha3
 from werkzeug.exceptions import Unauthorized
 
 from aleph import __version__
@@ -42,6 +43,10 @@ def _metadata_locale(locale):
         auth["oauth_uri"] = url_for("sessions_api.oauth_init")
     locales = SETTINGS.UI_LANGUAGES
     locales = {loc: Locale(loc).get_language_name(loc) for loc in locales}
+
+    translate_source_languages = [
+        iso_639_alpha3(lang) for lang in SETTINGS.FTM_TRANSLATE_SOURCE_LANGUAGES
+    ]
 
     # This is dumb but we agreed it with ARIJ
     # https://github.com/alephdata/aleph/issues/1432
@@ -82,6 +87,7 @@ def _metadata_locale(locale):
             "timelines": SETTINGS.FEEDBACK_URL_TIMELINES,
         },
         "service_urls": {"ftm_assets": SETTINGS.FTM_ASSETS_URL},
+        "services": {"translate": {"source_languages": translate_source_languages}},
     }
 
 

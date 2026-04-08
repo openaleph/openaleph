@@ -566,3 +566,7 @@ export function selectServiceUrls(state) {
 export function selectServiceUrl(state, key) {
   return selectServiceUrls(state)?.[key];
 }
+
+export function selectTranslateSourceLanguages(state) {
+  return selectMetadata(state)?.services?.translate?.source_languages || [];
+}

@@ -236,6 +236,9 @@ class Settings:
         # External services
         self.FTM_ASSETS_URL = env.get("FTM_ASSETS_URL")
         self.FTM_TRANSLATE_TARGET_LANGUAGE = env.get("FTM_TRANSLATE_TARGET_LANGUAGE")
+        self.FTM_TRANSLATE_SOURCE_LANGUAGES = (
+            env.get("FTM_TRANSLATE_SOURCE_LANGUAGES") or ""
+        ).split(",")
 
         ###############################################################################
         # Additional configuration

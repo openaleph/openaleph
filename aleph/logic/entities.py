@@ -23,6 +23,7 @@ from aleph.procrastinate.queues import (
     queue_prune_entity,
     queue_update_entity,
 )
+from aleph.settings import SETTINGS
 from aleph.util import make_entity_proxy
 
 log = logging.getLogger(__name__)
@@ -183,6 +184,8 @@ def should_translate(collection_id: int, foreign_id: str, proxy: EntityProxy) ->
     views' and not in lists for many entities because of the costly call for
     Pages schemata."""
     if not tasks.translate.defer:
+        return False
+    if not SETTINGS.FTM_TRANSLATE_SOURCE_LANGUAGES:
         return False
     if proxy.has(
         "translatedText", quiet=True

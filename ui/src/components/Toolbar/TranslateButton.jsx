@@ -7,7 +7,7 @@ import { Popover2 as Popover } from '@blueprintjs/popover2';
 import { Tooltip2 as Tooltip } from '@blueprintjs/popover2';
 
 import { triggerEntityTranslate } from 'actions';
-import { selectModel } from 'selectors';
+import { selectModel, selectTranslateSourceLanguages } from 'selectors';
 import { showSuccessToast, showWarningToast } from 'app/toast';
 
 const messages = defineMessages({
@@ -39,6 +39,10 @@ const messages = defineMessages({
     id: 'entity.toolbar.translate.auto_detect',
     defaultMessage: 'Auto-detect language',
   },
+  unsupported: {
+    id: 'entity.toolbar.translate.unsupported',
+    defaultMessage: '{language} (not supported)',
+  },
 });
 
 class TranslateButton extends Component {
@@ -68,7 +72,7 @@ class TranslateButton extends Component {
   }
 
   render() {
-    const { entity, intl, languageValues } = this.props;
+    const { entity, intl, languageValues, supportedLanguages } = this.props;
     const { blocking, processing } = this.state;
     const isProcessing = processing || entity?.processing_status?.translate;
     const collectionLanguages = entity?.collection?.languages || [];
@@ -76,6 +80,7 @@ class TranslateButton extends Component {
     const languages = [
       ...new Set([...detectedLanguages, ...collectionLanguages]),
     ];
+    const supportedSet = new Set(supportedLanguages || []);
 
     let menu = null;
     if (languages.length > 0) {
@@ -87,11 +92,18 @@ class TranslateButton extends Component {
           />
           {languages.map((code) => {
             const label = languageValues?.get?.(code) || code;
+            const isSupported = supportedSet.has(code);
+            const text = isSupported
+              ? intl.formatMessage(messages.translate_from, { language: label })
+              : intl.formatMessage(messages.unsupported, { language: label });
             return (
               <MenuItem
                 key={code}
-                text={intl.formatMessage(messages.translate_from, { language: label })}
-                onClick={() => this.onTranslate(code)}
+                text={text}
+                disabled={!isSupported}
+                onClick={
+                  isSupported ? () => this.onTranslate(code) : undefined
+                }
               />
             );
           })}
@@ -145,6 +157,7 @@ const mapStateToProps = (state) => {
   const model = selectModel(state);
   return {
     languageValues: model?.types?.language?.values || {},
+    supportedLanguages: selectTranslateSourceLanguages(state),
   };
 };
 
