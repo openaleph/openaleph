@@ -57,6 +57,7 @@ def _metadata_locale(locale):
             "version": __version__,
             "ftm_version": ftm_version,
             "banner": SETTINGS.APP_BANNER,
+            "entity_banner_rules": SETTINGS.ENTITY_BANNER_RULES,
             "ui_uri": SETTINGS.APP_UI_URL,
             "messages_url": SETTINGS.APP_MESSAGES_URL,
             "publish": archive.can_publish,
