@@ -1,9 +1,10 @@
 from datetime import datetime
+
 from normality import stringify
 
 from aleph.core import db
+from aleph.model.common import DatedModel, DatedSchema, SDict
 from aleph.model.role import Role
-from aleph.model.common import DatedModel
 
 
 class Alert(db.Model, DatedModel):
@@ -16,7 +17,7 @@ class Alert(db.Model, DatedModel):
     notified_at = db.Column(db.DateTime, nullable=True)
 
     role_id = db.Column(db.Integer, db.ForeignKey("role.id"), index=True)
-    role = db.relationship(Role, backref=db.backref("alerts", lazy="dynamic"))  # noqa
+    role = db.relationship(Role, backref=db.backref("alerts", lazy="dynamic"))
 
     def update(self):
         self.notified_at = datetime.utcnow()
@@ -61,3 +62,22 @@ class Alert(db.Model, DatedModel):
 
     def __repr__(self):
         return "<Alert(%r, %r)>" % (self.id, self.query)
+
+
+# === Pydantic schemas ===
+
+
+class AlertSchema(DatedSchema):
+    """Canonical wire format for an :class:`Alert`.
+
+    ``query`` and ``role_id`` are application invariants — every alert
+    is created with both. The DB columns are technically nullable but
+    the application never persists an alert without them.
+    """
+
+    query: str
+    role_id: str
+    notified_at: datetime | None = None
+
+    writeable: bool = False
+    links: SDict = {}

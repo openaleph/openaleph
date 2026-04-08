@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from typing import Literal
 
 from itsdangerous import URLSafeTimedSerializer
 from normality import stringify
@@ -7,7 +8,14 @@ from sqlalchemy import func, not_, or_
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from aleph.core import db
-from aleph.model.common import IdModel, SoftDeleteModel, make_token, query_like
+from aleph.model.common import (
+    DatedSchema,
+    IdModel,
+    SDict,
+    SoftDeleteModel,
+    make_token,
+    query_like,
+)
 from aleph.settings import SETTINGS
 from aleph.util import anonymize_email
 
@@ -318,3 +326,43 @@ Role.members = db.relationship(
     secondaryjoin=Role.id == membership.c.member_id,
     backref="roles",
 )
+
+
+# === Pydantic schemas ===
+
+RoleType = Literal["user", "group", "system"]
+
+
+class RoleSchema(DatedSchema):
+    """Canonical wire format for a :class:`Role`.
+
+    Required fields are application invariants: every role row has
+    ``foreign_id``, ``name``, ``type`` (all ``nullable=False`` at the
+    DB level) and ``label`` (a computed property on the SQLA class
+    that always returns a non-empty string).
+
+    The sensitive fields (``email``, ``api_key``, ``locale``, the
+    ``is_*`` flags, ``has_password``) stay optional because callers
+    redact them based on whether the requester is allowed to write the
+    role; unset → stripped on dump.
+    """
+
+    type: RoleType
+    name: str
+    foreign_id: str
+    label: str
+
+    # Sensitive — populated only when the requester is allowed to see them.
+    email: str | None = None
+    api_key: str | None = None
+    locale: str | None = None
+    has_password: bool | None = None
+    is_admin: bool | None = None
+    is_muted: bool | None = None
+    is_tester: bool | None = None
+    is_blocked: bool | None = None
+    is_investigator: bool | None = None
+
+    writeable: bool = False
+    shallow: bool = True
+    links: SDict = {}

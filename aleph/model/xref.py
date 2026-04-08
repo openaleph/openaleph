@@ -4,10 +4,14 @@ from typing import Self
 from anystore.types import SDict
 from anystore.util.data import model_dump
 from banal import hash_data
+from nomenklatura.judgement import Judgement
 from nomenklatura.resolver.edge import Edge
 from nomenklatura.resolver.identifier import StrIdent
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
+from aleph.model.collection import CollectionSchema
+from aleph.model.common import APIBaseModel
+from aleph.model.entity import EntitySchema
 from aleph.settings import SETTINGS
 
 SYSTEM_USER = SETTINGS.SYSTEM_USER
@@ -59,3 +63,94 @@ class ESEdge(BaseModel):
         data = e.to_dict()
         data.update(**metadata)
         return cls(**data)
+
+
+# === API wire-format schemas ===
+#
+# ESEdge above is the internal storage shape for the nomenklatura
+# resolver. The schemas below are the API wire formats that the
+# response builder produces from edges + canonical clusters.
+
+
+class XrefSchema(APIBaseModel):
+    """Wire format for a cross-reference match — one ranked pair of
+    similar entities, perspective-aware so the requested collection's
+    entity is always served as ``entity`` (left).
+
+    Both ``entity`` and ``match`` are required: ``XrefSerializer``
+    drops the row entirely if either side fails to resolve, so a
+    half-populated XrefSchema would be a bug. ``score`` is also
+    required — every edge produced by the nomenklatura resolver
+    carries one.
+    """
+
+    entity: EntitySchema
+    match: EntitySchema
+    score: float
+    collections: list[CollectionSchema] = []
+    writeable: bool = False
+
+    method: str | None = None
+    judgement: Judgement | None = None
+
+    @property
+    def cache_key(self) -> str:
+        # Pair-deterministic key matching ESEdge.edge_id semantics.
+        # Both entity and match are required so neither id can be empty.
+        a, b = sorted([self.entity.id, self.match.id])
+        return f"{a}/{b}"
+
+
+class CanonicalSchema(APIBaseModel):
+    """Wire format for a canonical (clustered) entity — replaces the
+    legacy Profile shape.
+
+    A canonical cluster is the merged view of N constituent entities
+    that the resolver has judged the same. ``merged`` is the FTM
+    proxy of the merged result; ``entities`` are the constituent
+    entities (typically served shallow). The cluster only exists
+    *because* there's a merged proxy — ``merged`` is required, and
+    the legacy ``CanonicalSerializer._serialize`` raises ``KeyError``
+    on the same invariant.
+    """
+
+    id: str
+    merged: SDict
+    entities: list[EntitySchema] = []
+    collection_ids: list[str] = []
+    writeable: bool = False
+    shallow: bool = False
+
+    @property
+    def cache_key(self) -> str:
+        return self.id
+
+
+class StatementSchema(APIBaseModel):
+    """Wire format for a single FollowTheMoney statement
+    (``GET /api/2/statements`` and embedded in canonical lineage views).
+
+    A statement is one (entity, schema, prop, value) tuple sourced from
+    one dataset — all five parts are required. ``id`` is also required
+    because :class:`followthemoney.statement.Statement` always has one
+    (the ``Statement.__init__`` derives it via ``generate_key()`` if no
+    explicit id was passed). When ``prop`` is an entity-typed property
+    the value is resolved to a nested :class:`EntitySchema` by the
+    response builder.
+    """
+
+    id: str
+    entity_id: str
+    schema_: str = Field(alias="schema")
+    prop: str
+    value: str | EntitySchema
+    dataset: CollectionSchema | str
+
+    canonical_id: str | None = None
+    prop_type: str | None = None
+    first_seen: datetime | None = None
+    last_seen: datetime | None = None
+
+    @property
+    def cache_key(self) -> str:
+        return self.id
