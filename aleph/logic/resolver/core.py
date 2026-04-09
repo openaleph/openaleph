@@ -1,55 +1,49 @@
-"""Per-request batch loader for cached pydantic resources.
+"""Resolver cache and per-request batch loader.
 
-The :class:`Resolver` is constructed once per HTTP request and exposes
-typed ``get`` / ``get_many`` / ``get_etag`` / ``invalidate`` methods.
+Two classes:
 
-Three layers, in priority order:
+- :class:`Cache` — the module-level singleton (``cache``). Lives for
+  the entire process lifetime. No per-request local dict — every
+  ``get`` hits the persistent store directly. Used by SQLA events,
+  logic functions, CLI commands, and anything outside a request cycle.
 
-1. **Per-instance local dict** (request-scoped). Garbage collected when
-   the request ends. Holds both hits and *negative* hits — see the
-   ``_MISSING`` sentinel below — so a request asking for the same
-   missing id twice issues only one upstream call.
-2. **Persistent ``anystore.Store``** — Redis in production, ``memory://``
-   in tests, file/S3 in offline modes. Same code path either way; the
-   resolver doesn't know the backend. Misses are *never* persisted to
-   this layer (only to local), to avoid poisoning the store with stale
-   negatives across requests.
-3. **Upstream fetch** via the registry (DB / Elasticsearch / wherever
-   the owning logic module knows how to load from).
+- :class:`RequestResolver` — constructed once per HTTP request and
+  discarded on response. Adds a per-request ``_local`` dict on top of
+  the persistent store for request-scoped deduplication and negative-hit
+  caching. Used by serializers and view functions via FastAPI
+  ``Depends(get_resolver)`` or Flask request lifecycle.
 
-The hot-path read uses ``model_validate=False`` so cached payloads
-skip pydantic validators. They were already validated at write time
-and the persistent store is a trust boundary the resolver controls
-end-to-end.
-
-The resolver also doubles as the source of truth for HTTP cache
-validators: every cached object exposes a content-derived ETag
-(:meth:`Resolver.get_etag`, :meth:`Resolver.get_many_etag`)
-which the API layer puts on the response so browsers can revalidate
-with ``If-None-Match`` and get a 304. ETags rotate automatically
-whenever :meth:`Resolver.invalidate` is called from a mutation path,
-so the wire-level cache stays consistent with the backing store
-without any per-endpoint bookkeeping.
+Both share the same persistent store (Redis / memory / fs via anystore).
+The ``cache`` singleton is the canonical interface for all non-request
+code: ``from aleph.logic.resolver import cache``.
 
 Spurious ``invalidate()`` calls are cheap — content-derived ETags
 stay stable across re-fetches when the upstream content is unchanged,
 so the client still gets a 304. Mutation paths can invalidate
 liberally without paying for it on the wire.
+
+The resolver also doubles as the source of truth for HTTP cache
+validators: every cached object exposes a content-derived ETag
+(:meth:`Cache.get_etag`, :meth:`Cache.get_many_etag`)
+which the API layer puts on the response so browsers can revalidate
+with ``If-None-Match`` and get a 304. ETags rotate automatically
+whenever :meth:`Cache.invalidate` is called from a mutation path,
+so the wire-level cache stays consistent with the backing store
+without any per-endpoint bookkeeping.
 """
 
-from typing import Any, Type, TypeVar
+from typing import Any, Iterable, Type
 
 from anystore import get_store
+from anystore.logic.serialize import from_store
 from anystore.store import Store
 from pydantic import BaseModel
 from werkzeug.exceptions import NotFound
 
 from aleph.logic.resolver.etag import _short_hash, compute_etag
-from aleph.logic.resolver.registry import fetch_many, fetch_one, get_ttl
+from aleph.logic.resolver.registry import M, fetch_many, fetch_one, get_ttl
 from aleph.logic.resolver.ttl import STORE_TTL
 from aleph.settings import SETTINGS
-
-T = TypeVar("T", bound=BaseModel)
 
 # Sentinel so the per-request local cache can record "fetched, not found"
 # distinct from "never asked". ``dict.get(key)`` returns None for both —
@@ -60,7 +54,7 @@ _MISSING: Any = object()
 
 
 def get_resolver_store() -> Store:
-    """Shared anystore Store backing every Resolver instance.
+    """Shared anystore Store backing every Cache / RequestResolver.
 
     Reads ``SETTINGS.RESOLVER_STORE_URI`` (defined in
     :mod:`aleph.settings`), which defaults to the same Redis instance
@@ -76,9 +70,8 @@ def get_resolver_store() -> Store:
 
     ``raise_on_nonexist=False`` is essential — anystore's default is
     True (it raises ``DoesNotExist`` on missing keys), but the
-    resolver's three-layer cache logic depends on ``Store.get``
-    returning ``None`` for misses so it can fall through to the
-    upstream fetcher.
+    resolver's cache logic depends on ``Store.get`` returning ``None``
+    for misses so it can fall through to the upstream fetcher.
     """
     return get_store(
         uri=SETTINGS.RESOLVER_STORE_URI,
@@ -88,44 +81,31 @@ def get_resolver_store() -> Store:
     )
 
 
-class Resolver:
-    """Per-request batch loader. See module docstring for the cache
-    layering and rationale.
+class Cache:
+    """Process-level cache backed by the persistent store.
 
-    Constructed once per request and discarded on response. In FastAPI:
-    ``Depends(get_resolver)``. In Flask: one is attached to
-    ``flask.request._resolver`` by the serializer shim.
+    No per-request local dict — safe for use as a long-lived singleton.
+    Every ``get`` hits the store (Redis / memory) directly. Mutations
+    (``invalidate``, ``populate``) take effect immediately for all
+    subsequent reads across all requests.
+
+    This is the ``cache`` singleton exported from
+    ``aleph.logic.resolver``.
     """
 
-    # Exception raised by get_or_404. Swappable for frameworks that
-    # use a different 404 class (e.g. FastAPI's HTTPException).
     ERROR_NOT_FOUND = NotFound
 
     def __init__(self, store: Store | None = None) -> None:
-        # The local cache holds three states:
-        #   - key absent             → never asked this request
-        #   - key present, value=obj → cached pydantic instance
-        #   - key present, value=None → negative hit (already missed
-        #                               upstream this request, don't refetch)
-        self._local: dict[tuple[type, str], BaseModel | None] = {}
         self._store = store or get_resolver_store()
 
-    # --- key construction --------------------------------------------------
-
     @staticmethod
-    def _key(cls_: Type[BaseModel], identifier: str) -> str:
-        """Path-style store key: ``ClassName/identifier``.
-
-        For leaf schemas the identifier is a plain id or foreign_id
-        (``Role/42``, ``Collection/foo-dataset``). For aggregates the
-        caller passes a composite key built via the model's
-        ``make_cache_key`` classmethod (``CollectionStatistics/foo-dataset/stats``).
-        """
+    def _key(cls_: Type[M], identifier: str) -> str:
+        """Path-style store key: ``ClassName/identifier``."""
         return f"{cls_.__name__}/{identifier}"
 
-    # --- single-object API -------------------------------------------------
+    # --- read API ----------------------------------------------------------
 
-    def get_or_404(self, cls: Type[T], identifier: str) -> T:
+    def get_or_404(self, cls: Type[M], identifier: str) -> M:
         """Like :meth:`get` but raises :attr:`ERROR_NOT_FOUND` if the
         object is not found. Convenience for view functions that would
         otherwise do ``obj_or_404(cache.get(...))``.
@@ -139,9 +119,9 @@ class Resolver:
             raise self.ERROR_NOT_FOUND()
         return obj
 
-    def get(self, cls: Type[T], identifier: str) -> T | None:
+    def get(self, cls: Type[M], identifier: str) -> M | None:
         """Get a single object by identifier. Returns None if the
-        object is not found anywhere (local, store, upstream).
+        object is not found anywhere (store, upstream).
 
         ``identifier`` must be a non-empty string. The resolver
         deliberately does not handle ``None`` / empty input — callers
@@ -151,15 +131,8 @@ class Resolver:
         """
         if not identifier:
             raise ValueError(
-                f"Resolver.get({cls.__name__}, ...) requires a non-empty " "identifier"
+                f"Cache.get({cls.__name__}, ...) requires a non-empty identifier"
             )
-        local_key = (cls, identifier)
-        if local_key in self._local:
-            return self._local[local_key]  # type: ignore[return-value]
-
-        # Persistent store layer — anystore handles the pydantic
-        # round-trip. ``model_validate=False`` skips re-running validators
-        # on a payload that was already validated at write time.
         obj = self._store.get(
             self._key(cls, identifier),
             model=cls,
@@ -168,9 +141,6 @@ class Resolver:
         if obj is None:
             obj = fetch_one(cls, identifier)
             if obj is not None:
-                # Write path: full validation runs (no model_validate
-                # flag passed → upstream default is True). Stored
-                # payloads are trusted by every subsequent read.
                 self._store.put(
                     self._key(cls, identifier),
                     obj,
@@ -182,126 +152,44 @@ class Resolver:
             # otherwise crawlers hitting deleted ids would poison the
             # store and a deleted-then-recreated entity would stay
             # "missing" until explicit invalidation. The local cache
-            # below is request-scoped so this is safe.
+            # below in RequestResolver is request-scoped so this is safe.
 
-        self._local[local_key] = obj
-        return obj  # type: ignore[return-value]
-
-    def get_etag(self, cls: Type[BaseModel], identifier: str) -> str | None:
-        """Return the content ETag for a single object, or ``None`` if
-        the object doesn't exist. Cheap once the object is in local
-        cache; otherwise hits the store layer via :meth:`get`. Same
-        non-empty-identifier contract as :meth:`get`."""
-        obj = self.get(cls, identifier)
-        if obj is not None:
-            return compute_etag(cls, obj)
+        return obj
 
     # --- batch API ---------------------------------------------------------
 
-    def get_many(self, cls: Type[T], identifiers: list[str]) -> list[T]:
-        """Batched: split into local-cached, store-cached, upstream-fetch.
-        Returns objects in the input order, omitting missing ones.
-
-        Hot-path optimization for the entity batch case (~120 entities
-        per search response). Uses Redis ``MGET`` directly when the
-        underlying store is Redis-backed; falls back to per-key
-        ``Store.get`` for other backends.
+    def get_many(self, cls: Type[M], identifiers: Iterable[str]) -> list[M]:
+        """Batch-fetch from the store + upstream. Uses Redis MGET when
+        available; falls back to per-key reads for other backends.
         """
+        identifiers = set([i for i in identifiers if i])
         if not identifiers:
             return []
 
-        results: dict[str, BaseModel] = {}
-        store_misses = self._fill_from_local(cls, identifiers, results)
-        upstream_misses = self._fill_from_store(cls, store_misses, results)
-        self._fill_from_upstream(cls, upstream_misses, results)
-        return [results[i] for i in identifiers if i in results]  # type: ignore[misc]
+        results: list[M] = []
 
-    def _fill_from_local(
-        self,
-        cls: Type[T],
-        identifiers: list[str],
-        results: dict[str, BaseModel],
-    ) -> list[str]:
-        """Step 1: drain the per-request local cache.
-
-        Updates ``results`` in place with hits, returns the list of ids
-        that need to fall through to the persistent store. ``_MISSING``
-        means "never asked this request"; a stored ``None`` means
-        "already missed upstream — skip".
-        """
-        store_misses: list[str] = []
-        for identifier in identifiers:
-            local = self._local.get((cls, identifier), _MISSING)
-            if local is _MISSING:
-                store_misses.append(identifier)
-            elif local is not None:
-                results[identifier] = local
-        return store_misses
-
-    def _fill_from_store(
-        self,
-        cls: Type[T],
-        store_misses: list[str],
-        results: dict[str, BaseModel],
-    ) -> list[str]:
-        """Step 2: batch read the persistent store for the local misses.
-
-        Redis backends get a single MGET via :meth:`_mget`; other
-        backends fall back to N per-key gets. Updates ``results`` in
-        place with hits, populates the local cache for them, and
-        returns the list of ids that still need to be fetched upstream.
-        """
-        if not store_misses:
-            return []
+        # 1. Persistent cache store.
+        keys = [self._key(cls, i) for i in identifiers]
         upstream_misses: list[str] = []
-        keys = [self._key(cls, i) for i in store_misses]
-        for identifier, raw in zip(store_misses, self._mget(cls, keys)):
-            if raw is None:
+        for identifier, obj in zip(identifiers, self._mget(cls, keys)):
+            if obj is None:
                 upstream_misses.append(identifier)
             else:
-                results[identifier] = raw
-                self._local[(cls, identifier)] = raw
-        return upstream_misses
+                results.append(obj)
 
-    def _fill_from_upstream(
-        self,
-        cls: Type[T],
-        upstream_misses: list[str],
-        results: dict[str, BaseModel],
-    ) -> None:
-        """Step 3: batch fetch upstream for the store misses.
+        # 2. Upstream fetch for misses.
+        if upstream_misses:
+            ttl = get_ttl(cls)
+            for obj in fetch_many(cls, upstream_misses):
+                if obj is None:
+                    continue
+                key = obj.cache_key  # type: ignore[attr-defined]
+                self._store.put(self._key(cls, key), obj, model=cls, ttl=ttl)
+                results.append(obj)
 
-        Uses the registered ``fetch_many`` if any, otherwise N
-        ``fetch_one`` calls. Each fetched object's ``cache_key`` is
-        used as the lookup identifier (so e.g. CollectionSchema is
-        keyed by ``foreign_id`` rather than the SQLA int PK). Anything
-        not returned by upstream is recorded as a *negative* hit in
-        the local cache only — never in the persistent store, to
-        avoid poisoning the cache with stale negatives.
-        """
-        if not upstream_misses:
-            return
-        ttl = get_ttl(cls)
-        fetched_keys: set[str] = set()
-        for obj in fetch_many(cls, upstream_misses):
-            if obj is None:
-                continue
-            # Use the model's own ``cache_key`` (foreign_id, composite
-            # path, …) instead of guessing the SQLA primary key —
-            # the lookup identifier the caller passed in is exactly
-            # what each schema's ``cache_key`` returns.
-            key = obj.cache_key  # type: ignore[attr-defined]
-            self._store.put(self._key(cls, key), obj, model=cls, ttl=ttl)
-            results[key] = obj
-            self._local[(cls, key)] = obj
-            fetched_keys.add(key)
-        # Record persistent misses in the local cache only — never in
-        # the persistent store (see comment in `get()`).
-        for identifier in upstream_misses:
-            if identifier not in fetched_keys:
-                self._local[(cls, identifier)] = None
+        return results
 
-    def _mget(self, cls: Type[T], keys: list[str]) -> list[T | None]:
+    def _mget(self, cls: Type[M], keys: Iterable[str]) -> list[M | None]:
         """Batch read from the underlying store.
 
         For Redis backends, issues a single ``MGET`` and deserializes
@@ -317,11 +205,10 @@ class Resolver:
         path is correct for every backend; the MGET shortcut is purely
         a latency win for the entity hot path.
         """
+        keys = set(keys)
         backend = self._store._fs
         client = getattr(backend, "client", None)
         if client is not None and hasattr(client, "mget"):
-            from anystore.logic.serialize import from_store
-
             fs_keys = [self._store._keys.to_fs_key(k) for k in keys]
             raw_values = client.mget(fs_keys)
             return [
@@ -331,28 +218,9 @@ class Resolver:
         # Generic per-key fallback. Correct for every backend.
         return [self._store.get(k, model=cls, model_validate=False) for k in keys]
 
-    def get_many_etag(
-        self, cls: Type[BaseModel], ids: list[str], extra: str = ""
-    ) -> str:
-        """Combined ETag for a list-style response (companion to
-        :meth:`get_many`).
-
-        The ETag is a content hash of the constituent ETags joined with
-        a newline plus an optional ``extra`` discriminator (typically
-        the search query string, so different filters get different
-        ETags). Each constituent ETag is fetched via :meth:`get_etag`,
-        so this populates the local cache as a side effect — the
-        following ``get_many`` for the same ids will hit the local
-        layer.
-        """
-        parts = [self.get_etag(cls, i) or "" for i in ids]
-        if extra:
-            parts.append(extra)
-        return f'"{_short_hash(chr(10).join(parts).encode())}"'
-
     # --- mutation hook -----------------------------------------------------
 
-    def populate(self, cls_: Type[BaseModel], identifier: str, obj: BaseModel) -> None:
+    def populate(self, cls_: Type[M], identifier: str, obj: M) -> None:
         """Write a pre-computed object into the persistent store.
 
         Use this when the caller has already done the expensive
@@ -364,7 +232,7 @@ class Resolver:
         """
         self._store.put(self._key(cls_, identifier), obj, model=cls_, ttl=get_ttl(cls_))
 
-    def invalidate(self, cls_: Type[BaseModel], identifier: str) -> None:
+    def invalidate(self, cls_: Type[M], identifier: str) -> None:
         """Drop a key from the persistent store. Called from logic
         paths that mutate the underlying object. ``identifier`` must
         be a non-empty string — the same tight contract as :meth:`get`.
@@ -382,43 +250,110 @@ class Resolver:
             ignore_errors=True,
         )
 
-    def invalidate_many(self, cls_: Type[BaseModel], identifiers: list[str]) -> None:
+    def invalidate_many(self, cls_: Type[M], identifiers: list[str]) -> None:
         """Drop several keys for the same class."""
         for identifier in identifiers:
             self.invalidate(cls_, identifier)
 
-    def invalidate_prefix(self, cls_: Type[BaseModel], identifier_prefix: str) -> None:
-        """Drop every key under a path prefix.
-
-        Aggregate-aware invalidation: invalidating a Collection by its
-        ``foreign_id`` should also drop the matching CollectionStatistics
-        and CollectionStatus aggregates that share the same prefix.
-        Each aggregate's ``make_cache_key`` is rooted at the parent
-        identifier so a single prefix sweep covers them all.
-        """
-        prefix = self._key(cls_, identifier_prefix)
-        for key in self._store.iterate_keys(prefix=prefix):
+    def flush_all(self) -> None:
+        """Wipe the entire persistent store."""
+        for key in self._store.iterate_keys():
             self._store.delete(key, ignore_errors=True)
+
+
+class RequestResolver(Cache):
+    """Per-request batch loader. Extends :class:`Cache` with a
+    request-scoped ``_local`` dict for deduplication and negative-hit
+    caching.
+
+    Constructed once per HTTP request and discarded on response.
+    The ``_local`` dict is garbage collected with the instance.
+    """
+
+    def __init__(self, store: Store | None = None) -> None:
+        super().__init__(store)
+        self._local: dict[tuple[type, str], BaseModel | None] = {}
+
+    def get(self, cls: Type[M], identifier: str) -> M | None:
+        """Three-layer lookup: local → store → upstream.
+
+        Negative hits (upstream returned None) are recorded in the
+        local cache only — never in the persistent store — to avoid
+        poisoning the store with stale negatives across requests.
+        """
+        if not identifier:
+            raise ValueError(
+                f"RequestResolver.get({cls.__name__}, ...) requires a "
+                "non-empty identifier"
+            )
+        local_key = (cls, identifier)
+        if local_key in self._local:
+            return self._local[local_key]  # type: ignore[return-value]
+
+        obj = super().get(cls, identifier)
+        self._local[local_key] = obj
+        return obj
+
+    def get_many(self, cls: Type[M], identifiers: Iterable[str]) -> list[M]:
+        """Batched three-layer lookup with request-scoped deduplication. First
+        try local request-scoped cache, fall through Cache backend."""
+        identifiers = set([i for i in identifiers if i])
+        if not identifiers:
+            return []
+
+        results: list[M] = []
+        missing: list[str] = []
+        for identifier in identifiers:
+            obj = self._local.get((cls, identifier), _MISSING)
+            if obj is _MISSING:
+                missing.append(identifier)
+            elif obj is not None:
+                results.append(obj)
+        if missing:
+            results.extend(super().get_many(cls, missing))
+        return results
+
+    # --- etag logic -----------------------------------------------------
+
+    def get_etag(self, cls: Type[M], identifier: str) -> str | None:
+        """Return the content ETag for a single object, or ``None`` if
+        the object doesn't exist. Cheap once the object is in local
+        cache; otherwise hits the store layer via :meth:`get`. Same
+        non-empty-identifier contract as :meth:`get`."""
+        obj = self.get(cls, identifier)
+        if obj is not None:
+            return compute_etag(cls, obj)
+
+    def get_many_etag(self, cls: Type[M], ids: list[str], extra: str = "") -> str:
+        """Combined ETag for a list-style response (companion to
+        :meth:`get_many`).
+
+        The ETag is a content hash of the constituent ETags joined with
+        a newline plus an optional ``extra`` discriminator (typically
+        the search query string, so different filters get different
+        ETags). Each constituent ETag is fetched via :meth:`get_etag`,
+        so this populates the local cache as a side effect — the
+        following ``get_many`` for the same ids will hit the local
+        layer.
+        """
+        parts = [self.get_etag(cls, i) or "" for i in ids]
+        if extra:
+            parts.append(extra)
+        return f'"{_short_hash(chr(10).join(parts).encode())}"'
 
     def flush_all(self) -> None:
-        """Wipe the entire persistent resolver store and local cache.
-
-        Used by the CLI (``aleph flushcache``), test fixtures, and
-        any situation that needs a clean slate. Acts on this instance's
-        store (which may differ from the default if a custom store was
-        passed to ``__init__``).
-        """
+        """Wipe the persistent store and local cache."""
         self._local.clear()
-        for key in list(self._store.iterate_keys()):
-            self._store.delete(key, ignore_errors=True)
+        super().flush_all()
 
 
-def get_resolver() -> Resolver:
+def get_resolver() -> RequestResolver:
     """FastAPI dependency. Yields a fresh Resolver per request — the
     local cache lifetime is a single request, garbage collected on
     response. The persistent store is shared.
     """
-    return Resolver()
+    return RequestResolver()
 
 
-cache: Resolver = get_resolver()
+# app wide singleton for persistent cache
+cache: Cache = Cache()

@@ -8,7 +8,7 @@ Uses the standard TestCase infrastructure from ``aleph.tests.util``.
 import time
 
 from aleph.core import db
-from aleph.logic.resolver.core import Resolver
+from aleph.logic.resolver.core import RequestResolver
 from aleph.model import (
     Alert,
     AlertSchema,
@@ -52,12 +52,12 @@ class ResolverE2ETestCase(TestCase):
             importlib.reload(mod)
 
         # Wipe the resolver store so tests start clean.
-        Resolver().flush_all()
+        RequestResolver().flush_all()
 
     # --- Role -----------------------------------------------------------------
 
     def test_role_resolve_and_etag(self):
-        r = Resolver()
+        r = RequestResolver()
         role = r.get(RoleSchema, str(self.admin.id))
         self.assertIsNotNone(role)
         self.assertEqual(role.name, "admin")
@@ -67,11 +67,11 @@ class ResolverE2ETestCase(TestCase):
         self.assertTrue(etag.startswith('"') and etag.endswith('"'))
 
         # Same content → same ETag.
-        r2 = Resolver()
+        r2 = RequestResolver()
         self.assertEqual(r2.get_etag(RoleSchema, str(self.admin.id)), etag)
 
     def test_role_invalidation_rotates_etag(self):
-        r = Resolver()
+        r = RequestResolver()
         etag_before = r.get_etag(RoleSchema, str(self.admin.id))
 
         # Mutate the role — Role.update calls touch() which bumps
@@ -79,7 +79,7 @@ class ResolverE2ETestCase(TestCase):
         self.admin.update({"name": "Admin Renamed"})
         db.session.commit()
 
-        r2 = Resolver()
+        r2 = RequestResolver()
         etag_after = r2.get_etag(RoleSchema, str(self.admin.id))
         self.assertNotEqual(etag_before, etag_after)
 
@@ -93,7 +93,7 @@ class ResolverE2ETestCase(TestCase):
         alert = Alert.create({"query": "test-query"}, self.admin.id)
         db.session.commit()
 
-        r = Resolver()
+        r = RequestResolver()
         fetched = r.get(AlertSchema, str(alert.id))
         self.assertIsNotNone(fetched)
         self.assertEqual(fetched.query, "test-query")
@@ -106,14 +106,14 @@ class ResolverE2ETestCase(TestCase):
         alert = Alert.create({"query": "delete-me"}, self.admin.id)
         db.session.commit()
 
-        r = Resolver()
+        r = RequestResolver()
         self.assertIsNotNone(r.get(AlertSchema, str(alert.id)))
 
         # Delete — SQLA after_delete event fires invalidation.
         alert.delete()
         db.session.commit()
 
-        r2 = Resolver()
+        r2 = RequestResolver()
         self.assertIsNone(r2.get(AlertSchema, str(alert.id)))
 
     # --- Export ---------------------------------------------------------------
@@ -128,7 +128,7 @@ class ResolverE2ETestCase(TestCase):
         )
         db.session.commit()
 
-        r = Resolver()
+        r = RequestResolver()
         fetched = r.get(ExportSchema, str(export.id))
         self.assertIsNotNone(fetched)
         self.assertEqual(fetched.label, "Test Export")
@@ -140,7 +140,7 @@ class ResolverE2ETestCase(TestCase):
         export.set_status(status=Status.SUCCESS)
         db.session.commit()
 
-        r2 = Resolver()
+        r2 = RequestResolver()
         etag_after = r2.get_etag(ExportSchema, str(export.id))
         self.assertNotEqual(etag_before, etag_after)
 
@@ -157,7 +157,7 @@ class ResolverE2ETestCase(TestCase):
         )
         db.session.commit()
 
-        r = Resolver()
+        r = RequestResolver()
         fetched = r.get(EntitySetSchema, str(entityset.id))
         self.assertIsNotNone(fetched)
         self.assertEqual(fetched.label, "Test Diagram")
@@ -172,7 +172,7 @@ class ResolverE2ETestCase(TestCase):
         db.session.add(entityset)
         db.session.commit()
 
-        r2 = Resolver()
+        r2 = RequestResolver()
         etag_after = r2.get_etag(EntitySetSchema, str(entityset.id))
         self.assertNotEqual(etag_before, etag_after)
 
@@ -181,26 +181,17 @@ class ResolverE2ETestCase(TestCase):
 
     # --- Collection -----------------------------------------------------------
 
-    def test_collection_resolve_by_foreign_id(self):
-        r = Resolver()
-        coll = r.get(CollectionSchema, self.public_coll.foreign_id)
-        self.assertIsNotNone(coll)
-        self.assertEqual(coll.name, self.public_coll.foreign_id)
-
-        etag = r.get_etag(CollectionSchema, self.public_coll.foreign_id)
-        self.assertIsNotNone(etag)
-
     def test_collection_invalidation(self):
-        r = Resolver()
-        etag_before = r.get_etag(CollectionSchema, self.public_coll.foreign_id)
+        r = RequestResolver()
+        etag_before = r.get_etag(CollectionSchema, self.public_coll.id)
 
         # Mutate — touch() bumps updated_at, SQLA after_update fires.
         self.public_coll.label = "Renamed Public"
         self.public_coll.touch()
         db.session.commit()
 
-        r2 = Resolver()
-        etag_after = r2.get_etag(CollectionSchema, self.public_coll.foreign_id)
+        r2 = RequestResolver()
+        etag_after = r2.get_etag(CollectionSchema, self.public_coll.id)
         self.assertNotEqual(etag_before, etag_after)
 
     # --- Entity ---------------------------------------------------------------
@@ -212,7 +203,7 @@ class ResolverE2ETestCase(TestCase):
         raw = get_entity(self._kwazulu.id)
         self.assertIsNotNone(raw, "Fixture entity not in ES index")
 
-        r = Resolver()
+        r = RequestResolver()
         entity = r.get(EntitySchema, self._kwazulu.id)
         self.assertIsNotNone(entity)
         self.assertEqual(entity.id, self._kwazulu.id)
@@ -224,17 +215,17 @@ class ResolverE2ETestCase(TestCase):
         self.assertIn(self._kwazulu.id, ids)
 
     def test_entity_etag_from_es_version(self):
-        r = Resolver()
+        r = RequestResolver()
         etag = r.get_etag(EntitySchema, self._kwazulu.id)
         self.assertIsNotNone(etag)
         self.assertTrue(etag.startswith('"') and etag.endswith('"'))
 
         # Stable on re-fetch.
-        r2 = Resolver()
+        r2 = RequestResolver()
         self.assertEqual(r2.get_etag(EntitySchema, self._kwazulu.id), etag)
 
     def test_entity_invalidation(self):
-        r = Resolver()
+        r = RequestResolver()
         etag_before = r.get_etag(EntitySchema, self._kwazulu.id)
         self.assertIsNotNone(etag_before)
 
@@ -253,7 +244,7 @@ class ResolverE2ETestCase(TestCase):
         )
         time.sleep(1)  # ES refresh
 
-        r2 = Resolver()
+        r2 = RequestResolver()
         entity = r2.get(EntitySchema, self._kwazulu.id)
         self.assertIsNotNone(entity)
         etag_after = r2.get_etag(EntitySchema, self._kwazulu.id)
@@ -265,23 +256,23 @@ class ResolverE2ETestCase(TestCase):
         """DB path: deleting a collection via the ORM fires the SQLA
         after_update event (soft-delete sets deleted_at), which
         invalidates the resolver cache. The next fetch returns None."""
-        fid = self.public_coll.foreign_id
-        r = Resolver()
-        self.assertIsNotNone(r.get(CollectionSchema, fid))
+        cid = self.public_coll.id
+        r = RequestResolver()
+        self.assertIsNotNone(r.get(CollectionSchema, cid))
 
         from aleph.logic.collections import delete_collection
 
         delete_collection(self.public_coll, sync=True)
 
-        r2 = Resolver()
-        self.assertIsNone(r2.get(CollectionSchema, fid))
+        r2 = RequestResolver()
+        self.assertIsNone(r2.get(CollectionSchema, cid))
 
     def test_entity_deletion_invalidates_cache(self):
         """ES path: deleting an entity removes it from the index and
         calls refresh_entity → resolver_cache.invalidate. The next
         fetch returns None."""
         entity_id = self._kwazulu.id
-        r = Resolver()
+        r = RequestResolver()
         self.assertIsNotNone(r.get(EntitySchema, entity_id))
 
         from openaleph_search.index.entities import get_entity
@@ -292,7 +283,7 @@ class ResolverE2ETestCase(TestCase):
         delete_entity(self.public_coll, raw, sync=True)
         time.sleep(1)  # ES refresh
 
-        r2 = Resolver()
+        r2 = RequestResolver()
         self.assertIsNone(r2.get(EntitySchema, entity_id))
 
     # --- ETag opacity ---------------------------------------------------------
@@ -302,10 +293,10 @@ class ResolverE2ETestCase(TestCase):
         alert = Alert.create({"query": "opacity-test"}, self.admin.id)
         db.session.commit()
 
-        r = Resolver()
+        r = RequestResolver()
         for cls, identifier in [
             (RoleSchema, str(self.admin.id)),
-            (CollectionSchema, self.public_coll.foreign_id),
+            (CollectionSchema, self.public_coll.id),
             (AlertSchema, str(alert.id)),
         ]:
             etag = r.get_etag(cls, identifier)
@@ -319,14 +310,14 @@ class ResolverE2ETestCase(TestCase):
     # --- get_many_etag --------------------------------------------------------
 
     def test_get_many_etag_stable_and_discriminated(self):
-        r = Resolver()
+        r = RequestResolver()
         r.get(RoleSchema, str(self.admin.id))
 
         combined = r.get_many_etag(RoleSchema, [str(self.admin.id)])
         self.assertIsNotNone(combined)
 
         # Same input → same ETag.
-        r2 = Resolver()
+        r2 = RequestResolver()
         self.assertEqual(r2.get_many_etag(RoleSchema, [str(self.admin.id)]), combined)
 
         # Different extra discriminator → different ETag.

@@ -17,7 +17,7 @@ STORE_TTL = 7 * 24 * 60 * 60  # 7 days
 # Mutations call invalidate(); TTL is just a backstop.
 TTL_RESOURCE = 24 * 60 * 60  # 24 hours
 
-# Aggregates (CollectionStatistics, CollectionStatus, DatasetDiscovery).
+# Aggregates (CollectionStatistics, CollectionStatus, CollectionDiscovery).
 # These are recomputed during ingestion — invalidate() covers most
 # cases but a shorter backstop catches edge cases where the recompute
 # runs outside the normal mutation path (e.g. direct ES update).
