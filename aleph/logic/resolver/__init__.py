@@ -12,16 +12,13 @@ Two parallel APIs live here:
 Both surfaces are re-exported here so callers can do
 ``from aleph.logic.resolver import Resolver`` or
 ``from aleph.logic.resolver import queue, resolve, get``.
+
+The legacy API is loaded lazily (via ``__getattr__``) to avoid
+circular imports — the legacy module imports fetcher functions from
+``aleph.logic.{roles,alerts,...}`` which in turn register with the
+new resolver registry at import time.
 """
 
-from aleph.logic.resolver._legacy import (
-    LOADERS,
-    CollectionByForeignId,
-    cached_entities_by_ids,
-    get,
-    queue,
-    resolve,
-)
 from aleph.logic.resolver.core import (
     Resolver,
     get_resolver,
@@ -55,3 +52,22 @@ __all__ = [
     "queue",
     "resolve",
 ]
+
+_LEGACY_NAMES = frozenset(
+    {
+        "LOADERS",
+        "CollectionByForeignId",
+        "cached_entities_by_ids",
+        "get",
+        "queue",
+        "resolve",
+    }
+)
+
+
+def __getattr__(name: str):
+    if name in _LEGACY_NAMES:
+        from aleph.logic.resolver import _legacy
+
+        return getattr(_legacy, name)
+    raise AttributeError(f"module 'aleph.logic.resolver' has no attribute {name}")
