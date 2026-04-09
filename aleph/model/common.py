@@ -2,12 +2,13 @@ import logging
 import secrets
 import uuid
 from datetime import date, datetime
+from typing import Any
 
 from anystore.types import SDict
 from anystore.util import clean_dict
 from anystore.util import model_dump as _anystore_model_dump
 from flask_babel import lazy_gettext
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import false
 
 from aleph.core import db
@@ -213,6 +214,19 @@ class DatedSchema(APIBaseModel):
     created_at: datetime | None = None
     updated_at: datetime | None = None
     deleted_at: datetime | None = None
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def _stringify_id(cls, v: Any) -> Any:
+        """Coerce SQLA integer primary keys into the string the API
+        boundary expects. Runs before field validation so the schema
+        can validate directly off a SQLA row instance via
+        ``RoleSchema.model_validate(role)`` (using ``from_attributes``)
+        without needing each fetcher to call ``role.to_dict()`` first.
+        """
+        if v is None:
+            return v
+        return str(v)
 
 
 def model_dump(model: BaseModel | None) -> SDict | None:
