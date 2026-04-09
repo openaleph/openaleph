@@ -18,8 +18,9 @@ from aleph.index.collections import get_collection
 from aleph.logic.aggregator import get_aggregator_name
 from aleph.logic.mail import email_role
 from aleph.logic.notifications import publish
+from aleph.logic.resolver.registry import register, register_etag
 from aleph.logic.util import archive_url, entity_url, ui_url
-from aleph.model import Entity, Events, Export, Role, Status
+from aleph.model import Entity, Events, Export, ExportSchema, Role, Status
 from aleph.settings import SETTINGS
 
 log = logging.getLogger(__name__)
@@ -44,6 +45,20 @@ def get_export(export_id):
     export = Export.by_id(export_id, deleted=True)
     if export is not None:
         return export.to_dict()
+
+
+@register(ExportSchema, ttl=2 * 60 * 60)
+def _fetch_export(export_id: str) -> ExportSchema | None:
+    export = Export.by_id(export_id, deleted=True)
+    if export is None:
+        return None
+    return ExportSchema.model_validate(export)
+
+
+@register_etag(ExportSchema)
+def _export_etag(export: ExportSchema) -> str:
+    ts = int(export.updated_at.timestamp()) if export.updated_at else 0
+    return f"{export.id}:{ts}"
 
 
 def write_document(export_dir, zf, collection, entity):

@@ -7,6 +7,7 @@ from aleph.authz import Authz
 from aleph.core import cache, db
 from aleph.logic.mail import email_role
 from aleph.logic.notifications import get_role_channels
+from aleph.logic.resolver.registry import register, register_etag
 from aleph.model import (
     Alert,
     Collection,
@@ -18,6 +19,7 @@ from aleph.model import (
     Mapping,
     Permission,
     Role,
+    RoleSchema,
 )
 from aleph.model.role import membership
 from aleph.settings import SETTINGS
@@ -37,6 +39,22 @@ def get_role(role_id):
         data = role.to_dict()
         cache.set_complex(key, data, expires=cache.EXPIRE)
     return data
+
+
+@register(RoleSchema, ttl=4 * 60 * 60)
+def _fetch_role(role_id: str) -> RoleSchema | None:
+    role = Role.by_id(role_id)
+    if role is None:
+        return None
+    return RoleSchema.model_validate(role)
+
+
+@register_etag(RoleSchema)
+def _role_etag(role: RoleSchema) -> str:
+    """ETag seed from updated_at — cheaper than content-hashing the
+    full model. The decorator handles hashing + quoting."""
+    ts = int(role.updated_at.timestamp()) if role.updated_at else 0
+    return f"{role.id}:{ts}"
 
 
 def get_deep_role(role):

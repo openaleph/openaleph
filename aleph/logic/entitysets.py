@@ -3,13 +3,28 @@ import logging
 from aleph.core import cache
 from aleph.logic.entities import upsert_entity
 from aleph.logic.notifications import publish
-from aleph.model import EntitySet, EntitySetItem, Events
+from aleph.logic.resolver.registry import register, register_etag
+from aleph.model import EntitySet, EntitySetItem, EntitySetSchema, Events
 
 log = logging.getLogger(__name__)
 
 
 def get_entityset(entityset_id):
     return EntitySet.by_id(entityset_id)
+
+
+@register(EntitySetSchema, ttl=2 * 60 * 60)
+def _fetch_entityset(entityset_id: str) -> EntitySetSchema | None:
+    entityset = EntitySet.by_id(entityset_id)
+    if entityset is None:
+        return None
+    return EntitySetSchema.model_validate(entityset)
+
+
+@register_etag(EntitySetSchema)
+def _entityset_etag(entityset: EntitySetSchema) -> str:
+    ts = int(entityset.updated_at.timestamp()) if entityset.updated_at else 0
+    return f"{entityset.id}:{ts}"
 
 
 def refresh_entityset(entityset_id):
