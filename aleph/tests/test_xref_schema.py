@@ -81,12 +81,12 @@ def test_xref_schema_with_collections_and_judgement():
 def test_canonical_schema_minimal():
     c = CanonicalSchema(
         id="NK-abc",
-        merged={"id": "NK-abc", "schema": "Person", "name": "Alice Smith"},
+        merged=_entity("NK-abc", "Alice Smith"),
     )
     assert c.cache_key == "NK-abc"
     dumped = model_dump(c)
     assert dumped["id"] == "NK-abc"
-    assert dumped["merged"]["name"] == "Alice Smith"
+    assert dumped["merged"]["properties"]["name"] == ["Alice Smith"]
 
 
 def test_canonical_schema_required_fields_raise_on_missing():
@@ -97,13 +97,13 @@ def test_canonical_schema_required_fields_raise_on_missing():
 def test_canonical_schema_with_constituents():
     c = CanonicalSchema(
         id="NK-abc",
-        merged={"id": "NK-abc", "schema": "Person", "name": "Alice Smith"},
+        merged=_entity("NK-abc", "Alice Smith"),
         entities=[_entity("a", "Alice"), _entity("b", "Alicia")],
         collection_ids=["leaks", "opensanctions"],
         writeable=True,
     )
     dumped = model_dump(c)
-    assert dumped["merged"]["name"] == "Alice Smith"
+    assert dumped["merged"]["properties"]["name"] == ["Alice Smith"]
     assert len(dumped["entities"]) == 2
     assert dumped["collection_ids"] == ["leaks", "opensanctions"]
 
@@ -149,6 +149,7 @@ def test_statement_schema_entity_value():
     s = StatementSchema(
         id="stmt-2",
         entity_id="a",
+        canonical_id="NK-abc",
         schema="Person",
         prop="ownership",
         prop_type="entity",
@@ -165,8 +166,10 @@ def test_statement_schema_cache_key_uses_id():
     s = StatementSchema(
         id="stmt-1",
         entity_id="a",
+        canonical_id="NK-abc",
         schema="Person",
         prop="name",
+        prop_type="name",
         value="Alice",
         dataset="leaks",
     )

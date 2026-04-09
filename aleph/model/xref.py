@@ -115,7 +115,7 @@ class CanonicalSchema(APIBaseModel):
     """
 
     id: str
-    merged: SDict
+    merged: EntitySchema
     entities: list[EntitySchema] = []
     collection_ids: list[str] = []
     writeable: bool = False
@@ -146,8 +146,8 @@ class StatementSchema(APIBaseModel):
     value: str | EntitySchema
     dataset: CollectionSchema | str
 
-    canonical_id: str | None = None
-    prop_type: str | None = None
+    canonical_id: str
+    prop_type: str
     first_seen: datetime | None = None
     last_seen: datetime | None = None
 
