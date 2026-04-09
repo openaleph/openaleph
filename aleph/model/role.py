@@ -10,6 +10,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from aleph.core import db
 from aleph.logic.resolver import cache
 from aleph.model.common import (
+    APIBaseModel,
     DatedSchema,
     IdModel,
     SDict,
@@ -381,11 +382,24 @@ class RoleSchema(DatedSchema):
         raise ValueError("RoleSchema has no id; cannot derive a cache_key")
 
 
+class RoleChannels(APIBaseModel):
+    """Notification channels for a role. Resolver-cached under
+    ``RoleChannels/<role_id>``."""
+
+    role_id: str
+    channels: list[str]
+
+    @property
+    def cache_key(self) -> str:
+        return self.role_id
+
+
 # === Resolver invalidation via SQLA events ===
 
 
 def _invalidate_role(mapper, connection, target: Role):
     cache.invalidate(RoleSchema, str(target.id))
+    cache.invalidate(RoleChannels, str(target.id))
 
 
 event.listen(Role, "after_update", _invalidate_role)

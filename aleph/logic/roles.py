@@ -160,7 +160,7 @@ def update_role(role):
     """Synchronize denormalised role configuration."""
     refresh_role(role)
     get_role(role.id)
-    get_role_channels(role)
+    get_role_channels(str(role.id))
 
 
 def update_roles():
@@ -199,11 +199,8 @@ def delete_role(role):
 
 
 def refresh_role(role, sync=False):
+    # SQLA events handle RoleSchema + RoleChannels invalidation.
     Authz.flush_role(role)
-    cache.kv.delete(
-        cache.object_key(Role, role.id),
-        cache.object_key(Role, role.id, "channels"),
-    )
 
 
 def check_visible(role, authz):

@@ -69,7 +69,6 @@ from aleph.model.entityset import (
     Judgement,
 )
 from aleph.model.event import (
-    Event,
     Events,
     EventSchema,
     NotificationSchema,
@@ -101,7 +100,6 @@ __all__ = [
     "Entity",
     "EntitySet",
     "EntitySetItem",
-    "Event",
     "Events",
     "Export",
     "Judgement",
