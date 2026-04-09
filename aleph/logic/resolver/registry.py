@@ -31,6 +31,11 @@ from pydantic import BaseModel
 
 FetchOne = Callable[[str], BaseModel | None]
 FetchMany = Callable[[Iterable[str]], Iterable[BaseModel]]
+# ETag seed functions return a raw version string (e.g. "42:1735689600").
+# The decorator wraps it with _short_hash + quoting so every custom ETag
+# is guaranteed opaque on the wire.
+EtagSeedFn = Callable[[BaseModel], str]
+# Wrapped form stored in the registry — already hashed + quoted.
 EtagFn = Callable[[BaseModel], str]
 
 _REGISTRY: dict[Type[BaseModel], tuple[FetchOne, FetchMany | None, int | None]] = {}
@@ -67,18 +72,28 @@ def register(
     return deco
 
 
-def register_etag(cls: Type[BaseModel]) -> Callable[[EtagFn], EtagFn]:
-    """Decorator to register a custom ETag function for a pydantic
-    schema. Defaults to content-hashing the ``model_dump_json`` output.
+def register_etag(cls: Type[BaseModel]) -> Callable[[EtagSeedFn], EtagSeedFn]:
+    """Decorator to register a custom ETag seed function for a pydantic
+    schema. The registered function should return a **raw version
+    string** (e.g. ``f"{obj.id}:{epoch}"``). The decorator
+    automatically wraps it with ``_short_hash`` + RFC 7232 quoting so
+    the on-wire ETag is always opaque and compact — the registered
+    function never has to think about hashing or formatting.
 
-    For ES-sourced classes (``EntitySchema``), use ``_seq_no`` /
-    ``_primary_term``. For SQLA-sourced classes, use ``updated_at``
-    epoch. The default content hash is correct but slower.
+    For ES-sourced classes (``EntitySchema``), return
+    ``f"{_seq_no}:{_primary_term}"``. For SQLA-sourced classes, return
+    ``f"{id}:{updated_at_epoch}"``. The default (no registered
+    function) content-hashes ``model_dump_json``.
     """
+    from aleph.logic.resolver.etag import _short_hash
 
-    def deco(fn: EtagFn) -> EtagFn:
-        _ETAG_FNS[cls] = fn
-        return fn
+    def deco(fn: EtagSeedFn) -> EtagSeedFn:
+        def _wrapped(obj: BaseModel) -> str:
+            seed = fn(obj)
+            return f'"{_short_hash(seed.encode())}"'
+
+        _ETAG_FNS[cls] = _wrapped
+        return fn  # return the unwrapped fn so callers can still unit-test the seed
 
     return deco
 

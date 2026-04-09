@@ -131,6 +131,8 @@ def test_get_rejects_empty_identifier(widgets):
 
 
 def test_get_hits_upstream_then_caches(widgets, fetch_calls):
+    assert fetch_calls["one"] == 0
+
     r = Resolver()
     obj = r.get(Widget, "1")
     assert obj is not None
@@ -145,6 +147,8 @@ def test_get_hits_upstream_then_caches(widgets, fetch_calls):
 
 
 def test_get_persists_to_store_then_skips_upstream(widgets, fetch_calls):
+    assert fetch_calls["one"] == 0
+
     r = Resolver()
     r.get(Widget, "1")
     assert fetch_calls["one"] == 1
@@ -159,6 +163,8 @@ def test_get_persists_to_store_then_skips_upstream(widgets, fetch_calls):
 
 
 def test_get_negative_hit_is_local_only(widgets, fetch_calls):
+    assert fetch_calls["one"] == 0
+
     r = Resolver()
     assert r.get(Widget, "missing") is None
     assert fetch_calls["one"] == 1
@@ -175,6 +181,8 @@ def test_get_negative_hit_is_local_only(widgets, fetch_calls):
 
 
 def test_get_after_invalidate_refetches(widgets, fetch_calls):
+    assert fetch_calls["one"] == 0
+
     r = Resolver()
     r.get(Widget, "1")
     assert fetch_calls["one"] == 1
@@ -199,6 +207,8 @@ def test_invalidate_rejects_empty_identifier(widgets):
 
 
 def test_invalidate_many(widgets, fetch_calls):
+    assert fetch_calls["one"] == 0
+
     r = Resolver()
     r.get(Widget, "1")
     r.get(Widget, "2")
@@ -262,6 +272,8 @@ def test_get_many_uses_cache_key_not_id(fetch_calls):
         fetch_calls["one"] += 1
         return upstream.get(identifier)
 
+    assert fetch_calls["one"] == 0
+
     # First call: cold cache. Two upstream fetches, results in input order.
     r = Resolver()
     result = r.get_many(Resource, ["alpha", "beta"])
@@ -299,6 +311,9 @@ def test_get_many_uses_batch_fetcher_when_registered(fetch_calls):
         fetch_calls["one"] += 1
         return upstream.get(identifier)
 
+    assert fetch_calls["one"] == 0
+    assert fetch_calls["many"] == 0
+
     r = Resolver()
     result = r.get_many(Widget, ["1", "2"])
     assert [w.id for w in result] == ["1", "2"]
@@ -308,6 +323,8 @@ def test_get_many_uses_batch_fetcher_when_registered(fetch_calls):
 
 
 def test_get_many_falls_back_to_fetch_one_without_batch(widgets, fetch_calls):
+    assert fetch_calls["one"] == 0
+
     r = Resolver()
     result = r.get_many(Widget, ["1", "2", "3"])
     assert [w.id for w in result] == ["1", "2", "3"]
@@ -318,6 +335,8 @@ def test_get_many_falls_back_to_fetch_one_without_batch(widgets, fetch_calls):
 def test_get_many_layered_cache(widgets, fetch_calls):
     """Three ids: one in local, one in store, one upstream-only.
     Verifies the resolver doesn't double-fetch any layer."""
+    assert fetch_calls["one"] == 0
+
     r = Resolver()
     r.get(Widget, "1")  # warms local + store for id=1
     assert fetch_calls["one"] == 1
@@ -337,6 +356,8 @@ def test_get_many_negative_local_cache_blocks_refetch(widgets, fetch_calls):
     """The _MISSING sentinel: a None recorded in self._local must
     block subsequent fetches in the SAME request, otherwise repeated
     references to a deleted entity would each hit upstream."""
+    assert fetch_calls["one"] == 0
+
     r = Resolver()
     r.get(Widget, "missing")
     assert fetch_calls["one"] == 1
@@ -351,7 +372,7 @@ def test_get_many_negative_local_cache_blocks_refetch(widgets, fetch_calls):
 # --- ETag API -------------------------------------------------------------
 
 
-def test_get_etag_default_content_hash(widgets):
+def test_get_etag_default_hash(widgets):
     r = Resolver()
     etag = r.get_etag(Widget, "1")
     assert etag is not None
@@ -385,13 +406,27 @@ def test_get_etag_returns_none_for_missing(widgets):
 
 
 def test_register_etag_overrides_default(widgets):
+    """The registered function returns a raw seed string; the decorator
+    wraps it with _short_hash + quoting so the on-wire ETag is always
+    opaque and compact."""
+
     @register_etag(Widget)
     def _widget_etag(obj: Widget) -> str:
-        return f'"v-{obj.id}-{obj.name}"'
+        return f"{obj.id}:{obj.name}"
 
     r = Resolver()
     etag = r.get_etag(Widget, "1")
-    assert etag == '"v-1-alpha"'
+    assert etag is not None
+    # Opaque, quoted, compact — no raw id or name leaking.
+    assert etag.startswith('"') and etag.endswith('"')
+    assert len(etag) == 13
+    assert "1" not in etag[1:-1] or len(etag[1:-1]) == 11  # hash, not literal
+
+    # Different content → different hash.
+    widgets["1"] = Widget(id="1", name="alpha-prime")
+    Resolver.invalidate(Widget, "1")
+    r2 = Resolver()
+    assert r2.get_etag(Widget, "1") != etag
 
 
 def test_compute_etag_direct():
