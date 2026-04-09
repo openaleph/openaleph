@@ -17,7 +17,8 @@ from openaleph_search.index.util import (
 from openaleph_search.query.util import BoolQuery, bool_query
 
 from aleph.core import cache, es
-from aleph.model import Collection, Entity
+from aleph.logic.resolver.registry import register, register_etag
+from aleph.model import Collection, CollectionSchema, Entity
 
 STATS_FACETS = [
     "schema",
@@ -154,6 +155,24 @@ def get_collection_by_foreign_id(foreign_id):
     if collection is None:
         return
     return get_collection(collection.id)
+
+
+# CollectionSchema.cache_key returns ``self.name`` (= foreign_id), so
+# the resolver keys collections by foreign_id. The fetcher looks up
+# the SQLA row by foreign_id and validates directly (the model
+# validator on CollectionSchema handles the SQLA → pydantic mapping).
+@register(CollectionSchema, ttl=4 * 60 * 60)
+def _fetch_collection(foreign_id: str) -> CollectionSchema | None:
+    collection = Collection.by_foreign_id(foreign_id)
+    if collection is None:
+        return None
+    return CollectionSchema.model_validate(collection)
+
+
+@register_etag(CollectionSchema)
+def _collection_etag(coll: CollectionSchema) -> str:
+    ts = int(coll.updated_at.timestamp()) if coll.updated_at else 0
+    return f"{coll.name}:{ts}"
 
 
 def _facet_key(collection_id, facet):
