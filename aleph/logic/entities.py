@@ -1,6 +1,7 @@
 import logging
-from typing import Generator
+from typing import Generator, Iterator
 
+from anystore.types import SDict
 from banal import ensure_dict, is_mapping
 from flask_babel import gettext
 from followthemoney import EntityProxy, model
@@ -16,8 +17,9 @@ from aleph.index import xref as xref_index
 from aleph.logic.aggregator import get_aggregator
 from aleph.logic.collections import MODEL_ORIGIN, refresh_collection
 from aleph.logic.notifications import flush_notifications
+from aleph.logic.resolver.registry import register, register_etag
 from aleph.logic.util import latin_alt
-from aleph.model import Bookmark, Document, Entity, EntitySetItem, Mapping
+from aleph.model import Bookmark, Document, Entity, EntitySchema, EntitySetItem, Mapping
 from aleph.procrastinate.queues import (
     queue_analyze,
     queue_prune_entity,
@@ -27,6 +29,55 @@ from aleph.settings import SETTINGS
 from aleph.util import make_entity_proxy
 
 log = logging.getLogger(__name__)
+
+
+def _compute_latinized(properties: SDict) -> SDict:
+    """Pre-compute transliterated property values so the serializer
+    doesn't have to redo it on every request."""
+    latinized: dict[str, list[str]] = {}
+    for prop, values in properties.items():
+        for v in values:
+            la = latin_alt(v)
+            if la:
+                latinized.setdefault(prop, []).append(la)
+    return latinized
+
+
+def _entity_from_es(data: SDict) -> EntitySchema:
+    """Turn a raw ES dict into an EntitySchema, pre-computing
+    ``latinized`` so it's cached alongside the entity."""
+    data["latinized"] = _compute_latinized(data.get("properties", {}))
+    return EntitySchema.model_validate(data)
+
+
+def _entities_batch_from_es(ids) -> Iterator[EntitySchema]:
+    """Batch fetch from ES, yielding EntitySchema instances.
+
+    ``entities_by_ids`` yields raw dicts — each one needs the
+    ``_entity_from_es`` conversion so the resolver gets pydantic
+    models with ``cache_key`` and pre-computed ``latinized``.
+    """
+    for data in index.entities_by_ids(ids):
+        yield _entity_from_es(data)
+
+
+# Entities are ES-sourced and rarely mutated; long TTL.
+@register(EntitySchema, fetch_many=_entities_batch_from_es, ttl=2 * 60 * 60)
+def _fetch_entity(entity_id: str) -> EntitySchema | None:
+    data = index.get_entity(entity_id)
+    if data is None:
+        return None
+    return _entity_from_es(data)
+
+
+@register_etag(EntitySchema)
+def _entity_etag(entity: EntitySchema) -> str:
+    """ETag seed from ES _seq_no / _primary_term when available —
+    much cheaper than content-hashing the full entity."""
+    version = index.get_entity_version(entity.id)
+    if version is not None:
+        return f"{version.seq_no}:{version.primary_term}"
+    raise ValueError(f"Entity not found in index: `{entity.id}`")
 
 
 def _deduce_page_ids(

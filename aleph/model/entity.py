@@ -171,10 +171,10 @@ class EntitySchema(EntityModel):
     safeHtml: list[str] | None = None
     processing_status: SDict | None = None
 
-    # Transliterated property values — always computed by the response
-    # builder (may be an empty dict for entities with no transliterable
-    # property values).
-    latinized: SDict
+    # Transliterated property values — computed by the response builder,
+    # not part of the cached entity. Defaults to empty so the resolver
+    # can cache the raw ES payload without needing to compute it.
+    latinized: SDict = {}
 
     # Request-time computed fields populated by the response builder.
     writeable: bool = False
