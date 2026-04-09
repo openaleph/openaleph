@@ -22,6 +22,7 @@ def _entity(**overrides) -> EntitySchema:
         "schema": "Person",
         "properties": {"name": ["Alice Smith"]},
         "schemata": ["Person", "LegalEntity", "Thing"],
+        "collection_id": 1,
         "latinized": {},
     }
     base.update(overrides)
@@ -43,14 +44,19 @@ def test_entity_schema_dump_uses_schema_alias_and_hides_cache_key():
 
 
 def test_entity_schema_required_fields_raise_on_missing():
-    # ``id``, ``schema`` (via alias ``schema_``) and ``properties``
-    # are required from the parent ``EntityModel``. ``schemata`` and
-    # ``latinized`` both default to empty so raw ES payloads and
-    # minimal test constructions validate without them.
+    # ``id``, ``schema`` (via alias ``schema_``), ``properties`` and
+    # ``collection_id`` are required. ``schemata`` and ``latinized``
+    # both default to empty so raw ES payloads and minimal test
+    # constructions validate without them.
     with pytest.raises(ValidationError):
         EntitySchema(schema="Person", properties={"name": ["Alice"]})  # missing id
-    # Minimal valid construction — schemata and latinized default.
-    EntitySchema(id="x", schema="Person", properties={"name": ["Alice"]})
+    with pytest.raises(ValidationError):
+        # missing collection_id
+        EntitySchema(id="x", schema="Person", properties={"name": ["Alice"]})
+    # Minimal valid construction.
+    EntitySchema(
+        id="x", schema="Person", properties={"name": ["Alice"]}, collection_id=1
+    )
 
 
 def test_entity_schema_with_aleph_extras():
@@ -83,6 +89,7 @@ def test_entity_schema_validates_from_dict_with_datasets_referents():
             "schema": "Person",
             "properties": {"name": ["Bob"]},
             "schemata": ["Person", "LegalEntity", "Thing"],
+            "collection_id": 1,
             "latinized": {},
             "datasets": ["leaks", "opensanctions"],
             "referents": ["ofac-1234"],

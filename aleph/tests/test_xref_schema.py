@@ -17,6 +17,7 @@ def _entity(entity_id: str, name: str) -> EntitySchema:
         schema="Person",
         properties={"name": [name]},
         schemata=["Person", "LegalEntity", "Thing"],
+        collection_id=1,
         latinized={},
     )
 

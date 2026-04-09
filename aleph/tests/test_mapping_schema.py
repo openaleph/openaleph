@@ -59,6 +59,7 @@ def test_mapping_schema_with_nested_entityset_and_table():
             schema="Table",
             properties={"fileName": ["data.csv"]},
             schemata=["Table", "Document", "Folder", "Thing"],
+            collection_id=42,
             latinized={},
         ),
     )

@@ -150,6 +150,10 @@ class EntitySchema(EntityModel):
     # test fixtures still validate.
     schemata: list[str] = []
 
+    # Every indexed entity carries its collection_id (int PK) from the
+    # ES document. Used by authz checks and xref cluster resolution.
+    collection_id: int
+
     # Resolved nested resources, populated by the response builder.
     collection: CollectionSchema | None = None
     role_id: str | None = None
