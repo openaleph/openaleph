@@ -32,17 +32,11 @@ def _role(**overrides) -> RoleSchema:
     return RoleSchema(**base)
 
 
-def test_role_schema_cache_key_prefers_foreign_id():
+def test_role_schema_cache_key_uses_id():
+    """Roles are referenced by int PK everywhere (Permission.role_id,
+    Alert.role_id, notification actor_id, …) so the resolver keys
+    roles under their id, not foreign_id."""
     role = _role()
-    assert role.cache_key == "alice@example.org"
-
-
-def test_role_schema_cache_key_falls_back_to_id_when_no_foreign_id():
-    # foreign_id is required by the schema, but the cache_key property
-    # still falls back to `id` if a subclass or future model omits it.
-    # We exercise the fallback by clearing foreign_id post-construction.
-    role = _role()
-    object.__setattr__(role, "foreign_id", None)
     assert role.cache_key == "42"
 
 
