@@ -312,7 +312,9 @@ class ResolverE2ETestCase(TestCase):
             self.assertIsNotNone(etag, f"{cls.__name__} etag is None")
             inner = etag[1:-1]  # strip quotes
             self.assertEqual(len(inner), 11, f"{cls.__name__} etag wrong length")
-            self.assertNotIn(identifier, inner)
+            # numeric IDs can be part of the hash by coincidence
+            if len(str(identifier)) > 1:
+                self.assertNotIn(identifier, inner)
 
     # --- get_many_etag --------------------------------------------------------
 
