@@ -1,5 +1,6 @@
 import logging
 import re
+from collections import defaultdict
 
 from banal import ensure_list
 from flask import request
@@ -8,30 +9,33 @@ from followthemoney import model
 from followthemoney.helpers import entity_filename
 from followthemoney.statement.util import get_prop_type
 from followthemoney.types import registry
+from pydantic import BaseModel
 from rigour.mime.types import CSV, PDF
 from servicelayer import env
 
 from aleph.core import url_for
-from aleph.logic import resolver
 from aleph.logic.entities import (
     check_write_entity,
     should_transcribe,
     should_translate,
     transliterate_values,
 )
+from aleph.logic.resolver import cache as resolver_cache
 from aleph.logic.util import archive_url, collection_url, entity_url
 from aleph.logic.xref.canonical import get_canonical_cluster
 from aleph.model import (
-    Alert,
+    AlertSchema,
     Collection,
+    CollectionSchema,
     Document,
-    Entity,
-    EntitySet,
-    EntitySetItem,
+    EntitySchema,
+    EntitySetSchema,
     Events,
-    Export,
+    ExportSchema,
     Role,
+    RoleSchema,
 )
+from aleph.model.common import model_dump
 from aleph.procrastinate.queues import defer
 from aleph.util import make_entity_proxy
 from aleph.views.util import clean_object, jsonify
@@ -63,12 +67,34 @@ class Serializer(object):
         obj = self._serialize(obj)
         return clean_object(obj)
 
-    def queue(self, clazz, key, schema=None):
-        if not self.nested:
-            resolver.queue(request, clazz, key, schema=schema)
+    def queue(self, schema_cls, key):
+        """Collect a (schema_cls, key) pair for batch pre-fetching."""
+        if self.nested or not key:
+            return
+        if not hasattr(request, "_resolver_queue"):
+            request._resolver_queue = defaultdict(set)
+        request._resolver_queue[schema_cls].add(str(key))
 
-    def resolve(self, clazz, key, serializer=None):
-        data = resolver.get(request, clazz, key)
+    def _resolve_queued(self):
+        """Batch-fetch all queued items via the resolver. Called once
+        before _serialize runs."""
+        queue = getattr(request, "_resolver_queue", None)
+        if not queue:
+            return
+        for schema_cls, keys in queue.items():
+            resolver_cache.get_many(schema_cls, list(keys))
+        request._resolver_queue = defaultdict(set)
+
+    def resolve(self, schema_cls, key, serializer=None):
+        """Look up a single object from the resolver cache and
+        optionally serialize it. Returns a dict (for backwards
+        compat with existing _serialize methods that work on dicts)."""
+        if not key:
+            return None
+        obj = resolver_cache.get(schema_cls, str(key))
+        if obj is None:
+            return None
+        data = model_dump(obj)
         if data is not None and serializer is not None:
             serializer = serializer(nested=True)
             data = serializer.serialize(data)
@@ -78,7 +104,7 @@ class Serializer(object):
         obj = self._to_dict(obj)
         if obj is not None:
             self.collect(obj)
-            resolver.resolve(request)
+            self._resolve_queued()
             return self._serialize_common(obj)
 
     def serialize_many(self, objs):
@@ -88,7 +114,7 @@ class Serializer(object):
             if obj is not None:
                 self.collect(obj)
                 collected.append(obj)
-        resolver.resolve(request)
+        self._resolve_queued()
         serialized = []
         for obj in collected:
             obj = self._serialize_common(obj)
@@ -97,6 +123,8 @@ class Serializer(object):
         return serialized
 
     def _to_dict(self, obj):
+        if isinstance(obj, BaseModel):
+            return model_dump(obj)
         if hasattr(obj, "to_dict"):
             obj = obj.to_dict()
         if hasattr(obj, "_asdict"):
@@ -172,10 +200,10 @@ class AlertSerializer(Serializer):
 
 class CollectionSerializer(Serializer):
     def collect(self, obj):
-        self.queue(Role, obj.get("creator_id"))
+        self.queue(RoleSchema, obj.get("creator_id"))
         for role_id in ensure_list(obj.get("team_id")):
             if request.authz.can_read_role(role_id):
-                self.queue(Role, role_id)
+                self.queue(RoleSchema, role_id)
 
     def _serialize(self, obj):
         pk = obj.get("id")
@@ -191,31 +219,31 @@ class CollectionSerializer(Serializer):
             pk, request.authz.WRITE
         )
         creator_id = obj.pop("creator_id", None)
-        obj["creator"] = self.resolve(Role, creator_id, RoleSerializer)
+        obj["creator"] = self.resolve(RoleSchema, creator_id, RoleSerializer)
         obj["team"] = []
         for role_id in ensure_list(obj.pop("team_id", [])):
             if request.authz.can_read_role(role_id):
-                role = self.resolve(Role, role_id, RoleSerializer)
+                role = self.resolve(RoleSchema, role_id, RoleSerializer)
                 obj["team"].append(role)
         return obj
 
 
 class PermissionSerializer(Serializer):
     def collect(self, obj):
-        self.queue(Role, obj.get("role_id"))
+        self.queue(RoleSchema, obj.get("role_id"))
 
     def _serialize(self, obj):
         obj.pop("collection_id", None)
         role_id = obj.pop("role_id", None)
         obj["writeable"] = request.authz.can_read_role(role_id)  # wat
-        obj["role"] = self.resolve(Role, role_id, RoleSerializer)
+        obj["role"] = self.resolve(RoleSchema, role_id, RoleSerializer)
         return obj
 
 
 class EntitySerializer(Serializer):
     def collect(self, obj):
-        self.queue(Collection, obj.get("collection_id"))
-        self.queue(Role, obj.get("role_id"))
+        self.queue(CollectionSchema, obj.get("collection_id"))
+        self.queue(RoleSchema, obj.get("role_id"))
         schema = model.get(obj.get("schema"))
         if schema is None or self.nested:  # FIXME what does that
             return
@@ -225,7 +253,7 @@ class EntitySerializer(Serializer):
             if prop is None or prop.type != registry.entity:
                 continue
             for value in ensure_list(values):
-                self.queue(Entity, value, schema=prop.range)
+                self.queue(EntitySchema, value, schema=prop.range)
 
     def _serialize(self, obj):  # noqa: C901
         proxy = make_entity_proxy(dict(obj))
@@ -233,7 +261,7 @@ class EntitySerializer(Serializer):
         for prop, value in proxy.itervalues():
             properties.setdefault(prop.name, [])
             if prop.type == registry.entity and not self.nested:
-                entity = self.resolve(Entity, value, EntitySerializer)
+                entity = self.resolve(EntitySchema, value, EntitySerializer)
                 if entity is not None:
                     entity["shallow"] = True
                     value = entity
@@ -281,14 +309,16 @@ class EntitySerializer(Serializer):
         # entities that get resolved without regard for authz.
         if not request.authz.can(coll_id, request.authz.READ):
             return None
-        obj["collection"] = self.resolve(Collection, coll_id, CollectionSerializer)
+        obj["collection"] = self.resolve(
+            CollectionSchema, coll_id, CollectionSerializer
+        )
         role_id = obj.pop("role_id", None)
         # FIXME: some real world ES docs have an array here, we don't know why
         # currently. If there is ever a bug, this _could_ solve it:
         # if is_listish(role_id):
         #     if len(ensure_list(role_id)) == 1:
         #         role_id = role_id[0]
-        obj["role"] = self.resolve(Role, role_id, RoleSerializer)
+        obj["role"] = self.resolve(RoleSchema, role_id, RoleSerializer)
         obj["links"] = links
         obj["latinized"] = transliterate_values(proxy)
         obj["writeable"] = check_write_entity(obj, request.authz)
@@ -331,10 +361,10 @@ class XrefSerializer(Serializer):
 
     def collect(self, obj):
         matchable = tuple([s for s in model if s.matchable])
-        self.queue(Entity, obj.get("source"), matchable)
-        self.queue(Entity, obj.get("target"), matchable)
+        self.queue(EntitySchema, obj.get("source"), matchable)
+        self.queue(EntitySchema, obj.get("target"), matchable)
         for coll_id in self._collection_ids(obj):
-            self.queue(Collection, coll_id)
+            self.queue(CollectionSchema, coll_id)
 
     def _serialize(self, obj):
         source_id = obj.pop("source", None)
@@ -352,11 +382,12 @@ class XrefSerializer(Serializer):
             if perspective_cid not in source_cids and perspective_cid in target_cids:
                 source_id, target_id = target_id, source_id
 
-        obj["entity"] = self.resolve(Entity, source_id, EntitySerializer)
-        obj["match"] = self.resolve(Entity, target_id, EntitySerializer)
+        obj["entity"] = self.resolve(EntitySchema, source_id, EntitySerializer)
+        obj["match"] = self.resolve(EntitySchema, target_id, EntitySerializer)
         coll_ids = self._collection_ids(obj)
         obj["collections"] = [
-            self.resolve(Collection, cid, CollectionSerializer) for cid in coll_ids
+            self.resolve(CollectionSchema, cid, CollectionSerializer)
+            for cid in coll_ids
         ]
         if obj["entity"] and obj["match"]:
             obj["writeable"] = obj["entity"].get("writeable") or obj["match"].get(
@@ -399,8 +430,8 @@ class ExportSerializer(Serializer):
 
 class EntitySetSerializer(Serializer):
     def collect(self, obj):
-        self.queue(Collection, obj.get("collection_id"))
-        self.queue(Role, obj.get("role_id"))
+        self.queue(CollectionSchema, obj.get("collection_id"))
+        self.queue(RoleSchema, obj.get("role_id"))
 
     def _serialize(self, obj):
         collection_id = obj.pop("collection_id", None)
@@ -410,14 +441,14 @@ class EntitySetSerializer(Serializer):
             Collection, collection_id, CollectionSerializer
         )
         role_id = obj.get("role_id", None)
-        obj["role"] = self.resolve(Role, role_id, RoleSerializer)
+        obj["role"] = self.resolve(RoleSchema, role_id, RoleSerializer)
         return obj
 
 
 class EntitySetItemSerializer(Serializer):
     def collect(self, obj):
-        self.queue(Collection, obj.get("collection_id"))
-        self.queue(Entity, obj.get("entity_id"))
+        self.queue(CollectionSchema, obj.get("collection_id"))
+        self.queue(EntitySchema, obj.get("entity_id"))
 
     def _serialize(self, obj):
         coll_id = obj.pop("collection_id", None)
@@ -425,8 +456,10 @@ class EntitySetItemSerializer(Serializer):
         if not request.authz.can(coll_id, request.authz.READ):
             return None
         entity_id = obj.pop("entity_id", None)
-        obj["entity"] = self.resolve(Entity, entity_id, EntitySerializer)
-        obj["collection"] = self.resolve(Collection, coll_id, CollectionSerializer)
+        obj["entity"] = self.resolve(EntitySchema, entity_id, EntitySerializer)
+        obj["collection"] = self.resolve(
+            CollectionSchema, coll_id, CollectionSerializer
+        )
         esi_coll_id = obj.get("entityset_collection_id")
         obj["writeable"] = request.authz.can(esi_coll_id, request.authz.WRITE)
         return obj
@@ -437,7 +470,7 @@ class CanonicalSerializer(Serializer):
 
     def collect(self, obj):
         for coll_id in obj.get("collection_ids", set()):
-            self.queue(Collection, coll_id)
+            self.queue(CollectionSchema, coll_id)
         entity_serializer = EntitySerializer(nested=True)
         for entity in obj.get("entities", []):
             entity_serializer.collect(entity)
@@ -463,24 +496,30 @@ class CanonicalSerializer(Serializer):
 class StatementSerializer(Serializer):
     """Serializer for FtM statements — resolves dataset and entity references."""
 
-    def collect(self, obj):
-        from aleph.logic.resolver import CollectionByForeignId
+    @staticmethod
+    def _fid_to_collection_id(foreign_id: str) -> str | None:
+        """Look up a collection by foreign_id and return str(int PK)."""
+        if not foreign_id:
+            return None
+        coll = Collection.by_foreign_id(foreign_id)
+        return str(coll.id) if coll else None
 
-        self.queue(CollectionByForeignId, obj.get("dataset"))
+    def collect(self, obj):
+        # Statement dataset is a foreign_id — convert to int PK for queue.
+        coll_id = self._fid_to_collection_id(obj.get("dataset"))
+        if coll_id:
+            self.queue(CollectionSchema, coll_id)
         prop_type = get_prop_type(obj.get("schema"), obj.get("prop"))
         if prop_type == "entity":
-            self.queue(Entity, obj.get("value"))
+            self.queue(EntitySchema, obj.get("value"))
 
     def _serialize(self, obj):
-        from aleph.logic.resolver import CollectionByForeignId
-
         dataset_fid = obj.pop("dataset", None)
-        obj["dataset"] = self.resolve(
-            CollectionByForeignId, dataset_fid, CollectionSerializer
-        )
+        coll_id = self._fid_to_collection_id(dataset_fid)
+        obj["dataset"] = self.resolve(CollectionSchema, coll_id, CollectionSerializer)
         prop_type = get_prop_type(obj.get("schema"), obj.get("prop"))
         if prop_type == "entity":
-            entity = self.resolve(Entity, obj.get("value"), EntitySerializer)
+            entity = self.resolve(EntitySchema, obj.get("value"), EntitySerializer)
             if entity is not None:
                 entity["shallow"] = True
                 obj["value"] = entity
@@ -488,57 +527,65 @@ class StatementSerializer(Serializer):
 
 
 class NotificationSerializer(Serializer):
+    # Schema → Serializer for rendering resolved param objects.
     SERIALIZERS = {
-        Alert: AlertSerializer,
-        Entity: EntitySerializer,
-        Collection: CollectionSerializer,
-        EntitySet: EntitySetSerializer,
-        EntitySetItem: EntitySetItemSerializer,
-        Role: RoleSerializer,
-        Export: ExportSerializer,
+        AlertSchema: AlertSerializer,
+        EntitySchema: EntitySerializer,
+        CollectionSchema: CollectionSerializer,
+        EntitySetSchema: EntitySetSerializer,
+        RoleSchema: RoleSerializer,
+        ExportSchema: ExportSerializer,
     }
 
     def collect(self, obj):
-        self.queue(Role, obj.get("actor_id"))
+        self.queue(RoleSchema, obj.get("actor_id"))
         event = Events.get(obj.get("event"))
         if event is not None:
-            for name, clazz in event.params.items():
+            for name, schema_cls in event.param_types.items():
                 key = obj.get("params", {}).get(name)
-                self.queue(clazz, key, Entity.THING)
+                self.queue(schema_cls, key)
 
     def _serialize(self, obj):
         event = Events.get(obj.get("event"))
         if event is None:
             return None
-        params = {"actor": self.resolve(Role, obj.get("actor_id"), RoleSerializer)}
-        for name, clazz in event.params.items():
+        params = {
+            "actor": self.resolve(RoleSchema, obj.get("actor_id"), RoleSerializer)
+        }
+        for name, schema_cls in event.param_types.items():
             key = obj.get("params", {}).get(name)
-            serializer = self.SERIALIZERS.get(clazz)
-            params[name] = self.resolve(clazz, key, serializer)
+            serializer = self.SERIALIZERS.get(schema_cls)
+            params[name] = self.resolve(schema_cls, key, serializer)
         obj["params"] = params
-        obj["event"] = event.to_dict()
+        obj["event"] = model_dump(event)
         return obj
 
 
 class MappingSerializer(Serializer):
     def collect(self, obj):
-        self.queue(EntitySet, obj.get("entityset_id"))
-        self.queue(Entity, obj.get("table_id"))
+        self.queue(EntitySetSchema, obj.get("entityset_id"))
+        self.queue(EntitySchema, obj.get("table_id"))
 
     def _serialize(self, obj):
         obj["links"] = {}
         entityset_id = obj.pop("entityset_id", None)
-        obj["entityset"] = self.resolve(EntitySet, entityset_id, EntitySetSerializer)
-        obj["table"] = self.resolve(Entity, obj.get("table_id", None), EntitySerializer)
+        obj["entityset"] = self.resolve(
+            EntitySetSchema, entityset_id, EntitySetSerializer
+        )
+        obj["table"] = self.resolve(
+            EntitySchema, obj.get("table_id", None), EntitySerializer
+        )
         return obj
 
 
 class BookmarkSerializer(Serializer):
     def collect(self, obj):
-        self.queue(Entity, obj.get("entity_id"))
+        self.queue(EntitySchema, obj.get("entity_id"))
 
     def _serialize(self, obj):
-        obj["entity"] = self.resolve(Entity, obj.get("entity_id"), EntitySerializer)
+        obj["entity"] = self.resolve(
+            EntitySchema, obj.get("entity_id"), EntitySerializer
+        )
 
         # Entity could not be resolved, for example because it has been
         # removed or permissions have changed.
@@ -554,11 +601,13 @@ class BookmarkSerializer(Serializer):
 
 class TagSerializer(Serializer):
     def collect(self, obj):
-        self.queue(Entity, obj.get("entity_id"))
-        self.queue(Role, obj.get("role_id"))
+        self.queue(EntitySchema, obj.get("entity_id"))
+        self.queue(RoleSchema, obj.get("role_id"))
 
     def _serialize(self, obj):
-        obj["entity"] = self.resolve(Entity, obj.get("entity_id"), EntitySerializer)
-        obj["role"] = self.resolve(Role, obj.get("role_id"), RoleSerializer)
+        obj["entity"] = self.resolve(
+            EntitySchema, obj.get("entity_id"), EntitySerializer
+        )
+        obj["role"] = self.resolve(RoleSchema, obj.get("role_id"), RoleSerializer)
 
         return obj

@@ -1,22 +1,10 @@
 """Object resolver package.
 
-Two parallel APIs live here:
+The typed :class:`Resolver` class plus its registry helpers
+(:func:`register`, :func:`register_etag`).
 
-1. The typed :class:`Resolver` class plus its registry helpers
-   (:func:`register`, :func:`register_etag`) — see :mod:`.core` and
-   :mod:`.registry`. New code should use this.
-
-2. The legacy free-function API (``queue`` / ``resolve`` / ``get`` /
-   ``cached_entities_by_ids``) — see :mod:`._legacy`.
-
-Both surfaces are re-exported here so callers can do
-``from aleph.logic.resolver import Resolver`` or
-``from aleph.logic.resolver import queue, resolve, get``.
-
-The legacy API is loaded lazily (via ``__getattr__``) to avoid
-circular imports — the legacy module imports fetcher functions from
-``aleph.logic.{roles,alerts,...}`` which in turn register with the
-new resolver registry at import time.
+The module-level :data:`cache` singleton is the canonical interface
+for all callers: ``from aleph.logic.resolver import cache``.
 """
 
 from aleph.logic.resolver.core import (
@@ -35,7 +23,6 @@ from aleph.logic.resolver.registry import (
 )
 
 __all__ = [
-    # New API
     "Resolver",
     "cache",
     "compute_etag",
@@ -46,30 +33,4 @@ __all__ = [
     "is_registered",
     "register",
     "register_etag",
-    # Legacy API (deprecated)
-    "LOADERS",
-    "CollectionByForeignId",
-    "cached_entities_by_ids",
-    "get",
-    "queue",
-    "resolve",
 ]
-
-_LEGACY_NAMES = frozenset(
-    {
-        "LOADERS",
-        "CollectionByForeignId",
-        "cached_entities_by_ids",
-        "get",
-        "queue",
-        "resolve",
-    }
-)
-
-
-def __getattr__(name: str):
-    if name in _LEGACY_NAMES:
-        from aleph.logic.resolver import _legacy
-
-        return getattr(_legacy, name)
-    raise AttributeError(f"module 'aleph.logic.resolver' has no attribute {name}")
