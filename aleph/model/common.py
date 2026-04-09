@@ -229,20 +229,17 @@ class DatedSchema(APIBaseModel):
         return str(v)
 
 
-def model_dump(model: BaseModel | None) -> SDict | None:
+def model_dump(model: BaseModel) -> SDict:
     """Dump a pydantic model to a dict, dropping ``None``, empty strings
     and empty containers recursively.
 
-    Thin ``None``-tolerant wrapper around
-    ``anystore.util.model_dump(obj, clean=True)``. Replaces
-    ``aleph.views.util.clean_object()`` and is the canonical way to
-    serialize an API response. The frontend uses defensive accessors
-    (``entity?.collection?.foreign_id``), so dropping empty values is
-    safe. ``cache_key`` is a regular ``@property`` on
+    Thin wrapper around ``anystore.util.model_dump(obj, clean=True)``.
+    Replaces ``aleph.views.util.clean_object()`` and is the canonical
+    way to serialize an API response. The frontend uses defensive
+    accessors (``entity?.collection?.foreign_id``), so dropping empty
+    values is safe. ``cache_key`` is a regular ``@property`` on
     :class:`APIBaseModel` so it never appears in the dump output.
     """
-    if model is None:
-        return None
     return _anystore_model_dump(model, clean=True)
 
 
