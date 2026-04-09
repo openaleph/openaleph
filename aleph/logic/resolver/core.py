@@ -109,12 +109,12 @@ class Resolver:
 
     @staticmethod
     def _key(cls_: Type[BaseModel], identifier: str) -> str:
-        """Path-style key: ``Role/1``, ``Collection/foo-dataset/stats``, …
+        """Path-style store key: ``ClassName/identifier``.
 
-        First segment is ``cls.__name__``; remaining segments come from
-        the lookup identifier the caller passes. For aggregates, the
-        caller composes the suffix via the model's ``make_cache_key``
-        classmethod — there is no automatic key derivation here.
+        For leaf schemas the identifier is a plain id or foreign_id
+        (``Role/42``, ``Collection/foo-dataset``). For aggregates the
+        caller passes a composite key built via the model's
+        ``make_cache_key`` classmethod (``CollectionStatistics/foo-dataset/stats``).
         """
         return f"{cls_.__name__}/{identifier}"
 

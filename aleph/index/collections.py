@@ -18,7 +18,8 @@ from openaleph_search.query.util import BoolQuery, bool_query
 
 from aleph.core import cache, es
 from aleph.logic.resolver.registry import register, register_etag
-from aleph.model import Collection, CollectionSchema, Entity
+from aleph.logic.resolver.ttl import TTL_AGGREGATE, TTL_RESOURCE
+from aleph.model import Collection, CollectionSchema, CollectionStatistics, Entity
 
 STATS_FACETS = [
     "schema",
@@ -161,7 +162,7 @@ def get_collection_by_foreign_id(foreign_id):
 # the resolver keys collections by foreign_id. The fetcher looks up
 # the SQLA row by foreign_id and validates directly (the model
 # validator on CollectionSchema handles the SQLA → pydantic mapping).
-@register(CollectionSchema, ttl=4 * 60 * 60)
+@register(CollectionSchema, ttl=TTL_RESOURCE)
 def _fetch_collection(foreign_id: str) -> CollectionSchema | None:
     collection = Collection.by_foreign_id(foreign_id)
     if collection is None:
@@ -187,6 +188,18 @@ def get_collection_stats(collection_id):
     for key, result in cache.get_many_complex(keys.keys(), empty):
         stats[keys[key]] = result
     return stats
+
+
+@register(CollectionStatistics, ttl=TTL_AGGREGATE)
+def _fetch_collection_stats(cache_key: str) -> CollectionStatistics | None:
+    """``cache_key`` is ``<foreign_id>/stats`` — built by
+    ``CollectionStatistics.make_cache_key(foreign_id)``."""
+    foreign_id = cache_key.rsplit("/", 1)[0]
+    collection = Collection.by_foreign_id(foreign_id)
+    if collection is None:
+        return None
+    raw = get_collection_stats(collection.id)
+    return CollectionStatistics(foreign_id=foreign_id, **raw)
 
 
 def update_collection_stats(collection_id, facets=STATS_FACETS):

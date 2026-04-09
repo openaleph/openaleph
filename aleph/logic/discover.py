@@ -6,6 +6,8 @@ from openaleph_search import EntitiesQuery, SearchQueryParser
 from openaleph_search.model import SearchAuth
 
 from aleph.core import cache
+from aleph.logic.resolver.registry import register
+from aleph.logic.resolver.ttl import TTL_AGGREGATE
 from aleph.model import Collection
 from aleph.model.discover import (
     DatasetDiscovery,
@@ -68,6 +70,17 @@ def get_collection_discovery(collection_id: int, dataset: str) -> DatasetDiscove
         return DatasetDiscovery(**data)
     # regenerate and update cache
     return update_collection_discovery(collection_id, dataset)
+
+
+@register(DatasetDiscovery, ttl=TTL_AGGREGATE)
+def _fetch_discovery(cache_key: str) -> DatasetDiscovery | None:
+    """``cache_key`` is ``<foreign_id>/discovery`` — built by
+    ``DatasetDiscovery.make_cache_key(foreign_id)``."""
+    foreign_id = cache_key.rsplit("/", 1)[0]
+    collection = Collection.by_foreign_id(foreign_id)
+    if collection is None:
+        return None
+    return get_collection_discovery(collection.id, foreign_id)
 
 
 def update_collection_discovery(collection_id: int, dataset: str) -> DatasetDiscovery:

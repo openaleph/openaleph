@@ -44,6 +44,10 @@ class DatasetDiscovery(APIBaseModel):
     locationMentioned: list[SignificantTerms] = []
     namesMentioned: list[SignificantTerms] = []
 
+    @classmethod
+    def make_cache_key(cls, foreign_id: str) -> str:
+        return f"{foreign_id}/discovery"
+
     @property
     def cache_key(self) -> str:
-        return f"{self.name}/discovery"
+        return self.make_cache_key(self.name)

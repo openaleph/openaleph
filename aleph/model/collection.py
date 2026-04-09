@@ -471,9 +471,13 @@ class CollectionStatistics(APIBaseModel):
     phones: FacetCounts = FacetCounts()
     emails: FacetCounts = FacetCounts()
 
+    @classmethod
+    def make_cache_key(cls, foreign_id: str) -> str:
+        return f"{foreign_id}/stats"
+
     @property
     def cache_key(self) -> str:
-        return f"{self.foreign_id}/stats"
+        return self.make_cache_key(self.foreign_id)
 
 
 class StatusCounts(APIBaseModel):
@@ -497,12 +501,16 @@ class CollectionStatus(StatusCounts):
     """Resolver-cached aggregate keyed under
     ``CollectionStatus/<foreign_id>/status``."""
 
-    foreign_id: str | None = None
+    foreign_id: str
     jobs: list[CollectionJobStatus] = []
+
+    @classmethod
+    def make_cache_key(cls, foreign_id: str) -> str:
+        return f"{foreign_id}/status"
 
     @property
     def cache_key(self) -> str:
-        return f"{self.foreign_id}/status"
+        return self.make_cache_key(self.foreign_id)
 
 
 class CollectionDeepSchema(CollectionSchema):
