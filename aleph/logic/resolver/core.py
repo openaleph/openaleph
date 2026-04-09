@@ -42,6 +42,7 @@ from typing import Any, Type, TypeVar
 from anystore import get_store
 from anystore.store import Store
 from pydantic import BaseModel
+from werkzeug.exceptions import NotFound
 
 from aleph.logic.resolver.etag import _short_hash, compute_etag
 from aleph.logic.resolver.registry import fetch_many, fetch_one, get_ttl
@@ -96,6 +97,10 @@ class Resolver:
     ``flask.request._resolver`` by the serializer shim.
     """
 
+    # Exception raised by get_or_404. Swappable for frameworks that
+    # use a different 404 class (e.g. FastAPI's HTTPException).
+    ERROR_NOT_FOUND = NotFound
+
     def __init__(self, store: Store | None = None) -> None:
         # The local cache holds three states:
         #   - key absent             → never asked this request
@@ -119,6 +124,20 @@ class Resolver:
         return f"{cls_.__name__}/{identifier}"
 
     # --- single-object API -------------------------------------------------
+
+    def get_or_404(self, cls: Type[T], identifier: str) -> T:
+        """Like :meth:`get` but raises :attr:`ERROR_NOT_FOUND` if the
+        object is not found. Convenience for view functions that would
+        otherwise do ``obj_or_404(cache.get(...))``.
+
+        The exception class is a class attribute so it can be swapped
+        for frameworks that use a different 404 (e.g. FastAPI's
+        ``HTTPException(404)``).
+        """
+        obj = self.get(cls, identifier)
+        if obj is None:
+            raise self.ERROR_NOT_FOUND()
+        return obj
 
     def get(self, cls: Type[T], identifier: str) -> T | None:
         """Get a single object by identifier. Returns None if the
@@ -332,6 +351,18 @@ class Resolver:
         return f'"{_short_hash(chr(10).join(parts).encode())}"'
 
     # --- mutation hook -----------------------------------------------------
+
+    def populate(self, cls_: Type[BaseModel], identifier: str, obj: BaseModel) -> None:
+        """Write a pre-computed object into the persistent store.
+
+        Use this when the caller has already done the expensive
+        computation (e.g. ``update_collection_stats``) and wants to
+        push the result into the cache directly — without waiting for
+        the next :meth:`get` to trigger the registered fetcher.
+
+        The object is written with the per-class TTL from the registry.
+        """
+        self._store.put(self._key(cls_, identifier), obj, model=cls_, ttl=get_ttl(cls_))
 
     def invalidate(self, cls_: Type[BaseModel], identifier: str) -> None:
         """Drop a key from the persistent store. Called from logic
