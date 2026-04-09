@@ -18,6 +18,10 @@ from aleph.core import db
 # === SQLAlchemy models ===
 from aleph.model.alert import Alert, AlertSchema
 from aleph.model.bookmark import Bookmark, BookmarkSchema
+from aleph.model.canonical import (
+    CanonicalSchema,
+    StatementSchema,
+)
 from aleph.model.collection import (
     Collection,
     CollectionDeepSchema,
@@ -76,9 +80,7 @@ from aleph.model.permission import Permission, PermissionSchema
 from aleph.model.role import Role, RoleSchema, RoleType
 from aleph.model.tag import Tag, TagSchema
 from aleph.model.xref import (
-    CanonicalSchema,
     ESEdge,
-    StatementSchema,
     XrefSchema,
 )
 
