@@ -14,10 +14,12 @@ from followthemoney.types import registry
 from ftmq.model.dataset import Dataset as FtmDataset
 from normality import stringify
 from pydantic import ConfigDict, Field, model_validator
+from sqlalchemy import event
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import aliased
 
 from aleph.core import db
+from aleph.logic.resolver import cache as resolver_cache
 from aleph.model.common import (
     APIBaseModel,
     IdModel,
@@ -519,3 +521,15 @@ class CollectionDeepSchema(CollectionSchema):
 
     status: CollectionStatus | None = None
     statistics: CollectionStatistics | None = None
+
+
+# === Resolver invalidation via SQLA events ===
+
+
+def _invalidate_collection(mapper, connection, target: Collection):
+    resolver_cache.invalidate(CollectionSchema, target.foreign_id)
+
+
+event.listen(Collection, "after_insert", _invalidate_collection)
+event.listen(Collection, "after_update", _invalidate_collection)
+event.listen(Collection, "after_delete", _invalidate_collection)

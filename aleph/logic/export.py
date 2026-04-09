@@ -22,6 +22,7 @@ from aleph.logic.resolver.registry import register, register_etag
 from aleph.logic.resolver.ttl import TTL_RESOURCE
 from aleph.logic.util import archive_url, entity_url, ui_url
 from aleph.model import Entity, Events, Export, ExportSchema, Role, Status
+from aleph.model.common import iso_text
 from aleph.settings import SETTINGS
 
 log = logging.getLogger(__name__)
@@ -50,16 +51,20 @@ def get_export(export_id):
 
 @register(ExportSchema, ttl=TTL_RESOURCE)
 def _fetch_export(export_id: str) -> ExportSchema | None:
-    export = Export.by_id(export_id, deleted=True)
+    export = Export.by_id(int(export_id), deleted=True)
     if export is None:
         return None
-    return ExportSchema.model_validate(export)
+    data = export.to_dict()
+    # Status values are lazy_gettext strings — pydantic strict mode
+    # rejects them as non-str. Force to plain str.
+    if "status" in data:
+        data["status"] = str(data["status"])
+    return ExportSchema.model_validate(data)
 
 
 @register_etag(ExportSchema)
 def _export_etag(export: ExportSchema) -> str:
-    ts = int(export.updated_at.timestamp()) if export.updated_at else 0
-    return f"{export.id}:{ts}"
+    return f"{export.id}:{iso_text(export.updated_at) or 0}"
 
 
 def write_document(export_dir, zf, collection, entity):
@@ -121,6 +126,7 @@ def export_entities(export_id):
         export = Export.by_id(export_id)
         export.set_status(status=Status.FAILED)
         db.session.commit()
+
     finally:
         shutil.rmtree(export_dir)
 
@@ -142,6 +148,7 @@ def create_export(
         meta=meta,
     )
     db.session.commit()
+
     return export
 
 
@@ -161,6 +168,7 @@ def complete_export(export_id, file_path, file_name):
         export.set_status(status=Status.FAILED)
 
     db.session.commit()
+
     params = {"export": export}
     role = Role.by_id(export.creator_id)
     log.info("Export [%r] complete: %s", export, export.status)
@@ -185,6 +193,7 @@ def delete_expired_exports():
                     archive.delete_file(export.content_hash)
         export.deleted = True
         db.session.add(export)
+
     db.session.commit()
 
 

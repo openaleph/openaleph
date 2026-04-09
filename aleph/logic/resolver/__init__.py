@@ -21,6 +21,7 @@ new resolver registry at import time.
 
 from aleph.logic.resolver.core import (
     Resolver,
+    cache,
     get_resolver,
     get_resolver_store,
 )
@@ -36,6 +37,7 @@ from aleph.logic.resolver.registry import (
 __all__ = [
     # New API
     "Resolver",
+    "cache",
     "compute_etag",
     "fetch_many",
     "fetch_one",

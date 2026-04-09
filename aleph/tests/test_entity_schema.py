@@ -43,19 +43,14 @@ def test_entity_schema_dump_uses_schema_alias_and_hides_cache_key():
 
 
 def test_entity_schema_required_fields_raise_on_missing():
-    # `schemata` is required (always populated by the indexer).
-    # `latinized` defaults to {} (computed by the response builder,
-    # not part of the raw ES payload — the resolver caches the
-    # pre-computed value but raw validation must still pass).
+    # ``id``, ``schema`` (via alias ``schema_``) and ``properties``
+    # are required from the parent ``EntityModel``. ``schemata`` and
+    # ``latinized`` both default to empty so raw ES payloads and
+    # minimal test constructions validate without them.
     with pytest.raises(ValidationError):
-        EntitySchema(id="x", schema="Person", properties={"name": ["Alice"]})
-    # schemata present → validates (latinized defaults to {}).
-    EntitySchema(
-        id="x",
-        schema="Person",
-        properties={"name": ["Alice"]},
-        schemata=["Person"],
-    )
+        EntitySchema(schema="Person", properties={"name": ["Alice"]})  # missing id
+    # Minimal valid construction — schemata and latinized default.
+    EntitySchema(id="x", schema="Person", properties={"name": ["Alice"]})
 
 
 def test_entity_schema_with_aleph_extras():

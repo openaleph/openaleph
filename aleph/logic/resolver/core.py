@@ -333,35 +333,30 @@ class Resolver:
 
     # --- mutation hook -----------------------------------------------------
 
-    @staticmethod
-    def invalidate(cls_: Type[BaseModel], identifier: str) -> None:
+    def invalidate(self, cls_: Type[BaseModel], identifier: str) -> None:
         """Drop a key from the persistent store. Called from logic
         paths that mutate the underlying object. ``identifier`` must
         be a non-empty string — the same tight contract as :meth:`get`.
 
-        Static so callers don't need a Resolver instance — invalidation
-        is a write to the shared store, not a per-request operation.
+        Acts on this instance's store, enabling future storage tiering
+        (e.g. fs-backed store for some schemas, hot redis for others).
         """
         if not identifier:
             raise ValueError(
                 f"Resolver.invalidate({cls_.__name__}, ...) requires a "
                 "non-empty identifier"
             )
-        get_resolver_store().delete(
-            Resolver._key(cls_, identifier),
+        self._store.delete(
+            self._key(cls_, identifier),
             ignore_errors=True,
         )
 
-    @staticmethod
-    def invalidate_many(cls_: Type[BaseModel], identifiers: list[str]) -> None:
-        """Drop several keys for the same class. No batched delete in
-        the underlying store interface, so this is just a loop —
-        kept as a method for caller readability."""
+    def invalidate_many(self, cls_: Type[BaseModel], identifiers: list[str]) -> None:
+        """Drop several keys for the same class."""
         for identifier in identifiers:
-            Resolver.invalidate(cls_, identifier)
+            self.invalidate(cls_, identifier)
 
-    @staticmethod
-    def invalidate_prefix(cls_: Type[BaseModel], identifier_prefix: str) -> None:
+    def invalidate_prefix(self, cls_: Type[BaseModel], identifier_prefix: str) -> None:
         """Drop every key under a path prefix.
 
         Aggregate-aware invalidation: invalidating a Collection by its
@@ -370,10 +365,21 @@ class Resolver:
         Each aggregate's ``make_cache_key`` is rooted at the parent
         identifier so a single prefix sweep covers them all.
         """
-        store = get_resolver_store()
-        prefix = Resolver._key(cls_, identifier_prefix)
-        for key in store.iterate_keys(prefix=prefix):
-            store.delete(key, ignore_errors=True)
+        prefix = self._key(cls_, identifier_prefix)
+        for key in self._store.iterate_keys(prefix=prefix):
+            self._store.delete(key, ignore_errors=True)
+
+    def flush_all(self) -> None:
+        """Wipe the entire persistent resolver store and local cache.
+
+        Used by the CLI (``aleph flushcache``), test fixtures, and
+        any situation that needs a clean slate. Acts on this instance's
+        store (which may differ from the default if a custom store was
+        passed to ``__init__``).
+        """
+        self._local.clear()
+        for key in list(self._store.iterate_keys()):
+            self._store.delete(key, ignore_errors=True)
 
 
 def get_resolver() -> Resolver:
@@ -382,3 +388,6 @@ def get_resolver() -> Resolver:
     response. The persistent store is shared.
     """
     return Resolver()
+
+
+cache: Resolver = get_resolver()

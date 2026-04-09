@@ -76,15 +76,24 @@ def reset_resolver_state():
     Store on (uri, backend_config), so the same instance is returned
     across tests — we wipe it via ``iterate_keys`` between tests
     instead of trying to mint a fresh one.
+
+    The registry is scoped: we save the real registrations before the
+    test, clear to empty, and restore afterwards — so module-level
+    ``@register`` decorators for real schemas (Role, Entity, …) aren't
+    permanently lost when running alongside the e2e test suite.
     """
-    store = get_resolver_store()
-    for key in list(store.iterate_keys()):
-        store.delete(key, ignore_errors=True)
+    Resolver().flush_all()
+    # Save the real registrations (populated by module-level @register
+    # decorators), clear to empty so the test owns the full registry,
+    # then restore after.
+    saved_registry = dict(_registry._REGISTRY)
+    saved_etags = dict(_registry._ETAG_FNS)
     _clear_registry()
     yield
-    for key in list(get_resolver_store().iterate_keys()):
-        get_resolver_store().delete(key, ignore_errors=True)
+    Resolver().flush_all()
     _clear_registry()
+    _registry._REGISTRY.update(saved_registry)
+    _registry._ETAG_FNS.update(saved_etags)
 
 
 @pytest.fixture
@@ -189,7 +198,7 @@ def test_get_after_invalidate_refetches(widgets, fetch_calls):
 
     # Mutate upstream then invalidate the persistent store.
     widgets["1"] = Widget(id="1", name="alpha-prime")
-    Resolver.invalidate(Widget, "1")
+    Resolver().invalidate(Widget, "1")
 
     # New resolver: local cache empty, store empty → upstream refetch.
     r2 = Resolver()
@@ -201,9 +210,9 @@ def test_invalidate_rejects_empty_identifier(widgets):
     """invalidate() carries the same non-empty contract as get() —
     callers must filter Optional sources upstream."""
     with pytest.raises(ValueError):
-        Resolver.invalidate(Widget, None)  # type: ignore[arg-type]
+        Resolver().invalidate(Widget, None)  # type: ignore[arg-type]
     with pytest.raises(ValueError):
-        Resolver.invalidate(Widget, "")
+        Resolver().invalidate(Widget, "")
 
 
 def test_invalidate_many(widgets, fetch_calls):
@@ -214,7 +223,7 @@ def test_invalidate_many(widgets, fetch_calls):
     r.get(Widget, "2")
     assert fetch_calls["one"] == 2
 
-    Resolver.invalidate_many(Widget, ["1", "2"])
+    Resolver().invalidate_many(Widget, ["1", "2"])
 
     r2 = Resolver()
     r2.get(Widget, "1")
@@ -393,7 +402,7 @@ def test_get_etag_changes_when_content_changes(widgets):
     e1 = r.get_etag(Widget, "1")
 
     widgets["1"] = Widget(id="1", name="alpha-prime")
-    Resolver.invalidate(Widget, "1")
+    Resolver().invalidate(Widget, "1")
 
     r2 = Resolver()
     e2 = r2.get_etag(Widget, "1")
@@ -424,7 +433,7 @@ def test_register_etag_overrides_default(widgets):
 
     # Different content → different hash.
     widgets["1"] = Widget(id="1", name="alpha-prime")
-    Resolver.invalidate(Widget, "1")
+    Resolver().invalidate(Widget, "1")
     r2 = Resolver()
     assert r2.get_etag(Widget, "1") != etag
 
@@ -452,7 +461,7 @@ def test_get_many_etag_changes_with_content(widgets):
     before = r.get_many_etag(Widget, ["1", "2"])
 
     widgets["1"] = Widget(id="1", name="alpha-prime")
-    Resolver.invalidate(Widget, "1")
+    Resolver().invalidate(Widget, "1")
 
     r2 = Resolver()
     after = r2.get_many_etag(Widget, ["1", "2"])
@@ -538,7 +547,7 @@ def test_invalidate_prefix_drops_subkeys(widgets):
     r.get(Gadget, "set-a/stats")
     r.get(Gadget, "set-b/main")
 
-    Resolver.invalidate_prefix(Gadget, "set-a")
+    Resolver().invalidate_prefix(Gadget, "set-a")
 
     # set-a/* gone from the store; set-b/* still there.
     store = get_resolver_store()

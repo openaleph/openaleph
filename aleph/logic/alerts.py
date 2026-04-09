@@ -11,6 +11,7 @@ from aleph.logic.notifications import publish
 from aleph.logic.resolver.registry import register, register_etag
 from aleph.logic.resolver.ttl import TTL_RESOURCE
 from aleph.model import Alert, AlertSchema, Entity, Events
+from aleph.model.common import iso_text
 
 log = logging.getLogger(__name__)
 
@@ -23,16 +24,15 @@ def get_alert(alert_id):
 
 @register(AlertSchema, ttl=TTL_RESOURCE)
 def _fetch_alert(alert_id: str) -> AlertSchema | None:
-    alert = Alert.by_id(alert_id)
+    alert = Alert.by_id(int(alert_id))
     if alert is None:
         return None
-    return AlertSchema.model_validate(alert)
+    return AlertSchema.model_validate(alert.to_dict())
 
 
 @register_etag(AlertSchema)
 def _alert_etag(alert: AlertSchema) -> str:
-    ts = int(alert.updated_at.timestamp()) if alert.updated_at else 0
-    return f"{alert.id}:{ts}"
+    return f"{alert.id}:{iso_text(alert.updated_at) or 0}"
 
 
 def check_alerts():

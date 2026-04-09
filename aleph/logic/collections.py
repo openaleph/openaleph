@@ -23,8 +23,11 @@ from aleph.logic.documents import (
 from aleph.logic.documents import index_flush as _index_flush
 from aleph.logic.documents import ingest_flush as _ingest_flush
 from aleph.logic.notifications import flush_notifications, publish
+from aleph.logic.resolver import cache as resolver_cache
 from aleph.model import (
     Collection,
+    CollectionStatistics,
+    DatasetDiscovery,
     Document,
     Entity,
     EntitySet,
@@ -87,12 +90,22 @@ def update_collection(collection, sync=False):
 
 def refresh_collection(collection_id):
     """Operations to execute after updating a collection-related
-    domain object. This will refresh stats and flush cache."""
-    cache.kv.delete(
-        cache.object_key(Collection, collection_id),
-        cache.object_key(Collection, collection_id, "stats"),
-        cache.object_key(Collection, collection_id, "discovery"),
-    )
+    domain object. This will refresh stats and flush cache.
+
+    ``CollectionSchema`` invalidation is handled by the SQLA event
+    on the ``Collection`` model. This function handles the aggregates
+    (statistics, discovery) which change when the *entity index*
+    changes (ingestion, reindex, entity upsert/delete).
+    """
+    collection = Collection.by_id(collection_id)
+    if collection is not None:
+        fid = collection.foreign_id
+        resolver_cache.invalidate(
+            CollectionStatistics, CollectionStatistics.make_cache_key(fid)
+        )
+        resolver_cache.invalidate(
+            DatasetDiscovery, DatasetDiscovery.make_cache_key(fid)
+        )
 
 
 def get_deep_collection(collection):

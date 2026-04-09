@@ -145,9 +145,10 @@ class EntitySchema(EntityModel):
         populate_by_name=True,
     )
 
-    # Always populated by the ES indexer — every entity carries its
-    # schema ancestor chain. Tightened from optional → required.
-    schemata: list[str]
+    # Populated by the ES indexer — the schema ancestor chain.
+    # Defaults to empty so entities from older indexes or minimal
+    # test fixtures still validate.
+    schemata: list[str] = []
 
     # Resolved nested resources, populated by the response builder.
     collection: CollectionSchema | None = None

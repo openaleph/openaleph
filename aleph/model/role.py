@@ -4,10 +4,11 @@ from typing import Literal
 
 from itsdangerous import URLSafeTimedSerializer
 from normality import stringify
-from sqlalchemy import func, not_, or_
+from sqlalchemy import event, func, not_, or_
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from aleph.core import db
+from aleph.logic.resolver import cache
 from aleph.model.common import (
     DatedSchema,
     IdModel,
@@ -378,3 +379,14 @@ class RoleSchema(DatedSchema):
         if self.id:
             return self.id
         raise ValueError("RoleSchema has no id; cannot derive a cache_key")
+
+
+# === Resolver invalidation via SQLA events ===
+
+
+def _invalidate_role(mapper, connection, target: Role):
+    cache.invalidate(RoleSchema, str(target.id))
+
+
+event.listen(Role, "after_update", _invalidate_role)
+event.listen(Role, "after_delete", _invalidate_role)

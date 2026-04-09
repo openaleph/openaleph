@@ -1,11 +1,11 @@
 import logging
 
-from aleph.core import cache
 from aleph.logic.entities import upsert_entity
 from aleph.logic.notifications import publish
 from aleph.logic.resolver.registry import register, register_etag
 from aleph.logic.resolver.ttl import TTL_RESOURCE
 from aleph.model import EntitySet, EntitySetItem, EntitySetSchema, Events
+from aleph.model.common import iso_text
 
 log = logging.getLogger(__name__)
 
@@ -19,17 +19,16 @@ def _fetch_entityset(entityset_id: str) -> EntitySetSchema | None:
     entityset = EntitySet.by_id(entityset_id)
     if entityset is None:
         return None
-    return EntitySetSchema.model_validate(entityset)
+    return EntitySetSchema.model_validate(entityset.to_dict())
 
 
 @register_etag(EntitySetSchema)
 def _entityset_etag(entityset: EntitySetSchema) -> str:
-    ts = int(entityset.updated_at.timestamp()) if entityset.updated_at else 0
-    return f"{entityset.id}:{ts}"
+    return f"{entityset.id}:{iso_text(entityset.updated_at) or 0}"
 
 
 def refresh_entityset(entityset_id):
-    cache.kv.delete(cache.object_key(EntitySet, entityset_id))
+    pass  # SQLA event handles resolver invalidation
 
 
 def create_entityset(collection, data, authz):

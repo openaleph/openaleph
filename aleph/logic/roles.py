@@ -22,6 +22,7 @@ from aleph.model import (
     Role,
     RoleSchema,
 )
+from aleph.model.common import iso_text
 from aleph.model.role import membership
 from aleph.settings import SETTINGS
 
@@ -44,7 +45,7 @@ def get_role(role_id):
 
 @register(RoleSchema, ttl=TTL_RESOURCE)
 def _fetch_role(role_id: str) -> RoleSchema | None:
-    role = Role.by_id(role_id)
+    role = Role.by_id(int(role_id))
     if role is None:
         return None
     return RoleSchema.model_validate(role)
@@ -52,10 +53,7 @@ def _fetch_role(role_id: str) -> RoleSchema | None:
 
 @register_etag(RoleSchema)
 def _role_etag(role: RoleSchema) -> str:
-    """ETag seed from updated_at — cheaper than content-hashing the
-    full model. The decorator handles hashing + quoting."""
-    ts = int(role.updated_at.timestamp()) if role.updated_at else 0
-    return f"{role.id}:{ts}"
+    return f"{role.id}:{iso_text(role.updated_at) or 0}"
 
 
 def get_deep_role(role):

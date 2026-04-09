@@ -20,6 +20,7 @@ from aleph.core import cache, es
 from aleph.logic.resolver.registry import register, register_etag
 from aleph.logic.resolver.ttl import TTL_AGGREGATE, TTL_RESOURCE
 from aleph.model import Collection, CollectionSchema, CollectionStatistics, Entity
+from aleph.model.common import iso_text
 
 STATS_FACETS = [
     "schema",
@@ -172,8 +173,7 @@ def _fetch_collection(foreign_id: str) -> CollectionSchema | None:
 
 @register_etag(CollectionSchema)
 def _collection_etag(coll: CollectionSchema) -> str:
-    ts = int(coll.updated_at.timestamp()) if coll.updated_at else 0
-    return f"{coll.name}:{ts}"
+    return f"{coll.name}:{iso_text(coll.updated_at) or 0}"
 
 
 def _facet_key(collection_id, facet):
