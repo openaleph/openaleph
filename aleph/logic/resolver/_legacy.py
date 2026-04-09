@@ -1,3 +1,12 @@
+"""Legacy free-function resolver API.
+
+Preserved alongside the typed ``Resolver`` class in
+:mod:`aleph.logic.resolver.core` for the call sites in
+``aleph/views/serializers.py``, ``aleph/logic/diagrams.py``,
+``aleph/search/facet.py``, ``aleph/logic/graph.py``, and
+``aleph/logic/notifications.py``.
+"""
+
 # Bulk object resolver.
 # The purpose of this module is to quickly load objects of different
 # classes/types from the backend. It's typically used by the API serialiser to

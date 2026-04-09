@@ -58,6 +58,7 @@ dependencies = [
     "legacy-cgi; python_version >= '3.13'",
     "lxml[html-clean] (>=5.4.0,<6.0.0)",
     "dateparser (>=1.2.2,<2.0.0)",
+    "anystore @ git+https://github.com/dataresearchcenter/anystore.git",
 ]
 
 [project.scripts]
@@ -107,3 +108,4 @@ ALEPH_HEALTH_CHECK_API_KEY = "test-health-key"
 ALEPH_ALLOW_REGISTRATION = 1
 OPENALEPH_SEARCH_PERCOLATION = 1
 OPENALEPH_SEARCH_MATCHING_SINGLE_TOKEN_MIN_LENGTH = 7
+ALEPH_RESOLVER_STORE_URI = "memory://"
