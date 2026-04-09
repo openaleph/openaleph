@@ -1,6 +1,6 @@
+import functools
 import logging
 from datetime import datetime
-from functools import cache
 from typing import Any
 
 from banal import ensure_dict, ensure_list
@@ -13,13 +13,14 @@ from followthemoney.namespace import Namespace
 from followthemoney.types import registry
 from ftmq.model.dataset import Dataset as FtmDataset
 from normality import stringify
-from pydantic import ConfigDict, Field, model_validator
+from openaleph_procrastinate.model import DatasetStatus
+from pydantic import ConfigDict, Field, computed_field, model_validator
 from sqlalchemy import event
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import aliased
 
 from aleph.core import db
-from aleph.logic.resolver import cache as resolver_cache
+from aleph.logic.resolver import cache
 from aleph.model.common import (
     APIBaseModel,
     IdModel,
@@ -33,7 +34,7 @@ from aleph.model.role import Role, RoleSchema
 log = logging.getLogger(__name__)
 
 
-@cache
+@functools.cache
 def cached_dataset_name_check(dataset: str) -> str:
     return dataset_name_check(dataset)
 
@@ -359,6 +360,10 @@ class CollectionSchema(FtmDataset):
         populate_by_name=True,
     )
 
+    # str(int PK) — carried for the resolver cache key and legacy
+    # serializer compat. Will be dropped when IDs move to foreign_id.
+    id: str
+
     # FTM core models countries via ``coverage.countries``; languages
     # are an Aleph extension.
     languages: list[str] = []
@@ -384,10 +389,23 @@ class CollectionSchema(FtmDataset):
     shallow: bool = True
     links: SDict = {}
 
+    # Backwards-compat aliases — FTM uses ``name``/``title``, Aleph
+    # historically used ``foreign_id``/``label`` on the wire.
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def foreign_id(self) -> str:
+        return self.name
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def label(self) -> str:
+        return self.title
+
     @property
     def cache_key(self) -> str:
-        # FTM dataset name == Aleph foreign_id.
-        return self.name
+        # Keyed by str(int PK) for now — same pattern as RoleSchema.
+        # The numeric id → foreign_id migration is a separate refactor.
+        return self.id
 
     @model_validator(mode="before")
     @classmethod
@@ -424,6 +442,8 @@ class CollectionSchema(FtmDataset):
             )
 
         return {
+            # Aleph internal — str(int PK) for resolver cache key
+            "id": stringify(data.id),
             # FTM core fields
             "name": data.foreign_id,
             "title": data.label,
@@ -464,7 +484,7 @@ class CollectionStatistics(APIBaseModel):
     ``aleph.index.collections.STATS_FACETS``.
     """
 
-    foreign_id: str
+    collection_id: str
     schema_: FacetCounts = Field(default_factory=FacetCounts, alias="schema")
     names: FacetCounts = FacetCounts()
     addresses: FacetCounts = FacetCounts()
@@ -473,63 +493,84 @@ class CollectionStatistics(APIBaseModel):
     phones: FacetCounts = FacetCounts()
     emails: FacetCounts = FacetCounts()
 
-    @classmethod
-    def make_cache_key(cls, foreign_id: str) -> str:
-        return f"{foreign_id}/stats"
+    @property
+    def cache_key(self) -> str:
+        return self.collection_id
+
+
+class GlobalStatistics(APIBaseModel):
+    """System-wide aggregate statistics returned by
+    ``GET /api/2/statistics``. Singleton — keyed under
+    ``GlobalStatistics/global``.
+    """
+
+    collections: int = 0
+    things: int = 0
+    schemata: dict[str, int] = {}
+    countries: dict[str, int] = {}
+    categories: dict[str, int] = {}
 
     @property
     def cache_key(self) -> str:
-        return self.make_cache_key(self.foreign_id)
+        return "global"
 
 
-class StatusCounts(APIBaseModel):
-    """Counts for an in-flight or completed processing batch."""
+class CollectionCounts(APIBaseModel):
+    """Mapping and entityset counts for a collection detail view."""
 
-    finished: int = 0
-    pending: int = 0
-    running: int = 0
-
-
-class CollectionStageStatus(StatusCounts):
-    job_id: str | None = None
-    stage: str | None = None
+    mappings: int = 0
+    entitysets: dict[str, int] = {}
 
 
-class CollectionJobStatus(StatusCounts):
-    stages: list[CollectionStageStatus] = []
+class CollectionStatus(DatasetStatus):
+    """Procrastinate job state enriched with the collection PK."""
 
-
-class CollectionStatus(StatusCounts):
-    """Resolver-cached aggregate keyed under
-    ``CollectionStatus/<foreign_id>/status``."""
-
-    foreign_id: str
-    jobs: list[CollectionJobStatus] = []
-
-    @classmethod
-    def make_cache_key(cls, foreign_id: str) -> str:
-        return f"{foreign_id}/status"
-
+    @computed_field
     @property
-    def cache_key(self) -> str:
-        return self.make_cache_key(self.foreign_id)
+    def collection_id(self) -> str:
+        # collection_1 -> 1
+        return self.name.split("_")[1]
 
 
-class CollectionDeepSchema(CollectionSchema):
+class CollectionDetailSchema(CollectionSchema):
     """Detail-view shape — base CollectionSchema plus the per-dataset
-    aggregates returned by ``GET /api/2/collections/<id>``."""
+    aggregates returned by ``GET /api/2/collections/<id>``.
 
-    status: CollectionStatus | None = None
+    Keyed under ``CollectionDetailSchema/<collection_id>``.
+    """
+
     statistics: CollectionStatistics | None = None
+    counts: CollectionCounts | None = None
+    # Procrastinate job status — NOT cached, always patched live.
+    status: CollectionStatus | None = None
+    shallow: bool = False
 
 
-# === Resolver invalidation via SQLA events ===
+# === Resolver invalidation + ES sync via SQLA events ===
 
 
-def _invalidate_collection(mapper, connection, target: Collection):
-    resolver_cache.invalidate(CollectionSchema, target.foreign_id)
+def _on_collection_change(mapper, connection, target: Collection):
+    """Invalidate resolver cache and sync to ES on every DB write."""
+    cid = str(target.id)
+    cache.invalidate(CollectionSchema, cid)
+    cache.invalidate(CollectionDetailSchema, cid)
+    # ES is a derived index of the DB — sync atomically so the ES
+    # doc is visible as soon as the commit returns.
+    from aleph.index.collections import index_collection
+
+    index_collection(target, sync=True)
 
 
-event.listen(Collection, "after_insert", _invalidate_collection)
-event.listen(Collection, "after_update", _invalidate_collection)
-event.listen(Collection, "after_delete", _invalidate_collection)
+def _on_collection_delete(mapper, connection, target: Collection):
+    """Invalidate resolver cache and remove from ES on delete."""
+    cid = str(target.id)
+    cache.invalidate(CollectionSchema, cid)
+    cache.invalidate(CollectionDetailSchema, cid)
+    from aleph.index.collections import delete_collection_index
+
+    delete_collection_index(target.id, sync=True)
+
+
+event.listen(Collection, "after_insert", _on_collection_change)
+event.listen(Collection, "after_update", _on_collection_change)
+event.listen(Collection, "after_delete", _on_collection_delete)

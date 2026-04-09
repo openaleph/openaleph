@@ -6,8 +6,7 @@ from pydantic import ValidationError
 
 from aleph.api.requests.collection import CollectionCreate, CollectionUpdate
 from aleph.model.collection import (
-    CollectionDeepSchema,
-    CollectionJobStatus,
+    CollectionDetailSchema,
     CollectionSchema,
     CollectionStatistics,
     CollectionStatus,
@@ -17,19 +16,24 @@ from aleph.model.common import model_dump
 
 
 def test_collection_schema_minimal_dict():
-    c = CollectionSchema(name="opensanctions", title="OpenSanctions")
+    c = CollectionSchema(id="42", name="opensanctions", title="OpenSanctions")
     assert c.name == "opensanctions"
     assert c.title == "OpenSanctions"
-    assert c.cache_key == "opensanctions"
+    assert c.cache_key == "42"
+    assert c.foreign_id == "opensanctions"
+    assert c.label == "OpenSanctions"
     dumped = model_dump(c)
     assert dumped["name"] == "opensanctions"
     assert dumped["title"] == "OpenSanctions"
+    assert dumped["foreign_id"] == "opensanctions"
+    assert dumped["label"] == "OpenSanctions"
     assert "cache_key" not in dumped
 
 
 def test_collection_schema_with_ftm_coverage_and_publisher():
     c = CollectionSchema.model_validate(
         {
+            "id": "42",
             "name": "opensanctions",
             "title": "OpenSanctions",
             "summary": "Sanctions and PEPs",
@@ -50,7 +54,7 @@ def test_collection_schema_with_ftm_coverage_and_publisher():
 
 
 def test_collection_schema_aleph_extras_default_false():
-    c = CollectionSchema(name="x", title="X")
+    c = CollectionSchema(id="1", name="x", title="X")
     dumped = model_dump(c)
     assert dumped["restricted"] is False
     assert dumped["xref"] is False
@@ -70,15 +74,15 @@ def test_facet_counts_round_trip():
     assert dumped == {"values": {"Person": 42, "Company": 12}, "total": 54}
 
 
-def test_collection_statistics_cache_key_path_style():
-    s = CollectionStatistics(foreign_id="opensanctions")
-    assert s.cache_key == "opensanctions/stats"
+def test_collection_statistics_cache_key():
+    s = CollectionStatistics(collection_id="42")
+    assert s.cache_key == "42"
 
 
 def test_collection_statistics_with_facets():
     s = CollectionStatistics.model_validate(
         {
-            "foreign_id": "opensanctions",
+            "collection_id": "42",
             "schema": {  # JSON key is `schema`, python attr is `schema_`
                 "values": {"Person": 100, "Company": 30},
                 "total": 130,
@@ -94,37 +98,43 @@ def test_collection_statistics_with_facets():
     assert "cache_key" not in dumped
 
 
-def test_collection_status_cache_key_path_style():
-    st = CollectionStatus(foreign_id="opensanctions")
-    assert st.cache_key == "opensanctions/status"
+def test_collection_status_from_dataset_name():
+    """CollectionStatus derives collection_id from the aggregator
+    dataset name (``collection_<id>``)."""
+    st = CollectionStatus(name="collection_42")
+    assert st.collection_id == "42"
+    dumped = model_dump(st)
+    assert dumped["collection_id"] == "42"
+    assert dumped["name"] == "collection_42"
 
 
-def test_collection_status_with_jobs():
+def test_collection_status_counts():
     st = CollectionStatus(
-        foreign_id="opensanctions",
-        finished=12,
-        pending=3,
-        running=1,
-        jobs=[
-            CollectionJobStatus(finished=5, pending=2),
-            CollectionJobStatus(finished=7, running=1),
-        ],
+        name="collection_42",
+        todo=3,
+        doing=1,
+        succeeded=12,
     )
     dumped = model_dump(st)
-    assert dumped["finished"] == 12
-    assert len(dumped["jobs"]) == 2
+    assert dumped["succeeded"] == 12
+    assert dumped["todo"] == 3
+    assert dumped["doing"] == 1
 
 
-def test_collection_deep_schema_includes_aggregates():
-    c = CollectionDeepSchema(
+def test_collection_detail_schema_includes_aggregates():
+    c = CollectionDetailSchema(
+        id="42",
         name="opensanctions",
         title="OpenSanctions",
-        statistics=CollectionStatistics(foreign_id="opensanctions"),
-        status=CollectionStatus(foreign_id="opensanctions", finished=10),
+        statistics=CollectionStatistics(collection_id="42"),
+        status=CollectionStatus(name="collection_42", succeeded=10),
     )
     dumped = model_dump(c)
-    assert dumped["statistics"]["foreign_id"] == "opensanctions"
-    assert dumped["status"]["finished"] == 10
+    assert dumped["statistics"]["collection_id"] == "42"
+    assert dumped["status"]["succeeded"] == 10
+    assert dumped["status"]["collection_id"] == "42"
+    assert dumped["foreign_id"] == "opensanctions"
+    assert dumped["label"] == "OpenSanctions"
 
 
 def test_collection_create_label_min_length():

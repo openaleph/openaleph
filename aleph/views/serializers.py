@@ -20,7 +20,7 @@ from aleph.logic.entities import (
     should_translate,
     transliterate_values,
 )
-from aleph.logic.resolver import cache as resolver_cache
+from aleph.logic.resolver import cache
 from aleph.logic.util import archive_url, collection_url, entity_url
 from aleph.logic.xref.canonical import get_canonical_cluster
 from aleph.model import (
@@ -82,7 +82,7 @@ class Serializer(object):
         if not queue:
             return
         for schema_cls, keys in queue.items():
-            resolver_cache.get_many(schema_cls, list(keys))
+            cache.get_many(schema_cls, list(keys))
         request._resolver_queue = defaultdict(set)
 
     def resolve(self, schema_cls, key, serializer=None):
@@ -91,7 +91,7 @@ class Serializer(object):
         compat with existing _serialize methods that work on dicts)."""
         if not key:
             return None
-        obj = resolver_cache.get(schema_cls, str(key))
+        obj = cache.get(schema_cls, str(key))
         if obj is None:
             return None
         data = model_dump(obj)
@@ -253,7 +253,7 @@ class EntitySerializer(Serializer):
             if prop is None or prop.type != registry.entity:
                 continue
             for value in ensure_list(values):
-                self.queue(EntitySchema, value, schema=prop.range)
+                self.queue(EntitySchema, value)
 
     def _serialize(self, obj):  # noqa: C901
         proxy = make_entity_proxy(dict(obj))

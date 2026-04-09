@@ -220,17 +220,18 @@ class Cache:
 
     # --- mutation hook -----------------------------------------------------
 
-    def populate(self, cls_: Type[M], identifier: str, obj: M) -> None:
-        """Write a pre-computed object into the persistent store.
-
-        Use this when the caller has already done the expensive
-        computation (e.g. ``update_collection_stats``) and wants to
-        push the result into the cache directly — without waiting for
-        the next :meth:`get` to trigger the registered fetcher.
-
-        The object is written with the per-class TTL from the registry.
-        """
-        self._store.put(self._key(cls_, identifier), obj, model=cls_, ttl=get_ttl(cls_))
+    def refresh(self, cls_: Type[M], identifier: str) -> None:
+        """Refresh the object in persistent cache from upstream."""
+        if not identifier:
+            raise ValueError(
+                f"Resolver.refresh({cls_.__name__}, ...) requires a "
+                "non-empty identifier"
+            )
+        obj = fetch_one(cls_, identifier)
+        if obj is not None:
+            self._store.put(
+                self._key(cls_, identifier), obj, model=cls_, ttl=get_ttl(cls_)
+            )
 
     def invalidate(self, cls_: Type[M], identifier: str) -> None:
         """Drop a key from the persistent store. Called from logic

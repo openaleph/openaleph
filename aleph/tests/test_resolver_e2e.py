@@ -87,6 +87,25 @@ class ResolverE2ETestCase(TestCase):
         role = r2.get(RoleSchema, str(self.admin.id))
         self.assertEqual(role.name, "Admin Renamed")
 
+    def test_refresh_updates_cached_role(self):
+        """cache.refresh() re-fetches from upstream and updates the
+        store so subsequent reads get the fresh value."""
+        r = RequestResolver()
+        role = r.get(RoleSchema, str(self.admin.id))
+        self.assertEqual(role.name, "admin")
+
+        # Mutate the role in the DB.
+        self.admin.update({"name": "Admin Refreshed"})
+        db.session.commit()
+
+        # refresh() fetches fresh from the DB and writes to the store.
+        r.refresh(RoleSchema, str(self.admin.id))
+
+        # New resolver reads the refreshed value from the store.
+        r2 = RequestResolver()
+        role2 = r2.get(RoleSchema, str(self.admin.id))
+        self.assertEqual(role2.name, "Admin Refreshed")
+
     # --- Alert ----------------------------------------------------------------
 
     def test_alert_resolve_and_etag(self):

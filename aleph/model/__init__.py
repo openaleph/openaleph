@@ -24,14 +24,13 @@ from aleph.model.canonical import (
 )
 from aleph.model.collection import (
     Collection,
-    CollectionDeepSchema,
-    CollectionJobStatus,
+    CollectionCounts,
+    CollectionDetailSchema,
     CollectionSchema,
-    CollectionStageStatus,
     CollectionStatistics,
     CollectionStatus,
     FacetCounts,
-    StatusCounts,
+    GlobalStatistics,
 )
 from aleph.model.common import (
     APIBaseModel,
@@ -42,7 +41,7 @@ from aleph.model.common import (
     model_dump,
 )
 from aleph.model.discover import (
-    DatasetDiscovery,
+    CollectionDiscovery,
     MentionedTerms,
     SignificantTerms,
     Term,
@@ -111,13 +110,13 @@ __all__ = [
     "AlertSchema",
     "BookmarkSchema",
     "CanonicalSchema",
-    "CollectionDeepSchema",
-    "CollectionJobStatus",
+    "CollectionCounts",
+    "CollectionDetailSchema",
     "CollectionSchema",
-    "CollectionStageStatus",
     "CollectionStatistics",
     "CollectionStatus",
-    "DatasetDiscovery",
+    "CollectionDiscovery",
+    "GlobalStatistics",
     "DiagramEdge",
     "DiagramGrouping",
     "DiagramLayout",
@@ -142,7 +141,6 @@ __all__ = [
     "SignificantTerms",
     "SimilarSchema",
     "StatementSchema",
-    "StatusCounts",
     "TagSchema",
     "Term",
     "XrefSchema",

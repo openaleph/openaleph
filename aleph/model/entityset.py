@@ -20,6 +20,7 @@ from aleph.model.common import (
     make_textid,
     query_like,
 )
+from aleph.model.entity import EntitySchema
 from aleph.model.permission import Permission
 from aleph.model.role import Role, RoleSchema
 
@@ -452,6 +453,7 @@ class EntitySetSchema(DatedSchema):
 
     summary: str | None = None
     layout: DiagramLayout | None = None
+    entities: list[EntitySchema] = []
 
     role: RoleSchema | None = None
     collection: CollectionSchema | None = None

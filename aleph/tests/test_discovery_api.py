@@ -1,6 +1,6 @@
 from aleph.core import cache
 from aleph.logic.discover import _discovery_key, update_collection_discovery
-from aleph.model.discover import DatasetDiscovery
+from aleph.model.discover import CollectionDiscovery
 from aleph.tests.util import TestCase
 from aleph.views.util import validate
 
@@ -41,7 +41,7 @@ class DiscoveryApiTestCase(TestCase):
 
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, res
-        assert validate(res.json, "DatasetDiscovery")
+        assert validate(res.json, "CollectionDiscovery")
 
         # Check response structure
         data = res.json
@@ -69,7 +69,7 @@ class DiscoveryApiTestCase(TestCase):
 
         res = self.client.get(url)
         assert res.status_code == 200, res
-        assert validate(res.json, "DatasetDiscovery")
+        assert validate(res.json, "CollectionDiscovery")
 
         data = res.json
         assert data["name"] == self.public_coll.foreign_id
@@ -102,7 +102,7 @@ class DiscoveryApiTestCase(TestCase):
         url = f"/api/2/collections/{self.private_coll.id}/discover"
 
         # Pre-populate cache with test data to ensure consistent response
-        test_discovery = DatasetDiscovery(
+        test_discovery = CollectionDiscovery(
             name=self.private_coll.foreign_id,
             peopleMentioned=[],
             companiesMentioned=[],

@@ -278,7 +278,7 @@ class CollectionsApiTestCase(TestCase):
 
     def test_statistics(self):
         self.load_fixtures()
-        compute_collection(self.private_coll, sync=True)
+        compute_collection(self.private_coll, force=True)
         _, headers = self.login(is_admin=True)
         url = "/api/2/collections/%s" % self.private_coll.id
         res = self.client.get(url, headers=headers)

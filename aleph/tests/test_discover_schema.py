@@ -2,7 +2,7 @@
 
 from aleph.model.common import model_dump
 from aleph.model.discover import (
-    DatasetDiscovery,
+    CollectionDiscovery,
     MentionedTerms,
     SignificantTerms,
     Term,
@@ -28,12 +28,12 @@ def test_significant_terms_nests_term():
 
 
 def test_dataset_discovery_cache_key_includes_dataset_path():
-    d = DatasetDiscovery(name="opensanctions")
+    d = CollectionDiscovery(name="opensanctions")
     assert d.cache_key == "opensanctions/discovery"
 
 
 def test_dataset_discovery_cache_key_invisible_in_dump():
-    d = DatasetDiscovery(
+    d = CollectionDiscovery(
         name="opensanctions",
         peopleMentioned=[
             SignificantTerms(term=Term(name="putin", count=10)),

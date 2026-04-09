@@ -17,7 +17,6 @@ from pydantic import BaseModel
 from aleph.logic.resolver import (
     RequestResolver,
     compute_etag,
-    get_resolver_store,
     register,
     register_etag,
 )
@@ -203,6 +202,27 @@ def test_get_after_invalidate_refetches(widgets, fetch_calls):
     # New resolver: local cache empty, store empty → upstream refetch.
     r2 = RequestResolver()
     assert r2.get(Widget, "1").name == "alpha-prime"
+    assert fetch_calls["one"] == 2
+
+
+def test_refresh_fetches_from_upstream_and_updates_store(widgets, fetch_calls):
+    """cache.refresh() re-fetches from upstream and writes to the
+    persistent store, so subsequent reads get the fresh value."""
+    r = RequestResolver()
+    assert r.get(Widget, "1").name == "alpha"
+    assert fetch_calls["one"] == 1
+
+    # Mutate upstream.
+    widgets["1"] = Widget(id="1", name="alpha-refreshed")
+
+    # refresh() calls fetch_one and writes to the store.
+    r.refresh(Widget, "1")
+    assert fetch_calls["one"] == 2
+
+    # New resolver: local empty, store has fresh value.
+    r2 = RequestResolver()
+    assert r2.get(Widget, "1").name == "alpha-refreshed"
+    # Served from store, no additional upstream call.
     assert fetch_calls["one"] == 2
 
 
@@ -518,33 +538,3 @@ def test_default_ttl_is_none(widgets):
 def test_key_format_is_path_style():
     assert RequestResolver._key(Widget, "1") == "Widget/1"
     assert RequestResolver._key(Widget, "foo/stats") == "Widget/foo/stats"
-
-
-def test_invalidate_prefix_drops_subkeys(widgets):
-    """invalidate_prefix should drop every key under a path prefix.
-    Used by aggregate-aware invalidation (Collection + its
-    CollectionStatistics + CollectionStatus all share a foreign_id
-    prefix)."""
-
-    # Stand up two Widget keys with a shared prefix.
-    @register(Gadget)
-    def _fetch_gadget(identifier: str) -> Gadget | None:
-        # Two virtual gadgets keyed by composite path.
-        return {
-            "set-a/main": Gadget(id="set-a/main", color="red"),
-            "set-a/stats": Gadget(id="set-a/stats", color="blue"),
-            "set-b/main": Gadget(id="set-b/main", color="green"),
-        }.get(identifier)
-
-    r = RequestResolver()
-    r.get(Gadget, "set-a/main")
-    r.get(Gadget, "set-a/stats")
-    r.get(Gadget, "set-b/main")
-
-    RequestResolver().invalidate_prefix(Gadget, "set-a")
-
-    # set-a/* gone from the store; set-b/* still there.
-    store = get_resolver_store()
-    assert not store.exists("Gadget/set-a/main")
-    assert not store.exists("Gadget/set-a/stats")
-    assert store.exists("Gadget/set-b/main")

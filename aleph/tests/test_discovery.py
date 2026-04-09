@@ -8,7 +8,7 @@ from aleph.logic.discover import (
     get_collection_discovery,
     update_collection_discovery,
 )
-from aleph.model.discover import DatasetDiscovery
+from aleph.model.discover import CollectionDiscovery
 from aleph.tests.util import TestCase
 
 
@@ -99,7 +99,7 @@ class DiscoveryTestCase(TestCase):
         with patch.object(cache, "get_complex", return_value=cached_data):
             result = get_collection_discovery(collection_id, dataset)
 
-            self.assertIsInstance(result, DatasetDiscovery)
+            self.assertIsInstance(result, CollectionDiscovery)
             self.assertEqual(result.name, dataset)
             self.assertEqual(len(result.peopleMentioned), 1)
             self.assertEqual(result.peopleMentioned[0].term.name, "John Doe")
@@ -112,7 +112,7 @@ class DiscoveryTestCase(TestCase):
         with patch.object(cache, "get_complex", return_value=None):
             result = get_collection_discovery(collection_id, dataset)
 
-            self.assertIsInstance(result, DatasetDiscovery)
+            self.assertIsInstance(result, CollectionDiscovery)
             self.assertEqual(result.name, dataset)
             self.assertEqual(len(result.peopleMentioned), 0)
             self.assertEqual(len(result.companiesMentioned), 0)
@@ -135,7 +135,7 @@ class DiscoveryTestCase(TestCase):
         discovery_result = update_collection_discovery(collection_id, dataset)
 
         # Verify the result structure
-        self.assertIsInstance(discovery_result, DatasetDiscovery)
+        self.assertIsInstance(discovery_result, CollectionDiscovery)
         self.assertEqual(discovery_result.name, dataset)
 
         # Check that the discovery found some data from fixtures
@@ -171,7 +171,7 @@ class DiscoveryTestCase(TestCase):
         # Update discovery for public collection
         result = update_collection_discovery(collection_id, dataset)
 
-        self.assertIsInstance(result, DatasetDiscovery)
+        self.assertIsInstance(result, CollectionDiscovery)
         self.assertEqual(result.name, dataset)
 
         # The public collection has a Company "KwaZulu" so we might find related terms
@@ -213,7 +213,7 @@ class DiscoveryTestCase(TestCase):
 
         result = update_collection_discovery(collection_id, dataset)
 
-        self.assertIsInstance(result, DatasetDiscovery)
+        self.assertIsInstance(result, CollectionDiscovery)
         self.assertEqual(result.name, dataset)
         self.assertEqual(len(result.peopleMentioned), 0)
         self.assertEqual(len(result.companiesMentioned), 0)

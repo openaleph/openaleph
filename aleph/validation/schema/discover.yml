@@ -39,7 +39,7 @@ SignificantTerms:
     term:
       $ref: "#/components/schemas/Term"
 
-DatasetDiscovery:
+CollectionDiscovery:
   type: object
   properties:
     name:

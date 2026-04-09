@@ -12,16 +12,19 @@ Usage in views::
 from typing import Type, TypeVar
 
 from flask import request
+from openaleph_procrastinate.manage.status import get_dataset_status
 
 from aleph.authz import Authz
 from aleph.logic.resolver import cache
 from aleph.model import (
     Collection,
+    CollectionDetailSchema,
     CollectionSchema,
     EntitySchema,
     EntitySet,
     EntitySetSchema,
 )
+from aleph.model.collection import CollectionStatus
 from aleph.model.common import APIBaseModel, SDict, model_dump
 from aleph.views.util import obj_or_404, require
 
@@ -56,6 +59,24 @@ def get_collection(
     coll = cache.get_or_404(CollectionSchema, str(collection_id))
     require(request.authz.can(coll.id, action))
     return coll
+
+
+def get_detail_collection(
+    collection_id: int | str, action: str = Authz.READ
+) -> CollectionDetailSchema:
+    """Resolver lookup + 404 + authz for a Collection detail view.
+
+    Returns the cached ``CollectionDetailSchema`` with live procrastinate
+    job status patched in (status is never cached — it's live data).
+    """
+    detail = cache.get_or_404(CollectionDetailSchema, str(collection_id))
+    require(request.authz.can(detail.id, action))
+    # Patch live job status — not cached because it changes continuously.
+    dataset_name = f"collection_{collection_id}"
+    ds = get_dataset_status(dataset_name)
+    if ds is not None:
+        detail.status = CollectionStatus(**ds.model_dump())
+    return detail
 
 
 def get_entity(entity_id: str, action: str = Authz.READ) -> EntitySchema:
