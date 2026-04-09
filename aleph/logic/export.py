@@ -19,6 +19,7 @@ from aleph.logic.aggregator import get_aggregator_name
 from aleph.logic.mail import email_role
 from aleph.logic.notifications import publish
 from aleph.logic.resolver.registry import register, register_etag
+from aleph.logic.resolver.ttl import TTL_RESOURCE
 from aleph.logic.util import archive_url, entity_url, ui_url
 from aleph.model import Entity, Events, Export, ExportSchema, Role, Status
 from aleph.settings import SETTINGS
@@ -47,7 +48,7 @@ def get_export(export_id):
         return export.to_dict()
 
 
-@register(ExportSchema, ttl=2 * 60 * 60)
+@register(ExportSchema, ttl=TTL_RESOURCE)
 def _fetch_export(export_id: str) -> ExportSchema | None:
     export = Export.by_id(export_id, deleted=True)
     if export is None:

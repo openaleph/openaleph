@@ -4,6 +4,7 @@ from aleph.core import cache
 from aleph.logic.entities import upsert_entity
 from aleph.logic.notifications import publish
 from aleph.logic.resolver.registry import register, register_etag
+from aleph.logic.resolver.ttl import TTL_RESOURCE
 from aleph.model import EntitySet, EntitySetItem, EntitySetSchema, Events
 
 log = logging.getLogger(__name__)
@@ -13,7 +14,7 @@ def get_entityset(entityset_id):
     return EntitySet.by_id(entityset_id)
 
 
-@register(EntitySetSchema, ttl=2 * 60 * 60)
+@register(EntitySetSchema, ttl=TTL_RESOURCE)
 def _fetch_entityset(entityset_id: str) -> EntitySetSchema | None:
     entityset = EntitySet.by_id(entityset_id)
     if entityset is None:

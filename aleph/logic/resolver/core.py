@@ -42,10 +42,10 @@ from typing import Any, Type, TypeVar
 from anystore import get_store
 from anystore.store import Store
 from pydantic import BaseModel
-from servicelayer.settings import REDIS_LONG
 
 from aleph.logic.resolver.etag import _short_hash, compute_etag
 from aleph.logic.resolver.registry import fetch_many, fetch_one, get_ttl
+from aleph.logic.resolver.ttl import STORE_TTL
 from aleph.settings import SETTINGS
 
 T = TypeVar("T", bound=BaseModel)
@@ -83,7 +83,7 @@ def get_resolver_store() -> Store:
         uri=SETTINGS.RESOLVER_STORE_URI,
         raise_on_nonexist=False,
         backend_config={"redis_prefix": f"{SETTINGS.APP_NAME}/resolver"},
-        ttl=REDIS_LONG,  # FIXME servicelayer dependency
+        default_ttl=STORE_TTL,
     )
 
 

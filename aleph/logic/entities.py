@@ -18,6 +18,7 @@ from aleph.logic.aggregator import get_aggregator
 from aleph.logic.collections import MODEL_ORIGIN, refresh_collection
 from aleph.logic.notifications import flush_notifications
 from aleph.logic.resolver.registry import register, register_etag
+from aleph.logic.resolver.ttl import TTL_RESOURCE
 from aleph.logic.util import latin_alt
 from aleph.model import Bookmark, Document, Entity, EntitySchema, EntitySetItem, Mapping
 from aleph.procrastinate.queues import (
@@ -62,7 +63,7 @@ def _entities_batch_from_es(ids) -> Iterator[EntitySchema]:
 
 
 # Entities are ES-sourced and rarely mutated; long TTL.
-@register(EntitySchema, fetch_many=_entities_batch_from_es, ttl=2 * 60 * 60)
+@register(EntitySchema, fetch_many=_entities_batch_from_es, ttl=TTL_RESOURCE)
 def _fetch_entity(entity_id: str) -> EntitySchema | None:
     data = index.get_entity(entity_id)
     if data is None:

@@ -9,6 +9,7 @@ from aleph.authz import Authz
 from aleph.core import db, es
 from aleph.logic.notifications import publish
 from aleph.logic.resolver.registry import register, register_etag
+from aleph.logic.resolver.ttl import TTL_RESOURCE
 from aleph.model import Alert, AlertSchema, Entity, Events
 
 log = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ def get_alert(alert_id):
         return alert.to_dict()
 
 
-@register(AlertSchema, ttl=4 * 60 * 60)
+@register(AlertSchema, ttl=TTL_RESOURCE)
 def _fetch_alert(alert_id: str) -> AlertSchema | None:
     alert = Alert.by_id(alert_id)
     if alert is None:

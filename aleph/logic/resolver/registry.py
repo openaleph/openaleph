@@ -8,9 +8,10 @@ batched fast path; ``ttl`` per-class overrides the store-level default.
 Usage from the owning logic module:
 
     from aleph.logic.resolver import register, register_etag
+    from aleph.logic.resolver.ttl import TTL_RESOURCE
     from aleph.model.role import RoleSchema
 
-    @register(RoleSchema, ttl=7200)
+    @register(RoleSchema, ttl=TTL_RESOURCE)
     def _fetch_role(role_id: str) -> RoleSchema | None:
         ...
 

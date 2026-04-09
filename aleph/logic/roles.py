@@ -8,6 +8,7 @@ from aleph.core import cache, db
 from aleph.logic.mail import email_role
 from aleph.logic.notifications import get_role_channels
 from aleph.logic.resolver.registry import register, register_etag
+from aleph.logic.resolver.ttl import TTL_RESOURCE
 from aleph.model import (
     Alert,
     Collection,
@@ -41,7 +42,7 @@ def get_role(role_id):
     return data
 
 
-@register(RoleSchema, ttl=4 * 60 * 60)
+@register(RoleSchema, ttl=TTL_RESOURCE)
 def _fetch_role(role_id: str) -> RoleSchema | None:
     role = Role.by_id(role_id)
     if role is None:
