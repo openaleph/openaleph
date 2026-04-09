@@ -259,6 +259,42 @@ class ResolverE2ETestCase(TestCase):
         etag_after = r2.get_etag(EntitySchema, self._kwazulu.id)
         self.assertNotEqual(etag_before, etag_after)
 
+    # --- Deletion invalidation ------------------------------------------------
+
+    def test_collection_deletion_invalidates_cache(self):
+        """DB path: deleting a collection via the ORM fires the SQLA
+        after_update event (soft-delete sets deleted_at), which
+        invalidates the resolver cache. The next fetch returns None."""
+        fid = self.public_coll.foreign_id
+        r = Resolver()
+        self.assertIsNotNone(r.get(CollectionSchema, fid))
+
+        from aleph.logic.collections import delete_collection
+
+        delete_collection(self.public_coll, sync=True)
+
+        r2 = Resolver()
+        self.assertIsNone(r2.get(CollectionSchema, fid))
+
+    def test_entity_deletion_invalidates_cache(self):
+        """ES path: deleting an entity removes it from the index and
+        calls refresh_entity → resolver_cache.invalidate. The next
+        fetch returns None."""
+        entity_id = self._kwazulu.id
+        r = Resolver()
+        self.assertIsNotNone(r.get(EntitySchema, entity_id))
+
+        from openaleph_search.index.entities import get_entity
+
+        from aleph.logic.entities import delete_entity
+
+        raw = get_entity(entity_id)
+        delete_entity(self.public_coll, raw, sync=True)
+        time.sleep(1)  # ES refresh
+
+        r2 = Resolver()
+        self.assertIsNone(r2.get(EntitySchema, entity_id))
+
     # --- ETag opacity ---------------------------------------------------------
 
     def test_etags_are_opaque(self):
