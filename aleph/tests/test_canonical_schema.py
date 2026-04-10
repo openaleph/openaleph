@@ -97,7 +97,7 @@ def test_statement_schema_entity_value():
         prop="ownership",
         prop_type="entity",
         value=_entity("b", "Bob"),
-        dataset=CollectionSchema(name="leaks", title="Leaks"),
+        dataset=CollectionSchema(id="1", name="leaks", title="Leaks"),
     )
     dumped = model_dump(s)
     assert dumped["value"]["id"] == "b"

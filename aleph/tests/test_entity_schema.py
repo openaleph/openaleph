@@ -71,7 +71,7 @@ def test_entity_schema_with_aleph_extras():
         bookmarked=True,
         writeable=True,
         links={"self": "/api/2/entities/x"},
-        collection=CollectionSchema(name="leaks", title="Leaks"),
+        collection=CollectionSchema(id="1", name="leaks", title="Leaks"),
     )
     dumped = model_dump(e)
     assert dumped["countries"] == ["us"]
@@ -157,7 +157,7 @@ def test_entity_create_accepts_inline_collection():
     payload = {
         "schema": "Person",
         "properties": {"name": ["Alice"]},
-        "collection": {"name": "leaks", "title": "Leaks"},
+        "collection": {"id": "1", "name": "leaks", "title": "Leaks"},
         "foreign_id": "alice-fid",
     }
     ec = EntityCreate.model_validate(payload)
@@ -168,3 +168,9 @@ def test_entity_create_accepts_inline_collection():
 
 def test_entity_create_optional_id_and_collection_id():
     EntityCreate.model_validate({"schema": "Person", "properties": {"name": ["Alice"]}})
+
+
+def test_entity_role_id_type_mismatch():
+    data = _entity().model_dump()
+    data["role_id"] = 1  # should be str, will be converted
+    EntitySchema.model_validate(data)

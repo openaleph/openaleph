@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Type
 
 from flask_babel import lazy_gettext
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel, Field, computed_field
 
 from aleph.model.alert import AlertSchema
 from aleph.model.collection import CollectionSchema
@@ -33,8 +33,10 @@ class EventSchema(APIBaseModel):
     title: Any  # lazy_gettext proxy
     template: Any  # lazy_gettext proxy
     link_to: str | None = None
-    # Runtime type map for resolver dispatch — not serialized directly.
-    param_types: dict[str, Type[BaseModel]] = {}
+    # Runtime type map for resolver dispatch — excluded from serialization
+    # because class objects can't be JSON-serialized. The wire-format
+    # ``params`` computed field produces the string version.
+    param_types: dict[str, Type[BaseModel]] = Field(default={}, exclude=True)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

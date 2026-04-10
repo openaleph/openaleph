@@ -435,6 +435,7 @@ class CollectionSchema(FtmDataset):
 
         category = data.category if data.category in Collection.CATEGORIES else None
 
+        data.label = data.label or data.foreign_id
         if not data.label:
             raise ValueError(
                 f"Collection {data.foreign_id!r} has no label; "

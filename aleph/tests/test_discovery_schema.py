@@ -27,19 +27,19 @@ def test_significant_terms_nests_term():
     assert dumped["term"]["label"] == "Putin"
 
 
-def test_dataset_discovery_cache_key_includes_dataset_path():
-    d = CollectionDiscovery(name="opensanctions")
-    assert d.cache_key == "opensanctions/discovery"
+def test_collection_discovery_cache_key():
+    d = CollectionDiscovery(collection_id="42")
+    assert d.cache_key == "42"
 
 
-def test_dataset_discovery_cache_key_invisible_in_dump():
+def test_collection_discovery_cache_key_invisible_in_dump():
     d = CollectionDiscovery(
-        name="opensanctions",
+        collection_id="42",
         peopleMentioned=[
             SignificantTerms(term=Term(name="putin", count=10)),
         ],
     )
     dumped = model_dump(d)
     assert "cache_key" not in dumped
-    assert dumped["name"] == "opensanctions"
+    assert dumped["collection_id"] == "42"
     assert dumped["peopleMentioned"][0]["term"]["name"] == "putin"

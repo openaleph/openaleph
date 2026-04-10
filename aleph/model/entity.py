@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from typing import Any
 
 from flask_babel import gettext
 from followthemoney import EntityProxy, model
@@ -7,7 +8,7 @@ from followthemoney.exc import InvalidData
 from followthemoney.types import registry
 from ftmq.model.entity import EntityModel
 from nomenklatura.judgement import Judgement
-from pydantic import ConfigDict
+from pydantic import ConfigDict, field_validator
 from sqlalchemy.dialects.postgresql import JSONB
 
 from aleph.core import db
@@ -193,6 +194,12 @@ class EntitySchema(EntityModel):
     @property
     def cache_key(self) -> str:
         return self.id
+
+    @field_validator("role_id", mode="before")
+    @classmethod
+    def clean_role_id(cls, v: Any) -> str | None:
+        if isinstance(v, int):
+            return str(v)
 
 
 class EntityTagSchema(APIBaseModel):

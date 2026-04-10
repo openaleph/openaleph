@@ -65,8 +65,8 @@ def test_xref_schema_cache_key_is_pair_deterministic_and_non_empty():
 def test_xref_schema_with_collections_and_judgement():
     x = _xref(
         collections=[
-            CollectionSchema(name="leaks", title="Leaks"),
-            CollectionSchema(name="opensanctions", title="OpenSanctions"),
+            CollectionSchema(id="1", name="leaks", title="Leaks"),
+            CollectionSchema(id="2", name="opensanctions", title="OpenSanctions"),
         ],
         judgement=Judgement.POSITIVE,
         writeable=True,

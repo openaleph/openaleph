@@ -3,6 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
+from aleph.model import CollectionSchema, EntitySchema
 from aleph.model.common import model_dump
 from aleph.model.event import EventSchema, NotificationSchema
 
@@ -12,7 +13,7 @@ def _event(**overrides) -> EventSchema:
         "name": "ingest_document",
         "title": "Document uploads",
         "template": "{{actor}} added {{document}} to {{collection}}",
-        "params": {"document": "entity", "collection": "collection"},
+        "param_types": {"document": EntitySchema, "collection": CollectionSchema},
     }
     base.update(overrides)
     return EventSchema(**base)
