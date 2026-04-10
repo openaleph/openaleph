@@ -27,7 +27,7 @@ from aleph.core import create_app, db, kv
 from aleph.index.admin import clear_index, delete_index, upgrade_search
 from aleph.logic.aggregator import get_aggregator
 from aleph.logic.collections import reindex_collection, update_collection
-from aleph.logic.resolver import cache
+from aleph.logic.resolver import cache, register_all
 from aleph.logic.roles import create_system_roles
 from aleph.migration import destroy_db
 from aleph.model import Collection, Entity, Permission, Role
@@ -255,6 +255,7 @@ class TestCase(unittest.TestCase):
 
         kv.flushall()
         cache.flush_all()
+        register_all()
         settings = SearchSettings()
         assert settings.auth is True, "OPENALEPH_SEARCH_AUTH setting must be true"
         create_system_roles()
