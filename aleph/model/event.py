@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Type
 
 from flask_babel import lazy_gettext
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, computed_field, field_serializer
 
 from aleph.model.alert import AlertSchema
 from aleph.model.collection import CollectionSchema
@@ -37,6 +37,12 @@ class EventSchema(APIBaseModel):
     # because class objects can't be JSON-serialized. The wire-format
     # ``params`` computed field produces the string version.
     param_types: dict[str, Type[BaseModel]] = Field(default={}, exclude=True)
+
+    @field_serializer("title", "template")
+    @classmethod
+    def _stringify_lazy(cls, v: Any) -> str:
+        """Force lazy_gettext proxies to plain strings for JSON serialization."""
+        return str(v)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
