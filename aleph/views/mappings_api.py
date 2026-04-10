@@ -9,12 +9,9 @@ from aleph.core import db
 from aleph.model import Mapping, Status
 from aleph.procrastinate.queues import queue_flush_mapping, queue_load_mapping
 from aleph.search import DatabaseQueryResult, QueryParser
+from aleph.views import resources
 from aleph.views.serializers import MappingSerializer
 from aleph.views.util import (
-    get_db_collection,
-    get_entityset,
-    get_index_entity,
-    get_nested,
     parse_request,
     require,
 )
@@ -35,18 +32,18 @@ def load_query():
 
 
 def get_table_id(data, collection):
-    table = get_index_entity(data.get("table_id"), request.authz.READ)
+    table = resources.get_entity(data.get("table_id"), request.authz.READ)
 
-    if table["collection_id"] != collection.id:
+    if table.collection_id != collection.id:
         raise BadRequest()
 
-    return table.get("id")
+    return table.id
 
 
 def get_entityset_id(data):
-    entityset_id = get_nested(data, "entityset", "entityset_id")
+    entityset_id = data.get("entityset_id")
     if entityset_id is not None:
-        get_entityset(entityset_id, request.authz.WRITE)
+        resources.get_entityset(entityset_id, request.authz.WRITE)
         return entityset_id
 
 
@@ -103,7 +100,7 @@ def index(collection_id):
         - Mapping
     """
     require(request.authz.can_browse_anonymous)
-    collection = get_db_collection(collection_id)
+    collection = resources.get_db_collection(collection_id, request.authz.READ)
     parser = QueryParser(request.args, request.authz)
     table_id = first(parser.filters.get("table"))
     q = Mapping.by_collection(collection.id, table_id=table_id)
@@ -142,7 +139,7 @@ def create(collection_id):
       - Collection
       - Mapping
     """
-    collection = get_db_collection(collection_id, request.authz.WRITE)
+    collection = resources.get_db_collection(collection_id, request.authz.WRITE)
     data = parse_request("MappingCreate")
     mapping = Mapping.create(
         load_query(),
@@ -189,7 +186,7 @@ def view(collection_id, mapping_id):
       - Collection
       - Mapping
     """
-    collection = get_db_collection(collection_id, request.authz.WRITE)
+    collection = resources.get_db_collection(collection_id, request.authz.WRITE)
     mapping = get_mapping(mapping_id, collection)
     return MappingSerializer.jsonify(mapping)
 
@@ -236,7 +233,7 @@ def update(collection_id, mapping_id):
       - Collection
       - Mapping
     """
-    collection = get_db_collection(collection_id, request.authz.WRITE)
+    collection = resources.get_db_collection(collection_id, request.authz.WRITE)
     mapping = get_mapping(mapping_id, collection)
     data = parse_request("MappingCreate")
     mapping.update(
@@ -282,7 +279,7 @@ def trigger(collection_id, mapping_id):
       - Collection
       - Mapping
     """
-    collection = get_db_collection(collection_id, request.authz.WRITE)
+    collection = resources.get_db_collection(collection_id, request.authz.WRITE)
     mapping = get_mapping(mapping_id, collection)
     mapping.disabled = False
     mapping.set_status(Status.PENDING)
@@ -324,7 +321,7 @@ def flush(collection_id, mapping_id):
       - Collection
       - Mapping
     """
-    collection = get_db_collection(collection_id, request.authz.WRITE)
+    collection = resources.get_db_collection(collection_id, request.authz.WRITE)
     mapping = get_mapping(mapping_id, collection)
     mapping.disabled = True
     mapping.last_run_status = None
@@ -368,7 +365,7 @@ def delete(collection_id, mapping_id):
       - Collection
       - Mapping
     """
-    collection = get_db_collection(collection_id, request.authz.WRITE)
+    collection = resources.get_db_collection(collection_id, request.authz.WRITE)
     mapping = get_mapping(mapping_id, collection)
     mapping.delete()
     db.session.commit()

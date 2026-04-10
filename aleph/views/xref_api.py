@@ -12,12 +12,12 @@ from aleph.logic.xref.resolver import get_resolver
 from aleph.procrastinate.queues import OP_EXPORT_XREF, queue_export_xref, queue_xref
 from aleph.search.query import XrefQuery
 from aleph.search.result import get_query_result
+from aleph.views import resources
 from aleph.views.serializers import XrefSerializer
 from aleph.views.util import (
-    get_db_collection,
-    get_index_collection,
     jsonify,
     parse_request,
+    require,
 )
 
 blueprint = Blueprint("xref_api", __name__)
@@ -58,7 +58,7 @@ def index(collection_id):
       - Xref
       - Collection
     """
-    get_index_collection(collection_id, request.authz.READ)
+    require(request.authz.can(collection_id, request.authz.READ))
     result = get_query_result(XrefQuery, request, collection_id=collection_id)
     # Judgement is directly on each edge document from ES
     return XrefSerializer.jsonify_result(result)
@@ -93,7 +93,7 @@ def generate(collection_id):
       - Xref
       - Collection
     """
-    collection = get_db_collection(collection_id, request.authz.WRITE)
+    collection = resources.get_db_collection(collection_id, request.authz.WRITE)
     queue_xref(collection)
     return jsonify({"status": "accepted"}, status=202)
 
@@ -118,7 +118,7 @@ def export(collection_id):
       - Xref
       - Collection
     """
-    collection = get_db_collection(collection_id, request.authz.READ)
+    collection = resources.get_db_collection(collection_id, request.authz.READ)
     label = "%s - Cross-reference results" % collection.label
     export = create_export(
         operation=OP_EXPORT_XREF,

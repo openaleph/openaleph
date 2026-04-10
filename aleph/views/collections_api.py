@@ -117,7 +117,7 @@ def view(collection_id):
     require(request.authz.can_browse_anonymous)
     if get_flag("refresh", False):
         refresh_collection(collection_id)
-    collection = resources.get_detail_collection(collection_id)
+    collection = resources.get_detail_collection(collection_id, request.authz.READ)
     return CollectionSerializer.jsonify(collection)
 
 
@@ -341,7 +341,7 @@ def status(collection_id):
       tags:
       - Collection
     """
-    collection = resources.get_collection(collection_id)
+    collection = resources.get_collection(collection_id, request.authz.READ)
     request.rate_limit = None
     status = get_collection_status(collection.id)
     return jsonify(model_dump(status))

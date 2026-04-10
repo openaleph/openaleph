@@ -3,9 +3,9 @@ import logging
 from followthemoney import model
 from followthemoney.types import registry
 
-from aleph.logic import resolver
-from aleph.model import Collection, Entity, Events
-from aleph.util import make_entity_proxy
+from aleph.logic.resolver import cache
+from aleph.model import Collection, CollectionSchema, EntitySchema, Events
+from aleph.model.common import model_dump
 
 log = logging.getLogger(__name__)
 
@@ -180,15 +180,12 @@ class EventFacet(Facet):
 
 class EntityFacet(Facet):
     def expand(self, keys):
-        for key in keys:
-            resolver.queue(self.parser, Entity, key)
-        resolver.resolve(self.parser)
+        cache.get_many(EntitySchema, list(keys))
 
     def update(self, result, key):
-        entity = resolver.get(self.parser, Entity, key)
+        entity = cache.get(EntitySchema, key)
         if entity is not None:
-            proxy = make_entity_proxy(entity)
-            result["label"] = proxy.caption
+            result["label"] = entity.caption
 
 
 class LanguageFacet(Facet):
@@ -203,16 +200,15 @@ class CategoryFacet(Facet):
 
 class CollectionFacet(Facet):
     def expand(self, keys):
-        for key in keys:
-            if int(key) in self.parser.auth.collection_ids:
-                resolver.queue(self.parser, Collection, key)
-        resolver.resolve(self.parser)
+        authorized = [str(k) for k in keys if int(k) in self.parser.auth.collection_ids]
+        cache.get_many(CollectionSchema, authorized)
 
     def update(self, result, key):
-        collection = resolver.get(self.parser, Collection, key)
-        if collection is not None:
-            result["label"] = collection.get("label")
-            result["category"] = collection.get("category")
+        coll = cache.get(CollectionSchema, str(key))
+        if coll is not None:
+            data = model_dump(coll)
+            result["label"] = data.get("title") or data.get("label")
+            result["category"] = data.get("category")
 
 
 class NameFacet(Facet):

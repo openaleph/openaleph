@@ -52,6 +52,7 @@ from aleph.search import (
 from aleph.search.result import QueryResult, get_query_result
 from aleph.settings import SETTINGS
 from aleph.util import make_entity_proxy
+from aleph.views import resources
 from aleph.views.context import enable_cache, tag_request
 from aleph.views.serializers import (
     EntitySerializer,
@@ -59,10 +60,7 @@ from aleph.views.serializers import (
     SimilarSerializer,
 )
 from aleph.views.util import (
-    get_db_collection,
     get_flag,
-    get_index_entity,
-    get_nested_collection,
     get_session_id,
     jsonify,
     parse_request,
@@ -301,7 +299,7 @@ def create():
         - Entity
     """
     data = parse_request("EntityCreate")
-    collection = get_nested_collection(data, request.authz.WRITE)
+    collection = resources.get_db_collection(data["collection_id"], request.authz.WRITE)
     data.pop("id", None)
     if get_flag("validate", default=False):
         validate_entity(data)
@@ -315,7 +313,7 @@ def create():
     )
     db.session.commit()
     tag_request(entity_id=entity_id, collection_id=collection.id)
-    entity = get_index_entity(entity_id, request.authz.READ)
+    entity = resources.get_entity(entity_id, request.authz.READ)
     return EntitySerializer.jsonify(entity)
 
 
@@ -344,25 +342,24 @@ def view(entity_id):
       - Entity
     """
     enable_cache()
-    excludes = ["text", "numeric.*"]
-    entity = get_index_entity(entity_id, request.authz.READ, excludes=excludes)
-    tag_request(collection_id=entity.get("collection_id"))
-    proxy = make_entity_proxy(entity)
+    entity = resources.get_entity(entity_id, request.authz.READ)
+    tag_request(collection_id=entity.collection_id)
+    proxy = entity.to_proxy()
     html = proxy.get("bodyHtml", quiet=True)
     source_url = proxy.first("sourceUrl", quiet=True)
     encoding = proxy.first("encoding", quiet=True)
-    entity["safeHtml"] = [
+    entity.safeHtml = [
         sanitize_html(value, source_url, encoding=encoding) for value in html
     ]
-    entity["shallow"] = False
+    entity.shallow = False
 
     if request.authz.logged_in:
         bookmark = Bookmark.query.filter_by(
             role_id=request.authz.id,
-            collection_id=int(entity.get("collection_id")),
+            collection_id=int(entity.collection_id),
             entity_id=entity_id,
         ).first()
-        entity["bookmarked"] = True if bookmark else False
+        entity.bookmarked = True if bookmark else False
 
     return EntitySerializer.jsonify(entity, detail_view=True)
 
@@ -393,9 +390,9 @@ def nearby(entity_id):
       - Entity
     """
     # enable_cache()
-    entity = get_index_entity(entity_id, request.authz.READ)
-    tag_request(collection_id=entity.get("collection_id"))
-    proxy = make_entity_proxy(entity)
+    entity = resources.get_entity(entity_id, request.authz.READ)
+    tag_request(collection_id=entity.collection_id)
+    proxy = entity.to_proxy()
     parser = SearchQueryParser(request.values, request.authz.search_auth)
     result = get_query_result(GeoDistanceQuery, request, entity=proxy, parser=parser)
     return EntitySerializer.jsonify_result(result)
@@ -438,18 +435,18 @@ def similar(entity_id):
       - Entity
     """
     # enable_cache()
-    entity = get_index_entity(entity_id, request.authz.READ)
-    tag_request(collection_id=entity["collection_id"])
-    proxy = make_entity_proxy(entity)
+    entity = resources.get_entity(entity_id, request.authz.READ)
+    tag_request(collection_id=entity.collection_id)
+    proxy = entity.to_proxy()
     result = get_query_result(MatchQuery, request, entity=proxy)
     entities = list(result.results)
     xref_resolver = get_resolver(request.authz.search_auth, sync=True)
     result.results = []
-    source_collection_id = {entity["collection_id"]}
+    source_collection_id = {entity.collection_id}
     for obj in entities:
         target_collection_id = {obj["collection_id"]}
         match_proxy = make_entity_proxy(obj)
-        judgement = xref_resolver.get_judgement(entity_id, obj.get("id"))
+        judgement = xref_resolver.get_judgement(entity_id, obj["id"])
         suggestion = make_suggestion(
             proxy,
             match_proxy,
@@ -508,9 +505,9 @@ def more_like_this(entity_id):
       - Entity
     """
     # enable_cache()
-    entity = get_index_entity(entity_id, request.authz.READ)
-    tag_request(collection_id=entity.get("collection_id"))
-    proxy = make_entity_proxy(entity)
+    entity = resources.get_entity(entity_id, request.authz.READ)
+    tag_request(collection_id=entity.collection_id)
+    proxy = entity.to_proxy()
     result = get_query_result(MoreLikeThisQuery, request, entity=proxy)
     return EntitySerializer.jsonify_result(result)
 
@@ -883,9 +880,9 @@ def tags(entity_id):
     # (ibans, emails, ...) and has nothing to do with the new entity tagging
     # feature found in tags_api.py
     enable_cache()
-    entity = get_index_entity(entity_id, request.authz.READ)
-    tag_request(collection_id=entity.get("collection_id"))
-    results = entity_tags(make_entity_proxy(entity), request.authz)
+    entity = resources.get_entity(entity_id, request.authz.READ)
+    tag_request(collection_id=entity.collection_id)
+    results = entity_tags(entity.to_proxy(), request.authz)
     return jsonify({"status": "ok", "total": len(results), "results": results})
 
 
@@ -929,11 +926,15 @@ def update(entity_id):
     """
     data = parse_request("EntityUpdate")
     try:
-        entity = get_index_entity(entity_id, request.authz.WRITE)
+        entity = resources.get_entity(entity_id, request.authz.WRITE)
         require(check_write_entity(entity, request.authz))
-        collection = get_db_collection(entity.get("collection_id"), request.authz.WRITE)
+        collection = resources.get_db_collection(
+            entity.collection_id, request.authz.WRITE
+        )
     except NotFound:
-        collection = get_nested_collection(data, request.authz.WRITE)
+        collection = resources.get_db_collection(
+            data["collection_id"], request.authz.WRITE
+        )
     tag_request(collection_id=collection.id)
     data["id"] = entity_id
     if get_flag("validate", default=False):
@@ -969,8 +970,8 @@ def delete(entity_id):
       tags:
       - Entity
     """
-    entity = get_index_entity(entity_id, request.authz.WRITE)
-    collection = get_db_collection(entity.get("collection_id"), request.authz.WRITE)
+    entity = resources.get_entity(entity_id, request.authz.WRITE)
+    collection = resources.get_db_collection(entity.collection_id, request.authz.WRITE)
     tag_request(collection_id=collection.id)
     sync = get_flag("sync", default=True)
     job_id = get_session_id()
@@ -1000,11 +1001,11 @@ def ingest(entity_id):
       - Entity
       - Ingest
     """
-    entity = get_index_entity(entity_id, request.authz.WRITE)
-    collection = get_db_collection(entity.get("collection_id"), request.authz.WRITE)
+    entity = resources.get_entity(entity_id, request.authz.WRITE)
+    collection = resources.get_db_collection(entity.collection_id, request.authz.WRITE)
     tag_request(collection_id=collection.id, entity_id=entity_id)
     job_id = get_session_id()
-    proxy = make_entity_proxy(entity)
+    proxy = entity.to_proxy()
     aggregator = get_aggregator(collection)
     aggregator.put(proxy)
     ingest_flush(collection, entity_id=entity_id)
@@ -1054,9 +1055,9 @@ def expand(entity_id):
       tags:
       - Entity
     """
-    entity = get_index_entity(entity_id, request.authz.READ)
-    proxy = make_entity(entity, StatementEntity, entity["dataset"])
-    collection_id = entity.get("collection_id")
+    entity = resources.get_entity(entity_id, request.authz.READ)
+    proxy = make_entity(entity, StatementEntity, entity.dataset)
+    collection_id = entity.collection_id
     tag_request(collection_id=collection_id)
     parser = QueryParser(
         request.args, request.authz.search_auth, max_limit=SETTINGS.MAX_EXPAND_ENTITIES
@@ -1136,7 +1137,7 @@ def entitysets(entity_id):
       - Entity
       - Profile
     """
-    entity = get_index_entity(entity_id, request.authz.READ)
+    entity = resources.get_entity(entity_id, request.authz.READ)
 
     parser = QueryParser(request.args, request.authz.search_auth)
     collection_ids = [
@@ -1154,7 +1155,7 @@ def entitysets(entity_id):
         collection_ids = request.authz.collections(request.authz.READ)
 
     entitysets = EntitySet.by_entity_id(
-        entity["id"],
+        entity.id,
         collection_ids=collection_ids,
         judgements=judgements,
         types=types,
@@ -1198,10 +1199,10 @@ def analyze(entity_id):
     """
     if not tasks.analyze.defer:
         raise BadRequest("Analysis queue is not enabled on this OpenAleph instance")
-    entity = get_index_entity(entity_id, request.authz.WRITE)
-    collection = get_db_collection(entity.get("collection_id"), request.authz.WRITE)
+    entity = resources.get_entity(entity_id, request.authz.WRITE)
+    collection = resources.get_db_collection(entity.collection_id, request.authz.WRITE)
     tag_request(collection_id=collection.id, entity_id=entity_id)
-    proxy = make_entity_proxy(entity)
+    proxy = entity.to_proxy()
     queue_analyze(collection, [proxy])
     return ("", 202)
 
@@ -1241,10 +1242,10 @@ def transcribe(entity_id):
         raise BadRequest(
             "Transcription queue is not enabled on this OpenAleph instance"
         )
-    entity = get_index_entity(entity_id, request.authz.WRITE)
-    collection = get_db_collection(entity.get("collection_id"), request.authz.WRITE)
+    entity = resources.get_entity(entity_id, request.authz.WRITE)
+    collection = resources.get_db_collection(entity.collection_id, request.authz.WRITE)
     tag_request(collection_id=collection.id, entity_id=entity_id)
-    proxy = make_entity_proxy(entity)
+    proxy = entity.to_proxy()
     if not should_transcribe(proxy):
         raise BadRequest("Entity is not eligible for transcription")
     queue_transcribe(collection, proxy)
@@ -1284,10 +1285,10 @@ def translate(entity_id):
     """
     if not tasks.translate.defer:
         raise BadRequest("Translation queue is not enabled on this OpenAleph instance")
-    entity = get_index_entity(entity_id, request.authz.READ)
-    collection = get_db_collection(entity.get("collection_id"), request.authz.READ)
+    entity = resources.get_entity(entity_id, request.authz.READ)
+    collection = resources.get_db_collection(entity.collection_id, request.authz.READ)
     tag_request(collection_id=collection.id, entity_id=entity_id)
-    proxy = make_entity_proxy(entity)
+    proxy = entity.to_proxy()
     if not should_translate(collection.id, collection.foreign_id, proxy):
         raise BadRequest("Entity is not eligible for translation")
     data = request.get_json(silent=True) or {}
