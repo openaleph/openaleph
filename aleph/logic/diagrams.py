@@ -7,7 +7,9 @@ from rigour.mime.types import HTML
 
 from aleph import settings
 from aleph.core import archive
-from aleph.logic.resolver import cached_entities_by_ids
+from aleph.logic.resolver import cache
+from aleph.model import EntitySchema
+from aleph.model.common import model_dump
 
 log = logging.getLogger(__name__)
 FIELDS = ["id", "schema", "properties"]
@@ -28,11 +30,9 @@ def render_diagram(entityset):
     """Generate an HTML snippet from a diagram object."""
     entity_ids = entityset.entities
     entities = []
-    for entity in cached_entities_by_ids(entity_ids):
-        for field in list(entity.keys()):
-            if field not in FIELDS:
-                entity.pop(field)
-        entities.append(entity)
+    for entity_schema in cache.get_many(EntitySchema, entity_ids):
+        entity = model_dump(entity_schema)
+        entities.append({k: entity[k] for k in FIELDS if k in entity})
 
     # TODO: add viewport
     return render_template(

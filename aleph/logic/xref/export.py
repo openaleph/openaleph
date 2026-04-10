@@ -18,7 +18,7 @@ from aleph.authz import Authz
 from aleph.core import db
 from aleph.index.xref import iter_edges
 from aleph.logic.export import complete_export
-from aleph.logic.resolver import cache as resolver_cache
+from aleph.logic.resolver import cache
 from aleph.logic.util import entity_url
 from aleph.model import Collection, CollectionSchema, EntitySchema, Export, Role, Status
 
@@ -53,20 +53,6 @@ def _collect_batch_ids(batch) -> tuple[set[str], set[int]]:
     return entity_ids, collection_ids
 
 
-def _fetch_collections_by_id(
-    collection_ids: set[int],
-) -> dict[int, CollectionSchema]:
-    """Look up collections by int PK, resolving via foreign_id."""
-    coll_by_id: dict[int, CollectionSchema] = {}
-    for cid in collection_ids:
-        coll_row = Collection.by_id(cid)
-        if coll_row is not None:
-            coll_schema = resolver_cache.get(CollectionSchema, coll_row.foreign_id)
-            if coll_schema is not None:
-                coll_by_id[cid] = coll_schema
-    return coll_by_id
-
-
 def _resolve_match_collection(
     target_cids, coll_by_id: dict[int, CollectionSchema]
 ) -> CollectionSchema | None:
@@ -85,11 +71,13 @@ def _iter_match_batch(excel, sheet, batch):
     entity_ids, collection_ids = _collect_batch_ids(batch)
 
     # Batch-fetch entities via the resolver.
-    fetched = resolver_cache.get_many(EntitySchema, list(entity_ids))
+    fetched = cache.get_many(EntitySchema, list(entity_ids))
     entities = {e.id: e for e in fetched}
 
-    # Batch-fetch collections by int PK → foreign_id → resolver.
-    coll_by_id = _fetch_collections_by_id(collection_ids)
+    # Batch-fetch collections
+    coll_by_id = {
+        int(c.id): c for c in cache.get_many(CollectionSchema, map(str, collection_ids))
+    }
 
     for obj in batch:
         entity = entities.get(str(obj.get("source")))

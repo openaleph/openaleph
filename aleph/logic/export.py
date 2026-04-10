@@ -14,15 +14,23 @@ from openaleph_search.index.entities import checksums_count, iter_proxies
 from servicelayer.archive.util import checksum, ensure_path
 
 from aleph.core import archive, db
-from aleph.index.collections import get_collection
 from aleph.logic.aggregator import get_aggregator_name
 from aleph.logic.mail import email_role
 from aleph.logic.notifications import publish
+from aleph.logic.resolver import cache
 from aleph.logic.resolver.registry import register, register_etag
 from aleph.logic.resolver.ttl import TTL_RESOURCE
 from aleph.logic.util import archive_url, entity_url, ui_url
-from aleph.model import Entity, Events, Export, ExportSchema, Role, Status
-from aleph.model.common import iso_text
+from aleph.model import (
+    CollectionSchema,
+    Entity,
+    Events,
+    Export,
+    ExportSchema,
+    Role,
+    Status,
+)
+from aleph.model.common import iso_text, model_dump
 from aleph.settings import SETTINGS
 
 log = logging.getLogger(__name__)
@@ -100,7 +108,9 @@ def export_entities(export_id):
             for idx, entity in enumerate(proxies):
                 collection_id = entity.context.get("collection_id")
                 if collection_id not in collections:
-                    collections[collection_id] = get_collection(collection_id)
+                    coll = cache.get(CollectionSchema, str(collection_id))
+                    if coll is not None:  # FIXME
+                        collections[collection_id] = model_dump(coll)
                 collection = collections[collection_id]
                 if collection is None:
                     continue

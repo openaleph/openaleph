@@ -17,7 +17,7 @@ from aleph.index import xref as xref_index
 from aleph.logic.aggregator import get_aggregator
 from aleph.logic.collections import MODEL_ORIGIN, refresh_collection
 from aleph.logic.notifications import flush_notifications
-from aleph.logic.resolver import cache as resolver_cache
+from aleph.logic.resolver import cache
 from aleph.logic.resolver.registry import register, register_etag
 from aleph.logic.resolver.ttl import TTL_RESOURCE
 from aleph.logic.util import latin_alt
@@ -281,7 +281,7 @@ def transliterate_values(entity):
 
 
 def refresh_entity(collection, entity_id):
-    resolver_cache.invalidate(EntitySchema, entity_id)
+    cache.invalidate(EntitySchema, entity_id)
     refresh_collection(collection.id)
 
 
