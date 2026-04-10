@@ -4,7 +4,7 @@ from flask import render_template
 from flask_babel import gettext
 
 from aleph.authz import Authz
-from aleph.core import cache, db
+from aleph.core import db
 from aleph.logic.mail import email_role
 from aleph.logic.notifications import get_role_channels
 from aleph.logic.resolver.registry import register, register_etag
@@ -29,22 +29,8 @@ from aleph.settings import SETTINGS
 log = logging.getLogger(__name__)
 
 
-def get_role(role_id):
-    if role_id is None:
-        return
-    key = cache.object_key(Role, role_id)
-    data = cache.get_complex(key)
-    if data is None:
-        role = Role.by_id(role_id)
-        if role is None:
-            return
-        data = role.to_dict()
-        cache.set_complex(key, data, expires=cache.EXPIRE)
-    return data
-
-
 @register(RoleSchema, ttl=TTL_RESOURCE)
-def _fetch_role(role_id: str) -> RoleSchema | None:
+def get_role(role_id: str) -> RoleSchema | None:
     role = Role.by_id(int(role_id))
     if role is None:
         return None
