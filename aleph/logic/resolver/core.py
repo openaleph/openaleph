@@ -256,7 +256,7 @@ class Cache:
         for identifier in identifiers:
             self.invalidate(cls_, identifier)
 
-    def flush_all(self) -> None:
+    def flushall(self) -> None:
         """Wipe the entire persistent store."""
         for key in self._store.iterate_keys():
             self._store.delete(key, ignore_errors=True)
@@ -342,10 +342,10 @@ class RequestResolver(Cache):
             parts.append(extra)
         return f'"{_short_hash(chr(10).join(parts).encode())}"'
 
-    def flush_all(self) -> None:
+    def flushall(self) -> None:
         """Wipe the persistent store and local cache."""
         self._local.clear()
-        super().flush_all()
+        super().flushall()
 
 
 def get_resolver() -> RequestResolver:

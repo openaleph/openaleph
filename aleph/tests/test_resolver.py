@@ -81,7 +81,7 @@ def reset_resolver_state():
     ``@register`` decorators for real schemas (Role, Entity, …) aren't
     permanently lost when running alongside the e2e test suite.
     """
-    RequestResolver().flush_all()
+    RequestResolver().flushall()
     # Save the real registrations (populated by module-level @register
     # decorators), clear to empty so the test owns the full registry,
     # then restore after.
@@ -89,7 +89,7 @@ def reset_resolver_state():
     saved_etags = dict(_registry._ETAG_FNS)
     _clear_registry()
     yield
-    RequestResolver().flush_all()
+    RequestResolver().flushall()
     _clear_registry()
     _registry._REGISTRY.update(saved_registry)
     _registry._ETAG_FNS.update(saved_etags)

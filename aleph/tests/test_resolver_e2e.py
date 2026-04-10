@@ -52,7 +52,7 @@ class ResolverE2ETestCase(TestCase):
             importlib.reload(mod)
 
         # Wipe the resolver store so tests start clean.
-        RequestResolver().flush_all()
+        RequestResolver().flushall()
 
     # --- Role -----------------------------------------------------------------
 

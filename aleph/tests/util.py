@@ -254,7 +254,7 @@ class TestCase(unittest.TestCase):
                     conn.commit()
 
         kv.flushall()
-        cache.flush_all()
+        cache.flushall()
         register_all()
         settings = SearchSettings()
         assert settings.auth is True, "OPENALEPH_SEARCH_AUTH setting must be true"
