@@ -42,7 +42,7 @@ SignificantTerms:
 CollectionDiscovery:
   type: object
   properties:
-    name:
+    collection_id:
       type: string
       description: Collection foreign_id
     peopleMentioned:

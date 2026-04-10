@@ -15,9 +15,13 @@ def test_term_computed_label_is_in_dump():
     assert dumped == {"name": "angela merkel", "count": 12, "label": "Angela Merkel"}
 
 
-def test_mentioned_terms_empty_lists_stripped():
+def test_mentioned_terms_empty_lists_preserved():
     mt = MentionedTerms()
-    assert model_dump(mt) is None or model_dump(mt) == {}
+    dumped = model_dump(mt)
+    assert dumped["peopleMentioned"] == []
+    assert dumped["companiesMentioned"] == []
+    assert dumped["locationMentioned"] == []
+    assert dumped["namesMentioned"] == []
 
 
 def test_significant_terms_nests_term():
@@ -25,6 +29,10 @@ def test_significant_terms_nests_term():
     dumped = model_dump(st)
     assert dumped["term"]["name"] == "putin"
     assert dumped["term"]["label"] == "Putin"
+    assert dumped["peopleMentioned"] == []
+    assert dumped["companiesMentioned"] == []
+    assert dumped["locationMentioned"] == []
+    assert dumped["namesMentioned"] == []
 
 
 def test_collection_discovery_cache_key():
