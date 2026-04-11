@@ -37,21 +37,6 @@ def get_resource(schema_cls: Type[T], identifier: str) -> T:
     return cache.get_or_404(schema_cls, str(identifier))
 
 
-def get_collection_resource(
-    schema_cls: Type[T], identifier: str, action: str = Authz.READ
-) -> T:
-    """Resolver lookup + 404 + collection-scoped authz. Works for
-    any resource that carries a ``collection_id`` (Entity, EntitySet,
-    EntitySetItem, Mapping, etc.)."""
-    obj = cache.get_or_404(schema_cls, str(identifier))
-    if not hasattr(obj, "collection_id"):
-        raise RuntimeError(
-            f"Invalid resource for collection authz check: `{schema_cls}`"
-        )
-    require(request.authz.can(obj.collection_id, action))
-    return obj
-
-
 def get_collection(
     collection_id: int | str, action: str = Authz.READ
 ) -> CollectionSchema:
@@ -59,6 +44,19 @@ def get_collection(
     coll = cache.get_or_404(CollectionSchema, str(collection_id))
     require(request.authz.can(coll.id, action))
     return coll
+
+
+def get_collection_resource(
+    schema_cls: Type[T], identifier: str, action: str = Authz.READ
+) -> T:
+    """Resolver lookup + 404 + collection-scoped authz. Works for
+    any resource that carries a ``collection_id`` (Entity, EntitySet,
+    EntitySetItem, Mapping, etc.)."""
+    # First check if collection exists and has action rights
+    obj = cache.get_or_404(schema_cls, str(identifier))
+    # This will raise if invalid:
+    get_collection(obj.collection_id, action)
+    return obj
 
 
 def get_detail_collection(

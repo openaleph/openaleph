@@ -360,9 +360,8 @@ class XrefSerializer(Serializer):
         return set(map(int, ensure_list(obj.get("collection_id"))))
 
     def collect(self, obj):
-        matchable = tuple([s for s in model if s.matchable])
-        self.queue(EntitySchema, obj.get("source"), matchable)
-        self.queue(EntitySchema, obj.get("target"), matchable)
+        self.queue(EntitySchema, obj.get("source"))
+        self.queue(EntitySchema, obj.get("target"))
         for coll_id in self._collection_ids(obj):
             self.queue(CollectionSchema, coll_id)
 
@@ -438,7 +437,7 @@ class EntitySetSerializer(Serializer):
         obj["shallow"] = obj.get("shallow", True)
         obj["writeable"] = request.authz.can(collection_id, request.authz.WRITE)
         obj["collection"] = self.resolve(
-            Collection, collection_id, CollectionSerializer
+            CollectionSchema, collection_id, CollectionSerializer
         )
         role_id = obj.get("role_id", None)
         obj["role"] = self.resolve(RoleSchema, role_id, RoleSerializer)

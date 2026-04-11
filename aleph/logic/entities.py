@@ -2,7 +2,7 @@ import logging
 from typing import Generator, Iterator
 
 from anystore.types import SDict
-from banal import ensure_dict, is_mapping
+from banal import is_mapping
 from flask_babel import gettext
 from followthemoney import EntityProxy, model
 from followthemoney.exc import InvalidData
@@ -12,6 +12,7 @@ from followthemoney.util import make_entity_id
 from openaleph_procrastinate.defer import tasks
 from openaleph_search.index import entities as index
 
+from aleph.authz import Authz
 from aleph.core import db
 from aleph.index import xref as xref_index
 from aleph.logic.aggregator import get_aggregator
@@ -22,6 +23,7 @@ from aleph.logic.resolver.registry import register, register_etag
 from aleph.logic.resolver.ttl import TTL_RESOURCE
 from aleph.logic.util import latin_alt
 from aleph.model import Bookmark, Document, Entity, EntitySchema, EntitySetItem, Mapping
+from aleph.model.collection import Collection
 from aleph.procrastinate.queues import (
     queue_analyze,
     queue_prune_entity,
@@ -61,6 +63,15 @@ def _entities_batch_from_es(ids) -> Iterator[EntitySchema]:
     """
     for data in index.entities_by_ids(ids):
         yield _entity_from_es(data)
+
+
+def _ensure_entity(data: EntitySchema | SDict) -> EntitySchema:
+    """During transition to pydantic serializer: Entity payload flows through
+    the application in both shapes, ensure the pydantic obj here or fail
+    loudly"""
+    if isinstance(data, dict):
+        data = EntitySchema(**data)
+    return data
 
 
 # Entities are ES-sourced and rarely mutated; long TTL.
@@ -258,16 +269,15 @@ def should_translate(collection_id: int, foreign_id: str, proxy: EntityProxy) ->
     return False
 
 
-def check_write_entity(entity, authz):
+def check_write_entity(entity: EntitySchema | SDict, authz: Authz):
     """Implement the cross-effects of mutable flag and the authz
     system for serialisers and API."""
     if authz.is_admin:
         return True
-    if not entity.get("mutable"):
+    entity = _ensure_entity(entity)
+    if not entity.mutable:
         return False
-    collection_id = ensure_dict(entity.get("collection")).get("id")
-    collection_id = entity.get("collection_id", collection_id)
-    return authz.can(collection_id, authz.WRITE)
+    return authz.can(entity.collection_id, authz.WRITE)
 
 
 def transliterate_values(entity):
@@ -280,14 +290,14 @@ def transliterate_values(entity):
     return transliterated
 
 
-def refresh_entity(collection, entity_id):
+def refresh_entity(collection: Collection, entity_id: str):
     cache.invalidate(EntitySchema, entity_id)
     refresh_collection(collection.id)
 
 
-def delete_entity(collection, entity, sync=False, job_id=None):
+def delete_entity(collection: Collection, entity_id: str, sync=False, job_id=None):
     """Delete entity from index and redis, queue full prune."""
-    entity_id = collection.ns.sign(entity.get("id"))
+    entity_id = collection.ns.sign(entity_id)
     index.delete_entity(entity_id, sync=sync)
     refresh_entity(collection, entity_id)
     queue_prune_entity(collection, entity_id=entity_id, batch=job_id)
@@ -304,7 +314,7 @@ def prune_entity(collection, entity_id=None, job_id=None):
     log.info("[%s] Prune entity: %s", collection, entity_id)
     for adjacent in index.iter_adjacent(collection.name, entity_id):
         log.warning("Recursive delete: %s", adjacent.get("id"))
-        delete_entity(collection, adjacent, job_id=job_id)
+        delete_entity(collection, adjacent["id"], job_id=job_id)
     flush_notifications(entity_id, clazz=Entity)
     obj = Entity.by_id(entity_id, collection=collection)
     if obj is not None:

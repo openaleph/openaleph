@@ -170,6 +170,31 @@ def test_entity_create_optional_id_and_collection_id():
     EntityCreate.model_validate({"schema": "Person", "properties": {"name": ["Alice"]}})
 
 
+def test_entity_collection_id_extracted_from_nested_collection():
+    """collection_id is pulled from a nested collection dict when not provided directly."""
+    e = EntitySchema(
+        id="x",
+        schema="Person",
+        properties={"name": ["Alice"]},
+        collection={"id": "42", "name": "leaks", "title": "Leaks"},
+    )
+    assert e.collection_id == 42
+    assert e.collection is not None
+    assert e.collection.name == "leaks"
+
+
+def test_entity_collection_id_direct_takes_precedence():
+    """Explicit collection_id is not overwritten by a nested collection dict."""
+    e = EntitySchema(
+        id="x",
+        schema="Person",
+        properties={"name": ["Alice"]},
+        collection_id=1,
+        collection={"id": "99", "name": "other", "title": "Other"},
+    )
+    assert e.collection_id == 1
+
+
 def test_entity_role_id_type_mismatch():
     data = _entity().model_dump()
     data["role_id"] = 1  # should be str, will be converted

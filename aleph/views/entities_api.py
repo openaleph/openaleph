@@ -975,7 +975,7 @@ def delete(entity_id):
     tag_request(collection_id=collection.id)
     sync = get_flag("sync", default=True)
     job_id = get_session_id()
-    delete_entity(collection, entity, sync=sync, job_id=job_id)
+    delete_entity(collection, entity.id, sync=sync, job_id=job_id)
     return ("", 204)
 
 

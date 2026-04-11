@@ -299,7 +299,7 @@ class ResolverE2ETestCase(TestCase):
         from aleph.logic.entities import delete_entity
 
         raw = get_entity(entity_id)
-        delete_entity(self.public_coll, raw, sync=True)
+        delete_entity(self.public_coll, raw["id"], sync=True)
         time.sleep(1)  # ES refresh
 
         r2 = RequestResolver()
