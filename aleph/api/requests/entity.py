@@ -1,8 +1,9 @@
 """Request body schemas for the entities endpoints."""
 
-from pydantic import Field
+from typing import Any
 
-from aleph.model.collection import CollectionSchema
+from pydantic import Field, model_validator
+
 from aleph.model.common import APIBaseModel, SDict
 
 
@@ -26,5 +27,16 @@ class EntityCreate(EntityUpdate):
     create-only ``foreign_id`` and the option to pass the parent
     collection inline rather than by id."""
 
-    collection: CollectionSchema | None = None
+    collection: SDict | None = None
     foreign_id: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _extract_collection_id(cls, data: Any) -> Any:
+        """Pull ``collection_id`` from a nested ``collection`` when not
+        provided directly."""
+        if isinstance(data, dict) and not data.get("collection_id"):
+            collection = data.get("collection")
+            if isinstance(collection, dict) and "id" in collection:
+                data["collection_id"] = collection["id"]
+        return data

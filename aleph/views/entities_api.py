@@ -3,8 +3,6 @@ import logging
 from elasticsearch import ApiError as ElasticsearchApiError
 from flask import Blueprint, request
 from flask_babel import gettext
-from followthemoney import StatementEntity
-from ftmq.util import make_entity
 from openaleph_procrastinate.defer import tasks
 from openaleph_search.query.mentions import MentionsQuery, MultiMentionsQuery
 from openaleph_search.query.queries import PercolatorQuery
@@ -13,6 +11,7 @@ from rigour.mime.types import ZIP
 from werkzeug.datastructures import MultiDict
 from werkzeug.exceptions import BadRequest, NotFound
 
+from aleph.api.requests.entity import EntityCreate, EntityUpdate
 from aleph.core import db, url_for
 from aleph.logic.aggregator import get_aggregator
 from aleph.logic.documents import ingest_flush
@@ -298,8 +297,9 @@ def create():
       tags:
         - Entity
     """
-    data = parse_request("EntityCreate")
-    collection = resources.get_db_collection(data["collection_id"], request.authz.WRITE)
+    body = EntityCreate.model_validate(request.get_json())
+    collection = resources.get_db_collection(body.collection_id, request.authz.WRITE)
+    data = body.model_dump(by_alias=True)
     data.pop("id", None)
     if get_flag("validate", default=False):
         validate_entity(data)
@@ -924,7 +924,7 @@ def update(entity_id):
       tags:
       - Entity
     """
-    data = parse_request("EntityUpdate")
+    body = EntityUpdate.model_validate(request.get_json())
     try:
         entity = resources.get_entity(entity_id, request.authz.WRITE)
         require(check_write_entity(entity, request.authz))
@@ -933,9 +933,10 @@ def update(entity_id):
         )
     except NotFound:
         collection = resources.get_db_collection(
-            data["collection_id"], request.authz.WRITE
+            body.collection_id, request.authz.WRITE
         )
     tag_request(collection_id=collection.id)
+    data = body.model_dump(by_alias=True)
     data["id"] = entity_id
     if get_flag("validate", default=False):
         validate_entity(data)
@@ -1062,7 +1063,7 @@ def expand(entity_id):
       - Entity
     """
     entity = resources.get_entity(entity_id, request.authz.READ)
-    proxy = make_entity(entity, StatementEntity, entity.dataset)
+    proxy = entity.to_proxy()
     collection_id = entity.collection_id
     tag_request(collection_id=collection_id)
     parser = QueryParser(

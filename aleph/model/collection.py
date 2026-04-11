@@ -410,6 +410,13 @@ class CollectionSchema(FtmDataset):
     @model_validator(mode="before")
     @classmethod
     def _from_collection(cls, data: Any) -> Any:
+        # Dict input: map Aleph aliases → FTM canonical fields
+        if isinstance(data, dict):
+            if "name" not in data and "foreign_id" in data:
+                data["name"] = data["foreign_id"]
+            if "title" not in data and "label" in data:
+                data["title"] = data["label"]
+            return data
         if not isinstance(data, Collection):
             return data
 

@@ -2,7 +2,7 @@ import logging
 from collections.abc import Collection
 
 from anystore.types import SDict
-from followthemoney import EntityProxy, StatementEntity, model
+from followthemoney import EntityProxy, StatementEntity, ValueEntity, model
 from followthemoney.graph import Node
 from followthemoney.property import Property
 from followthemoney.types import registry
@@ -56,7 +56,7 @@ def _expand_adjacent(
 
 
 def expand_proxy(
-    proxy: StatementEntity,
+    proxy: ValueEntity | StatementEntity,
     authz: Authz,
     properties: Collection[str] | None = None,
     limit: int = 0,
