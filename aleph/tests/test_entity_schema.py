@@ -163,7 +163,7 @@ def test_entity_create_accepts_inline_collection():
     ec = EntityCreate.model_validate(payload)
     assert ec.foreign_id == "alice-fid"
     assert ec.collection is not None
-    assert ec.collection.name == "leaks"
+    assert ec.collection["name"] == "leaks"
 
 
 def test_entity_create_optional_id_and_collection_id():

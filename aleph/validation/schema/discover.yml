@@ -65,4 +65,4 @@ CollectionDiscovery:
       items:
         $ref: "#/components/schemas/SignificantTerms"
       default: []
-  required: ["name"]
+  required: ["collection_id"]
