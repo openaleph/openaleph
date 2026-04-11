@@ -14,7 +14,7 @@ from aleph.logic.entitysets import (
     save_entityset_item,
 )
 from aleph.model import EntitySet, Judgement
-from aleph.model.common import make_textid
+from aleph.model.common import make_textid, model_dump
 from aleph.procrastinate.queues import queue_update_entity
 from aleph.search import (
     DatabaseQueryResult,
@@ -153,7 +153,7 @@ def view(entityset_id):
       - EntitySet
     """
     entityset = resources.get_entityset(entityset_id, request.authz.READ)
-    data = entityset.to_dict()
+    data = model_dump(entityset)
     data["shallow"] = False
     return EntitySetSerializer.jsonify(data)
 
@@ -187,7 +187,7 @@ def update(entityset_id):
       tags:
       - EntitySet
     """
-    entityset = resources.get_entityset(entityset_id, request.authz.WRITE)
+    entityset = resources.get_db_entityset(entityset_id, request.authz.WRITE)
     data = parse_request("EntitySetUpdate")
     entityset.update(data)
     db.session.commit()
@@ -227,7 +227,7 @@ def embed(entityset_id):
       tags:
       - EntitySet
     """
-    entityset = resources.get_entityset(entityset_id, request.authz.WRITE)
+    entityset = resources.get_db_entityset(entityset_id, request.authz.WRITE)
     if entityset.type != EntitySet.DIAGRAM:
         raise BadRequest(gettext("Only diagrams can be embedded!"))
     data = publish_diagram(entityset)
@@ -254,7 +254,7 @@ def delete(entityset_id):
       tags:
       - EntitySet
     """
-    entityset = resources.get_entityset(entityset_id, request.authz.WRITE)
+    entityset = resources.get_db_entityset(entityset_id, request.authz.WRITE)
     entityset.delete()
     db.session.commit()
     refresh_entityset(entityset_id)
@@ -289,7 +289,7 @@ def entities_index(entityset_id):
       tags:
       - EntitySet
     """
-    entityset = resources.get_entityset(entityset_id, request.authz.READ)
+    entityset = resources.get_db_entityset(entityset_id, request.authz.READ)
     parser = SearchQueryParser(request.args, request.authz.search_auth)
     tag_request(query=parser.text, prefix=parser.prefix)
     result = get_query_result(
@@ -341,7 +341,7 @@ def entities_update(entityset_id):
       tags:
       - Entity
     """
-    entityset = resources.get_entityset(entityset_id, request.authz.WRITE)
+    entityset = resources.get_db_entityset(entityset_id, request.authz.WRITE)
     data = parse_request("EntityUpdate")
     entity_id = data.get("id", make_textid())
     try:
@@ -402,7 +402,7 @@ def item_index(entityset_id):
       tags:
       - EntitySetItem
     """
-    entityset = resources.get_entityset(entityset_id, request.authz.READ)
+    entityset = resources.get_db_entityset(entityset_id, request.authz.READ)
     result = DatabaseQueryResult(request, entityset.items(request.authz))
     # The entityset is needed to check if the item is writeable in the serializer:
     result.results = [i.to_dict(entityset=entityset) for i in result.results]
@@ -443,7 +443,7 @@ def item_update(entityset_id):
       tags:
       - EntitySetItem
     """
-    entityset = resources.get_entityset(entityset_id, request.authz.WRITE)
+    entityset = resources.get_db_entityset(entityset_id, request.authz.WRITE)
     data = parse_request("EntitySetItemUpdate")
     entity = data.pop("entity", {})
     entity_id = data.pop("entity_id", entity.get("id"))
