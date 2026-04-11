@@ -975,6 +975,12 @@ def delete(entity_id):
     tag_request(collection_id=collection.id)
     sync = get_flag("sync", default=True)
     job_id = get_session_id()
+    # Force-load the namespace (needs foreign_id) before closing the
+    # session — delete_entity uses collection.ns.sign().
+    collection.ns  # noqa: B018
+    # Release the DB transaction so the sync procrastinate task (which
+    # opens its own connection) doesn't deadlock on the collection row.
+    db.session.close()
     delete_entity(collection, entity.id, sync=sync, job_id=job_id)
     return ("", 204)
 
