@@ -76,6 +76,13 @@ This installs:
     ```bash
     make install
     ```
+### Aleph CLI
+
+Install openaleph CLI locally
+
+```bash
+pip install -e .
+```
 
 ### Initialize the Database
 
