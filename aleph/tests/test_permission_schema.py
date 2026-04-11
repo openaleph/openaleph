@@ -62,6 +62,12 @@ def test_permission_schema_with_nested_role():
     assert "cache_key" not in dumped["role"]
 
 
+def test_permission_int_id_coercion():
+    p = PermissionSchema(id="5", collection_id=7, role_id=42, read=True, write=False)
+    assert p.collection_id == "7"
+    assert p.role_id == "42"
+
+
 def test_permission_update_requires_read_and_write():
     PermissionUpdate.model_validate({"read": True, "write": False})
     with pytest.raises(ValidationError):

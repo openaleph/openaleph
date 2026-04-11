@@ -49,6 +49,11 @@ def test_notification_schema_minimal():
     assert dumped["event"]["name"] == "ingest_document"
 
 
+def test_notification_int_actor_id_coercion():
+    n = _notification(actor_id=42)
+    assert n.actor_id == "42"
+
+
 def test_notification_schema_required_fields_raise_on_missing():
     with pytest.raises(ValidationError):
         NotificationSchema(

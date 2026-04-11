@@ -8,7 +8,7 @@ from anystore.types import SDict
 from anystore.util import clean_dict
 from anystore.util import model_dump as _anystore_model_dump
 from flask_babel import lazy_gettext
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 from sqlalchemy import false
 
 from aleph.core import db
@@ -176,6 +176,33 @@ class APIBaseModel(BaseModel):
         populate_by_name=True,
         arbitrary_types_allowed=False,
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_id_fields(cls, data: Any) -> Any:
+        """Coerce all ``*_id`` dict values from int to str.
+
+        SQLA integer foreign keys (``role_id``, ``collection_id``, etc.)
+        need to become strings for the API wire format. For dict input
+        this runs before field validation. For SQLA objects
+        (``from_attributes``), pydantic reads attributes directly — the
+        coercion for those is handled by ``_stringify_ids`` below.
+        """
+        if isinstance(data, dict):
+            for key, value in data.items():
+                if key.endswith("_id") and isinstance(value, int):
+                    data[key] = str(value)
+        return data
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def _stringify_ids(cls, v: Any, info) -> Any:
+        """Coerce int→str for any field whose name ends with ``_id``
+        and whose declared type is ``str``. Handles SQLA objects where
+        ``from_attributes`` reads the raw int column value."""
+        if info.field_name and info.field_name.endswith("_id") and isinstance(v, int):
+            return str(v)
+        return v
 
     @property
     def cache_key(self) -> str:

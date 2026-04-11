@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 
 from normality import stringify
+from pydantic import field_validator
 from sqlalchemy.dialects.postgresql import JSONB
 
 from aleph.core import db
@@ -147,6 +148,14 @@ class MappingSchema(DatedSchema):
 
     last_run_status: str | None = None
     last_run_err_msg: str | None = None
+
+    @field_validator("last_run_status", mode="before")
+    @classmethod
+    def _localize_status(cls, v: str | None) -> str | None:
+        """Map raw DB enum to localized label string."""
+        if v is None:
+            return None
+        return str(Status.LABEL.get(v, v))
 
     entityset: EntitySetSchema | None = None
     table: EntitySchema | None = None

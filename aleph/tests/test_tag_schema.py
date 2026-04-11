@@ -73,6 +73,12 @@ def test_tag_schema_aggregate_count():
     assert dumped["count"] == 42
 
 
+def test_tag_int_id_coercion():
+    t = _tag(role_id=42, collection_id=7)
+    assert t.role_id == "42"
+    assert t.collection_id == "7"
+
+
 def test_tag_create_requires_entity_id_and_tag():
     TagCreate.model_validate({"entity_id": "abc", "tag": "x"})
     with pytest.raises(ValidationError):

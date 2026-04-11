@@ -1,10 +1,11 @@
 import logging
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from banal import ensure_list
 from nomenklatura.judgement import Judgement  # noqa: F401
 from normality import stringify
+from pydantic import model_validator
 from sqlalchemy import event, func
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -467,17 +468,11 @@ class EntitySetItemSchema(DatedSchema):
     """Canonical wire format for an :class:`EntitySetItem`.
 
     The wire ``id`` is the composite ``"<entityset_id>$<entity_id>"`` —
-    matching the legacy ``EntitySetItem.to_dict()`` shape. All four
-    identifier fields are application invariants: every item links a
-    specific entity to a specific entityset, the entity belongs to a
-    collection, and the parent entityset's collection is always
-    derivable. The DB columns are technically nullable but every write
-    site populates them.
+    matching the legacy ``EntitySetItem.to_dict()`` shape.
 
     The nested ``entity`` field is populated by the response builder
     via the resolver. It is typed as :class:`SDict` here to avoid an
-    import cycle with :mod:`aleph.model.entity`; the assembler layer
-    constructs an ``EntitySchema`` from this slot.
+    import cycle with :mod:`aleph.model.entity`.
     """
 
     entityset_id: str
@@ -491,6 +486,33 @@ class EntitySetItemSchema(DatedSchema):
 
     writeable: bool = False
     links: SDict = {}
+
+    @model_validator(mode="before")
+    @classmethod
+    def _from_entityset_item(cls, data: Any) -> Any:
+        """Handle SQLA EntitySetItem objects: compute composite id and
+        extract entityset_collection_id from the relationship."""
+        if isinstance(data, dict):
+            return data
+        # SQLA object — extract fields that aren't direct columns
+        entityset = getattr(data, "entityset", None)
+        entityset_id = str(getattr(data, "entityset_id", ""))
+        entity_id = str(getattr(data, "entity_id", ""))
+        return {
+            "id": f"{entityset_id}${entity_id}",
+            "entityset_id": entityset_id,
+            "entity_id": entity_id,
+            "collection_id": str(getattr(data, "collection_id", "")),
+            "entityset_collection_id": (
+                str(entityset.collection_id) if entityset else ""
+            ),
+            "added_by_id": stringify(getattr(data, "added_by_id", None)),
+            "judgement": getattr(data, "judgement", None),
+            "compared_to_entity_id": getattr(data, "compared_to_entity_id", None),
+            "created_at": getattr(data, "created_at", None),
+            "updated_at": getattr(data, "updated_at", None),
+            "deleted_at": getattr(data, "deleted_at", None),
+        }
 
     @property
     def cache_key(self) -> str:

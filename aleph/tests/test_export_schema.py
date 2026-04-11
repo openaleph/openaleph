@@ -63,6 +63,17 @@ def test_export_schema_with_download_link():
     assert dumped["links"] == {"download": "/api/2/archive?token=..."}
 
 
+def test_export_int_id_coercion():
+    exp = _export(creator_id=42, collection_id=7)
+    assert exp.creator_id == "42"
+    assert exp.collection_id == "7"
+
+
+def test_export_status_localized():
+    exp = _export(status="success")
+    assert exp.status == "successful"
+
+
 def test_export_schema_bool_false_is_kept():
     # `deleted=False` carries meaning (it's not "empty"), so it stays in
     # the dump. anystore.clean_dict only strips None / empty strings /

@@ -46,6 +46,12 @@ def test_bookmark_schema_required_fields_raise_on_missing():
         )  # missing created_at
 
 
+def test_bookmark_int_id_coercion():
+    bm = _bookmark(role_id=42, collection_id=7)
+    assert bm.role_id == "42"
+    assert bm.collection_id == "7"
+
+
 def test_bookmark_create_requires_entity_id():
     BookmarkCreate.model_validate({"entity_id": "abc-123"})
     with pytest.raises(ValidationError):

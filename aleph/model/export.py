@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timedelta
 
 from normality import stringify
+from pydantic import field_validator
 from servicelayer.cache import make_key
 from sqlalchemy import event
 from sqlalchemy.dialects.postgresql import JSONB
@@ -189,6 +190,12 @@ class ExportSchema(DatedSchema):
     file_size: int | None = None
 
     links: SDict = {}
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def _localize_status(cls, v: str) -> str:
+        """Map raw DB enum to localized label string."""
+        return str(Status.LABEL.get(v, v))
 
 
 # === Resolver invalidation via SQLA events ===
