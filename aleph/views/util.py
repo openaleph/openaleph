@@ -5,15 +5,13 @@ import string
 from urllib.parse import urlparse
 
 import orjson
-from banal import as_bool, is_listish, is_mapping
+from banal import as_bool
 from flask import Response, render_template, request
-from flask_babel import gettext
 from normality import stringify
 from servicelayer.jobs import Job
-from werkzeug.exceptions import BadRequest, Forbidden, NotFound
+from werkzeug.exceptions import Forbidden, NotFound
 
 from aleph.util import json_default
-from aleph.validation import get_validator
 
 log = logging.getLogger(__name__)
 CALLBACK_VALID = string.ascii_letters + string.digits + "_"
@@ -42,59 +40,6 @@ def get_session_id():
     session_id = stringify(request._session_id)
     session_id = session_id or Job.random_id()
     return "%s:%s" % (role_id, session_id)
-
-
-def parse_request(schema):
-    """Get request form data or body and validate it against a schema."""
-    if request.is_json:
-        data = request.get_json()
-    else:
-        data = request.form.to_dict(flat=True)
-    return validate(data, schema)
-
-
-def validate(data, schema):
-    """Validate the data inside a request against a schema."""
-    validator = get_validator(schema)
-    errors = {}
-    for error in validator.iter_errors(data):
-        path = ".".join((str(c) for c in error.path))
-        if path not in errors:
-            errors[path] = error.message
-        else:
-            errors[path] += "; " + error.message
-        log.info("ERROR [%s]: %s", path, error.message)
-
-    if not len(errors):
-        return data
-
-    resp = jsonify(
-        {
-            "status": "error",
-            "errors": errors,
-            "message": gettext("Error during data validation"),
-        },
-        status=400,
-    )
-    raise BadRequest(response=resp)
-
-
-def clean_object(data):
-    """Remove unset values from the response to save some bandwidth."""
-    if is_mapping(data):
-        out = {}
-        for k, v in data.items():
-            v = clean_object(v)
-            if v is not None:
-                out[k] = v
-        return out if len(out) else None
-    elif is_listish(data):
-        data = [clean_object(d) for d in data]
-        data = [d for d in data if d is not None]
-        return data if len(data) else None
-    elif isinstance(data, str):
-        return data if len(data) else None
-    return data
 
 
 def get_url_path(url):
