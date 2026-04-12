@@ -9,10 +9,11 @@ from werkzeug.exceptions import BadRequest
 from aleph.authz import Authz
 from aleph.core import db
 from aleph.logic.roles import challenge_role, create_user, get_deep_role, update_role
-from aleph.model import Role
+from aleph.model import Role, RoleSchema, model_dump
 from aleph.search import DatabaseQueryResult, QueryParser
 from aleph.settings import SETTINGS
 from aleph.util import is_auto_admin
+from aleph.views import resources
 from aleph.views.context import tag_request
 from aleph.views.serializers import RoleSerializer
 from aleph.views.util import jsonify, obj_or_404, parse_request, require
@@ -154,9 +155,11 @@ def create():
         email, data.get("name"), data.get("password"), is_admin=is_auto_admin(email)
     )
     # Let the serializer return more info about this user
+    # FIXME this is hacky (but has been like this since forever) to use the
+    # authz object to notify the serializer to include more data.
     request.authz = Authz.from_role(role)
     tag_request(role_id=role.id)
-    return RoleSerializer.jsonify(role, status=201)
+    return RoleSerializer.jsonify(role, detail_view=True, status=201)
 
 
 @blueprint.route("/api/2/roles/<int:id>", methods=["GET"])
@@ -186,11 +189,12 @@ def view(id):
       tags:
       - Role
     """
-    role = obj_or_404(Role.by_id(id))
+    role = resources.get_resource(RoleSchema, str(id))
     require(request.authz.can_read_role(role.id))
-    data = role.to_dict()
+    data = model_dump(role)
     if request.authz.can_write_role(role.id):
-        data.update(get_deep_role(role))
+        role_ = Role.by_id(role.id)
+        data.update(get_deep_role(role_))
     if SETTINGS.MAINTENANCE:
         # Prevent continuous fetching of profile information in maintenance mode.
         # This is a workaround for the improper permission system (see "write" access).
