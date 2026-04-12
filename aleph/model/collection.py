@@ -30,6 +30,7 @@ from aleph.logic.resolver import cache
 from aleph.model.common import (
     APIBaseModel,
     IdModel,
+    ResolveFrom,
     SDict,
     SoftDeleteModel,
     make_textid,
@@ -403,6 +404,7 @@ class CollectionSchema(FtmDataset):
     # FTM core models countries via ``coverage.countries``; languages
     # are an Aleph extension.
     languages: list[str] = []
+    countries: list[str] = []
 
     # Aleph access / visibility flags.
     restricted: bool = False
@@ -416,20 +418,22 @@ class CollectionSchema(FtmDataset):
 
     # Aleph access control (creator + read-permitted team).
     creator_id: str | None = None
-    creator: RoleSchema | None = None
+    creator: Annotated[RoleSchema | None, ResolveFrom("creator_id", RoleSchema)] = None
     team_id: list[str] = []
-    team: list[RoleSchema] = []
+    team: list[RoleSchema] = (
+        []
+    )  # resolved by CollectionAssembler (list, not auto-resolved)
 
     # Request-time computed fields populated by the response builder.
     writeable: bool = False
     shallow: bool = True
     links: SDict = {}
 
-    # Backwards-compat aliases — FTM uses ``name``/``title``, Aleph
-    # historically used ``foreign_id``/``label`` on the wire.
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field
     @property
     def foreign_id(self) -> str:
+        """Backwards compat alias for Aleph Collection model: foreign_id is
+        Dataset.name"""
         return self.name
 
     @computed_field  # type: ignore[prop-decorator]
@@ -439,8 +443,6 @@ class CollectionSchema(FtmDataset):
 
     @property
     def cache_key(self) -> str:
-        # Keyed by str(int PK) for now — same pattern as RoleSchema.
-        # The numeric id → foreign_id migration is a separate refactor.
         return self.id
 
     @model_validator(mode="before")
@@ -499,6 +501,7 @@ class CollectionSchema(FtmDataset):
             "coverage": coverage,
             # Aleph extras
             "languages": languages,
+            "countries": countries,
             "restricted": bool(data.restricted),
             "xref": bool(data.xref),
             "taggable": bool(data.taggable),
