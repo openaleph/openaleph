@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
 
 from flask_babel import gettext
 from followthemoney import EntityProxy, model
@@ -17,6 +17,7 @@ from aleph.model.common import (
     ENTITY_ID_LEN,
     APIBaseModel,
     DatedModel,
+    ResolveFrom,
     SDict,
     iso_text,
     make_textid,
@@ -133,18 +134,23 @@ class Entity(db.Model, DatedModel):
 # of the legacy serializer).
 
 
-class EntitySchema(EntityModel):
+class EntitySchema(EntityModel, APIBaseModel):
     """Wire format for an OpenAleph entity.
 
     Subclasses :class:`ftmq.model.entity.EntityModel` for the canonical
     FollowTheMoney shape (``id``, ``caption``, ``schema``, ``properties``,
-    ``datasets``, ``referents``) and adds Aleph-specific fields on top.
+    ``datasets``, ``referents``) and :class:`APIBaseModel` for the
+    ``_stringify_ids`` / ``_coerce_id_fields`` validators and
+    ``cache_key`` property.
     """
 
     model_config = ConfigDict(
         from_attributes=True,
         populate_by_name=True,
     )
+
+    # Reference to Canonical cluster if any
+    canonical_id: str | None = None
 
     # Populated by the ES indexer — the schema ancestor chain.
     # Defaults to empty so entities from older indexes or minimal
@@ -155,10 +161,12 @@ class EntitySchema(EntityModel):
     # ES document. Used by authz checks and xref cluster resolution.
     collection_id: int
 
-    # Resolved nested resources, populated by the response builder.
-    collection: CollectionSchema | None = None
+    # Resolved nested resources, populated by the assembler.
+    collection: Annotated[
+        CollectionSchema | None, ResolveFrom("collection_id", CollectionSchema)
+    ] = None
     role_id: str | None = None
-    role: RoleSchema | None = None
+    role: Annotated[RoleSchema | None, ResolveFrom("role_id", RoleSchema)] = None
 
     # FTM property aggregates surfaced as flat fields for facet display.
     countries: list[str] = []
@@ -198,7 +206,10 @@ class EntitySchema(EntityModel):
     @classmethod
     def _extract_collection_id(cls, data: Any) -> Any:
         """Pull ``collection_id`` from a nested ``collection`` dict/model
-        when ``collection_id`` is not provided directly."""
+        when ``collection_id`` is not provided directly. As well transform
+        literal ``EntityProxy`` input data."""
+        if isinstance(data, EntityProxy):
+            return data.to_dict()
         if isinstance(data, dict) and "collection_id" not in data:
             collection = data.get("collection")
             if isinstance(collection, dict) and "id" in collection:
