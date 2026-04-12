@@ -6,6 +6,7 @@ from nomenklatura.judgement import Judgement
 from rigour.mime.types import XLSX
 from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
+from aleph.api.requests.xref import Pairwise
 from aleph.logic.export import create_export
 from aleph.logic.xref.canonical import resolve_entity_or_canonical
 from aleph.logic.xref.resolver import get_resolver
@@ -16,7 +17,6 @@ from aleph.views import resources
 from aleph.views.serializers import XrefSerializer
 from aleph.views.util import (
     jsonify,
-    parse_request,
     require,
 )
 
@@ -163,12 +163,12 @@ def decide():
       - Xref
       - Collection
     """
-    data = parse_request("Pairwise")
-    entity_id = data["entity_id"]
-    match_id = data["match_id"]
+    body: Pairwise = Pairwise.model_validate(request.get_json())
+    entity_id = body.entity_id
+    match_id = body.match_id
     if entity_id == match_id:
         raise BadRequest("entity_id and match_id must be different")
-    judgement = Judgement(data["judgement"])
+    judgement = Judgement(body.judgement)
     log.info(
         "decide: entity_id=%s match_id=%s judgement=%s", entity_id, match_id, judgement
     )

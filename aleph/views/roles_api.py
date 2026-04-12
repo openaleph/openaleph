@@ -6,6 +6,7 @@ from flask_babel import gettext
 from itsdangerous import BadSignature
 from werkzeug.exceptions import BadRequest
 
+from aleph.api.requests.role import RoleCodeCreate, RoleCreate, RoleUpdate
 from aleph.authz import Authz
 from aleph.core import db
 from aleph.logic.roles import challenge_role, create_user, get_deep_role, update_role
@@ -16,7 +17,7 @@ from aleph.util import is_auto_admin
 from aleph.views import resources
 from aleph.views.context import tag_request
 from aleph.views.serializers import RoleSerializer
-from aleph.views.util import jsonify, obj_or_404, parse_request, require
+from aleph.views.util import jsonify, obj_or_404, require
 
 blueprint = Blueprint("roles_api", __name__)
 log = logging.getLogger(__name__)
@@ -105,8 +106,8 @@ def create_code():
       - Role
     """
     require(request.authz.can_register())
-    data = parse_request("RoleCodeCreate")
-    challenge_role(data)
+    body: RoleCodeCreate = RoleCodeCreate.model_validate(request.get_json())
+    challenge_role(body.model_dump())
     return jsonify(
         {"status": "ok", "message": gettext("To proceed, please check your email.")}
     )
@@ -136,9 +137,9 @@ def create():
       - Role
     """
     require(request.authz.can_register())
-    data = parse_request("RoleCreate")
+    body: RoleCreate = RoleCreate.model_validate(request.get_json())
     try:
-        email = Role.SIGNATURE.loads(data.get("code"), max_age=Role.SIGNATURE_MAX_AGE)
+        email = Role.SIGNATURE.loads(body.code, max_age=Role.SIGNATURE_MAX_AGE)
     except BadSignature:
         return jsonify(
             {"status": "error", "message": gettext("Invalid code")}, status=400
@@ -151,9 +152,7 @@ def create():
             status=409,
         )
 
-    role = create_user(
-        email, data.get("name"), data.get("password"), is_admin=is_auto_admin(email)
-    )
+    role = create_user(email, body.name, body.password, is_admin=is_auto_admin(email))
     # Let the serializer return more info about this user
     # FIXME this is hacky (but has been like this since forever) to use the
     # authz object to notify the serializer to include more data.
@@ -238,13 +237,13 @@ def update(id):
     """
     role = obj_or_404(Role.by_id(id))
     require(request.authz.can_write_role(role.id))
-    data = parse_request("RoleUpdate")
+    body: RoleUpdate = RoleUpdate.model_validate(request.get_json())
+    data: dict = body.model_dump()
 
     # When changing passwords, check the old password first.
     # cf. https://github.com/alephdata/aleph/issues/718
-    if data.get("password"):
-        current_password = data.get("current_password")
-        if not role.check_password(current_password):
+    if body.password:
+        if not role.check_password(body.current_password):
             raise BadRequest(gettext("Incorrect password."))
 
     role.update(data)

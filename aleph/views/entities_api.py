@@ -62,7 +62,6 @@ from aleph.views.util import (
     get_flag,
     get_session_id,
     jsonify,
-    parse_request,
     require,
 )
 
@@ -253,8 +252,8 @@ def match():
       - Entity
     """
     require(request.authz.can_browse_anonymous)
-    entity = parse_request("EntityUpdate")
-    entity = make_entity_proxy(entity, cleaned=False)
+    body = EntityUpdate.model_validate(request.get_json())
+    entity = make_entity_proxy(body.model_dump(by_alias=True), cleaned=False)
     tag_request(schema=entity.schema.name, caption=entity.caption)
     collection_ids = request.args.getlist("collection_ids")
     result = get_query_result(

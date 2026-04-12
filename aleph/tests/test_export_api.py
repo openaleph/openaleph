@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 
-from aleph.logic.export import create_export, complete_export
+from aleph.logic.export import complete_export, create_export
+from aleph.model import ExportSchema
 from aleph.tests.util import TestCase
-from aleph.views.util import validate
 
 
 class ExportApiTestCase(TestCase):
@@ -32,7 +32,7 @@ class ExportApiTestCase(TestCase):
         assert res.json["total"] == 0, res.json
         res = self.client.get("/api/2/exports", headers=self.headers)
         assert res.status_code == 200, res
-        validate(res.json, "QueryResponse")
+        assert "results" in res.json
         assert res.json["total"] == 1, res.json
         results = res.json["results"]
-        validate(results[0], "Export")
+        ExportSchema.model_validate(results[0])

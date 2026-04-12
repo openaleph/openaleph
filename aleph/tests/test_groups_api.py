@@ -1,5 +1,5 @@
 from aleph.core import db
-from aleph.views.util import validate
+from aleph.model import RoleSchema
 from aleph.tests.util import TestCase
 
 
@@ -19,7 +19,7 @@ class GroupsApiTestCase(TestCase):
         res = self.client.get("/api/2/groups", headers=headers)
         assert res.status_code == 200, res
         assert res.json["total"] == 2, res.json
-        validate(res.json["results"][0], "Role")
+        RoleSchema.model_validate(res.json["results"][0])
         _, headers = self.login(foreign_id="other")
         res = self.client.get("/api/2/groups", headers=headers)
         assert res.status_code == 200, res

@@ -1,27 +1,28 @@
 import logging
 from urllib.parse import urlencode
-from flask_babel import gettext
-from flask import Blueprint, redirect, request, session
-from authlib.common.errors import AuthlibBaseError
-from werkzeug.exceptions import Unauthorized, BadRequest
-from prometheus_client import Counter
 
-from aleph.settings import SETTINGS
-from aleph.core import db, url_for, cache
+from authlib.common.errors import AuthlibBaseError
+from flask import Blueprint, redirect, request, session
+from flask_babel import gettext
+from prometheus_client import Counter
+from werkzeug.exceptions import BadRequest, Unauthorized
+
+from aleph.api.requests.role import RoleLogin
 from aleph.authz import Authz
-from aleph.oauth import oauth, handle_oauth
-from aleph.model import Role
-from aleph.logic.util import ui_url
+from aleph.core import cache, db, url_for
 from aleph.logic.roles import update_role
-from aleph.views.util import get_url_path, parse_request
-from aleph.views.util import require, jsonify
+from aleph.logic.util import ui_url
+from aleph.model import Role
+from aleph.oauth import handle_oauth, oauth
+from aleph.settings import SETTINGS
+from aleph.views.util import get_url_path, jsonify, require
 
 log = logging.getLogger(__name__)
 blueprint = Blueprint("sessions_api", __name__)
 
 AUTH_ATTEMPS = Counter(
     "aleph_auth_attemps_total",
-    "Total number of successful/failed authentication attemps",
+    "Total number of successful/failed authentication attempts",
     ["method", "result"],
 )
 
@@ -62,8 +63,8 @@ def password_login():
       - Role
     """
     require(SETTINGS.PASSWORD_LOGIN)
-    data = parse_request("Login")
-    role = Role.login(data.get("email"), data.get("password"))
+    body = RoleLogin.model_validate(request.get_json())
+    role = Role.login(body.email, body.password)
     if role is None:
         AUTH_ATTEMPS.labels(method="password", result="failed").inc()
         raise BadRequest(gettext("Invalid user or password."))

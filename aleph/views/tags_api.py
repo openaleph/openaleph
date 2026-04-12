@@ -4,6 +4,7 @@ from flask import Blueprint, request
 from sqlalchemy import func
 from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
+from aleph.api.requests.tag import TagCreate
 from aleph.authz import Authz
 from aleph.core import db
 from aleph.logic import collections
@@ -13,7 +14,7 @@ from aleph.model.tag import Tag
 from aleph.search import DatabaseQueryResult
 from aleph.views import resources
 from aleph.views.serializers import TagSerializer
-from aleph.views.util import jsonify, parse_request, require
+from aleph.views.util import jsonify, require
 
 log = logging.getLogger(__name__)
 blueprint = Blueprint("tags_api", __name__)
@@ -138,14 +139,9 @@ def create():
           description: Bad request
     """
     require(request.authz.session_write)
-    data = parse_request("TagCreate")
-    entity_id = data.get("entity_id")
-    tag_text = data.get("tag")
-
-    if not tag_text:
-        raise BadRequest("Tag text is required")
-    if not entity_id:
-        raise BadRequest("Entity ID is required")
+    body: TagCreate = TagCreate.model_validate(request.get_json())
+    entity_id = body.entity_id
+    tag_text = body.tag
 
     entity = require_entity_taggable(entity_id, request.authz)
 

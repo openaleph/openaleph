@@ -5,7 +5,12 @@ from flask import Blueprint, request
 from flask_babel import gettext
 from werkzeug.exceptions import BadRequest, NotFound
 
-from aleph.api.requests.entityset import EntitySetEntityUpdate, EntitySetItemUpdate
+from aleph.api.requests.entityset import (
+    EntitySetCreate,
+    EntitySetEntityUpdate,
+    EntitySetItemUpdate,
+    EntitySetUpdate,
+)
 from aleph.core import db
 from aleph.logic.diagrams import publish_diagram
 from aleph.logic.entities import check_write_entity, upsert_entity, validate_entity
@@ -36,7 +41,6 @@ from aleph.views.util import (
     get_flag,
     get_session_id,
     jsonify,
-    parse_request,
     require,
 )
 
@@ -122,7 +126,8 @@ def create():
       tags:
       - EntitySet
     """
-    data = parse_request("EntitySetCreate")
+    body: EntitySetCreate = EntitySetCreate.model_validate(request.get_json())
+    data: dict = body.model_dump()
     collection = resources.get_db_collection(data["collection_id"], request.authz.WRITE)
     entityset = create_entityset(collection, data, request.authz)
     db.session.commit()
@@ -187,8 +192,8 @@ def update(entityset_id):
       - EntitySet
     """
     entityset = resources.get_db_entityset(entityset_id, request.authz.WRITE)
-    data = parse_request("EntitySetUpdate")
-    entityset.update(data)
+    body: EntitySetUpdate = EntitySetUpdate.model_validate(request.get_json())
+    entityset.update(body.model_dump())
     db.session.commit()
     refresh_entityset(entityset_id)
     return view(entityset_id)

@@ -2,7 +2,6 @@ from aleph.logic.discover import compute_collection_discovery
 from aleph.logic.resolver import cache
 from aleph.model.discover import CollectionDiscovery
 from aleph.tests.util import TestCase
-from aleph.views.util import validate
 
 
 class DiscoveryApiTestCase(TestCase):
@@ -41,7 +40,7 @@ class DiscoveryApiTestCase(TestCase):
 
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, res
-        assert validate(res.json, "CollectionDiscovery")
+        CollectionDiscovery.model_validate(res.json)
 
         # Check response structure
         data = res.json
@@ -69,7 +68,7 @@ class DiscoveryApiTestCase(TestCase):
 
         res = self.client.get(url)
         assert res.status_code == 200, res
-        assert validate(res.json, "CollectionDiscovery")
+        CollectionDiscovery.model_validate(res.json)
 
         data = res.json
         assert data["collection_id"] == cid

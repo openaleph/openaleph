@@ -6,10 +6,11 @@ from pprint import pformat
 from aleph.core import db
 from aleph.index.util import index_entity
 from aleph.index.xref import delete_xref
+from aleph.model import EntitySchema
 from aleph.model.bookmark import Bookmark
+from aleph.model.entity import EntityExpandSchema, EntityTagSchema
 from aleph.settings import SETTINGS
 from aleph.tests.util import JSON, TestCase, get_caption
-from aleph.views.util import validate
 
 log = logging.getLogger(__name__)
 
@@ -82,7 +83,7 @@ class EntitiesApiTestCase(TestCase):
         res = self.client.get(url + "&facet=countries", headers=headers)
         assert len(res.json["facets"]) == 1, res.json
         assert "values" in res.json["facets"]["countries"], res.json
-        validate(res.json["results"][0], "Entity")
+        EntitySchema.model_validate(res.json["results"][0])
 
     def test_export(self):
         self.load_fixtures()
@@ -103,7 +104,7 @@ class EntitiesApiTestCase(TestCase):
         assert res.status_code == 200, res
         assert "LegalEntity" in res.json["schema"], res.json
         assert "Winnie" in get_caption(res.json), res.json
-        validate(res.json, "Entity")
+        EntitySchema.model_validate(res.json)
 
     def test_view_bookmarked(self):
         role, headers = self.login(is_admin=True)
@@ -179,7 +180,7 @@ class EntitiesApiTestCase(TestCase):
             url, data=json.dumps(data), headers=headers, content_type=JSON
         )
         assert res.status_code == 200, res.json
-        validate(res.json, "Entity")
+        EntitySchema.model_validate(res.json)
         assert "little" in get_caption(res.json), res.json
 
         data["properties"].pop("name", None)
@@ -225,7 +226,7 @@ class EntitiesApiTestCase(TestCase):
             url, data=json.dumps(data), headers=headers, content_type=JSON
         )
         assert res.status_code == 200, res.json
-        validate(res.json, "Entity")
+        EntitySchema.model_validate(res.json)
         assert "John Doe" in get_caption(res.json), res.json
 
     def test_create(self):
@@ -244,7 +245,7 @@ class EntitiesApiTestCase(TestCase):
         )
         assert res.status_code == 200, res.json
         assert "middle" in res.json["properties"]["summary"][0], res.json
-        validate(res.json, "Entity")
+        EntitySchema.model_validate(res.json)
 
         # Test non-admin user
         user, non_admin_headers = self.login("non_admin")
@@ -292,7 +293,7 @@ class EntitiesApiTestCase(TestCase):
         )
         assert res.status_code == 200, res.json
         assert res.json["collection"]["id"] == self.col_id, res.json
-        validate(res.json, "Entity")
+        EntitySchema.model_validate(res.json)
 
     def test_create_nested(self):
         _, headers = self.login(is_admin=True)
@@ -397,7 +398,7 @@ class EntitiesApiTestCase(TestCase):
         assert len(data["results"]) == 1, data
         assert "Laden" in get_caption(data["results"][0]["entity"]), data
         assert b"Pooh" not in res.data, res.data
-        validate(data["results"][0], "Entity")
+        EntitySchema.model_validate(data["results"][0])
 
         # now an xref edge exists, but undecided
         url = "/api/2/collections/%s/xref" % self.col_id
@@ -438,7 +439,7 @@ class EntitiesApiTestCase(TestCase):
         assert len(data["results"]) == 1, data
         assert "Laden" in get_caption(data["results"][0]), data
         assert b"Pooh" not in res.data, res.data
-        validate(data["results"][0], "Entity")
+        EntitySchema.model_validate(data["results"][0])
 
     def test_entity_tags(self):
         _, headers = self.login(is_admin=True)
@@ -471,7 +472,7 @@ class EntitiesApiTestCase(TestCase):
         results = res.json["results"]
         assert len(results) == 1, results
         assert results[0]["value"] == "+491769817271", results
-        validate(res.json["results"][0], "EntityTag")
+        EntityTagSchema.model_validate(res.json["results"][0])
 
     def test_undelete(self):
         _, headers = self.login(is_admin=True)
@@ -509,7 +510,7 @@ class EntitiesApiTestCase(TestCase):
             url, data=json.dumps(data), headers=headers, content_type=JSON
         )
         assert res.status_code == 200, res.status_code
-        validate(res.json, "Entity")
+        EntitySchema.model_validate(res.json)
         assert res.json["properties"]["name"] == ["Mr. Mango"], res.json
         assert res.json["properties"]["status"] == ["ripe"], res.json
 
@@ -533,7 +534,7 @@ class EntitiesApiTestCase(TestCase):
             url, data=json.dumps(data), headers=headers, content_type=JSON
         )
         assert res.status_code == 200, res.status_code
-        validate(res.json, "Entity")
+        EntitySchema.model_validate(res.json)
         assert res.json["properties"]["name"] == ["Mr. Mango"], res.json
         assert res.json["properties"]["status"] == ["ripe"], res.json
         assert res.json["properties"]["email"] == ["mango@mango.yum"], res.json
@@ -556,7 +557,7 @@ class EntitiesApiTestCase(TestCase):
             url, data=json.dumps(data), headers=headers, content_type=JSON
         )
         assert res.status_code == 200, res.status_code
-        validate(res.json, "Entity")
+        EntitySchema.model_validate(res.json)
         assert res.json["id"] != id2, res.json
         assert res.json["properties"]["name"] == ["Mr. Banana"], res.json
 
@@ -757,7 +758,7 @@ class EntitiesApiTestCase(TestCase):
         url = "/api/2/entities/%s/expand?limit=100" % (person1.json["id"])
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, (res.status_code, res.json)
-        validate(res.json, "EntityExpand")
+        EntityExpandSchema.model_validate(res.json)
         assert res.json["total"] == 2, pformat(res.json)
         results = res.json["results"]
         assert len(results) == 2, pformat(results)
@@ -779,7 +780,7 @@ class EntitiesApiTestCase(TestCase):
         url = "/api/2/entities/%s/expand" % (company1.json["id"])
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, (res.status_code, res.json)
-        validate(res.json, "EntityExpand")
+        EntityExpandSchema.model_validate(res.json)
         assert res.json["total"] == 1, pformat(res.json)
         results = res.json["results"]
         assert len(results) == 1, pformat(results)
@@ -793,7 +794,7 @@ class EntitiesApiTestCase(TestCase):
         url = url % passport.json["id"]
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, (res.status_code, res.json)
-        validate(res.json, "EntityExpand")
+        EntityExpandSchema.model_validate(res.json)
         assert res.json["total"] == 1, pformat(res.json)
         results = res.json["results"]
         assert len(results) == 1, pformat(results)
@@ -846,7 +847,7 @@ class EntitiesApiTestCase(TestCase):
         expand_url = "/api/2/entities/%s/expand?limit=0" % (company.json["id"])
         res = self.client.get(expand_url, headers=headers)
         assert res.status_code == 200, (res.status_code, res.json)
-        validate(res.json, "EntityExpand")
+        EntityExpandSchema.model_validate(res.json)
 
         results = res.json["results"]
         property_counts = {r["property"]: r["count"] for r in results}
