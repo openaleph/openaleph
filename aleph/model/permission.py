@@ -1,9 +1,10 @@
 from datetime import datetime
+from typing import Annotated
 
 from normality import stringify
 
 from aleph.core import db
-from aleph.model.common import DatedModel, DatedSchema, IdModel
+from aleph.model.common import DatedModel, DatedSchema, IdModel, ResolveFrom
 from aleph.model.role import RoleSchema
 
 
@@ -81,6 +82,6 @@ class PermissionSchema(DatedSchema):
     read: bool
     write: bool
 
-    role: RoleSchema | None = None
+    role: Annotated[RoleSchema | None, ResolveFrom("role_id", RoleSchema)] = None
 
     writeable: bool = False

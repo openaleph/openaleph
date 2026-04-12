@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from normality import stringify
 
 from aleph.core import db
@@ -6,6 +8,7 @@ from aleph.model.common import (
     DatedModel,
     DatedSchema,
     IdModel,
+    ResolveFrom,
     SDict,
 )
 from aleph.model.entity import EntitySchema
@@ -54,9 +57,11 @@ class TagSchema(DatedSchema):
     collection_id: str
     role_id: str
 
-    # Resolved nested resources, populated by the response builder.
-    entity: EntitySchema | None = None
-    role: RoleSchema | None = None
+    # Resolved nested resources, populated by the assembler.
+    entity: Annotated[EntitySchema | None, ResolveFrom("entity_id", EntitySchema)] = (
+        None
+    )
+    role: Annotated[RoleSchema | None, ResolveFrom("role_id", RoleSchema)] = None
 
     # Set on aggregated tag responses (count of times this tag appears).
     count: int | None = None

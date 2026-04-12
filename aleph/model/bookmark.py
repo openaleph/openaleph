@@ -1,9 +1,11 @@
 from datetime import datetime
+from typing import Annotated
 
 from normality import stringify
 
 from aleph.core import db
-from aleph.model.common import ENTITY_ID_LEN, APIBaseModel, IdModel
+from aleph.model.common import ENTITY_ID_LEN, APIBaseModel, IdModel, ResolveFrom
+from aleph.model.entity import EntitySchema
 
 
 class Bookmark(db.Model, IdModel):
@@ -49,6 +51,9 @@ class BookmarkSchema(APIBaseModel):
 
     id: str
     entity_id: str
+    entity: Annotated[EntitySchema | None, ResolveFrom("entity_id", EntitySchema)] = (
+        None
+    )
     role_id: str
     collection_id: str
     created_at: datetime

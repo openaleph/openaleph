@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from typing import Annotated
 
 from normality import stringify
 from pydantic import field_validator
@@ -11,6 +12,7 @@ from aleph.model.common import (
     ENTITY_ID_LEN,
     DatedModel,
     DatedSchema,
+    ResolveFrom,
     SDict,
     Status,
     iso_text,
@@ -157,8 +159,10 @@ class MappingSchema(DatedSchema):
             return None
         return str(Status.LABEL.get(v, v))
 
-    entityset: EntitySetSchema | None = None
-    table: EntitySchema | None = None
+    entityset: Annotated[
+        EntitySetSchema | None, ResolveFrom("entityset_id", EntitySetSchema)
+    ] = None
+    table: Annotated[EntitySchema | None, ResolveFrom("table_id", EntitySchema)] = None
 
     writeable: bool = False
     links: SDict = {}

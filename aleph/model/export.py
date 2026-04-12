@@ -181,13 +181,13 @@ class ExportSchema(DatedSchema):
     expires_at: datetime
     deleted: bool
     status: str
-    mime_type: str
     meta: SDict
 
     collection_id: str | None = None
     content_hash: str | None = None
     file_name: str | None = None
     file_size: int | None = None
+    mime_type: str | None = None
 
     links: SDict = {}
 

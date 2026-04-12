@@ -371,15 +371,7 @@ class RoleSchema(DatedSchema):
 
     @property
     def cache_key(self) -> str:
-        """Roles are referenced by int PK everywhere (Permission.role_id,
-        Alert.role_id, notification ``actor_id``, …) — not by
-        ``foreign_id``. Override the inherited default so the resolver
-        keys roles under their integer id, matching every call site
-        that asks for a role.
-        """
-        if self.id:
-            return self.id
-        raise ValueError("RoleSchema has no id; cannot derive a cache_key")
+        return self.id
 
 
 class RoleChannels(APIBaseModel):
