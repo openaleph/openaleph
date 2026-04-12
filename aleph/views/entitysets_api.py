@@ -15,7 +15,7 @@ from aleph.logic.entitysets import (
     save_entityset_item,
 )
 from aleph.model import EntitySet, Judgement
-from aleph.model.common import make_textid, model_dump
+from aleph.model.common import make_textid
 from aleph.procrastinate.queues import queue_update_entity
 from aleph.search import (
     DatabaseQueryResult,
@@ -154,9 +154,7 @@ def view(entityset_id):
       - EntitySet
     """
     entityset = resources.get_entityset(entityset_id, request.authz.READ)
-    data = model_dump(entityset)
-    data["shallow"] = False
-    return EntitySetSerializer.jsonify(data)
+    return EntitySetSerializer.jsonify(entityset, detail_view=True)
 
 
 @blueprint.route("/api/2/entitysets/<entityset_id>", methods=["POST", "PUT"])
@@ -406,8 +404,6 @@ def item_index(entityset_id):
     """
     entityset = resources.get_db_entityset(entityset_id, request.authz.READ)
     result = DatabaseQueryResult(request, entityset.items(request.authz))
-    # The entityset is needed to check if the item is writeable in the serializer:
-    result.results = [i.to_dict(entityset=entityset) for i in result.results]
     return EntitySetItemSerializer.jsonify_result(result)
 
 
@@ -460,10 +456,8 @@ def item_update(entityset_id):
     )
     db.session.commit()
     queue_update_entity(collection, entity_id=entity_id)
-    if item is not None:
-        # The entityset is needed to check if the item is writeable in the serializer:
-        item = item.to_dict(entityset=entityset)
-    else:
+    if item is None:
+        # NO_JUDGEMENT deletes the item — return a stub
         item = {
             "id": "$".join((entityset_id, entity_id)),
             "entityset_id": entityset_id,
