@@ -5,6 +5,7 @@ from flask import Blueprint, request
 from flask_babel import gettext
 from werkzeug.exceptions import BadRequest, NotFound
 
+from aleph.api.requests.entityset import EntitySetEntityUpdate, EntitySetItemUpdate
 from aleph.core import db
 from aleph.logic.diagrams import publish_diagram
 from aleph.logic.entities import check_write_entity, upsert_entity, validate_entity
@@ -342,8 +343,8 @@ def entities_update(entityset_id):
       - Entity
     """
     entityset = resources.get_db_entityset(entityset_id, request.authz.WRITE)
-    data = parse_request("EntityUpdate")
-    entity_id = data.get("id", make_textid())
+    body = EntitySetEntityUpdate.model_validate(request.get_json())
+    entity_id = body.id or make_textid()
     try:
         entity = resources.get_entity(entity_id, request.authz.READ)
         collection = resources.get_db_collection(
@@ -353,6 +354,7 @@ def entities_update(entityset_id):
         entity = None
         collection = entityset.collection
     tag_request(collection_id=entityset.collection_id)
+    data = body.model_dump(by_alias=True)
     if entity is None or check_write_entity(entity, request.authz):
         if get_flag("validate", default=False):
             validate_entity(data)
@@ -444,14 +446,18 @@ def item_update(entityset_id):
       - EntitySetItem
     """
     entityset = resources.get_db_entityset(entityset_id, request.authz.WRITE)
-    data = parse_request("EntitySetItemUpdate")
-    entity = data.pop("entity", {})
-    entity_id = data.pop("entity_id", entity.get("id"))
+    body = EntitySetItemUpdate.model_validate(request.get_json())
+    entity_id = body.entity_id or (body.entity or {}).get("id")
     entity = resources.get_entity(entity_id, request.authz.READ)
     collection = resources.get_db_collection(entity.collection_id, request.authz.READ)
-    data["added_by_id"] = request.authz.id
-    data.pop("collection", None)
-    item = save_entityset_item(entityset, collection, entity_id, **data)
+    item = save_entityset_item(
+        entityset,
+        collection,
+        entity_id,
+        added_by_id=request.authz.id,
+        judgement=body.judgement,
+        compared_to_entity_id=body.compared_to_entity_id,
+    )
     db.session.commit()
     queue_update_entity(collection, entity_id=entity_id)
     if item is not None:

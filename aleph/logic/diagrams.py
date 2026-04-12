@@ -28,7 +28,7 @@ def publish_diagram(entityset):
 
 def render_diagram(entityset):
     """Generate an HTML snippet from a diagram object."""
-    entity_ids = entityset.entities
+    entity_ids = entityset.entity_ids
     entities = []
     for entity_schema in cache.get_many(EntitySchema, entity_ids):
         entity = model_dump(entity_schema)

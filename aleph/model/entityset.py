@@ -1,11 +1,11 @@
 import logging
 from datetime import datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from banal import ensure_list
 from nomenklatura.judgement import Judgement  # noqa: F401
 from normality import stringify
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from sqlalchemy import event, func
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -16,6 +16,7 @@ from aleph.model.common import (
     ENTITY_ID_LEN,
     APIBaseModel,
     DatedSchema,
+    ResolveFrom,
     SDict,
     SoftDeleteModel,
     make_textid,
@@ -55,7 +56,7 @@ class EntitySet(db.Model, SoftDeleteModel):
     parent = db.relationship("EntitySet", backref="children", remote_side=[id])
 
     @property
-    def entities(self):
+    def entity_ids(self) -> list[str]:
         q = db.session.query(EntitySetItem.entity_id)
         q = q.filter(EntitySetItem.entityset_id == self.id)
         q = q.filter(EntitySetItem.judgement == Judgement.POSITIVE)
@@ -454,10 +455,16 @@ class EntitySetSchema(DatedSchema):
 
     summary: str | None = None
     layout: DiagramLayout | None = None
+
+    # SQLA EntitySet.entity_ids returns list[str] (IDs);
+    # the assembler resolves them into `entities` for the wire.
+    entity_ids: list[str] = Field(default=[], exclude=True)
     entities: list[EntitySchema] = []
 
-    role: RoleSchema | None = None
-    collection: CollectionSchema | None = None
+    role: Annotated[RoleSchema | None, ResolveFrom("role_id", RoleSchema)] = None
+    collection: Annotated[
+        CollectionSchema | None, ResolveFrom("collection_id", CollectionSchema)
+    ] = None
 
     writeable: bool = False
     shallow: bool = True
@@ -480,9 +487,13 @@ class EntitySetItemSchema(DatedSchema):
     collection_id: str
     entityset_collection_id: str
     added_by_id: str | None = None
+    # legacy profile logic, will delete
+    judgement: Judgement | None = None
 
-    entity: SDict | None = None
-    collection: CollectionSchema | None = None
+    entity: Annotated[SDict | None, ResolveFrom("entity_id", EntitySchema)] = None
+    collection: Annotated[
+        CollectionSchema | None, ResolveFrom("collection_id", CollectionSchema)
+    ] = None
 
     writeable: bool = False
     links: SDict = {}

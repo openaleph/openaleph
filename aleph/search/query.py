@@ -101,7 +101,7 @@ class EntitySetItemsQuery(EntitiesQuery):
 
     def get_filters(self, **kwargs):
         filters = super(EntitySetItemsQuery, self).get_filters(**kwargs)
-        filters.append({"ids": {"values": self.entityset.entities}})
+        filters.append({"ids": {"values": self.entityset.entity_ids}})
         return filters
 
     def get_index(self):
