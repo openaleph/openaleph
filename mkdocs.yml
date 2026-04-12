@@ -116,4 +116,5 @@ nav:
       - Internals:
           - Domain Models (Pydantic): dev-admin-guide/104/domain-models.md
           - Resolver & Cache: dev-admin-guide/104/resolver-cache.md
+          - Assemblers: dev-admin-guide/104/assemblers.md
   - Power User Blogpost Series: https://openaleph.org/blog/
