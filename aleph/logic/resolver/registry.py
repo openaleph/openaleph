@@ -110,12 +110,12 @@ def fetch_many(cls: Type[M], ids: Iterable[str]) -> Iterator[M]:
     """Look up the batch fetch function for ``cls`` and call it with
     ``ids``. Falls back to N ``fetch_one`` calls if no batch fetcher
     is registered. Yields only non-None results."""
-    _, fn_many, _ = _REGISTRY[cls]
+    fn_one, fn_many, _ = _REGISTRY[cls]
     if fn_many is not None:
         yield from fn_many(ids)
         return
     for identifier in ids:
-        item = fetch_one(cls, identifier)
+        item = fn_one(identifier)
         if item is not None:
             yield item
 
