@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Self
+from typing import Annotated, Self
 
 from anystore.types import SDict
 from anystore.util.data import model_dump
@@ -10,7 +10,7 @@ from nomenklatura.resolver.identifier import StrIdent
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from aleph.model.collection import CollectionSchema
-from aleph.model.common import APIBaseModel
+from aleph.model.common import APIBaseModel, ResolveFrom
 from aleph.model.entity import EntitySchema
 from aleph.settings import SETTINGS
 
@@ -84,11 +84,18 @@ class XrefSchema(APIBaseModel):
     carries one.
     """
 
-    entity: EntitySchema
-    match: EntitySchema
+    source: str
+    target: str
+    entity: Annotated[EntitySchema | None, ResolveFrom("source", EntitySchema)] = None
+    match: Annotated[EntitySchema | None, ResolveFrom("target", EntitySchema)] = None
     score: float
     collections: list[CollectionSchema] = []
     writeable: bool = False
+
+    # ES edge metadata — needed for orientation and collection resolution
+    source_collection_id: list[int] = []
+    target_collection_id: list[int] = []
+    collection_id: list[int] = []
 
     method: str | None = None
     judgement: Judgement | None = None

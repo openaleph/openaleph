@@ -9,17 +9,25 @@ their own endpoint (``views/canonical_api.py``).
 """
 
 from datetime import datetime
+from typing import Any
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from aleph.model.collection import CollectionSchema
 from aleph.model.common import APIBaseModel
 from aleph.model.entity import EntitySchema
 
 
+class CanonicalEntitySchema(EntitySchema):
+    """Canonicals don't live in 1 Collection anymore"""
+
+    collection_id: str | None = None
+
+
 class CanonicalSchema(APIBaseModel):
     """Wire format for a canonical (clustered) entity — replaces the
     legacy Profile shape.
+
 
     A canonical cluster is the merged view of N constituent entities
     that the resolver has judged the same. ``merged`` is the FTM
@@ -31,7 +39,8 @@ class CanonicalSchema(APIBaseModel):
     """
 
     id: str
-    merged: EntitySchema
+    label: str
+    merged: CanonicalEntitySchema
     entities: list[EntitySchema] = []
     collection_ids: list[str] = []
     writeable: bool = False
@@ -40,6 +49,11 @@ class CanonicalSchema(APIBaseModel):
     @property
     def cache_key(self) -> str:
         return self.id
+
+    @field_validator("collection_ids", mode="before")
+    @classmethod
+    def _stringify_collection_ids(cls, v: Any, info) -> Any:
+        return [str(i) for i in v]
 
 
 class StatementSchema(APIBaseModel):
@@ -63,7 +77,7 @@ class StatementSchema(APIBaseModel):
     dataset: CollectionSchema | str
 
     canonical_id: str
-    prop_type: str
+    prop_type: str | None = None
     first_seen: datetime | None = None
     last_seen: datetime | None = None
 

@@ -24,6 +24,8 @@ def _entity(entity_id: str, name: str) -> EntitySchema:
 
 def _xref(**overrides) -> XrefSchema:
     base = {
+        "source": "a",
+        "target": "b",
         "score": 0.95,
         "entity": _entity("a", "Alice"),
         "match": _entity("b", "Bob"),
@@ -42,19 +44,18 @@ def test_xref_schema_minimal():
 
 def test_xref_schema_required_fields_raise_on_missing():
     with pytest.raises(ValidationError):
-        XrefSchema(score=0.95)  # missing entity, match
+        XrefSchema(source="a", target="b")  # missing score
     with pytest.raises(ValidationError):
-        XrefSchema(
-            entity=_entity("a", "Alice"),
-            match=_entity("b", "Bob"),
-        )  # missing score
+        XrefSchema(score=0.95)  # missing source, target
 
 
 def test_xref_schema_cache_key_is_pair_deterministic_and_non_empty():
     # The cache key sorts the (entity, match) pair so it's stable
     # regardless of which side is "left".
     x1 = _xref()
-    x2 = _xref(entity=_entity("b", "Bob"), match=_entity("a", "Alice"))
+    x2 = _xref(
+        source="b", target="a", entity=_entity("b", "Bob"), match=_entity("a", "Alice")
+    )
     assert x1.cache_key == x2.cache_key == "a/b"
     # Neither side can be None now, so the key never degrades to "/".
     assert "/" in x1.cache_key
