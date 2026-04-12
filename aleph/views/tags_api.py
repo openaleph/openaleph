@@ -98,13 +98,18 @@ def index():
         # If filtering by entity, order by creation date
         query = query.order_by(Tag.created_at.desc())
     else:
-        # Group by tag value and order by occurrence count
+        # Group by tag value and order by occurrence count.
+        # Returns (tag, count) rows — not full Tag objects, so we
+        # bypass the TagSerializer and return plain dicts.
         query = (
             db.session.query(Tag.tag, func.count(Tag.entity_id).label("count"))
             .filter(Tag.collection_id == collection_id)
             .group_by(Tag.tag)
             .order_by(func.count(Tag.entity_id).desc(), Tag.tag)
         )
+        result = DatabaseQueryResult(request, query)
+        result.results = [{"tag": tag, "count": count} for tag, count in result.results]
+        return jsonify(result.to_dict())
 
     result = DatabaseQueryResult(request, query)
     return TagSerializer.jsonify_result(result)
