@@ -8,7 +8,7 @@ from anystore.types import SDict
 from anystore.util import clean_dict
 from anystore.util import model_dump as _anystore_model_dump
 from flask_babel import lazy_gettext
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import false
 
 from aleph.core import db
@@ -177,30 +177,17 @@ class APIBaseModel(BaseModel):
         arbitrary_types_allowed=False,
     )
 
-    @model_validator(mode="before")
-    @classmethod
-    def _coerce_id_fields(cls, data: Any) -> Any:
-        """Coerce all ``*_id`` dict values from int to str.
-
-        SQLA integer foreign keys (``role_id``, ``collection_id``, etc.)
-        need to become strings for the API wire format. For dict input
-        this runs before field validation. For SQLA objects
-        (``from_attributes``), pydantic reads attributes directly — the
-        coercion for those is handled by ``_stringify_ids`` below.
-        """
-        if isinstance(data, dict):
-            for key, value in data.items():
-                if key.endswith("_id") and isinstance(value, int):
-                    data[key] = str(value)
-        return data
-
     @field_validator("*", mode="before")
     @classmethod
     def _stringify_ids(cls, v: Any, info) -> Any:
-        """Coerce int→str for any field whose name ends with ``_id``
-        and whose declared type is ``str``. Handles SQLA objects where
-        ``from_attributes`` reads the raw int column value."""
-        if info.field_name and info.field_name.endswith("_id") and isinstance(v, int):
+        """Coerce int→str for any ``*_id`` field that holds a scalar int.
+        Leaves lists (e.g. ``collection_id: list[int]`` on XrefSchema)
+        untouched."""
+        if (
+            isinstance(v, int)
+            and info.field_name
+            and (info.field_name.endswith("_id") or info.field_name == "id")
+        ):
             return str(v)
         return v
 
@@ -271,12 +258,37 @@ def model_dump(model: BaseModel) -> SDict:
     return _anystore_model_dump(model, clean=True)
 
 
+class ResolveFrom:
+    """``Annotated`` metadata marker — tells the assembler which sibling
+    ``*_id`` field holds the resolver cache key and what schema type to
+    resolve.
+
+    Usage::
+
+        from typing import Annotated
+
+        class EntitySetSchema(DatedSchema):
+            collection_id: str
+            collection: Annotated[
+                CollectionSchema | None,
+                ResolveFrom("collection_id", CollectionSchema),
+            ] = None
+    """
+
+    __slots__ = ("id_field", "schema_cls")
+
+    def __init__(self, id_field: str, schema_cls: type | None = None) -> None:
+        self.id_field = id_field
+        self.schema_cls = schema_cls
+
+
 __all__ = [
     "APIBaseModel",
     "DatedSchema",
     "ENTITY_ID_LEN",
     "DatedModel",
     "IdModel",
+    "ResolveFrom",
     "SoftDeleteModel",
     "Status",
     "SDict",
