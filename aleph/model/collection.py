@@ -1,6 +1,7 @@
 import functools
 import logging
 from datetime import datetime
+from enum import StrEnum
 from typing import Annotated, Any
 
 from banal import ensure_dict, ensure_list
@@ -352,6 +353,8 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
 # Aleph "annual" → FTM "annually". Other values pass through unchanged.
 _FREQUENCY_MAP: dict[str, str] = {"annual": "annually"}
 
+Categories = StrEnum("Categories", {k: k for k in Collection.CATEGORIES})
+
 
 def _serialize_lax_dt(value: datetime | str | None) -> str | None:
     """Serialize a ``datetime`` to ISO; pass ISO strings through unchanged.
@@ -405,6 +408,8 @@ class CollectionSchema(FtmDataset):
     # are an Aleph extension.
     languages: list[str] = []
     countries: list[str] = []
+    # category overwrite
+    category: Categories | None = None
 
     # Aleph access / visibility flags.
     restricted: bool = False
