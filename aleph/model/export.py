@@ -181,7 +181,7 @@ class ExportSchema(DatedSchema):
     expires_at: datetime
     deleted: bool
     status: str
-    meta: SDict
+    meta: SDict = {}
 
     collection_id: str | None = None
     content_hash: str | None = None

@@ -2,16 +2,20 @@ import csv
 import io
 import logging
 import string
+from typing import TypeVar
 from urllib.parse import urlparse
 
 import orjson
 from banal import as_bool
 from flask import Response, render_template, request
 from normality import stringify
+from pydantic import BaseModel, ValidationError
 from servicelayer.jobs import Job
-from werkzeug.exceptions import Forbidden, NotFound
+from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
 from aleph.util import json_default
+
+T = TypeVar("T", bound=BaseModel)
 
 log = logging.getLogger(__name__)
 CALLBACK_VALID = string.ascii_letters + string.digits + "_"
@@ -47,6 +51,34 @@ def get_url_path(url):
         return urlparse(url)._replace(netloc="", scheme="").geturl() or "/"
     except Exception:
         return "/"
+
+
+def validate_request(schema_cls: type[T], data: dict | None = None) -> T:
+    """Validate request data against a pydantic schema, raising 400 on failure.
+
+    When *data* is ``None`` the function reads from the current Flask
+    request, transparently handling both JSON and form-encoded bodies.
+    """
+    if data is None:
+        data = (
+            request.get_json() if request.is_json else request.form.to_dict(flat=True)
+        )
+    try:
+        return schema_cls.model_validate(data)
+    except ValidationError as e:
+        errors = {}
+        for err in e.errors():
+            path = ".".join(str(loc) for loc in err["loc"])
+            errors[path] = err["msg"]
+        resp = jsonify(
+            {
+                "status": "error",
+                "errors": errors,
+                "message": "Error during data validation",
+            },
+            status=400,
+        )
+        raise BadRequest(response=resp)
 
 
 def jsonify(obj, status=200, headers=None):

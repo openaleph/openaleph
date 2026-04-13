@@ -14,7 +14,7 @@ from aleph.model.tag import Tag
 from aleph.search import DatabaseQueryResult
 from aleph.views import resources
 from aleph.views.serializers import TagSerializer
-from aleph.views.util import jsonify, require
+from aleph.views.util import jsonify, require, validate_request
 
 log = logging.getLogger(__name__)
 blueprint = Blueprint("tags_api", __name__)
@@ -139,7 +139,7 @@ def create():
           description: Bad request
     """
     require(request.authz.session_write)
-    body: TagCreate = TagCreate.model_validate(request.get_json())
+    body: TagCreate = validate_request(TagCreate)
     entity_id = body.entity_id
     tag_text = body.tag
 

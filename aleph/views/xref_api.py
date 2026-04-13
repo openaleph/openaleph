@@ -18,6 +18,7 @@ from aleph.views.serializers import XrefSerializer
 from aleph.views.util import (
     jsonify,
     require,
+    validate_request,
 )
 
 blueprint = Blueprint("xref_api", __name__)
@@ -163,7 +164,7 @@ def decide():
       - Xref
       - Collection
     """
-    body: Pairwise = Pairwise.model_validate(request.get_json())
+    body: Pairwise = validate_request(Pairwise)
     entity_id = body.entity_id
     match_id = body.match_id
     if entity_id == match_id:

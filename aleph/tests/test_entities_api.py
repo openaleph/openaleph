@@ -8,7 +8,7 @@ from aleph.index.util import index_entity
 from aleph.index.xref import delete_xref
 from aleph.model import EntitySchema
 from aleph.model.bookmark import Bookmark
-from aleph.model.entity import EntityExpandSchema, EntityTagSchema
+from aleph.model.entity import EntityExpandSchema, EntityTagSchema, SimilarSchema
 from aleph.settings import SETTINGS
 from aleph.tests.util import JSON, TestCase, get_caption
 
@@ -398,7 +398,7 @@ class EntitiesApiTestCase(TestCase):
         assert len(data["results"]) == 1, data
         assert "Laden" in get_caption(data["results"][0]["entity"]), data
         assert b"Pooh" not in res.data, res.data
-        EntitySchema.model_validate(data["results"][0])
+        SimilarSchema.model_validate(data["results"][0])
 
         # now an xref edge exists, but undecided
         url = "/api/2/collections/%s/xref" % self.col_id
@@ -758,7 +758,8 @@ class EntitiesApiTestCase(TestCase):
         url = "/api/2/entities/%s/expand?limit=100" % (person1.json["id"])
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, (res.status_code, res.json)
-        EntityExpandSchema.model_validate(res.json)
+        for item in res.json.get("results", []):
+            EntityExpandSchema.model_validate(item)
         assert res.json["total"] == 2, pformat(res.json)
         results = res.json["results"]
         assert len(results) == 2, pformat(results)
@@ -780,7 +781,8 @@ class EntitiesApiTestCase(TestCase):
         url = "/api/2/entities/%s/expand" % (company1.json["id"])
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, (res.status_code, res.json)
-        EntityExpandSchema.model_validate(res.json)
+        for item in res.json.get("results", []):
+            EntityExpandSchema.model_validate(item)
         assert res.json["total"] == 1, pformat(res.json)
         results = res.json["results"]
         assert len(results) == 1, pformat(results)
@@ -794,7 +796,8 @@ class EntitiesApiTestCase(TestCase):
         url = url % passport.json["id"]
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, (res.status_code, res.json)
-        EntityExpandSchema.model_validate(res.json)
+        for item in res.json.get("results", []):
+            EntityExpandSchema.model_validate(item)
         assert res.json["total"] == 1, pformat(res.json)
         results = res.json["results"]
         assert len(results) == 1, pformat(results)
@@ -847,7 +850,8 @@ class EntitiesApiTestCase(TestCase):
         expand_url = "/api/2/entities/%s/expand?limit=0" % (company.json["id"])
         res = self.client.get(expand_url, headers=headers)
         assert res.status_code == 200, (res.status_code, res.json)
-        EntityExpandSchema.model_validate(res.json)
+        for item in res.json.get("results", []):
+            EntityExpandSchema.model_validate(item)
 
         results = res.json["results"]
         property_counts = {r["property"]: r["count"] for r in results}

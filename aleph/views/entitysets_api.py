@@ -42,6 +42,7 @@ from aleph.views.util import (
     get_session_id,
     jsonify,
     require,
+    validate_request,
 )
 
 blueprint = Blueprint("entitysets_api", __name__)
@@ -126,7 +127,7 @@ def create():
       tags:
       - EntitySet
     """
-    body: EntitySetCreate = EntitySetCreate.model_validate(request.get_json())
+    body: EntitySetCreate = validate_request(EntitySetCreate)
     data: dict = body.model_dump()
     collection = resources.get_db_collection(data["collection_id"], request.authz.WRITE)
     entityset = create_entityset(collection, data, request.authz)
@@ -192,7 +193,7 @@ def update(entityset_id):
       - EntitySet
     """
     entityset = resources.get_db_entityset(entityset_id, request.authz.WRITE)
-    body: EntitySetUpdate = EntitySetUpdate.model_validate(request.get_json())
+    body: EntitySetUpdate = validate_request(EntitySetUpdate)
     entityset.update(body.model_dump())
     db.session.commit()
     refresh_entityset(entityset_id)
@@ -346,7 +347,7 @@ def entities_update(entityset_id):
       - Entity
     """
     entityset = resources.get_db_entityset(entityset_id, request.authz.WRITE)
-    body = EntitySetEntityUpdate.model_validate(request.get_json())
+    body: EntitySetEntityUpdate = validate_request(EntitySetEntityUpdate)
     entity_id = body.id or make_textid()
     try:
         entity = resources.get_entity(entity_id, request.authz.READ)
@@ -447,7 +448,7 @@ def item_update(entityset_id):
       - EntitySetItem
     """
     entityset = resources.get_db_entityset(entityset_id, request.authz.WRITE)
-    body = EntitySetItemUpdate.model_validate(request.get_json())
+    body: EntitySetItemUpdate = validate_request(EntitySetItemUpdate)
     entity_id = body.entity_id or (body.entity or {}).get("id")
     entity = resources.get_entity(entity_id, request.authz.READ)
     collection = resources.get_db_collection(entity.collection_id, request.authz.READ)

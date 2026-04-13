@@ -17,7 +17,7 @@ from aleph.util import is_auto_admin
 from aleph.views import resources
 from aleph.views.context import tag_request
 from aleph.views.serializers import RoleSerializer
-from aleph.views.util import jsonify, obj_or_404, require
+from aleph.views.util import jsonify, obj_or_404, require, validate_request
 
 blueprint = Blueprint("roles_api", __name__)
 log = logging.getLogger(__name__)
@@ -106,7 +106,7 @@ def create_code():
       - Role
     """
     require(request.authz.can_register())
-    body: RoleCodeCreate = RoleCodeCreate.model_validate(request.get_json())
+    body: RoleCodeCreate = validate_request(RoleCodeCreate)
     challenge_role(body.model_dump())
     return jsonify(
         {"status": "ok", "message": gettext("To proceed, please check your email.")}
@@ -137,7 +137,7 @@ def create():
       - Role
     """
     require(request.authz.can_register())
-    body: RoleCreate = RoleCreate.model_validate(request.get_json())
+    body: RoleCreate = validate_request(RoleCreate)
     try:
         email = Role.SIGNATURE.loads(body.code, max_age=Role.SIGNATURE_MAX_AGE)
     except BadSignature:
@@ -237,8 +237,8 @@ def update(id):
     """
     role = obj_or_404(Role.by_id(id))
     require(request.authz.can_write_role(role.id))
-    body: RoleUpdate = RoleUpdate.model_validate(request.get_json())
-    data: dict = body.model_dump()
+    body: RoleUpdate = validate_request(RoleUpdate)
+    data: dict = body.model_dump(exclude_unset=True)
 
     # When changing passwords, check the old password first.
     # cf. https://github.com/alephdata/aleph/issues/718

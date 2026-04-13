@@ -63,6 +63,7 @@ from aleph.views.util import (
     get_session_id,
     jsonify,
     require,
+    validate_request,
 )
 
 log = logging.getLogger(__name__)
@@ -252,7 +253,7 @@ def match():
       - Entity
     """
     require(request.authz.can_browse_anonymous)
-    body = EntityUpdate.model_validate(request.get_json())
+    body: EntityUpdate = validate_request(EntityUpdate)
     entity = make_entity_proxy(body.model_dump(by_alias=True), cleaned=False)
     tag_request(schema=entity.schema.name, caption=entity.caption)
     collection_ids = request.args.getlist("collection_ids")
@@ -296,7 +297,7 @@ def create():
       tags:
         - Entity
     """
-    body = EntityCreate.model_validate(request.get_json())
+    body: EntityCreate = validate_request(EntityCreate)
     collection = resources.get_db_collection(body.collection_id, request.authz.WRITE)
     data = body.model_dump(by_alias=True)
     data.pop("id", None)
@@ -923,7 +924,7 @@ def update(entity_id):
       tags:
       - Entity
     """
-    body = EntityUpdate.model_validate(request.get_json())
+    body: EntityUpdate = validate_request(EntityUpdate)
     try:
         entity = resources.get_entity(entity_id, request.authz.WRITE)
         require(check_write_entity(entity, request.authz))

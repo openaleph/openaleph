@@ -9,7 +9,7 @@ from aleph.model import Bookmark
 from aleph.search import DatabaseQueryResult
 from aleph.views import resources
 from aleph.views.serializers import BookmarkSerializer
-from aleph.views.util import jsonify, require
+from aleph.views.util import jsonify, require, validate_request
 
 log = logging.getLogger(__name__)
 blueprint = Blueprint("bookmarks_api", __name__)
@@ -72,7 +72,7 @@ def create():
                 $ref: '#/components/schemas/Bookmark'
     """
     require(request.authz.session_write)
-    body: BookmarkCreate = BookmarkCreate.model_validate(request.get_json())
+    body: BookmarkCreate = validate_request(BookmarkCreate)
     entity_id = body.entity_id
 
     try:

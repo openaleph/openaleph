@@ -12,7 +12,7 @@ from aleph.procrastinate.queues import queue_flush_mapping, queue_load_mapping
 from aleph.search import DatabaseQueryResult, QueryParser
 from aleph.views import resources
 from aleph.views.serializers import MappingSerializer
-from aleph.views.util import require
+from aleph.views.util import require, validate_request
 
 blueprint = Blueprint("mappings_api", __name__)
 log = logging.getLogger(__name__)
@@ -138,7 +138,7 @@ def create(collection_id):
       - Mapping
     """
     collection = resources.get_db_collection(collection_id, request.authz.WRITE)
-    body: MappingCreate = MappingCreate.model_validate(request.get_json())
+    body: MappingCreate = validate_request(MappingCreate)
     data: dict = body.model_dump()
     mapping = Mapping.create(
         load_query(),
@@ -234,7 +234,7 @@ def update(collection_id, mapping_id):
     """
     collection = resources.get_db_collection(collection_id, request.authz.WRITE)
     mapping = get_mapping(mapping_id, collection)
-    body: MappingCreate = MappingCreate.model_validate(request.get_json())
+    body: MappingCreate = validate_request(MappingCreate)
     data: dict = body.model_dump()
     mapping.update(
         query=load_query(),

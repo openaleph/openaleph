@@ -6,7 +6,7 @@ from aleph.model import Alert
 from aleph.search import DatabaseQueryResult
 from aleph.views.context import tag_request
 from aleph.views.serializers import AlertSerializer
-from aleph.views.util import obj_or_404, require
+from aleph.views.util import obj_or_404, require, validate_request
 
 blueprint = Blueprint("alerts_api", __name__)
 
@@ -62,7 +62,7 @@ def create():
         - Alert
     """
     require(request.authz.session_write)
-    body: AlertCreate = AlertCreate.model_validate(request.get_json())
+    body: AlertCreate = validate_request(AlertCreate)
     alert = Alert.create(body.model_dump(), request.authz.id)
     db.session.commit()
     tag_request(alert_id=alert.id)

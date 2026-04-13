@@ -16,4 +16,4 @@ class DashboardApiTestCase(TestCase):
         res = self.client.get("/api/2/status", headers=headers)
         assert res.status_code == 200, res
         assert res.json.get("total") == 0, res.json
-        assert "status" in res.json
+        assert "results" in res.json

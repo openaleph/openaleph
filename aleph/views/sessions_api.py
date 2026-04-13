@@ -15,7 +15,7 @@ from aleph.logic.util import ui_url
 from aleph.model import Role
 from aleph.oauth import handle_oauth, oauth
 from aleph.settings import SETTINGS
-from aleph.views.util import get_url_path, jsonify, require
+from aleph.views.util import get_url_path, jsonify, require, validate_request
 
 log = logging.getLogger(__name__)
 blueprint = Blueprint("sessions_api", __name__)
@@ -63,7 +63,7 @@ def password_login():
       - Role
     """
     require(SETTINGS.PASSWORD_LOGIN)
-    body = RoleLogin.model_validate(request.get_json())
+    body: RoleLogin = validate_request(RoleLogin)
     role = Role.login(body.email, body.password)
     if role is None:
         AUTH_ATTEMPS.labels(method="password", result="failed").inc()
