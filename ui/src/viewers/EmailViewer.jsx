@@ -11,7 +11,7 @@ class EmailViewer extends PureComponent {
   headerProperty(name, entitiesProp) {
     const { document } = this.props;
     const prop = document.schema.getProperty(name);
-    const re = new RegExp(/^=\?{1}(.+)\?{1}([B|Q])\?{1}(.+)\?{1}=.*$/);
+    const re = new RegExp(/=\?{1}(.+)\?{1}([B|Q])\?{1}(.+)\?{1}=.*/);
     const values = document.getProperty(prop).filter((value) => !re.test(value)).map((value) => {
       let result = (
         <Property.Value key={value.id || value} prop={prop} value={value} />
