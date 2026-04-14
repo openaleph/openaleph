@@ -17,6 +17,7 @@ class EntityProperties extends React.PureComponent {
       (p) => featured.indexOf(p) === -1
     );
     const properties = [...featured, ...sorted];
+    const re = new RegExp(/=\?{1}(.+)\?{1}([B|Q])\?{1}(.+)\?{1}=.*/);
     const missing = (
       <FormattedMessage
         id="entity.properties.missing"
@@ -35,7 +36,7 @@ class EntityProperties extends React.PureComponent {
                 <span className="value">
                   <Mention.List
                     prop={prop}
-                    values={entity.getProperty(prop)}
+                    values={entity.getProperty(prop).filter((value) => !re.test(value))}
                     missing={missing}
                     translitLookup={entity.latinized}
                   />
