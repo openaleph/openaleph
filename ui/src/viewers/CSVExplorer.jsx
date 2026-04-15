@@ -3,10 +3,11 @@
 // sort and pagination queries against it without any server round-trips.
 // Requires public/sql-wasm.wasm (copied from node_modules/sql.js/dist/).
 import React, { Component } from 'react';
-import { Button, Checkbox, Spinner, NonIdealState, Popover, Position } from '@blueprintjs/core';
+import { Button, Checkbox, Spinner, NonIdealState, Tooltip, Popover, Position } from '@blueprintjs/core';
 import { defineMessages, injectIntl, FormattedMessage } from 'react-intl';
 
 import './CSVExplorer.scss';
+import { Popover2 } from '@blueprintjs/popover2';
 
 const PAGE_SIZE = 100;
 
@@ -131,6 +132,15 @@ class CSVExplorer extends Component {
     this.setState({ filters: newFilters, page: 1 }, () => this.runQuery());
   }
 
+  get filterState() {
+    const filterVal = this.state.filterVal?.trim();
+    const filterCol = this.state.filterCol?.trim();
+
+    if (!filterVal) return false;
+    if (!filterCol || filterCol === '- column -') return false;
+    return true;
+  }
+
   onSettingsChange(patch) {
     this.setState(patch, () => this.initWorker());
   }
@@ -139,7 +149,7 @@ class CSVExplorer extends Component {
     const { skiprows, genericHeaders, separator } = this.state;
 
     return (
-      <div className="CSVExplorer__settings-popover">
+      <div className="CSVExplorer__settings-Popover">
         <label>
           <span>Skip rows</span>
           <input
@@ -190,13 +200,13 @@ class CSVExplorer extends Component {
         <span className="CSVExplorer__count">
           {total.toLocaleString()} rows
         </span>
-        <Popover
+        <Popover2
           content={this.renderSettings()}
           position={Position.BOTTOM_RIGHT}
           minimal
         >
           <Button minimal icon="cog" />
-        </Popover>
+        </Popover2>
       </div>
     );
   }
@@ -237,9 +247,13 @@ class CSVExplorer extends Component {
             onChange={(e) => this.setState({ filterVal: e.target.value })}
             onKeyDown={(e) => e.key === 'Enter' && this.onApplyFilter()}
           />
-          <Button small intent="primary" onClick={this.onApplyFilter}>
-            <FormattedMessage {...messages.filter_apply} />
-          </Button>
+          <Tooltip 
+            content="Select a column and enter a filter value" 
+            disabled={this.filterState} >
+            <Button small intent="primary" disabled={!this.filterState} onClick={this.onApplyFilter}>
+              <FormattedMessage {...messages.filter_apply} />
+            </Button>
+          </Tooltip>
         </div>
         {activeFilters.length > 0 && (
           <div className="CSVExplorer__filterbar-tags">
