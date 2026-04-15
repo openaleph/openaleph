@@ -279,6 +279,23 @@ class Role(db.Model, IdModel, SoftDeleteModel):
     def __repr__(self):
         return "<Role(%r,%r)>" % (self.id, self.foreign_id)
 
+    def update_groups(self, new_groups):
+
+        if set(new_groups) == set(self.roles):
+            return
+
+        self.clear_roles()
+        for group in new_groups:
+            self.add_role(group)
+            log.debug("User %r is member of %r", self, group)
+        return
+
+    def update_name(self, name):
+        if not name or self.name == name:
+            return
+        self.name = name
+        self.touch()
+
 
 Role.members = db.relationship(
     Role,
