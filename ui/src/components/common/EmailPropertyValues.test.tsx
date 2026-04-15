@@ -11,12 +11,31 @@ it('renders default property values if no entity property is given', () => {
     schema: 'Email',
     properties: {
       from: ['john.doe@example.org'],
+      inReplyToEmail: [
+        {
+          id: '456',
+          schema: 'Email',
+          properties: {
+            subject: ['Other email'],
+          },
+        },
+      ],
     },
   });
 
-  render(<EmailPropertyValues entity={entity} prop="from" />);
+  // String property
+  const { rerender } = render(
+    <EmailPropertyValues entity={entity} prop="from" />
+  );
 
   screen.getByText('john.doe@example.org');
+
+  // Entity property
+  rerender(
+    <EmailPropertyValues entity={entity} prop="inReplyToEmail" />
+  );
+
+  screen.getByRole("link", { name: /Other email/ });
 });
 
 it('merges values from entity property and default property by email address', () => {
