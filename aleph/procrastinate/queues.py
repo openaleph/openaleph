@@ -39,7 +39,7 @@ class Context(TypedDict):
     priority: int | None
 
 
-def get_context(collection: Collection) -> Context:
+def get_context(collection: Collection, priority: int | None = None) -> Context:
     """Set some task context variables that configure the ingestors."""
     from aleph.logic.aggregator import get_aggregator_name
 
@@ -48,7 +48,7 @@ def get_context(collection: Collection) -> Context:
             "languages": [x for x in collection.languages if x],
             "ftmstore": get_aggregator_name(collection),
             "namespace": collection.foreign_id,
-            "priority": Priorities.USER if collection.casefile else None,
+            "priority": priority or (Priorities.USER if collection.casefile else None),
         }
     )
 
@@ -63,7 +63,7 @@ def queue_ingest(collection: Collection, proxy: EntityProxy, **context: Any) -> 
 def queue_analyze(
     collection: Collection, entities: list[EntityProxy], **context: Any
 ) -> None:
-    context = {**context, **get_context(collection)}
+    context = {**context, **get_context(collection, Priorities.USER)}
     dataset = get_aggregator_name(collection)
     with app.open():
         defer.analyze(app, dataset, entities, **context)
@@ -72,14 +72,18 @@ def queue_analyze(
 def queue_transcribe(
     collection: Collection, proxy: EntityProxy, **context: Any
 ) -> None:
-    context = {**context, **get_context(collection)}
+    context = {**context, **get_context(collection, Priorities.USER)}
     dataset = get_aggregator_name(collection)
     with app.open():
         defer.transcribe(app, dataset, [proxy], **context)
 
 
-def queue_translate(collection: Collection, proxy: EntityProxy, **context: Any) -> None:
-    context = {**context, **get_context(collection)}
+def queue_translate(
+    collection: Collection,
+    proxy: EntityProxy,
+    **context: Any,
+) -> None:
+    context = {**context, **get_context(collection, Priorities.USER)}
     dataset = get_aggregator_name(collection)
     with app.open():
         defer.translate(app, dataset, [proxy], **context)

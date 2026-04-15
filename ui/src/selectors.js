@@ -547,14 +547,6 @@ export function selectBookmarksResult(state, query) {
   return result;
 }
 
-// TODO: Remove after deadline
-// See https://github.com/alephdata/aleph/issues/2864
-export function selectLocalBookmarks(state) {
-  return (
-    state?.localBookmarks?.sort((a, b) => b.bookmarkedAt - a.bookmarkedAt) || []
-  );
-}
-
 export function selectConfigValue(state, name) {
   return state?.config?.[name];
 }
@@ -565,4 +557,8 @@ export function selectServiceUrls(state) {
 
 export function selectServiceUrl(state, key) {
   return selectServiceUrls(state)?.[key];
+}
+
+export function selectTranslateSourceLanguages(state) {
+  return selectMetadata(state)?.services?.translate?.source_languages || [];
 }
