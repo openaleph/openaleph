@@ -38,11 +38,12 @@ from aleph.search import (
     EntitiesQuery,
     GeoDistanceQuery,
     MatchQuery,
+    MessageThreadQuery,
     MoreLikeThisQuery,
     QueryParser,
     SearchQueryParser,
 )
-from aleph.search.result import get_query_result
+from aleph.search.result import QueryResult, get_query_result
 from aleph.settings import SETTINGS
 from aleph.util import make_entity_proxy
 from aleph.views.context import enable_cache, tag_request
@@ -493,6 +494,106 @@ def more_like_this(entity_id):
     tag_request(collection_id=entity.get("collection_id"))
     proxy = make_entity_proxy(entity)
     result = get_query_result(MoreLikeThisQuery, request, entity=proxy)
+    return EntitySerializer.jsonify_result(result)
+
+
+@blueprint.route("/api/2/entities/<entity_id>/thread", methods=["GET"])
+def thread(entity_id):
+    """
+    ---
+    get:
+      summary: Get threaded messages for an entity
+      description: >
+        Walks the reply chain of the Email or Message entity with id
+        `entity_id` in either the `previous` (ancestors) or `following`
+        (descendants) direction. Results are scoped to the entity's own
+        collection and returned unpaginated, bounded by a server-side
+        depth/size cap.
+      parameters:
+      - in: path
+        name: entity_id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: direction
+        description: >
+          Walk direction — `previous` for ancestors (the messages this one
+          is a reply to), `following` for descendants (messages that reply
+          to this one). Defaults to `previous`.
+        schema:
+          type: string
+          enum: [previous, following]
+      - in: query
+        name: dehydrate
+        description: >
+          Exclude the `properties` payload from results for list-view
+          consumption. The threading-critical property fields (messageId,
+          inReplyTo, inReplyTo{Schema}) are always kept.
+        schema:
+          type: boolean
+      - in: query
+        name: include_fields
+        description: >
+          Property paths or group names to add back when `dehydrate=true`
+          (e.g. `properties.subject`, `emails`). Repeat for multiple.
+        schema:
+          type: array
+          items:
+            type: string
+      - in: query
+        name: limit
+        description: >
+          Max thread entities to return. Capped by the server at
+          MessageThreadQuery.MAX_RESULTS.
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Returns the threaded entities, root entity excluded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntitiesResponse'
+        '400':
+          description: Entity schema does not support threading
+      tags:
+      - Entity
+    """
+    entity = get_index_entity(entity_id, request.authz.READ)
+    collection_id = int(entity["collection_id"])
+    tag_request(collection_id=collection_id)
+    proxy = make_entity_proxy(entity)
+    if proxy.schema.name not in MessageThreadQuery.SCHEMATA:
+        raise BadRequest(
+            gettext("Threading is only supported for Email and Message entities")
+        )
+    direction = request.args.get("direction", MessageThreadQuery.DIRECTION_PREVIOUS)
+    if direction not in (
+        MessageThreadQuery.DIRECTION_PREVIOUS,
+        MessageThreadQuery.DIRECTION_FOLLOWING,
+    ):
+        raise BadRequest(
+            gettext("Invalid direction: %(direction)s") % {"direction": direction}
+        )
+    parser = SearchQueryParser(request.values, request.authz.search_auth)
+    # Thread views are list-view consumers by default — dehydrate unless the
+    # caller explicitly opts into the full payload with ?dehydrate=false.
+    if "dehydrate" not in request.args:
+        parser.dehydrate = True
+    query = MessageThreadQuery(
+        parser=parser,
+        entity=proxy,
+        collection_id=collection_id,
+        direction=direction,
+    )
+    entities = query.to_list()
+    result = QueryResult(request, parser=parser, results=entities, total=len(entities))
+    if query.truncated:
+        # The emitted `total` is a floor — there's at least one more entity
+        # in the thread beyond what we returned. Consumers detect this via
+        # the ES-style `total_type` on the response envelope.
+        result.total_type = "gte"
     return EntitySerializer.jsonify_result(result)
 
 

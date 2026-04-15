@@ -844,3 +844,66 @@ class EntitiesApiTestCase(TestCase):
         assert (
             membership_count == 0
         ), f"Expected 0 for membershipOrganization, got {membership_count}"
+
+    def test_thread(self):
+        # Minimal thread: before -> main -> after
+        #   before <- main   via entity-ref (main.inReplyToEmail = before)
+        #   main   <- after  via message-id string (after.inReplyTo = main.messageId)
+        _, headers = self.login(is_admin=True)
+        before = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "parent",
+                    "messageId": "<parent@example.com>",
+                },
+            },
+            self.col,
+        )
+        before_id = self.col.ns.sign(before.id)
+        main = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "main",
+                    "messageId": "<main@example.com>",
+                    "inReplyToEmail": before_id,
+                },
+            },
+            self.col,
+        )
+        main_id = self.col.ns.sign(main.id)
+        after = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "child",
+                    "messageId": "<child@example.com>",
+                    "inReplyTo": "<main@example.com>",
+                },
+            },
+            self.col,
+        )
+        after_id = self.col.ns.sign(after.id)
+        db.session.commit()
+        index_entity(before)
+        index_entity(main)
+        index_entity(after)
+
+        # previous: should find `before` via entity-ref, not `after`
+        res = self.client.get(
+            f"/api/2/entities/{main_id}/thread?direction=previous", headers=headers
+        )
+        assert res.status_code == 200, res.json
+        ids = [r["id"] for r in res.json["results"]]
+        assert before_id in ids, res.json
+        assert after_id not in ids, res.json
+
+        # following: should find `after` via messageId, not `before`
+        res = self.client.get(
+            f"/api/2/entities/{main_id}/thread?direction=following", headers=headers
+        )
+        assert res.status_code == 200, res.json
+        ids = [r["id"] for r in res.json["results"]]
+        assert after_id in ids, res.json
+        assert before_id not in ids, res.json
