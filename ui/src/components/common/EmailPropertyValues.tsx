@@ -30,8 +30,19 @@ export default function EmailPropertyValues({
 
   const formattedValues = values
     .map((value) => {
+      const key = value instanceof FTMEntity ? value.id : value;
+      const formattedValue = (
+        <Property.Value
+          key={key}
+          entity={entity}
+          prop={propObj}
+          value={value}
+          showTime={true}
+        />
+      );
+
       if (typeof value !== 'string') {
-        return null;
+        return formattedValue;
       }
 
       const normValue = value.toLowerCase().trim();
@@ -76,15 +87,7 @@ export default function EmailPropertyValues({
         }
       }
 
-      return (
-        <Property.Value
-          key={value}
-          entity={entity}
-          prop={propObj}
-          value={value}
-          showTime={true}
-        />
-      );
+      return formattedValue;
     })
     .filter(Boolean);
 
