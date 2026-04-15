@@ -25,6 +25,7 @@ import EntityProperties from 'components/Entity/EntityProperties';
 import ensureArray from 'util/ensureArray';
 import { queryEntities } from 'actions/index';
 import EntityActionBar from './EntityActionBar';
+import EmailPropertyValues from 'components/common/EmailPropertyValues';
 
 const messages = defineMessages({
   no_relationships: {
@@ -154,7 +155,14 @@ class EntityReferencesMode extends React.Component {
 
   renderCell(prop, entity) {
     const { schema, isThing, isPreview } = this.props;
-    const propVal = (
+    const propVal = prop.qname === 'Email:from' ? (
+      // This is a workaround to make the email sender a link
+      <EmailPropertyValues
+        entity={entity}
+        prop={prop.name}
+        preview={!isPreview}
+      />
+    ) : (
       <Property.Values
         prop={prop}
         values={entity.getProperty(prop.name)}
