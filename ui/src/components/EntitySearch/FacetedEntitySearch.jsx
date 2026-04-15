@@ -396,7 +396,7 @@ class FacetedEntitySearch extends React.Component {
                 <SearchActionBar
                   result={result}
                   exportDisabled={!exportLink}
-                  onExport={() => this.props.triggerQueryExport(exportLink)}
+                  onExport={(exportTypes) => this.props.triggerQueryExport(exportLink, exportTypes)}
                 >
                   <div className="SearchActionBar__secondary">
                     <SearchFieldSelect
