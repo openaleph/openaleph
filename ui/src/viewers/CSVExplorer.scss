@@ -1,10 +1,10 @@
 .CSVExplorer {
-  &__settings-popover {
+  &__settings-Popover {
     display: flex;
     flex-direction: column;
     gap: 8px;
     padding: 12px;
-    min-width: 200px;
+    min-width: 175px;
 
     > label {
       display: flex;
@@ -12,17 +12,73 @@
       justify-content: space-between;
       gap: 12px;
       font-size: 0.85em;
-      color: #5c7080;
+      color: #394b59;
+      font-weight: 500;
+
+      > span {
+        min-width: 70px;
+        text-align: left;
+      }
 
       input[type=number] {
-        width: 60px;
+        width: 45px;
+        padding: 4px 6px;
+        border: 1px solid #ced9e0;
+        border-radius: 3px;
+        font-size: 0.85em;
+
+        &:focus {
+          border-color: #137cbd;
+          outline: none;
+          box-shadow: 0 0 0 1px rgba(19, 124, 189, 0.3);
+        }
+      }
+
+      .bp4-html-select {
+        min-width: 10px;
+        
+        select {
+          padding: 4px 20px 4px 6px;
+          border: 1px solid #ced9e0;
+          border-radius: 3px;
+          font-size: 0.85em;
+
+          &:focus {
+            border-color: #137cbd;
+            outline: none;
+            box-shadow: 0 0 0 1px rgba(19, 124, 189, 0.3);
+          }
+        }
       }
     }
 
     .bp4-checkbox {
       margin: 0;
       font-size: 0.85em;
-      color: #5c7080;
+      color: #394b59;
+      font-weight: 500;
+    }
+
+    .CSVExplorer__checkbox-custom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.85em;
+      color: #394b59;
+      font-weight: 500;
+      cursor: pointer;
+      margin: 0;
+      
+      span {
+        flex: 1;
+      }
+      
+      input[type="checkbox"] {
+        margin: 0;
+        cursor: pointer;
+        width: 16px;
+        height: 16px;
+      }
     }
   }
 
@@ -49,10 +105,15 @@
 
   }
 
-  &__count {
+  &__meta {
     color: #5c7080;
     font-size: 0.85em;
     white-space: nowrap;
+    line-height: 1.3;
+    text-align: right;
+    padding-left: 12px;
+    border-left: 2px solid #e1e8ed;
+    opacity: 0.85;
   }
 
   &__filterbar {

@@ -2,8 +2,8 @@
 // database via a web worker (sql.js + papaparse), then runs search, filter,
 // sort and pagination queries against it without any server round-trips.
 // Requires public/sql-wasm.wasm (copied from node_modules/sql.js/dist/).
-import React, { Component } from 'react';
-import { Button, Checkbox, Spinner, NonIdealState, Tooltip, Popover, Position } from '@blueprintjs/core';
+import { Component } from 'react';
+import { Tooltip, Button, Spinner, NonIdealState, Position } from '@blueprintjs/core';
 import { defineMessages, injectIntl, FormattedMessage } from 'react-intl';
 
 import './CSVExplorer.scss';
@@ -175,18 +175,22 @@ class CSVExplorer extends Component {
             <span className="bp4-icon bp4-icon-double-caret-vertical" />
           </div>
         </label>
-        <Checkbox
-          checked={genericHeaders}
-          label="Generic headers"
-          onChange={(e) => this.onSettingsChange({ genericHeaders: e.target.checked })}
-        />
+        <label className="CSVExplorer__checkbox-custom">
+          <span>Add headers</span>
+          <input
+            type="checkbox"
+            checked={genericHeaders}
+            onChange={(e) => this.onSettingsChange({ genericHeaders: e.target.checked })}
+          />
+        </label>
       </div>
     );
   }
 
   renderToolbar() {
     const { intl } = this.props;
-    const { search, total } = this.state;
+    const { search, total, skiprows } = this.state;
+    const delimiter = this.state.separator || "auto";
 
     return (
       <div className="CSVExplorer__toolbar">
@@ -197,9 +201,9 @@ class CSVExplorer extends Component {
           value={search}
           onChange={this.onSearch}
         />
-        <span className="CSVExplorer__count">
-          {total.toLocaleString()} rows
-        </span>
+        <span className="CSVExplorer__meta">
+          Total: {total} • Skipped: {skiprows} • Separator: "{delimiter}"
+      </span>
         <Popover2
           content={this.renderSettings()}
           position={Position.BOTTOM_RIGHT}
