@@ -101,6 +101,8 @@ class Authz(object):
         return int(role_id) in self.roles
 
     def can_register(self):
+        if not SETTINGS.ALLOW_REGISTRATION:
+            return False
         if self.logged_in or SETTINGS.MAINTENANCE or not SETTINGS.PASSWORD_LOGIN:
             return False
         return True

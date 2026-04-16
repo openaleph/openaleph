@@ -113,6 +113,7 @@ class Settings:
 
         # Disable password-based authentication for SSO settings:
         self.PASSWORD_LOGIN = env.to_bool("ALEPH_PASSWORD_LOGIN", not self.OAUTH)
+        self.ALLOW_REGISTRATION = env.to_bool("ALEPH_ALLOW_REGISTRATION", False)
 
         # Roles that haven't logged in since X months will stop receiving notifications.
         self.ROLE_INACTIVE = timedelta(days=env.to_int("ALEPH_ROLE_INACTIVE", 6 * 30))
