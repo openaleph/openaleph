@@ -14,13 +14,29 @@ async function init(csvUrl, skiprows, genericHeaders, separator) {
   const text = await response.text();
 
   const lines = text.split(/\r?\n/);
+  // I could not get papaparse skipFirstNLines to do anything
   const csv = (skiprows > 0 ? lines.slice(skiprows) : lines).join('\n');
 
   const parsed = Papa.parse(csv, {
-    skipEmptyLines: true,
+    dynamicTyping: true,
+    skipEmptyLines: 'greedy',
     delimiter: separator === 'auto' ? '' : separator,
     delimitersToGuess: separator === 'auto' ? [',', '\t', '|', ';'] : undefined,
+    transform: function(value) {
+    if (value != null && typeof value === 'string') {
+      const trimmed = value.trim();
+      const euroRegex = /^[+-]?(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d+)?$/;
+
+      if (euroRegex.test(trimmed)) {
+        return trimmed
+          .replace(/\./g, '')
+          .replace(',', '.');
+      }
+    }
+    return value;
+  }
   });
+
   if (!parsed.data.length) {
     self.postMessage({ type: 'error', message: 'No data found in CSV' });
     return;
@@ -29,13 +45,11 @@ async function init(csvUrl, skiprows, genericHeaders, separator) {
   if (genericHeaders) {
     columns = parsed.data[0].map((_, i) => `col${i + 1}`);
   } else {
-    columns = parsed.data[0].map((h, i) => h.trim() || `col${i + 1}`);
+    columns = parsed.data[0].map((h, i) => String(h || '').trim() || `col${i + 1}`);
   }
-
   colAliases = columns.map((_, i) => `c${i}`);
 
   const dataRows = genericHeaders ? parsed.data : parsed.data.slice(1);
-
   db.run(`CREATE TABLE data (${colAliases.join(', ')})`);
 
   const padded = new Array(colAliases.length);
@@ -87,11 +101,11 @@ function query({ search, filters, sortCol, sortDir, page, pageSize }) {
       whereClauses.push(`${alias} NOT LIKE ?`);
       params.push(`%${val}%`);
     } else if (op === 'lt') {
-      whereClauses.push(`CAST(${alias} AS REAL) < CAST(? AS REAL)`);
-      params.push(val);
+      whereClauses.push(`${alias} < ?`);
+      params.push(parseFloat(val) || 0);
     } else if (op === 'gt') {
-      whereClauses.push(`CAST(${alias} AS REAL) > CAST(? AS REAL)`);
-      params.push(val);
+      whereClauses.push(`${alias} > ?`);
+      params.push(parseFloat(val) || 0);
     } else {
       whereClauses.push(`${alias} LIKE ?`);
       params.push(`%${val}%`);
