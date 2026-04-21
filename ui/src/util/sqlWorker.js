@@ -5,15 +5,24 @@ import Papa from 'papaparse';
 let db = null;
 let columns = [];     // display names (original, may have duplicates)
 let colAliases = [];  // internal SQLite names: c0, c1, c2, ...
+let csvText = null;
+let currentSettings = {};
 
 async function init(csvUrl, skiprows, genericHeaders, separator) {
+  if (!csvText || currentSettings.csvUrl !== csvUrl) {
+    const response = await fetch(csvUrl);
+    csvText = await response.text();
+  }
+  currentSettings = { csvUrl, skiprows, genericHeaders, separator };
+  await processCSV();
+}
+
+async function processCSV() {
+  const { skiprows, genericHeaders, separator } = currentSettings;
   const SQL = await initSqlJs({ locateFile: () => '/sql-wasm.wasm' });
   db = new SQL.Database();
 
-  const response = await fetch(csvUrl);
-  const text = await response.text();
-
-  const lines = text.split(/\r?\n/);
+  const lines = csvText.split(/\r?\n/);
   // I could not get papaparse skipFirstNLines to do anything
   const csv = (skiprows > 0 ? lines.slice(skiprows) : lines).join('\n');
 
@@ -135,6 +144,14 @@ self.onmessage = async (event) => {
     const { csvUrl, skiprows, genericHeaders, separator } = event.data;
     try {
       await init(csvUrl, skiprows, genericHeaders, separator);
+    } catch (e) {
+      self.postMessage({ type: 'error', message: e.message });
+    }
+  } else if (type === 'updateSettings') {
+    const { skiprows, genericHeaders, separator } = event.data;
+    try {
+      currentSettings = { ...currentSettings, skiprows, genericHeaders, separator };
+      await processCSV();
     } catch (e) {
       self.postMessage({ type: 'error', message: e.message });
     }
