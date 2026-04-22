@@ -1,9 +1,10 @@
 import { Component } from 'react';
 import { connect } from 'react-redux';
 import withRouter from 'app/withRouter';
-import { defineMessages, injectIntl } from 'react-intl';
+import { defineMessages, FormattedMessage, injectIntl } from 'react-intl';
 import c from 'classnames';
 import queryString from 'query-string';
+import { Tag } from '@blueprintjs/core';
 import { entityThreadQuery } from 'queries';
 import { selectThreadResult } from 'selectors';
 import togglePreview from 'util/togglePreview';
@@ -148,7 +149,21 @@ class EntityThreadMode extends Component {
         <td key={prop.name} className="entity">
           <Entity.Link entity={entity} preview={!isPreview}>
             <Schema.Icon schema={entity.schema} className="left-icon" />
-            {propVal}
+            <span className="value">
+              {propVal}
+              {this.props.entity.id === entity.id && (
+                <Tag
+                  className="current-tag"
+                  intent="primary"
+                  round
+                >
+                  <FormattedMessage
+                    id="entity.thread.current"
+                    defaultMessage="Current"
+                  />
+                </Tag>
+              )}
+            </span>
           </Entity.Link>
         </td>
       );
