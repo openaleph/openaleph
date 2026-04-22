@@ -513,6 +513,11 @@ export function selectMentionsResult(state, query) {
   return result;
 }
 
+export function selectThreadResult(state, query) {
+  const result = selectResult(state, query, selectEntity);
+  return result;
+}
+
 export function selectNearbyResult(state, query) {
   const result = selectResult(state, query, undefined);
   result.results = result.results

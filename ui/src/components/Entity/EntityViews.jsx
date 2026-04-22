@@ -24,6 +24,7 @@ import {
   entitySimilarQuery,
   entityMoreLikeThisQuery,
   folderDocumentsQuery,
+  entityThreadQuery,
 } from 'queries';
 import {
   selectEntitiesResult,
@@ -35,6 +36,7 @@ import {
   selectMentionsResult,
   selectNearbyResult,
   selectPercolateResult,
+  selectThreadResult,
 } from 'selectors';
 import EntityProperties from 'components/Entity/EntityProperties';
 import EntityReferencesMode from 'components/Entity/EntityReferencesMode';
@@ -48,6 +50,7 @@ import EntityNearbyMode from 'components/Entity/EntityNearbyMode';
 import DocumentViewMode from 'components/Document/DocumentViewMode';
 import TranslationViewer from 'viewers/TranslationViewer';
 import CSVExplorer from 'viewers/CSVExplorer';
+import EntityThreadMode from './EntityThreadMode';
 
 import './EntityViews.scss';
 
@@ -83,6 +86,7 @@ class EntityViews extends React.Component {
       moreLikeThis,
       mentions,
       screening,
+      thread,
       nearby,
       children,
       reference,
@@ -292,6 +296,26 @@ class EntityViews extends React.Component {
           {!references.total && references.isPending && (
             <Tab id="loading" title={<TextLoading loading={true} />} />
           )}
+          {entity.schema.isA("Email") && (
+            <Tab
+              id="thread"
+              title={
+                <TextLoading loading={thread.isPending}>
+                  <Schema.Icon schema="Email" className="left-icon" />
+                  <FormattedMessage
+                    id="entity.info.thread"
+                    defaultMessage="Thread"
+                  />
+                  <ResultCount result={thread} />
+                </TextLoading>
+              }
+              panel={
+                <EntityThreadMode
+                  entity={entity}
+                  isPreview={isPreview}
+                />}
+            />
+          )}
           {entity.schema.isDocument() &&
             (!processingError || !processingError.length) && (
               <Tab
@@ -484,6 +508,7 @@ const mapStateToProps = (state, ownProps) => {
       state,
       entityPercolateQuery(location, entity.id)
     ),
+    thread: selectThreadResult(state, entityThreadQuery(location, entity.id)),
     nearby: selectNearbyResult(state, entityNearbyQuery(location, entity.id)),
     nearbyQuery: entityNearbyQuery(location, entity.id),
     children: selectEntitiesResult(state, childrenQuery),
