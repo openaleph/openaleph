@@ -4,6 +4,7 @@ from flask import Blueprint, request
 from flask_babel import gettext
 from followthemoney.compare import compare
 from openaleph_procrastinate.defer import tasks
+from openaleph_search.query.queries import PercolatorQuery
 from openaleph_search.settings import MAX_PAGE
 from rigour.mime.types import ZIP
 from werkzeug.exceptions import BadRequest, NotFound
@@ -493,6 +494,44 @@ def more_like_this(entity_id):
     tag_request(collection_id=entity.get("collection_id"))
     proxy = make_entity_proxy(entity)
     result = get_query_result(MoreLikeThisQuery, request, entity=proxy)
+    return EntitySerializer.jsonify_result(result)
+
+
+@blueprint.route("/api/2/entities/<entity_id>/percolate", methods=["GET"])
+def percolate(entity_id):
+    """
+    ---
+    get:
+      summary: Percolate entity text against stored queries
+      description: >-
+        Find entities mentioned in the fulltext content of the entity with
+        id `entity_id` by percolating its text against stored entity queries.
+        Only works for Document-type entities that carry indexable text.
+        Supports all standard entity search filters (filter:schema,
+        filter:dataset, filter:countries, etc.) and highlight=true for
+        surface form extraction.
+      parameters:
+      - in: path
+        name: entity_id
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Returns a list of entities whose stored queries match the document text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntitiesResponse'
+      tags:
+      - Entity
+    """
+    entity = get_index_entity(entity_id, request.authz.READ)
+    tag_request(collection_id=entity.get("collection_id"))
+    try:
+        result = get_query_result(PercolatorQuery, request, entity_id=entity_id)
+    except ValueError as err:
+        raise BadRequest(str(err))
     return EntitySerializer.jsonify_result(result)
 
 
