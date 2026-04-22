@@ -16,6 +16,8 @@ import {
   querySimilar,
   queryMoreLikeThis,
   queryNearby,
+  queryPercolate,
+  queryMentions,
   queryEntityExpand,
   queryProfileExpand,
   queryNotifications,
@@ -50,6 +52,16 @@ export default createReducer(
     [queryMoreLikeThis.ERROR]: (state, { error, args: { query } }) =>
       resultLoadError(state, query, error),
     [queryMoreLikeThis.COMPLETE]: updateResultsKeyed,
+
+    [queryPercolate.START]: (state, { query }) => resultLoadStart(state, query),
+    [queryPercolate.ERROR]: (state, { error, args: { query } }) =>
+      resultLoadError(state, query, error),
+    [queryPercolate.COMPLETE]: updateResultsKeyed,
+
+    [queryMentions.START]: (state, { query }) => resultLoadStart(state, query),
+    [queryMentions.ERROR]: (state, { error, args: { query } }) =>
+      resultLoadError(state, query, error),
+    [queryMentions.COMPLETE]: updateResultsKeyed,
 
     [queryNearby.START]: (state, { query }) => resultLoadStart(state, query),
     [queryNearby.ERROR]: (state, { error, args: { query } }) =>
