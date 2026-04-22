@@ -95,16 +95,21 @@ def handle_oauth(provider, oauth_token):
         role = Role.load_or_create(
             role_id, Role.USER, name, email=email, is_admin=is_auto_admin(email)
         )
+
     if not role.is_actor:
         return None
-    role.clear_roles()
 
+    new_group_roles = []
+    role.is_admin = is_auto_admin(email)
     for group in _get_groups(provider, oauth_token, token):
         if group == SETTINGS.OAUTH_ADMIN_GROUP:
             role.is_admin = True
             continue
         foreign_id = "group:%s" % group
         group_role = Role.load_or_create(foreign_id, Role.GROUP, group)
-        role.add_role(group_role)
-        log.debug("User %r is member of %r", role, group_role)
+        new_group_roles.append(group_role)
+
+    role.update_groups(new_group_roles)
+    role.update_name(name or email)
+
     return role
