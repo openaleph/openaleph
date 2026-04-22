@@ -1,14 +1,18 @@
 import { Entity as FTMEntity } from '@alephdata/followthemoney';
 import { Property, Entity, Schema } from 'components/common';
 import wordList from 'util/wordList';
+import { RE_ENCODED_HEADER } from 'util/isBase64Encoded';
 
 type EmailPropertyValuesProps = {
   entity: FTMEntity;
   prop: string;
+  entityProp?: string;
   separator?: string;
   preview?: boolean;
 };
 
+// Fallback mapping when the caller doesn't pass `entityProp` explicitly
+// (e.g. EntityReferencesMode rows, where we only know the header prop).
 const ENTITY_PROPS: Record<string, string> = {
   from: 'emitters',
   to: 'recipients',
@@ -19,14 +23,22 @@ const ENTITY_PROPS: Record<string, string> = {
 export default function EmailPropertyValues({
   entity,
   prop,
+  entityProp,
   separator = ' · ',
   preview = false,
 }: EmailPropertyValuesProps) {
   const propObj = entity.schema.getProperty(prop);
-  const entityProp = ENTITY_PROPS[prop];
+  const resolvedEntityProp = entityProp ?? ENTITY_PROPS[prop];
 
-  const values = entity.getProperty(prop);
-  const entityValues = entityProp ? entity.getProperty(entityProp) : [];
+  const values = entity.getProperty(prop).filter((value) => {
+    // Drop raw MIME-encoded header strings (e.g. `=?utf-8?B?…?=`) that
+    // never got decoded upstream — rendering them verbatim is noise.
+    // Entity values pass through untouched.
+    return typeof value !== 'string' || !RE_ENCODED_HEADER.test(value);
+  });
+  const entityValues = resolvedEntityProp
+    ? entity.getProperty(resolvedEntityProp)
+    : [];
 
   const formattedValues = values
     .map((value) => {
