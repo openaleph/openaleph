@@ -31,6 +31,7 @@ export {
   queryMoreLikeThis,
   queryNearby,
   queryPercolate,
+  queryMentions,
   queryEntityExpand,
   triggerEntityTranscribe,
   triggerEntityTranslate,

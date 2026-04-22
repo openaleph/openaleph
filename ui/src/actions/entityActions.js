@@ -27,6 +27,11 @@ export const queryPercolate = asyncActionCreator(
   { name: 'QUERY_PERCOLATE' }
 );
 
+export const queryMentions = asyncActionCreator(
+  (query) => async () => queryEndpoint(query),
+  { name: 'QUERY_MENTIONS' }
+);
+
 export const queryEntityExpand = asyncActionCreator(
   (query) => async () => queryEndpoint(query),
   { name: 'QUERY_ENTITY_EXPAND' }

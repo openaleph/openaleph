@@ -179,6 +179,20 @@ export function entityMoreLikeThisQuery(location, entityId) {
     .limit(10);
 }
 
+export function entityMentionsQuery(location, entityId) {
+  const path = entityId ? `entities/${entityId}/mentions` : undefined;
+  return Query.fromLocation(
+    path,
+    location,
+    {
+      highlight: true,
+    },
+    'mentions'
+  )
+    .defaultFacet('collection_id', true)
+    .limit(10);
+}
+
 export function entityPercolateQuery(location, entityId) {
   const path = entityId ? `entities/${entityId}/percolate` : undefined;
   return Query.fromLocation(
