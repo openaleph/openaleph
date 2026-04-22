@@ -69,6 +69,10 @@ const messages = defineMessages({
     id: 'hotkeys.search.different',
     defaultMessage: 'Preview previous result',
   },
+  close_preview: {
+    id: 'hotkeys.search.close_preview',
+    defaultMessage: 'Close preview',
+  },
   configure_facets: {
     id: 'search.facets.configure',
     defaultMessage: 'Configure filters',
@@ -110,6 +114,7 @@ class FacetedEntitySearch extends React.Component {
     this.showNextPreview = this.showNextPreview.bind(this);
     this.showPreviousPreview = this.showPreviousPreview.bind(this);
     this.showPreview = this.showPreview.bind(this);
+    this.closePreview = this.closePreview.bind(this);
     this.checkMobileWidth = this.checkMobileWidth.bind(this);
     this.ref = React.createRef();
   }
@@ -179,16 +184,21 @@ class FacetedEntitySearch extends React.Component {
   showPreviousPreview(event) {
     event.preventDefault();
     const currentSelectionIndex = this.getCurrentPreviewIndex();
-    const nextEntity = this.props.result.results[currentSelectionIndex - 1];
-    if (nextEntity && currentSelectionIndex >= 0) {
+    const previousEntity = this.props.result.results[currentSelectionIndex - 1];
+    if (previousEntity && currentSelectionIndex >= 0) {
       event.preventDefault();
-      this.showPreview(nextEntity);
+      this.showPreview(previousEntity);
     }
   }
 
   showPreview(entity) {
     const { navigate, location } = this.props;
     togglePreview(navigate, location, entity);
+  }
+
+  closePreview() {
+    const { navigate, location } = this.props;
+    togglePreview(navigate, location);
   }
 
   toggleFacets() {
@@ -331,6 +341,12 @@ class FacetedEntitySearch extends React.Component {
             combo: 'down',
             label: intl.formatMessage(messages.next),
             onKeyDown: this.showNextPreview,
+            ...hotkeysGroupLabel,
+          },
+          {
+            combo: 'esc',
+            label: intl.formatMessage(messages.close_preview),
+            onKeyDown: this.closePreview,
             ...hotkeysGroupLabel,
           },
         ]}

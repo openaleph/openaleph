@@ -5,6 +5,7 @@ import { compose } from 'redux';
 import { connect } from 'react-redux';
 import { Button } from '@blueprintjs/core';
 import queryString from 'query-string';
+import togglePreview from 'util/togglePreview';
 import c from 'classnames';
 
 import withRouter from 'app/withRouter';
@@ -13,6 +14,7 @@ import {
   Collection,
   Entity,
   ErrorSection,
+  HotkeysContainer,
   Property,
   QueryInfiniteLoad,
   Schema,
@@ -23,6 +25,7 @@ import EntityProperties from 'components/Entity/EntityProperties';
 import ensureArray from 'util/ensureArray';
 import { queryEntities } from 'actions/index';
 import EntityActionBar from './EntityActionBar';
+import EmailPropertyValues from 'components/common/EmailPropertyValues';
 
 const messages = defineMessages({
   no_relationships: {
@@ -45,6 +48,18 @@ const messages = defineMessages({
     id: 'entity.references.search.placeholder_default',
     defaultMessage: 'Search entities',
   },
+  next_preview: {
+    id: 'entity.references.next_preview',
+    defaultMessage: 'Preview next {schema}',
+  },
+  previous_preview: {
+    id: 'entity.references.previous_preview',
+    defaultMessage: 'Preview previous {schema}',
+  },
+  close_preview: {
+    id: 'entity.references.close_preview',
+    defaultMessage: 'Close preview',
+  },
 });
 
 class EntityReferencesMode extends React.Component {
@@ -52,6 +67,11 @@ class EntityReferencesMode extends React.Component {
     super(props);
     this.onSearchSubmit = this.onSearchSubmit.bind(this);
     this.sortColumn = this.sortColumn.bind(this);
+    this.getCurrentPreviewIndex = this.getCurrentPreviewIndex.bind(this);
+    this.showNextPreview = this.showNextPreview.bind(this);
+    this.showPreviousPreview = this.showPreviousPreview.bind(this);
+    this.showPreview = this.showPreview.bind(this);
+    this.closePreview = this.closePreview.bind(this);
   }
 
   onSearchSubmit(queryText) {
@@ -94,19 +114,67 @@ class EntityReferencesMode extends React.Component {
     );
   }
 
+  getCurrentPreviewIndex() {
+    const { location, previewId, results } = this.props;
+    return results.findIndex(
+      (entity) => entity.id === previewId
+    );
+  }
+
+  showNextPreview(event) {
+    const { results } = this.props;
+    const currentSelectionIndex = this.getCurrentPreviewIndex();
+    const nextEntity = results[1 + currentSelectionIndex];
+
+    if (nextEntity && currentSelectionIndex >= 0) {
+      event.preventDefault();
+      this.showPreview(nextEntity);
+    }
+  }
+
+  showPreviousPreview(event) {
+    const { results } = this.props;
+    const currentSelectionIndex = this.getCurrentPreviewIndex();
+    const previousEntity = results[currentSelectionIndex - 1];
+
+    if (previousEntity && currentSelectionIndex >= 0) {
+      event.preventDefault();
+      this.showPreview(previousEntity);
+    }
+  }
+
+  showPreview(entity) {
+    const { navigate, location } = this.props;
+    togglePreview(navigate, location, entity);
+  }
+
+  closePreview() {
+    const { navigate, location } = this.props;
+    togglePreview(navigate, location);
+  }
+
   renderCell(prop, entity) {
-    const { schema, isThing } = this.props;
-    const propVal = (
+    const { schema, isThing, isPreview } = this.props;
+    const propVal = prop.qname === 'Email:from' ? (
+      // This is a workaround to make the email sender a link
+      <EmailPropertyValues
+        entity={entity}
+        prop={prop.name}
+        preview={!isPreview}
+      />
+    ) : (
       <Property.Values
         prop={prop}
         values={entity.getProperty(prop.name)}
         translitLookup={entity.latinized}
+        preview={!isPreview}
+        showTime={schema.isAny(['Message', 'Email'])}
       />
     );
     if (isThing && schema.caption.indexOf(prop.name) !== -1) {
       return (
         <td key={prop.name} className="entity">
-          <Entity.Link entity={entity}>
+          <Entity.Link entity={entity} preview={!isPreview}>
             <Schema.Icon schema={entity.schema} className="left-icon" />
             {propVal}
           </Entity.Link>
@@ -121,12 +189,18 @@ class EntityReferencesMode extends React.Component {
   }
 
   renderRow(columns, entity) {
-    const { isThing, expandedId, hideCollection } = this.props;
+    const { isThing, expandedId, previewId, hideCollection } = this.props;
     const isExpanded = entity.id === expandedId;
     const expandIcon = isExpanded ? 'chevron-up' : 'chevron-down';
 
     const mainRow = (
-      <tr key={entity.id} className={c('nowrap', { prefix: isExpanded })}>
+      <tr
+        key={entity.id}
+        className={c('nowrap', {
+          prefix: isExpanded,
+          active: previewId === entity.id,
+        })}
+      >
         {!isThing && (
           <td className="expand">
             <Button
@@ -184,7 +258,7 @@ class EntityReferencesMode extends React.Component {
   }
 
   render() {
-    const { intl, reference, query, result, schema, isThing, hideCollection } =
+    const { intl, reference, query, result, results, schema, isThing, hideCollection } =
       this.props;
 
     if (!reference) {
@@ -196,7 +270,6 @@ class EntityReferencesMode extends React.Component {
       );
     }
     const { property } = reference;
-    const results = _.uniqBy(ensureArray(result.results), 'id');
     const columns = schema
       .getFeaturedProperties()
       .filter((prop) => prop.name !== property.name);
@@ -211,75 +284,110 @@ class EntityReferencesMode extends React.Component {
     const { field: sortedField, direction } = query.getSort();
 
     return (
-      <section className="EntityReferencesTable">
-        <EntityActionBar
-          query={query}
-          onSearchSubmit={this.onSearchSubmit}
-          searchPlaceholder={placeholder}
-        ></EntityActionBar>
-        {result.total !== 0 && (
-          <>
-            <table className="data-table references-data-table">
-              <thead>
-                <tr>
-                  {!isThing && <th key="expand" />}
-                  {columns.map((prop) => {
-                    const fieldName = `properties.${prop.name}`;
-                    const isSortable = prop.type.name !== 'text';
-                    return (
-                      <SortableTH
-                        key={prop.name}
-                        sortable={isSortable}
-                        sorted={sortedField === fieldName && (direction === 'desc' ? 'desc' : 'asc')}
-                        onClick={() => this.sortColumn(fieldName)}
-                        className={prop.type.name}
-                      >
-                        <Property.Name prop={prop} />
-                      </SortableTH>
-                    );
-                  })}
-                  {!hideCollection && (
-                    <th>
-                      <FormattedMessage
-                        id="xref.match_collection"
-                        defaultMessage="Dataset"
-                      />
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {results.map((entity) => this.renderRow(columns, entity))}
-                {result.isPending &&
-                  skeletonItems.map((idx) => this.renderSkeleton(columns, idx))}
-              </tbody>
-            </table>
-            <QueryInfiniteLoad
-              query={query}
-              result={result}
-              fetch={this.props.queryEntities}
-            />
-          </>
-        )}
-        {result.total === 0 && (
-          <ErrorSection
-            icon={
-              <Schema.Icon
-                schema={reference.schema}
-                className="left-icon"
-                size={60}
+      <HotkeysContainer
+        hotkeys={[
+          {
+            combo: 'j',
+            label: intl.formatMessage(messages.next_preview, { schema: schemaLabel }),
+            onKeyDown: this.showNextPreview,
+            group: schema.plural,
+          },
+          {
+            combo: 'k',
+            label: intl.formatMessage(messages.previous_preview, { schema: schemaLabel }),
+            onKeyDown: this.showPreviousPreview,
+            group: schema.plural,
+          },
+          {
+            combo: 'up',
+            label: intl.formatMessage(messages.next_preview, { schema: schemaLabel }),
+            onKeyDown: this.showPreviousPreview,
+            group: schema.plural,
+          },
+          {
+            combo: 'down',
+            label: intl.formatMessage(messages.previous_preview, { schema: schemaLabel }),
+            onKeyDown: this.showNextPreview,
+            group: schema.plural,
+          },
+          {
+            combo: 'esc',
+            label: intl.formatMessage(messages.close_preview),
+            onKeyDown: this.closePreview,
+            group: schema.plural,
+          },
+        ]}
+      >
+        <section className="EntityReferencesTable">
+          <EntityActionBar
+            query={query}
+            onSearchSubmit={this.onSearchSubmit}
+            searchPlaceholder={placeholder}
+          ></EntityActionBar>
+          {result.total !== 0 && (
+            <>
+              <table className="data-table references-data-table">
+                <thead>
+                  <tr>
+                    {!isThing && <th key="expand" />}
+                    {columns.map((prop) => {
+                      const fieldName = `properties.${prop.name}`;
+                      const isSortable = prop.type.name !== 'text';
+                      return (
+                        <SortableTH
+                          key={prop.name}
+                          sortable={isSortable}
+                          sorted={sortedField === fieldName && (direction === 'desc' ? 'desc' : 'asc')}
+                          onClick={() => this.sortColumn(fieldName)}
+                          className={prop.type.name}
+                        >
+                          <Property.Name prop={prop} />
+                        </SortableTH>
+                      );
+                    })}
+                    {!hideCollection && (
+                      <th>
+                        <FormattedMessage
+                          id="xref.match_collection"
+                          defaultMessage="Dataset"
+                        />
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.map((entity) => this.renderRow(columns, entity))}
+                  {result.isPending &&
+                    skeletonItems.map((idx) => this.renderSkeleton(columns, idx))}
+                </tbody>
+              </table>
+              <QueryInfiniteLoad
+                query={query}
+                result={result}
+                fetch={this.props.queryEntities}
               />
-            }
-            title={
-              schema.name === 'Thing'
-                ? intl.formatMessage(messages.no_results_default)
-                : intl.formatMessage(messages.no_results, {
-                    schema: schemaLabel,
-                  })
-            }
-          />
-        )}
-      </section>
+            </>
+          )}
+          {result.total === 0 && (
+            <ErrorSection
+              icon={
+                <Schema.Icon
+                  schema={reference.schema}
+                  className="left-icon"
+                  size={60}
+                />
+              }
+              title={
+                schema.name === 'Thing'
+                  ? intl.formatMessage(messages.no_results_default)
+                  : intl.formatMessage(messages.no_results, {
+                      schema: schemaLabel,
+                    })
+              }
+            />
+          )}
+        </section>
+      </HotkeysContainer>
     );
   }
 }
@@ -292,12 +400,17 @@ const mapStateToProps = (state, ownProps) => {
   // Default sort by most recent dates
   const sortedQuery = query.defaultSortBy('dates', 'desc');
 
+  const result = selectEntitiesResult(state, sortedQuery);
+  const results = _.uniqBy(ensureArray(result.results), 'id');
+
   return {
     schema,
     parsedHash,
     expandedId: parsedHash.expand,
+    previewId: parsedHash["preview:id"],
     query: sortedQuery,
-    result: selectEntitiesResult(state, sortedQuery),
+    result,
+    results,
     isThing: schema.isThing(),
   };
 };

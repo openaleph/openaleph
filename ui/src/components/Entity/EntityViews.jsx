@@ -41,6 +41,7 @@ import EntityMappingMode from 'components/Entity/EntityMappingMode';
 import EntityNearbyMode from 'components/Entity/EntityNearbyMode';
 import DocumentViewMode from 'components/Document/DocumentViewMode';
 import TranslationViewer from 'viewers/TranslationViewer';
+import CSVExplorer from 'viewers/CSVExplorer';
 
 import './EntityViews.scss';
 
@@ -70,6 +71,7 @@ class EntityViews extends React.Component {
       isPreview,
       activeMode,
       entity,
+      location,
       references,
       tags,
       similar,
@@ -89,6 +91,7 @@ class EntityViews extends React.Component {
     const hasTextMode =
       hasTextOnlyMode || entity.schema.isAny(['Video', 'Audio']);
     const hasBrowseMode = entity.schema.isA('Folder');
+    const hasCSVExplorer = !isPreview && entity.schema.isA('Table');
     const hasViewer = entity.schema.isAny([
       'Pages',
       'Email',
@@ -160,6 +163,21 @@ class EntityViews extends React.Component {
               panel={
                 <DocumentViewMode document={entity} activeMode={activeMode} />
               }
+            />
+          )}
+          {hasCSVExplorer && (
+            <Tab
+              id="csv-explorer"
+              title={
+                <>
+                  <Icon icon="database" className="left-icon" />
+                  <FormattedMessage
+                    id="entity.info.csv_explorer"
+                    defaultMessage="Explore data"
+                  />
+                </>
+              }
+              panel={<CSVExplorer document={entity} />}
             />
           )}
           {hasTextMode && (
@@ -259,6 +277,7 @@ class EntityViews extends React.Component {
                   query={referenceQuery}
                   reference={reference}
                   hideCollection={true}
+                  isPreview={isPreview}
                 />
               }
             />

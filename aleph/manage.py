@@ -2,11 +2,12 @@ import json
 import logging
 from itertools import count
 from pathlib import Path
+from typing import Any, TextIO
+from warnings import warn
 
 import click
 from flask.cli import FlaskGroup
 from followthemoney import EntityProxy
-from followthemoney.cli.util import write_object
 from followthemoney.namespace import Namespace
 from normality import slugify
 from openaleph_procrastinate.util import (
@@ -69,6 +70,15 @@ from aleph.procrastinate.status import get_collection_status, get_status
 from aleph.util import JSONEncoder
 
 log = logging.getLogger("aleph")
+
+
+# FIXME followthemoney 4.8.0
+def write_object(stream: TextIO, obj: Any) -> None:
+    warn("write_object() is deprecated.", DeprecationWarning, stacklevel=2)
+    if hasattr(obj, "to_dict"):
+        obj = obj.to_dict()
+    data = json.dumps(obj)
+    stream.write(data + "\n")
 
 
 def get_expanded_entity(entity_id):

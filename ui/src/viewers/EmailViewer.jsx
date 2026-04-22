@@ -5,11 +5,12 @@ import { Schema } from 'react-ftm';
 import { Property, Skeleton, Entity } from 'components/common';
 import wordList from 'util/wordList';
 import { RE_ENCODED_HEADER } from 'util/isBase64Encoded';
+import EmailPropertyValues from 'components/common/EmailPropertyValues';
 
 import './EmailViewer.scss';
 
 class EmailViewer extends PureComponent {
-  headerProperty(name, entitiesProp) {
+  headerProperty(name) {
     const { document } = this.props;
     const prop = document.schema.getProperty(name);
     const values = document.getProperty(prop).filter((value) => !RE_ENCODED_HEADER.test(value)).map((value) => {
@@ -45,10 +46,13 @@ class EmailViewer extends PureComponent {
     if (values.length === 0) {
       return null;
     }
+
     return (
       <tr key={prop.qname}>
         <th>{prop.label}</th>
-        <td>{wordList(values, ', ')}</td>
+        <td>
+          <EmailPropertyValues entity={document} prop={name} separator=", " />
+        </td>
       </tr>
     );
   }
@@ -62,12 +66,12 @@ class EmailViewer extends PureComponent {
       <div className="email-header">
         <table className={Classes.HTML_TABLE}>
           <tbody>
-            {this.headerProperty('from', 'emitters')}
+            {this.headerProperty('from')}
             {this.headerProperty('date')}
             {this.headerProperty('subject')}
-            {this.headerProperty('to', 'recipients')}
-            {this.headerProperty('cc', 'recipients')}
-            {this.headerProperty('bcc', 'recipients')}
+            {this.headerProperty('to')}
+            {this.headerProperty('cc')}
+            {this.headerProperty('bcc')}
             {this.headerProperty('inReplyToEmail')}
           </tbody>
         </table>

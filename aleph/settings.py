@@ -46,6 +46,9 @@ class Settings:
         self.APP_BANNER = env.get("ALEPH_APP_BANNER")
         self.APP_MESSAGES_URL = env.get("ALEPH_APP_MESSAGES_URL", None)
 
+        # Entity-specific banner configuration as JSON
+        self.ENTITY_BANNER_RULES = self._parse_entity_banner_rules()
+
         # Force HTTPS here:
         self.FORCE_HTTPS = env.to_bool(
             "ALEPH_FORCE_HTTPS",
@@ -110,6 +113,7 @@ class Settings:
 
         # Disable password-based authentication for SSO settings:
         self.PASSWORD_LOGIN = env.to_bool("ALEPH_PASSWORD_LOGIN", not self.OAUTH)
+        self.ALLOW_REGISTRATION = env.to_bool("ALEPH_ALLOW_REGISTRATION", False)
 
         # Roles that haven't logged in since X months will stop receiving notifications.
         self.ROLE_INACTIVE = timedelta(days=env.to_int("ALEPH_ROLE_INACTIVE", 6 * 30))
@@ -261,6 +265,95 @@ class Settings:
                         )
                         raise e
                     setattr(self, key[len(json_prefix) :], json_value)
+
+    def _parse_entity_banner_rules(self):
+        """Parse entity banner rules from environment variable."""
+        rules_json = env.get("ALEPH_ENTITY_BANNER_RULES")
+        if not rules_json:
+            return []
+
+        try:
+            rules = json.loads(rules_json)
+            if not isinstance(rules, list):
+                log.error("ALEPH_ENTITY_BANNER_RULES must be a JSON array")
+                return []
+
+            # List of dangerous JavaScript keywords to block
+            illegal_keywords = [
+                "eval",
+                "Function",
+                "setTimeout",
+                "setInterval",
+                "window",
+                "document",
+                "global",
+                "fetch",
+                "XMLHttpRequest",
+                "import",
+                "require",
+                "alert",
+                "confirm",
+                "prompt",
+                "localStorage",
+                "sessionStorage",
+                "__proto__",
+                "constructor",
+                "prototype",
+                "atob",
+                "btoa",
+            ]
+
+            for i, rule in enumerate(rules):
+                if (
+                    not isinstance(rule, dict)
+                    or "condition" not in rule
+                    or "message" not in rule
+                ):
+                    log.error(
+                        f"Banner rule {i} must have 'condition' and 'message' fields"
+                    )
+                    return []
+
+                message = rule["message"].strip()
+                if not message or message == "":
+                    log.error(f"Banner rule {i} has empty message.")
+
+                condition = rule["condition"]
+                if not isinstance(condition, str):
+                    log.error(f"Banner rule {i} condition must be a string")
+                    return []
+
+                for keyword in illegal_keywords:
+                    if keyword in condition:
+                        log.error(
+                            f"Banner rule {i} contains illegal keyword: {keyword}"
+                        )
+                        return []
+
+                intent = rule.get("intent", "warning")
+                if intent not in ["primary", "success", "warning", "danger", "none"]:
+                    log.warning(
+                        f"Banner rule {i} has invalid intent '{intent}', fallback to 'warning'"
+                    )
+                    intent = "warning"
+
+                icon_map = {
+                    "primary": "info-sign",
+                    "success": "tick-circle",
+                    "warning": "warning-sign",
+                    "danger": "error",
+                    "none": "info-sign",
+                }
+
+                rule["intent"] = intent
+                rule["icon"] = icon_map[intent]
+
+            log.info(f"Loaded {len(rules)} entity banner rules")
+            return rules
+
+        except JSONDecodeError as e:
+            log.error(f"Could not parse ALEPH_ENTITY_BANNER_RULES as JSON: {e}")
+            return []
 
 
 SETTINGS = Settings()
