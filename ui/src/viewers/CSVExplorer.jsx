@@ -142,7 +142,8 @@ class CSVExplorer extends Component {
   }
 
   onSettingsChange(patch) {
-    this.setState(patch, () => this.initWorker());
+    this.setState(patch, () => {
+      if (this.worker) { this.worker.postMessage({ type: 'updateSettings', ...patch }); }});
   }
 
   renderSettings() {
@@ -202,7 +203,7 @@ class CSVExplorer extends Component {
           onChange={this.onSearch}
         />
         <span className="CSVExplorer__meta">
-          Total: {total} • Skipped: {skiprows} • Separator: "{delimiter}"
+          Total: {total.toLocaleString()} • Skipped: {skiprows.toLocaleString()} • Separator: "{delimiter}"
       </span>
         <Popover2
           content={this.renderSettings()}
