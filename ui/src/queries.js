@@ -179,6 +179,21 @@ export function entityMoreLikeThisQuery(location, entityId) {
     .limit(10);
 }
 
+export function entityPercolateQuery(location, entityId) {
+  const path = entityId ? `entities/${entityId}/percolate` : undefined;
+  return Query.fromLocation(
+    path,
+    location,
+    {
+      'filter:schemata': 'LegalEntity',
+      highlight: true,
+    },
+    'percolate'
+  )
+    .defaultFacet('collection_id', true)
+    .limit(30);
+}
+
 export function entityNearbyQuery(location, entityId) {
   const path = entityId ? `entities/${entityId}/nearby` : undefined;
   return Query.fromLocation(path, location, {}, 'nearby').defaultFacet(

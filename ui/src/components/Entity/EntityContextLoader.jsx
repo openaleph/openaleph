@@ -10,6 +10,7 @@ import {
   querySimilar,
   queryMoreLikeThis,
   queryNearby,
+  queryPercolate,
   queryEntityExpand,
 } from 'actions';
 import {
@@ -19,11 +20,13 @@ import {
   selectSimilarResult,
   selectMoreLikeThisResult,
   selectNearbyResult,
+  selectPercolateResult,
   selectEntityExpandResult,
 } from 'selectors';
 import {
   entitySimilarQuery,
   entityMoreLikeThisQuery,
+  entityPercolateQuery,
   entityNearbyQuery,
   folderDocumentsQuery,
   entityReferencesQuery,
@@ -65,6 +68,12 @@ class EntityContextLoader extends PureComponent {
       this.props.queryMoreLikeThis({ query: moreLikeThisQuery });
     }
 
+    const { percolateQuery, percolateResult } = this.props;
+    const showPercolate = entity?.schema?.isDocument() && !isPreview;
+    if (showPercolate && percolateResult.shouldLoad) {
+      this.props.queryPercolate({ query: percolateQuery });
+    }
+
     const { nearbyQuery, nearbyResult } = this.props;
     const showNearby = entity?.schema?.isA('Address') && !isPreview;
     if (showNearby && nearbyResult.shouldLoad) {
@@ -86,6 +95,7 @@ const mapStateToProps = (state, ownProps) => {
   const { entityId, location } = ownProps;
   const similarQuery = entitySimilarQuery(location, entityId);
   const moreLikeThisQuery = entityMoreLikeThisQuery(location, entityId);
+  const percolateQuery = entityPercolateQuery(location, entityId);
   const nearbyQuery = entityNearbyQuery(location, entityId);
   const childrenQuery = folderDocumentsQuery(location, entityId, undefined);
   const expandQuery = entityReferencesQuery(entityId);
@@ -96,6 +106,8 @@ const mapStateToProps = (state, ownProps) => {
     similarResult: selectSimilarResult(state, similarQuery),
     moreLikeThisQuery,
     moreLikeThisResult: selectMoreLikeThisResult(state, moreLikeThisQuery),
+    percolateQuery,
+    percolateResult: selectPercolateResult(state, percolateQuery),
     nearbyQuery,
     nearbyResult: selectNearbyResult(state, nearbyQuery),
     expandQuery,
@@ -110,6 +122,7 @@ const mapDispatchToProps = {
   querySimilar,
   queryMoreLikeThis,
   queryNearby,
+  queryPercolate,
   queryEntityExpand,
   fetchEntity,
   fetchEntityTags,

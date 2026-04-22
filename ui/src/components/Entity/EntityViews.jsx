@@ -18,6 +18,7 @@ import {
 } from 'components/common';
 import {
   entityNearbyQuery,
+  entityPercolateQuery,
   entityReferenceQuery,
   entitySimilarQuery,
   entityMoreLikeThisQuery,
@@ -31,12 +32,14 @@ import {
   selectSimilarResult,
   selectMoreLikeThisResult,
   selectNearbyResult,
+  selectPercolateResult,
 } from 'selectors';
 import EntityProperties from 'components/Entity/EntityProperties';
 import EntityReferencesMode from 'components/Entity/EntityReferencesMode';
 import EntityTagsMode from 'components/Entity/EntityTagsMode';
 import EntitySimilarMode from 'components/Entity/EntitySimilarMode';
 import EntityMoreLikeThisMode from 'components/Entity/EntityMoreLikeThisMode';
+import EntityScreeningMode from 'components/Entity/EntityScreeningMode';
 import EntityMappingMode from 'components/Entity/EntityMappingMode';
 import EntityNearbyMode from 'components/Entity/EntityNearbyMode';
 import DocumentViewMode from 'components/Document/DocumentViewMode';
@@ -76,6 +79,7 @@ class EntityViews extends React.Component {
       tags,
       similar,
       moreLikeThis,
+      screening,
       nearby,
       children,
       reference,
@@ -360,6 +364,23 @@ class EntityViews extends React.Component {
               panel={<EntityMoreLikeThisMode entity={entity} />}
             />
           )}
+          {entity.schema.isDocument() && !isPreview && (
+            <Tab
+              id="screening"
+              disabled={screening.total === 0}
+              title={
+                <TextLoading loading={screening.total === undefined}>
+                  <Icon icon="shield" className="left-icon" />
+                  <FormattedMessage
+                    id="entity.info.screening"
+                    defaultMessage="Screening"
+                  />
+                  <ResultCount result={screening} />
+                </TextLoading>
+              }
+              panel={<EntityScreeningMode entity={entity} />}
+            />
+          )}
           {entity?.collection?.writeable && entity.schema.isA('Table') && (
             <Tab
               id="mapping"
@@ -434,6 +455,10 @@ const mapStateToProps = (state, ownProps) => {
     moreLikeThis: selectMoreLikeThisResult(
       state,
       entityMoreLikeThisQuery(location, entity.id)
+    ),
+    screening: selectPercolateResult(
+      state,
+      entityPercolateQuery(location, entity.id)
     ),
     nearby: selectNearbyResult(state, entityNearbyQuery(location, entity.id)),
     nearbyQuery: entityNearbyQuery(location, entity.id),
