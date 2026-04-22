@@ -2,6 +2,7 @@ import React from 'react';
 import _ from 'lodash';
 import { FormattedMessage } from 'react-intl';
 import { Mention, Property, Collection, Role, Date } from 'components/common';
+import { RE_ENCODED_HEADER } from 'util/isBase64Encoded';
 
 import './EntityProperties.scss';
 
@@ -17,7 +18,6 @@ class EntityProperties extends React.PureComponent {
       (p) => featured.indexOf(p) === -1
     );
     const properties = [...featured, ...sorted];
-    const re = new RegExp(/=\?{1}(.+)\?{1}([B|Q])\?{1}(.+)\?{1}=.*/);
     const missing = (
       <FormattedMessage
         id="entity.properties.missing"
@@ -36,7 +36,7 @@ class EntityProperties extends React.PureComponent {
                 <span className="value">
                   <Mention.List
                     prop={prop}
-                    values={entity.getProperty(prop).filter((value) => !re.test(value))}
+                    values={entity.getProperty(prop).filter((value) => !RE_ENCODED_HEADER.test(value))}
                     missing={missing}
                     translitLookup={entity.latinized}
                   />

@@ -4,6 +4,7 @@ import { Classes, Pre } from '@blueprintjs/core';
 import { Schema } from 'react-ftm';
 import { Property, Skeleton, Entity } from 'components/common';
 import wordList from 'util/wordList';
+import { RE_ENCODED_HEADER } from 'util/isBase64Encoded';
 
 import './EmailViewer.scss';
 
@@ -11,8 +12,7 @@ class EmailViewer extends PureComponent {
   headerProperty(name, entitiesProp) {
     const { document } = this.props;
     const prop = document.schema.getProperty(name);
-    const re = new RegExp(/=\?{1}(.+)\?{1}([B|Q])\?{1}(.+)\?{1}=.*/);
-    const values = document.getProperty(prop).filter((value) => !re.test(value)).map((value) => {
+    const values = document.getProperty(prop).filter((value) => !RE_ENCODED_HEADER.test(value)).map((value) => {
       let result = (
         <Property.Value key={value.id || value} prop={prop} value={value} />
       );
