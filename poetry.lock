@@ -3897,7 +3897,7 @@ werkzeug = ">=3.1.3,<4.0.0"
 type = "git"
 url = "https://github.com/openaleph/openaleph-search.git"
 reference = "feat/percolator"
-resolved_reference = "267865aeb85f8d13fd4d5e410e358c283f8bf3ca"
+resolved_reference = "3d530b783f1baeca0bdece051abbf2e23c462c5b"
 
 [[package]]
 name = "openaleph-servicelayer"
