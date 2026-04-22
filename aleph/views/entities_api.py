@@ -39,11 +39,12 @@ from aleph.search import (
     EntitiesQuery,
     GeoDistanceQuery,
     MatchQuery,
+    MessageThreadQuery,
     MoreLikeThisQuery,
     QueryParser,
     SearchQueryParser,
 )
-from aleph.search.result import get_query_result
+from aleph.search.result import QueryResult, get_query_result
 from aleph.settings import SETTINGS
 from aleph.util import make_entity_proxy
 from aleph.views.context import enable_cache, tag_request
@@ -576,6 +577,98 @@ def mentions(entity_id):
         result = get_query_result(MentionsQuery, request, entity_id=entity_id)
     except ValueError as err:
         raise BadRequest(str(err))
+    return EntitySerializer.jsonify_result(result)
+
+
+@blueprint.route("/api/2/entities/<entity_id>/thread", methods=["GET"])
+def thread(entity_id):
+    """
+    ---
+    get:
+      summary: Get the full message thread for an entity
+      description: >
+        Reconstructs the complete thread tree of the Email or Message
+        entity with id `entity_id`. Walks up to the root message, then
+        down from the root to collect all branches (including sibling
+        branches the source entity isn't part of). Results are sorted
+        by date ascending and include the source entity itself.
+        Scoped to the entity's own collection, bounded by a server-side
+        depth/size cap.
+      parameters:
+      - in: path
+        name: entity_id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: dehydrate
+        description: >
+          Exclude the `properties` payload from results for list-view
+          consumption. The threading-critical property fields (messageId,
+          inReplyTo, inReplyTo{Schema}) are always kept.
+        schema:
+          type: boolean
+      - in: query
+        name: include_fields
+        description: >
+          Property paths or group names to add back when `dehydrate=true`
+          (e.g. `properties.subject`, `emails`). Repeat for multiple.
+        schema:
+          type: array
+          items:
+            type: string
+      - in: query
+        name: limit
+        description: >
+          Max thread entities to return. Capped by the server at
+          MessageThreadQuery.MAX_RESULTS.
+        schema:
+          type: integer
+      - in: query
+        name: highlight
+        description: >
+          When true, each result carries a `highlight.content` preview
+          snippet pulled from the entity's bodyText (same shape as
+          entity search highlights). Defaults to false.
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Returns the full thread sorted by date ascending
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntitiesResponse'
+        '400':
+          description: Entity schema does not support threading
+      tags:
+      - Entity
+    """
+    entity = get_index_entity(entity_id, request.authz.READ)
+    collection_id = int(entity["collection_id"])
+    tag_request(collection_id=collection_id)
+    proxy = make_entity_proxy(entity)
+    if proxy.schema.name not in MessageThreadQuery.SCHEMATA:
+        raise BadRequest(
+            gettext("Threading is only supported for Email and Message entities")
+        )
+    parser = SearchQueryParser(request.values, request.authz.search_auth)
+    # Thread views are list-view consumers by default — dehydrate unless the
+    # caller explicitly opts into the full payload with ?dehydrate=false.
+    if "dehydrate" not in request.args:
+        parser.dehydrate = True
+    query = MessageThreadQuery(
+        parser=parser,
+        entity=proxy,
+        collection_id=collection_id,
+    )
+    entities = query.to_list()
+    result = QueryResult(request, parser=parser, results=entities, total=len(entities))
+    if query.truncated:
+        # The emitted `total` is a floor — there's at least one more entity
+        # in the thread beyond what we returned. Consumers detect this via
+        # the ES-style `total_type` on the response envelope.
+        result.total_type = "gte"
     return EntitySerializer.jsonify_result(result)
 
 

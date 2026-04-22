@@ -911,3 +911,129 @@ class EntitiesApiTestCase(TestCase):
         url = "/api/2/entities/nonexistent-id/mentions"
         res = self.client.get(url, headers=headers)
         assert res.status_code == 404, res
+
+    def test_thread(self):
+        # Linear thread: before -> main -> after
+        #   before <- main   via entity-ref (main.inReplyToEmail = before)
+        #   main   <- after  via message-id string (after.inReplyTo = main.messageId)
+        _, headers = self.login(is_admin=True)
+        before = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "parent",
+                    "messageId": "<parent@example.com>",
+                    "date": "2024-01-01",
+                },
+            },
+            self.col,
+        )
+        before_id = self.col.ns.sign(before.id)
+        main = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "main",
+                    "messageId": "<main@example.com>",
+                    "inReplyToEmail": before_id,
+                    "date": "2024-01-02",
+                },
+            },
+            self.col,
+        )
+        main_id = self.col.ns.sign(main.id)
+        after = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "child",
+                    "messageId": "<child@example.com>",
+                    "inReplyTo": "<main@example.com>",
+                    "date": "2024-01-03",
+                },
+            },
+            self.col,
+        )
+        after_id = self.col.ns.sign(after.id)
+        db.session.commit()
+        index_entity(before)
+        index_entity(main)
+        index_entity(after)
+
+        # Full thread from main — all three entities, chronological order
+        res = self.client.get(f"/api/2/entities/{main_id}/thread", headers=headers)
+        assert res.status_code == 200, res.json
+        ids = [r["id"] for r in res.json["results"]]
+        assert before_id in ids, f"parent missing: {ids}"
+        assert main_id in ids, f"source missing: {ids}"
+        assert after_id in ids, f"child missing: {ids}"
+        # Chronological order
+        assert (
+            ids.index(before_id) < ids.index(main_id) < ids.index(after_id)
+        ), f"Expected chronological order, got: {ids}"
+
+    def test_thread_branching(self):
+        # Tree: root -> {branch_a, branch_b -> leaf}
+        # Starting from leaf, should return the full tree including
+        # sibling branch_a which is not in leaf's direct ancestry.
+        _, headers = self.login(is_admin=True)
+        root = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "root",
+                    "messageId": "<root@ex.com>",
+                    "date": "2024-01-01",
+                },
+            },
+            self.col,
+        )
+        root_id = self.col.ns.sign(root.id)
+        branch_a = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "branch_a",
+                    "inReplyTo": "<root@ex.com>",
+                    "date": "2024-01-02",
+                },
+            },
+            self.col,
+        )
+        branch_a_id = self.col.ns.sign(branch_a.id)
+        branch_b = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "branch_b",
+                    "inReplyTo": "<root@ex.com>",
+                    "date": "2024-01-03",
+                },
+            },
+            self.col,
+        )
+        branch_b_id = self.col.ns.sign(branch_b.id)
+        leaf = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "leaf",
+                    "inReplyToEmail": branch_b_id,
+                    "date": "2024-01-04",
+                },
+            },
+            self.col,
+        )
+        leaf_id = self.col.ns.sign(leaf.id)
+        db.session.commit()
+        for e in (root, branch_a, branch_b, leaf):
+            index_entity(e)
+
+        # Starting from leaf — should get full tree including sibling
+        res = self.client.get(f"/api/2/entities/{leaf_id}/thread", headers=headers)
+        assert res.status_code == 200, res.json
+        ids = [r["id"] for r in res.json["results"]]
+        assert root_id in ids, f"root missing: {ids}"
+        assert branch_a_id in ids, f"sibling branch_a missing: {ids}"
+        assert branch_b_id in ids, f"branch_b missing: {ids}"
+        assert leaf_id in ids, f"source leaf missing: {ids}"
