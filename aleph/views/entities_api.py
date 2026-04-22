@@ -4,7 +4,7 @@ from flask import Blueprint, request
 from flask_babel import gettext
 from followthemoney.compare import compare
 from openaleph_procrastinate.defer import tasks
-from openaleph_search.query.queries import PercolatorQuery
+from openaleph_search.query.queries import MentionsQuery, PercolatorQuery
 from openaleph_search.settings import MAX_PAGE
 from rigour.mime.types import ZIP
 from werkzeug.exceptions import BadRequest, NotFound
@@ -530,6 +530,50 @@ def percolate(entity_id):
     tag_request(collection_id=entity.get("collection_id"))
     try:
         result = get_query_result(PercolatorQuery, request, entity_id=entity_id)
+    except ValueError as err:
+        raise BadRequest(str(err))
+    return EntitySerializer.jsonify_result(result)
+
+
+@blueprint.route("/api/2/entities/<entity_id>/mentions", methods=["GET"])
+def mentions(entity_id):
+    """
+    ---
+    get:
+      summary: Find documents that mention this entity
+      description: >-
+        Given the id of a named entity (Person, Company, Organization, …),
+        return Document-family entities whose indexed text contains the
+        entity's caption or any of its matchable name variants. This is
+        the inverse of `/percolate` — that finds entities mentioned in a
+        document; this finds documents that mention an entity.
+
+        Supports all standard entity search filters (filter:schema to
+        narrow within the Document hierarchy, filter:dataset,
+        filter:countries, etc.), highlight=true for snippet extraction,
+        q=… for free-text narrowing that ANDs with the mention
+        requirement, and synonyms=true to expand the entity's names
+        into name_symbols / name_keys terms queries.
+      parameters:
+      - in: path
+        name: entity_id
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Returns a list of Document-family entities mentioning the source entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntitiesResponse'
+      tags:
+      - Entity
+    """
+    entity = get_index_entity(entity_id, request.authz.READ)
+    tag_request(collection_id=entity.get("collection_id"))
+    try:
+        result = get_query_result(MentionsQuery, request, entity_id=entity_id)
     except ValueError as err:
         raise BadRequest(str(err))
     return EntitySerializer.jsonify_result(result)

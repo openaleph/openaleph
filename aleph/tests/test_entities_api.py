@@ -844,3 +844,70 @@ class EntitiesApiTestCase(TestCase):
         assert (
             membership_count == 0
         ), f"Expected 0 for membershipOrganization, got {membership_count}"
+
+    def test_mentions(self):
+        """Basic e2e for /entities/<entity_id>/mentions.
+
+        Creates a Person and a Document whose text mentions the person's name.
+        The mentions endpoint should return the document.
+        Thorough coverage lives in openaleph-search's test_mentions.py.
+        """
+        _, headers = self.login(is_admin=True)
+
+        # Create a person entity
+        person_data = {
+            "schema": "Person",
+            "collection_id": self.col_id,
+            "properties": {"name": "Winnie the Pooh"},
+        }
+        person = self.client.post(
+            "/api/2/entities",
+            data=json.dumps(person_data),
+            headers=headers,
+            content_type=JSON,
+        )
+        assert person.status_code == 200, person.json
+        person_id = person.json["id"]
+
+        # Create a document that mentions the person
+        doc_data = {
+            "schema": "PlainText",
+            "collection_id": self.col_id,
+            "properties": {
+                "name": "story.txt",
+                "bodyText": [
+                    "Once upon a time, Winnie the Pooh went to the forest "
+                    "to find some honey."
+                ],
+            },
+        }
+        doc = self.client.post(
+            "/api/2/entities",
+            data=json.dumps(doc_data),
+            headers=headers,
+            content_type=JSON,
+        )
+        assert doc.status_code == 200, doc.json
+        doc_id = doc.json["id"]
+
+        # Query mentions for the person
+        url = f"/api/2/entities/{person_id}/mentions"
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res.json
+        results = res.json.get("results", [])
+        matched_ids = {r["id"] for r in results}
+        assert doc_id in matched_ids, (
+            f"Expected document {doc_id} in mentions results, "
+            f"got: {[r.get('id') for r in results]}"
+        )
+
+    def test_mentions_requires_auth(self):
+        url = f"/api/2/entities/{self.id}/mentions"
+        res = self.client.get(url)
+        assert res.status_code == 403, res
+
+    def test_mentions_nonexistent_entity(self):
+        _, headers = self.login(is_admin=True)
+        url = "/api/2/entities/nonexistent-id/mentions"
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 404, res
