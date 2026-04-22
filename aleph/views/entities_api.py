@@ -502,12 +502,14 @@ def thread(entity_id):
     """
     ---
     get:
-      summary: Get threaded messages for an entity
+      summary: Get the full message thread for an entity
       description: >
-        Walks the reply chain of the Email or Message entity with id
-        `entity_id` in either the `previous` (ancestors) or `following`
-        (descendants) direction. Results are scoped to the entity's own
-        collection and returned unpaginated, bounded by a server-side
+        Reconstructs the complete thread tree of the Email or Message
+        entity with id `entity_id`. Walks up to the root message, then
+        down from the root to collect all branches (including sibling
+        branches the source entity isn't part of). Results are sorted
+        by date ascending and include the source entity itself.
+        Scoped to the entity's own collection, bounded by a server-side
         depth/size cap.
       parameters:
       - in: path
@@ -515,15 +517,6 @@ def thread(entity_id):
         required: true
         schema:
           type: string
-      - in: query
-        name: direction
-        description: >
-          Walk direction — `previous` for ancestors (the messages this one
-          is a reply to), `following` for descendants (messages that reply
-          to this one). Defaults to `previous`.
-        schema:
-          type: string
-          enum: [previous, following]
       - in: query
         name: dehydrate
         description: >
@@ -550,7 +543,7 @@ def thread(entity_id):
           type: integer
       responses:
         '200':
-          description: Returns the threaded entities, root entity excluded
+          description: Returns the full thread sorted by date ascending
           content:
             application/json:
               schema:
@@ -568,14 +561,6 @@ def thread(entity_id):
         raise BadRequest(
             gettext("Threading is only supported for Email and Message entities")
         )
-    direction = request.args.get("direction", MessageThreadQuery.DIRECTION_PREVIOUS)
-    if direction not in (
-        MessageThreadQuery.DIRECTION_PREVIOUS,
-        MessageThreadQuery.DIRECTION_FOLLOWING,
-    ):
-        raise BadRequest(
-            gettext("Invalid direction: %(direction)s") % {"direction": direction}
-        )
     parser = SearchQueryParser(request.values, request.authz.search_auth)
     # Thread views are list-view consumers by default — dehydrate unless the
     # caller explicitly opts into the full payload with ?dehydrate=false.
@@ -585,7 +570,6 @@ def thread(entity_id):
         parser=parser,
         entity=proxy,
         collection_id=collection_id,
-        direction=direction,
     )
     entities = query.to_list()
     result = QueryResult(request, parser=parser, results=entities, total=len(entities))

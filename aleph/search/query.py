@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Iterator, Literal
+from typing import Any, Iterator
 
 from banal import ensure_list
 from followthemoney import EntityProxy
@@ -138,12 +138,22 @@ class XrefQuery(Query):
         return xref_index()
 
 
+def _entity_sort_date(entity: dict[str, Any]) -> str:
+    """Sort key for chronological ordering of thread entities."""
+    props = entity.get("properties", {})
+    for field in ("date", "createdAt", "authoredAt"):
+        vals = props.get(field, [])
+        if vals:
+            return vals[0]
+    return entity.get("updated_at", entity.get("created_at", ""))
+
+
 class MessageThreadQuery:
-    """Iterative walker for threaded messages (schema: Email or Message)
-    starting from a given entity. Provides communication context to the
-    frontend in either the "previous" (ancestors) or "following"
-    (descendants) direction, without pagination. Full thread reconstruction
-    is not attempted.
+    """Full-tree walker for threaded messages (schema: Email or Message).
+
+    Given any entity in a thread, reconstructs the complete thread tree:
+    walks up to the root, then down from the root to collect all branches.
+    Results are sorted by date ascending and include the source entity.
 
     Threading cannot be expressed as a single Elasticsearch query: the
     frontier at hop N is only known once hop N-1 returns. This walker does
@@ -172,7 +182,6 @@ class MessageThreadQuery:
         parser: SearchQueryParser,
         entity: EntityProxy,
         collection_id: int,
-        direction: Literal["previous", "following"],
     ) -> None:
         schema = entity.schema.name
         if schema not in self.SCHEMATA:
@@ -183,7 +192,6 @@ class MessageThreadQuery:
         self.entity = entity
         self.collection_id = collection_id
         self.schema: str = schema
-        self.direction = direction
         # Source shaping comes from the shared SearchQueryParser knobs.
         self.dehydrate: bool = parser.dehydrate
         self.include_fields: set[str] = set(parser.include_fields)
@@ -203,6 +211,8 @@ class MessageThreadQuery:
         # one-hop tail probe found residual frontier content. Consumed by
         # the caller to set `total_type = "gte"` on the response envelope.
         self.truncated: bool = False
+        # Internal direction — set per walk phase, not by the caller.
+        self._direction: str = self.DIRECTION_PREVIOUS
 
     def _source_spec(self) -> dict[str, list[str]]:
         """_source includes for every hop.
@@ -235,9 +245,9 @@ class MessageThreadQuery:
     def _frontier_query(
         self, ids: set[str], message_ids: set[str]
     ) -> dict[str, Any] | None:
-        """Union query matching the next hop in `direction`."""
+        """Union query matching the next hop in the current direction."""
         should: list[dict[str, Any]] = []
-        if self.direction == self.DIRECTION_FOLLOWING:
+        if self._direction == self.DIRECTION_FOLLOWING:
             # find entities that reply to anyone in the frontier
             if ids:
                 should.append({"terms": {self.reply_entity_field: list(ids)}})
@@ -272,8 +282,8 @@ class MessageThreadQuery:
         return fresh
 
     def _initial_frontier(self) -> tuple[set[str], set[str]]:
-        """Starting (ids, messageIds) derived from the root entity."""
-        if self.direction == self.DIRECTION_FOLLOWING:
+        """Starting (ids, messageIds) derived from the source entity."""
+        if self._direction == self.DIRECTION_FOLLOWING:
             # children point back at the root entity's id or messageId; both
             # are already in `seen_*` (added in __init__), so re-pass them
             # directly rather than through _fresh_*.
@@ -291,7 +301,7 @@ class MessageThreadQuery:
 
         Updates self.seen_ids / self.seen_mids as a side-effect."""
         props = entity.get("properties") or {}
-        if self.direction == self.DIRECTION_FOLLOWING:
+        if self._direction == self.DIRECTION_FOLLOWING:
             # grandchildren will reference this hit's id or messageId
             return (
                 self._fresh_ids([entity["id"]]),
@@ -316,17 +326,46 @@ class MessageThreadQuery:
         if result.get("hits", {}).get("hits"):
             self.truncated = True
 
-    def walk(self) -> Iterator[dict[str, Any]]:
-        """Yield thread entities (as unpacked ES dicts) in BFS order.
+    def _process_hits(
+        self, hits: list[dict], collected: list[dict[str, Any]]
+    ) -> tuple[set[str], set[str]]:
+        """Process ES hits from one BFS level: deduplicate, collect entities,
+        and compute the next frontier.
 
-        Sets self.truncated when the thread extends past what we returned.
-        That can come from two signals: (a) ES reports more matches at a
-        level than we fetched (same-level overflow), or (b) after the walk
-        stops because of the limit or depth cap, a one-hop size=1 probe on
-        the residual frontier finds anything."""
+        Returns the (next_ids, next_mids) frontier for the following hop."""
+        next_ids: set[str] = set()
+        next_mids: set[str] = set()
+        for hit in hits:
+            entity = unpack_result(hit)
+            if entity is None:
+                continue
+            hit_id = entity["id"]
+            if hit_id in self.seen_ids:
+                # For following direction, seen_ids accumulates from
+                # _next_frontier_from_hit, so duplicates are skipped.
+                if self._direction == self.DIRECTION_FOLLOWING:
+                    continue
+            self.seen_ids.add(hit_id)
+            collected.append(entity)
+            self.produced += 1
+            add_ids, add_mids = self._next_frontier_from_hit(entity)
+            next_ids |= add_ids
+            next_mids |= add_mids
+            if self.produced >= self.limit:
+                break
+        return next_ids, next_mids
+
+    def _walk_bfs(
+        self, start_ids: set[str], start_mids: set[str]
+    ) -> list[dict[str, Any]]:
+        """BFS walk in the current ``_direction`` from an explicit frontier.
+
+        Collects and returns entities. Updates ``seen_ids``, ``seen_mids``,
+        ``produced``, and ``truncated`` as side-effects."""
         es = get_es()
         index = entities_read_index(self.schema)
-        ids, message_ids = self._initial_frontier()
+        ids, message_ids = start_ids, start_mids
+        collected: list[dict[str, Any]] = []
         stopped_early = False
 
         for _ in range(self.MAX_DEPTH):
@@ -356,32 +395,7 @@ class MessageThreadQuery:
                 # more matches — definitely more to return.
                 self.truncated = True
 
-            next_ids: set[str] = set()
-            next_mids: set[str] = set()
-            for hit in hits:
-                entity = unpack_result(hit)
-                if entity is None:
-                    continue
-                hit_id = entity["id"]
-                # Don't re-yield an entity we've already emitted. Note that
-                # for the "following" direction the hit's id is *not* yet in
-                # seen_ids (we only seed it when computing the next frontier),
-                # so this is a no-op guard for the common case and only
-                # matters if the same entity appears in two search pages.
-                if (
-                    hit_id in self.seen_ids
-                    and self.direction == self.DIRECTION_FOLLOWING
-                ):
-                    continue
-                self.seen_ids.add(hit_id)
-                yield entity
-                self.produced += 1
-                add_ids, add_mids = self._next_frontier_from_hit(entity)
-                next_ids |= add_ids
-                next_mids |= add_mids
-                if self.produced >= self.limit:
-                    break
-            ids, message_ids = next_ids, next_mids
+            ids, message_ids = self._process_hits(hits, collected)
         else:
             # Ran out of depth without naturally emptying the frontier.
             stopped_early = True
@@ -390,6 +404,48 @@ class MessageThreadQuery:
         # and don't already know about same-level overflow.
         if stopped_early and not self.truncated and (ids or message_ids):
             self._probe_more(ids, message_ids)
+
+        return collected
+
+    def walk(self) -> Iterator[dict[str, Any]]:
+        """Reconstruct the full thread tree, sorted by date ascending.
+
+        Phase 1: walk PREVIOUS from the source entity up to the root.
+        Phase 2: walk FOLLOWING from the ROOT to get all descendants
+                 (including sibling branches the source isn't part of).
+        Phase 3: insert the source entity itself.
+        Phase 4: sort everything chronologically."""
+        all_entities: list[dict[str, Any]] = []
+
+        # Phase 1: walk up to root
+        self._direction = self.DIRECTION_PREVIOUS
+        start_ids, start_mids = self._initial_frontier()
+        ancestors = self._walk_bfs(start_ids, start_mids)
+        all_entities.extend(ancestors)
+
+        # Phase 2: walk down from the root (last ancestor = furthest from
+        # source in BFS order). If no ancestors, the source IS the root.
+        if ancestors:
+            root = ancestors[-1]
+            root_id = root["id"]
+            root_mids = set((root.get("properties") or {}).get("messageId", []))
+        else:
+            root_id = self.entity.id
+            root_mids = set(self.entity.get("messageId"))
+
+        self._direction = self.DIRECTION_FOLLOWING
+        # seen_ids already contains source + all ancestors — descendants
+        # that overlap won't be re-collected.
+        descendants = self._walk_bfs({root_id}, root_mids)
+        all_entities.extend(descendants)
+
+        # Phase 3: include the source entity
+        all_entities.append(self.entity.to_full_dict())
+
+        # Phase 4: sort by date ascending
+        all_entities.sort(key=_entity_sort_date)
+
+        yield from all_entities
 
     def to_list(self) -> list[dict[str, Any]]:
         return list(self.walk())
