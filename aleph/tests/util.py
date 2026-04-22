@@ -12,7 +12,8 @@ from tempfile import mkdtemp
 import flask_migrate
 from faker import Factory
 from flask import json
-from followthemoney.cli.util import read_entity
+from followthemoney import EntityProxy
+from ftmq.io import smart_read_proxies
 from ftmq.store.fragments import get_store
 from openaleph_procrastinate.manage.db import get_db
 from openaleph_search.settings import Settings as SearchSettings
@@ -42,13 +43,9 @@ JSON = "application/json"
 
 def read_entities(file_name):
     now = datetime.utcnow().isoformat()
-    with open(file_name) as fh:
-        while True:
-            entity = read_entity(fh)
-            if entity is None:
-                break
-            entity.context["updated_at"] = now
-            yield entity
+    for entity in smart_read_proxies(file_name, entity_type=EntityProxy):
+        entity.context["updated_at"] = now
+        yield entity
 
 
 def get_caption(entity):
