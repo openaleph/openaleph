@@ -541,6 +541,14 @@ def thread(entity_id):
           MessageThreadQuery.MAX_RESULTS.
         schema:
           type: integer
+      - in: query
+        name: highlight
+        description: >
+          When true, each result carries a `highlight.content` preview
+          snippet pulled from the entity's bodyText (same shape as
+          entity search highlights). Defaults to false.
+        schema:
+          type: boolean
       responses:
         '200':
           description: Returns the full thread sorted by date ascending

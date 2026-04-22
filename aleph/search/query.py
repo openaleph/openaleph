@@ -9,6 +9,7 @@ from openaleph_search.index.entities import PROXY_INCLUDES
 from openaleph_search.index.indexes import entities_read_index
 from openaleph_search.index.mapping import Field
 from openaleph_search.index.util import unpack_result
+from openaleph_search.query.highlight import get_highlighter
 from openaleph_search.query.queries import EXCLUDE_DEHYDRATE, expand_include_fields
 
 from aleph.index.collections import collections_index
@@ -195,16 +196,23 @@ class MessageThreadQuery:
         # Source shaping comes from the shared SearchQueryParser knobs.
         self.dehydrate: bool = parser.dehydrate
         self.include_fields: set[str] = set(parser.include_fields)
+        # Opt-in bodyText preview snippets per hit (`?highlight=true`),
+        # mirroring the API convention used by EntitiesQuery et al.
+        self.highlight: bool = parser.highlight
         # Cap the caller-provided limit with the hard backend max.
         self.limit: int = min(parser.limit, self.MAX_RESULTS)
         # e.g. "properties.inReplyToEmail" / "properties.inReplyToMessage"
         self.reply_entity_field = f"{Field.PROPERTIES}.inReplyTo{self.schema}"
         self.in_reply_to_field = f"{Field.PROPERTIES}.inReplyTo"
         self.message_id_field = f"{Field.PROPERTIES}.messageId"
-        # Walk-state: ids/messageIds already yielded or already queued into a
-        # frontier, so we never search for or yield them twice.
+        # Frontier dedup: ids/messageIds already queued for search, so we
+        # never re-add them to a frontier twice.
         self.seen_ids: set[str] = {entity.id}
         self.seen_mids: set[str] = set(entity.get("messageId"))
+        # Yield dedup: ids of entities already placed in the result list.
+        # The source is pre-populated because `walk()` inserts it explicitly
+        # in Phase 3, so hits matching the source must not be re-yielded.
+        self.yielded_ids: set[str] = {entity.id}
         self.produced: int = 0
         # Set by walk() when the thread extends past what we returned —
         # either ES reported more hits at a level than we fetched, or the
@@ -313,6 +321,58 @@ class MessageThreadQuery:
             self._fresh_mids(props.get("inReplyTo")),
         )
 
+    def _highlight_spec(self) -> dict[str, Any]:
+        """Body preview highlighter for thread entities.
+
+        Thread queries don't carry user text — we just want the first
+        preview chunks of bodyText per entity to simulate what ES returns
+        when the search view asks for highlights with an empty query.
+
+        `get_highlighter(Field.CONTENT)` with no text leaves the
+        `highlight_query` set to `{"match_all": {}}`, which triggers the
+        unified highlighter's `no_match_size` fallback: it returns the
+        leading `no_match_size` chars of the content field (no `<em>`
+        markup, since there's nothing to mark). That's exactly the
+        preview-snippet behaviour the frontend's `SearchHighlight`
+        renders from `highlight.content` arrays."""
+        content_highlighter = get_highlighter(Field.CONTENT)
+        return {
+            "encoder": "html",
+            "require_field_match": False,
+            "fields": {Field.CONTENT: content_highlighter},
+        }
+
+    def _fetch_source_entity(self) -> dict[str, Any]:
+        """Return the source entity as a dict, mirroring walked hits.
+
+        When highlighting is off we serialize the in-memory proxy
+        directly. When it's on we re-fetch through a single-doc search so
+        the source gets the same `highlight` block as the other hits.
+        Any failure in the search path falls back to `to_full_dict()` —
+        the source must always appear in the result."""
+        if not self.highlight:
+            return self.entity.to_full_dict()
+        es = get_es()
+        body = {
+            "query": {
+                "bool": {
+                    "filter": self._scope_filters(),
+                    "must": [{"ids": {"values": [self.entity.id]}}],
+                }
+            },
+            "size": 1,
+            "_source": self._source_spec(),
+            "highlight": self._highlight_spec(),
+            "track_total_hits": False,
+        }
+        result = es.search(index=entities_read_index(self.schema), body=body)
+        hits = result.get("hits", {}).get("hits", [])
+        if hits:
+            unpacked = unpack_result(hits[0])
+            if unpacked is not None:
+                return unpacked
+        return self.entity.to_full_dict()
+
     def _probe_more(self, ids: set[str], message_ids: set[str]) -> None:
         """One extra size=1 search to decide truncation precisely when the
         main walk terminated on a non-empty residual frontier."""
@@ -329,8 +389,13 @@ class MessageThreadQuery:
     def _process_hits(
         self, hits: list[dict], collected: list[dict[str, Any]]
     ) -> tuple[set[str], set[str]]:
-        """Process ES hits from one BFS level: deduplicate, collect entities,
-        and compute the next frontier.
+        """Process ES hits from one BFS level: expand the next frontier,
+        collect entities, and dedup yields.
+
+        Expansion always runs, even for hits we skip yielding — in Phase 2
+        the source and every ancestor re-surface as hits (they're seeded
+        into the FOLLOWING frontier to catch sibling branches), and their
+        descendants live one hop past them.
 
         Returns the (next_ids, next_mids) frontier for the following hop."""
         next_ids: set[str] = set()
@@ -340,17 +405,16 @@ class MessageThreadQuery:
             if entity is None:
                 continue
             hit_id = entity["id"]
-            if hit_id in self.seen_ids:
-                # For following direction, seen_ids accumulates from
-                # _next_frontier_from_hit, so duplicates are skipped.
-                if self._direction == self.DIRECTION_FOLLOWING:
-                    continue
-            self.seen_ids.add(hit_id)
-            collected.append(entity)
-            self.produced += 1
+            # Expand the frontier regardless of whether we yield this hit;
+            # the walk depends on traversing every discovered node.
             add_ids, add_mids = self._next_frontier_from_hit(entity)
             next_ids |= add_ids
             next_mids |= add_mids
+            if hit_id in self.yielded_ids:
+                continue
+            self.yielded_ids.add(hit_id)
+            collected.append(entity)
+            self.produced += 1
             if self.produced >= self.limit:
                 break
         return next_ids, next_mids
@@ -384,6 +448,8 @@ class MessageThreadQuery:
                 "_source": self._source_spec(),
                 "track_total_hits": True,
             }
+            if self.highlight:
+                body["highlight"] = self._highlight_spec()
             result = es.search(index=index, body=body)
             hits_obj = result.get("hits", {})
             hits = hits_obj.get("hits", [])
@@ -411,9 +477,10 @@ class MessageThreadQuery:
         """Reconstruct the full thread tree, sorted by date ascending.
 
         Phase 1: walk PREVIOUS from the source entity up to the root.
-        Phase 2: walk FOLLOWING from the ROOT to get all descendants
-                 (including sibling branches the source isn't part of).
-        Phase 3: insert the source entity itself.
+        Phase 2: walk FOLLOWING from the source + every ancestor to catch
+                 every descendant (including sibling branches the source
+                 isn't part of).
+        Phase 3: fetch the source entity with its own highlight.
         Phase 4: sort everything chronologically."""
         all_entities: list[dict[str, Any]] = []
 
@@ -423,24 +490,26 @@ class MessageThreadQuery:
         ancestors = self._walk_bfs(start_ids, start_mids)
         all_entities.extend(ancestors)
 
-        # Phase 2: walk down from the root (last ancestor = furthest from
-        # source in BFS order). If no ancestors, the source IS the root.
-        if ancestors:
-            root = ancestors[-1]
-            root_id = root["id"]
-            root_mids = set((root.get("properties") or {}).get("messageId", []))
-        else:
-            root_id = self.entity.id
-            root_mids = set(self.entity.get("messageId"))
-
+        # Phase 2: walk down from the full known chain (source + every
+        # ancestor). Seeding the FOLLOWING frontier with all of them in
+        # one go lets ES return sibling branches (replies to intermediate
+        # ancestors the source isn't descended from) at the very first
+        # hop — a single-root seed would miss them.
         self._direction = self.DIRECTION_FOLLOWING
-        # seen_ids already contains source + all ancestors — descendants
-        # that overlap won't be re-collected.
-        descendants = self._walk_bfs({root_id}, root_mids)
+        frontier_ids: set[str] = {self.entity.id}
+        frontier_mids: set[str] = set(self.entity.get("messageId"))
+        for ancestor in ancestors:
+            frontier_ids.add(ancestor["id"])
+            ancestor_mids = (ancestor.get("properties") or {}).get("messageId") or []
+            frontier_mids.update(ancestor_mids)
+        descendants = self._walk_bfs(frontier_ids, frontier_mids)
         all_entities.extend(descendants)
 
-        # Phase 3: include the source entity
-        all_entities.append(self.entity.to_full_dict())
+        # Phase 3: include the source entity. With highlighting on, the
+        # source gets its own bodyText preview so every row in the
+        # response carries the same shape; otherwise we skip the extra
+        # ES round-trip and use the in-memory proxy.
+        all_entities.append(self._fetch_source_entity())
 
         # Phase 4: sort by date ascending
         all_entities.sort(key=_entity_sort_date)
