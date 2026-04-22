@@ -44,8 +44,6 @@ export default function SearchHighlight({ highlight }) {
 
   return (
     <p className="SearchHighlight">
-      {highlight.name && <NamesHighlight names={highlight.name} />}
-      {highlight.names && <NamesHighlight names={highlight.names} />}
       {highlight.content && <TextHighlight texts={highlight.content} />}
       {highlight.text && <TextHighlight texts={highlight.text} />}
       {showTranslation && (
