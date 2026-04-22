@@ -1,0 +1,8 @@
+{
+    "extends": "../../tsconfig.json",
+    // https://stackoverflow.com/a/62694283
+    // required in order to export a compiled RegExp from util
+    "compilerOptions": {
+        "isolatedModules": false
+    },
+}

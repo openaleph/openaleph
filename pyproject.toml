@@ -15,7 +15,7 @@ dependencies = [
     "followthemoney @ git+https://github.com/dataresearchcenter/followthemoney.git@fix/pickle",
     "openaleph-search (>=5.2.2,<6.0.0)",
     "openaleph-procrastinate (>=5.2.2,<6.0.0)",
-    "ftmq[postgres] (>=4.7.1,<5.0.0)",
+    "ftmq[postgres] (>=4.8.0,<5.0.0)",
     "nomenklatura (>=4.7.2,<5.0.0)",
     "normality (>=3.0.2,<4.0.0)",
     "pydantic (>=2.10.6,<3.0.0)",
@@ -104,3 +104,4 @@ PROCRASTINATE_SYNC = 1
 PROCRASTINATE_APP = "aleph.procrastinate.tasks.app"
 NOMENKLATURA_XREF_ALGORITHM = "logic-v1"
 ALEPH_HEALTH_CHECK_API_KEY = "test-health-key"
+ALEPH_ALLOW_REGISTRATION = 1

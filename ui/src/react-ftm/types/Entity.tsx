@@ -5,6 +5,8 @@ import c from 'classnames';
 import Schema from './Schema';
 import Transliterate from './Transliterate';
 import { Classes } from '@blueprintjs/core';
+import { RE_ENCODED_HEADER } from 'util/isBase64Encoded';
+
 
 export interface FTMEntityExtended extends FTMEntity {
   caption?: string;
@@ -34,7 +36,34 @@ class EntityLabel extends React.Component<IEntityLabelProps> {
       return null;
     }
 
-    const caption = entity.caption || entity.getCaption();
+    let caption = entity.caption || entity.getCaption();
+    const match = caption.match(RE_ENCODED_HEADER);
+
+    if (match) {
+      const [, charset, encoding, encodedText] = match;
+
+      // Base64 decoding
+      if (encoding.toUpperCase() === "B") {
+
+        const binaryStr = atob(encodedText);
+        const bytes = Uint8Array.from(binaryStr, (c) => c.charCodeAt(0));
+        caption = new TextDecoder(charset).decode(bytes);
+      }
+
+      // Quoted-Printable decoding
+      if (encoding.toUpperCase() === "Q") {
+        const qpDecoded = encodedText
+          .replace(/_/g, " ")
+          .replace(/=([A-Fa-f0-9]{2})/g, (_, hex) =>
+            String.fromCharCode(parseInt(hex, 16))
+          );
+        const bytes = Uint8Array.from(qpDecoded, (c) => c.charCodeAt(0));
+        caption = new TextDecoder(charset).decode(bytes);
+      }
+    }
+
+    caption = caption ? caption : entity.schema.name;
+
     const label = truncate ? truncateText(caption, truncate) : caption;
     return (
       <span

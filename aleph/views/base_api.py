@@ -353,6 +353,6 @@ def handle_es_error(err):
         # "TIMEOUT", "N/A". Werkzeug converts them into status 0 which confuses
         # web browsers. Replace the weird status codes with 500 instead.
         status = int(err.status_code)
-    except ValueError:
+    except (ValueError, AttributeError):
         status = 500
     return jsonify({"status": "error", "message": message}, status=status)
