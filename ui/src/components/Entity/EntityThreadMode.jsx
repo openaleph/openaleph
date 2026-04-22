@@ -6,8 +6,7 @@ import c from 'classnames';
 import { entityThreadQuery } from 'queries';
 import { selectThreadResult } from 'selectors';
 import EmailPropertyValues from 'components/common/EmailPropertyValues';
-import { Entity, Property, Schema } from 'components/common';
-import { Tag } from '@blueprintjs/core';
+import { Entity, Property, Schema, Skeleton } from 'components/common';
 
 import './EntityThreadMode.scss';
 
@@ -16,6 +15,7 @@ class EntityThreadMode extends Component {
     const { result, entity } = this.props;
 
     const columns = entity.schema.getFeaturedProperties();
+    const skeletonItems = [...Array(15).keys()];
 
     return (
       <div className="EntityThreadMode">
@@ -29,6 +29,9 @@ class EntityThreadMode extends Component {
           </thead>
           <tbody>
             {result.results?.map((entity) => this.renderRow(columns, entity))}
+            {result.isPending && (
+              skeletonItems.map((index) => this.renderSkeleton(columns, index))
+            )}
           </tbody>
         </table>
       </div>
@@ -83,6 +86,18 @@ class EntityThreadMode extends Component {
       <td key={prop.name} className={prop.type.name}>
         {propVal}
       </td>
+    );
+  }
+
+  renderSkeleton(columns, index) {
+    return (
+      <tr key={index} className="nowrap skeleton">
+        {columns.map((prop) => (
+          <td key={prop.name}>
+            <Skeleton.Text type="span" length={10} />
+          </td>
+        ))}
+      </tr>
     );
   }
 }
