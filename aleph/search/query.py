@@ -237,6 +237,18 @@ class MessageThreadQuery:
         includes.append(self.message_id_field)
         includes.append(self.in_reply_to_field)
         includes.append(self.reply_entity_field)
+        # Keep the schema's featured + caption properties so thread list
+        # rows have enough to render (subject, date, from/sender/
+        # recipients, title, …) without refetching each entity. Also
+        # include the schema's temporal start props so
+        # `_entity_sort_date` has the fields it needs to sort the
+        # returned thread chronologically.
+        schema = self.entity.schema
+        thread_props: set[str] = set(schema.featured or [])
+        thread_props.update(schema.caption or [])
+        thread_props.update(p.name for p in (schema.temporal_start_props or []))
+        for prop_name in thread_props:
+            includes.append(f"{Field.PROPERTIES}.{prop_name}")
         if self.include_fields:
             includes.extend(expand_include_fields(self.include_fields))
         return {"includes": includes}
