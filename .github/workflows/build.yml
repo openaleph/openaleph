@@ -10,12 +10,6 @@ on:
 permissions:
   packages: write
 
-env:
-  # Use the stripped-down elasticsearch image in CI: the production
-  # image ships a multi-megabyte synonyms file that OOMs the GHA
-  # runner. `9.3.3-test` has only a minimal synonyms set loaded.
-  ELASTIC_TAG: 9.3.3-test
-
 jobs:
   docker-build-aleph:
     runs-on: ubuntu-latest
@@ -35,8 +29,14 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
+      # Stripped-down elasticsearch image for CI: the production image
+      # ships a multi-megabyte synonyms file that OOMs the GHA runner.
+      # `*-test` tags carry only a minimal synonyms set. For local
+      # dev use `ELASTIC_TAG` in docker-compose.yml to swap tags; GHA
+      # `services.<id>.image` doesn't evaluate `${{ env.* }}`, so we
+      # pin the CI tag inline here instead.
       elasticsearch:
-        image: ghcr.io/openaleph/elasticsearch:${{ env.ELASTIC_TAG }}
+        image: ghcr.io/openaleph/elasticsearch:9.3.3-test
         ports:
           - 9200:9200
         env:
