@@ -81,7 +81,7 @@ This installs:
 Install openaleph CLI locally
 
 ```bash
-pip install -e .
+pip install --no-cache-dir --no-deps .
 ```
 
 ### Initialize the Database
