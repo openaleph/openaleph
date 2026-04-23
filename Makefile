@@ -143,6 +143,6 @@ migrations:
 	FLASK_APP=aleph.wsgi flask db migrate
 
 documentation:
-	mkdocs build
+	zensical build
 
 .PHONY: services stop api worker ui upgrade update shell tail test lint format build install dev clean up
