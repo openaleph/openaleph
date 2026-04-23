@@ -209,12 +209,8 @@ export function entityPercolateQuery(location, entityId) {
 }
 
 export function entityThreadQuery(location, entityId) {
-  // TODO Replace with a real query
-  const context = {
-    'filter:collection_id': 65,
-    'filter:schema': 'Email',
-  };
-  return Query.fromLocation('entities', location, context, 'thread');
+  const path = entityId ? `entities/${entityId}/thread` : undefined;
+  return Query.fromLocation(path, location, {}, 'thread');
 }
 
 export function entityNearbyQuery(location, entityId) {
