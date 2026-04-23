@@ -77,7 +77,6 @@ class EntityViews extends React.Component {
       isPreview,
       activeMode,
       entity,
-      location,
       references,
       tags,
       similar,
@@ -360,7 +359,7 @@ class EntityViews extends React.Component {
                   <Icon icon="document" className="left-icon" />
                   <FormattedMessage
                     id="entity.info.mentions"
-                    defaultMessage="Document Mentions"
+                    defaultMessage="Document Results"
                   />
                   <ResultCount result={mentions} />
                 </TextLoading>
