@@ -12,6 +12,7 @@ import { queryPercolate } from 'actions';
 import { selectPercolateResult } from 'selectors';
 import {
   ErrorSection,
+  FacetedLayout,
   HotkeysContainer,
   QueryInfiniteLoad,
   Entity,
@@ -238,17 +239,8 @@ class EntityScreeningMode extends Component {
   }
 
   render() {
-    const { intl, query, result, results } = this.props;
+    const { intl, query, result, results, navigate, location } = this.props;
     const skeletonItems = [...Array(10).keys()];
-
-    if (result.total === 0) {
-      return (
-        <ErrorSection
-          icon="shield"
-          title={intl.formatMessage(messages.empty)}
-        />
-      );
-    }
 
     const hotkeysGroupLabel = {
       group: intl.formatMessage(messages.group_label),
@@ -289,22 +281,42 @@ class EntityScreeningMode extends Component {
           },
         ]}
       >
-        <div className="EntityScreeningMode">
-          {this.renderSummary()}
-          <table className="data-table">
-            {this.renderHeader()}
-            <tbody>
-              {results.map((entity) => this.renderRow(entity))}
-              {result.isPending &&
-                skeletonItems.map((idx) => this.renderSkeleton(idx))}
-            </tbody>
-          </table>
-          <QueryInfiniteLoad
-            query={query}
-            result={result}
-            fetch={this.props.queryPercolate}
-          />
-        </div>
+        <FacetedLayout
+          query={query}
+          result={result}
+          navigate={navigate}
+          location={location}
+          defaultFacets={['schema', 'countries']}
+          additionalFields={['collection_id']}
+          storageKey="entity:screening"
+          hideSidebarWhenEmpty
+        >
+          <div className="EntityScreeningMode">
+            {result.total === 0 ? (
+              <ErrorSection
+                icon="shield"
+                title={intl.formatMessage(messages.empty)}
+              />
+            ) : (
+              <>
+                {this.renderSummary()}
+                <table className="data-table">
+                  {this.renderHeader()}
+                  <tbody>
+                    {results.map((entity) => this.renderRow(entity))}
+                    {result.isPending &&
+                      skeletonItems.map((idx) => this.renderSkeleton(idx))}
+                  </tbody>
+                </table>
+                <QueryInfiniteLoad
+                  query={query}
+                  result={result}
+                  fetch={this.props.queryPercolate}
+                />
+              </>
+            )}
+          </div>
+        </FacetedLayout>
       </HotkeysContainer>
     );
   }
