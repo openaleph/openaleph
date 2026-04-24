@@ -12,6 +12,7 @@ import { queryMoreLikeThis } from 'actions';
 import { selectMoreLikeThisResult } from 'selectors';
 import {
   ErrorSection,
+  FacetedLayout,
   HotkeysContainer,
   QueryInfiniteLoad,
   Entity,
@@ -110,7 +111,7 @@ class EntityMoreLikeThisMode extends Component {
           `}
           values={{
             resultCount: result.total,
-            datasetCount: result.facets.collection_id.total,
+            datasetCount: result.facets?.collection_id?.total ?? 0,
           }}
         />
       </Callout>
@@ -182,17 +183,8 @@ class EntityMoreLikeThisMode extends Component {
   }
 
   render() {
-    const { intl, query, result, results } = this.props;
+    const { intl, query, result, results, navigate, location } = this.props;
     const skeletonItems = [...Array(10).keys()];
-
-    if (result.total === 0) {
-      return (
-        <ErrorSection
-          icon="search-text"
-          title={intl.formatMessage(messages.empty)}
-        />
-      );
-    }
 
     const hotkeysGroupLabel = {
       group: intl.formatMessage(messages.group_label),
@@ -233,22 +225,42 @@ class EntityMoreLikeThisMode extends Component {
           },
         ]}
       >
-        <div className="EntityMoreLikeThisMode">
-          {this.renderSummary()}
-          <table className="data-table">
-            {this.renderHeader()}
-            <tbody>
-              {results.map((entity) => this.renderRow(entity))}
-              {result.isPending &&
-                skeletonItems.map((idx) => this.renderSkeleton(idx))}
-            </tbody>
-          </table>
-          <QueryInfiniteLoad
-            query={query}
-            result={result}
-            fetch={this.props.queryMoreLikeThis}
-          />
-        </div>
+        <FacetedLayout
+          query={query}
+          result={result}
+          navigate={navigate}
+          location={location}
+          defaultFacets={['schema', 'countries', 'languages']}
+          additionalFields={['collection_id']}
+          storageKey="entity:more_like_this"
+          hideSidebarWhenEmpty
+        >
+          <div className="EntityMoreLikeThisMode">
+            {result.total === 0 ? (
+              <ErrorSection
+                icon="search-text"
+                title={intl.formatMessage(messages.empty)}
+              />
+            ) : (
+              <>
+                {this.renderSummary()}
+                <table className="data-table">
+                  {this.renderHeader()}
+                  <tbody>
+                    {results.map((entity) => this.renderRow(entity))}
+                    {result.isPending &&
+                      skeletonItems.map((idx) => this.renderSkeleton(idx))}
+                  </tbody>
+                </table>
+                <QueryInfiniteLoad
+                  query={query}
+                  result={result}
+                  fetch={this.props.queryMoreLikeThis}
+                />
+              </>
+            )}
+          </div>
+        </FacetedLayout>
       </HotkeysContainer>
     );
   }
