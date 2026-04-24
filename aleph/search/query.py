@@ -517,6 +517,10 @@ class MessageThreadQuery:
         descendants = self._walk_bfs(frontier_ids, frontier_mids)
         all_entities.extend(descendants)
 
+        # We maybe don't have any thread
+        if not len(all_entities):
+            return
+
         # Phase 3: include the source entity. With highlighting on, the
         # source gets its own bodyText preview so every row in the
         # response carries the same shape; otherwise we skip the extra
