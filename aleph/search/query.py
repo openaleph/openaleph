@@ -171,6 +171,9 @@ class MessageThreadQuery:
     DIRECTION_FOLLOWING = "following"
 
     SCHEMATA = ("Email", "Message")
+    # FIXME this needs a bit rethink about the ?dehydrate=True param for
+    # EntityReferenceMode and similar UI logic in general
+    INCLUDES = {"Email": ["sender", "emitters", "recipients"]}
 
     # Hard backend caps — callers can request a lower limit via the parser
     # but cannot exceed these.
@@ -247,6 +250,7 @@ class MessageThreadQuery:
         thread_props: set[str] = set(schema.featured or [])
         thread_props.update(schema.caption or [])
         thread_props.update(p.name for p in (schema.temporal_start_props or []))
+        thread_props.update(self.INCLUDES.get(self.schema, []))
         for prop_name in thread_props:
             includes.append(f"{Field.PROPERTIES}.{prop_name}")
         if self.include_fields:
@@ -516,6 +520,10 @@ class MessageThreadQuery:
             frontier_mids.update(ancestor_mids)
         descendants = self._walk_bfs(frontier_ids, frontier_mids)
         all_entities.extend(descendants)
+
+        # We maybe don't have any thread
+        if not len(all_entities):
+            return
 
         # Phase 3: include the source entity. With highlighting on, the
         # source gets its own bodyText preview so every row in the

@@ -186,6 +186,7 @@ export function entityMentionsQuery(location, entityId) {
     location,
     {
       highlight: true,
+      dehydrate: true,
     },
     'mentions'
   )

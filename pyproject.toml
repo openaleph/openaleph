@@ -83,8 +83,8 @@ ipdb = "^0.13.13"
 pytest-env = "^1.1.5"
 fakeredis = "<2.31"
 mkdocs = "^1.6.1"
-mkdocs-material = "^9.6.11"
 pre-commit = "^4.5.1"
+zensical = "^0.0.36"
 
 
 [build-system]
