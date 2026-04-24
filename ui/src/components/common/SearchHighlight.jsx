@@ -1,5 +1,4 @@
 import { Icon, Tag } from '@blueprintjs/core';
-import { Tag as CommonTag } from 'components/common';
 import convertHighlightsToReactElements from 'util/convertHighlightsToReactElements';
 import './SearchHighlight.scss';
 
@@ -8,7 +7,7 @@ const hasRealHighlight = (arr) => arr?.some((s) => /<em>/i.test(s));
 const NamesHighlight = ({ names }) => (
   <span className="SearchHighlight__names">
     {names.map((n, i) => (
-      <Tag key={`${n}-${i}`} minimal multiline icon={<CommonTag.Icon field="names" />}>
+      <Tag key={`${n}-${i}`} minimal multiline>
         {n}
       </Tag>
     ))}
@@ -44,6 +43,8 @@ export default function SearchHighlight({ highlight }) {
 
   return (
     <p className="SearchHighlight">
+      {highlight.name && <NamesHighlight names={highlight.name} />}
+      {highlight.names && <NamesHighlight names={highlight.names} />}
       {highlight.content && <TextHighlight texts={highlight.content} />}
       {highlight.text && <TextHighlight texts={highlight.text} />}
       {showTranslation && (
