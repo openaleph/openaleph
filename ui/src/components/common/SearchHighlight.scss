@@ -19,7 +19,9 @@
   margin-bottom: 10px;
 
   .#{$bp-ns}-tag {
-    background-color: $darc-gray-200 !important;
+    background: transparent !important;
+    color: $darc-gray-700;
+    border: 1px solid $darc-gray-300;
     margin: 2px 0;
 
     .tag-icon {
