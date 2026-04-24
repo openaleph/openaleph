@@ -9,6 +9,7 @@ import {
   queryEntities,
   querySimilar,
   queryMoreLikeThis,
+  queryThread,
   queryNearby,
   queryPercolate,
   queryMentions,
@@ -20,6 +21,7 @@ import {
   selectEntitiesResult,
   selectSimilarResult,
   selectMoreLikeThisResult,
+  selectThreadResult,
   selectNearbyResult,
   selectPercolateResult,
   selectMentionsResult,
@@ -30,6 +32,7 @@ import {
   entityMoreLikeThisQuery,
   entityPercolateQuery,
   entityMentionsQuery,
+  entityThreadQuery,
   entityNearbyQuery,
   folderDocumentsQuery,
   entityReferencesQuery,
@@ -83,6 +86,12 @@ class EntityContextLoader extends PureComponent {
       this.props.queryMentions({ query: mentionsQuery });
     }
 
+    const { threadQuery, threadResult } = this.props;
+    const showThread = entity?.schema?.isA("Email");
+    if (showThread && threadResult.shouldLoad) {
+      this.props.queryThread({ query: threadQuery });
+    }
+
     const { nearbyQuery, nearbyResult } = this.props;
     const showNearby = entity?.schema?.isA('Address') && !isPreview;
     if (showNearby && nearbyResult.shouldLoad) {
@@ -106,6 +115,7 @@ const mapStateToProps = (state, ownProps) => {
   const moreLikeThisQuery = entityMoreLikeThisQuery(location, entityId);
   const percolateQuery = entityPercolateQuery(location, entityId);
   const mentionsQuery = entityMentionsQuery(location, entityId);
+  const threadQuery = entityThreadQuery(location, entityId);
   const nearbyQuery = entityNearbyQuery(location, entityId);
   const childrenQuery = folderDocumentsQuery(location, entityId, undefined);
   const expandQuery = entityReferencesQuery(entityId);
@@ -120,6 +130,8 @@ const mapStateToProps = (state, ownProps) => {
     percolateResult: selectPercolateResult(state, percolateQuery),
     mentionsQuery,
     mentionsResult: selectMentionsResult(state, mentionsQuery),
+    threadQuery,
+    threadResult: selectThreadResult(state, threadQuery),
     nearbyQuery,
     nearbyResult: selectNearbyResult(state, nearbyQuery),
     expandQuery,
@@ -133,6 +145,7 @@ const mapDispatchToProps = {
   queryEntities,
   querySimilar,
   queryMoreLikeThis,
+  queryThread,
   queryNearby,
   queryPercolate,
   queryMentions,

@@ -209,6 +209,11 @@ export function entityPercolateQuery(location, entityId) {
     .limit(30);
 }
 
+export function entityThreadQuery(location, entityId) {
+  const path = entityId ? `entities/${entityId}/thread` : undefined;
+  return Query.fromLocation(path, location, {}, 'thread');
+}
+
 export function entityNearbyQuery(location, entityId) {
   const path = entityId ? `entities/${entityId}/nearby` : undefined;
   return Query.fromLocation(path, location, {}, 'nearby').defaultFacet(
