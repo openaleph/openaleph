@@ -697,6 +697,7 @@ def screening():
       tags:
       - Entity
     """
+    require(request.authz.logged_in)
     target_args, source_args = _split_prefixed_args(
         request.args, SCREENING_SOURCE_PREFIX
     )
