@@ -1,12 +1,15 @@
 import logging
 
+from elasticsearch import ApiError as ElasticsearchApiError
 from flask import Blueprint, request
 from flask_babel import gettext
 from followthemoney.compare import compare
 from openaleph_procrastinate.defer import tasks
-from openaleph_search.query.queries import MentionsQuery, PercolatorQuery
+from openaleph_search.query.mentions import MentionsQuery, MultiMentionsQuery
+from openaleph_search.query.queries import PercolatorQuery
 from openaleph_search.settings import MAX_PAGE
 from rigour.mime.types import ZIP
+from werkzeug.datastructures import MultiDict
 from werkzeug.exceptions import BadRequest, NotFound
 
 from aleph.core import db, url_for
@@ -577,6 +580,164 @@ def mentions(entity_id):
         result = get_query_result(MentionsQuery, request, entity_id=entity_id)
     except ValueError as err:
         raise BadRequest(str(err))
+    return EntitySerializer.jsonify_result(result)
+
+
+SCREENING_SOURCE_PREFIX = "source:"
+
+# Keys dropped from `source_args` before the source parser is built.
+# The source scope drives MultiMentionsQuery's name-scroll only — it
+# doesn't surface its own faceted results — so any facet-request keys
+# (which the UI adds to track counts via a separate /api/2/entities
+# call) would be pure noise here. Worse, `EntitiesQuery.get_filters()`
+# silently skips filter fields that also appear in `facet_names`
+# (because facets are normally applied via `post_filter`, which
+# `collect_source_names` bypasses); letting a stray
+# `source:facet=countries` through would drop the Nigeria filter
+# from the `es.count`, giving the caller a stale "too many entities"
+# error even after they narrowed the filter.
+_SOURCE_SKIP_PREFIXES: tuple[str, ...] = (
+    "facet",
+    "highlight",
+    "sort",
+)
+
+
+def _split_prefixed_args(args: MultiDict, prefix: str) -> tuple[MultiDict, MultiDict]:
+    """Partition request args into (unprefixed, prefixed-and-stripped).
+
+    Iterates with `multi=True` so repeated keys (e.g. multiple
+    `filter:dataset=…` values) are preserved in both output MultiDicts.
+    Keys starting with `prefix` have the prefix stripped and go to the
+    second dict; all other keys go to the first. Source-side keys that
+    are irrelevant to the name-scroll (facets / highlight / sort) are
+    dropped entirely — see `_SOURCE_SKIP_PREFIXES` for why."""
+    target: list[tuple[str, str]] = []
+    source: list[tuple[str, str]] = []
+    for key, value in args.items(multi=True):
+        if key.startswith(prefix):
+            stripped = key[len(prefix) :]
+            if stripped.split(":", 1)[0] in _SOURCE_SKIP_PREFIXES:
+                continue
+            source.append((stripped, value))
+        else:
+            target.append((key, value))
+    return MultiDict(target), MultiDict(source)
+
+
+@blueprint.route("/api/2/screening", methods=["GET"])
+def screening():
+    """
+    ---
+    get:
+      summary: Screen a filtered entity set against documents
+      description: >-
+        Batch screening (a.k.a. reverse percolation at scale): scrolls
+        a `source` entity filter — a watchlist, PEP list, sanctions
+        roster, etc., possibly spanning multiple collections — to
+        collect matchable names, then returns Document-family entities
+        whose indexed text contains any of those names as a phrase.
+
+        The request carries two independent `SearchQueryParser` scopes
+        in one URL:
+
+        - **Target** scope (the documents being searched). Unprefixed
+          parser args: `filter:*`, `q`, `sort`, `limit`, `offset`,
+          `highlight`, `highlight_count`, `synonyms`, `dehydrate`.
+        - **Source** scope (the entities whose names are the phrase
+          bank). Prefixed with `source:`:
+          `source:filter:schema=Person`,
+          `source:filter:dataset=watchlist_a`,
+          `source:filter:dataset=watchlist_b`,
+          `source:filter:topics=sanction`, etc.
+
+        Source entities are scoped by the caller's dataset read ACL the
+        same way every other entity search is — entities in datasets
+        the caller cannot read do not contribute names.
+
+        Fails with 400 when the source filter resolves to more than
+        `MAX_SOURCE_NAMES` (currently 10 000) distinct names — narrow
+        the source filter (add `source:filter:dataset=…`,
+        `source:filter:topics=…`, etc.).
+      parameters:
+      - in: query
+        name: "filter:{field}"
+        description: Filter the target document search by field.
+        schema:
+          type: string
+      - in: query
+        name: "source:filter:{field}"
+        description: Filter the source entity set by field.
+        schema:
+          type: string
+      - in: query
+        name: q
+        description: Free-text narrowing applied to the target documents.
+        schema:
+          type: string
+      - in: query
+        name: highlight
+        description: Return phrase-match fragments on each target hit.
+        schema:
+          type: boolean
+      - in: query
+        name: limit
+        description: Max target hits to return.
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Document-family entities mentioning the source set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntitiesResponse'
+        '400':
+          description: Source filter exceeds the name budget or is invalid
+      tags:
+      - Entity
+    """
+    target_args, source_args = _split_prefixed_args(
+        request.args, SCREENING_SOURCE_PREFIX
+    )
+    target_parser = SearchQueryParser(target_args, auth=request.authz.search_auth)
+    source_parser = SearchQueryParser(source_args, auth=request.authz.search_auth)
+    # No single collection id to tag — the source filter can span many
+    # datasets. The parsers' `filter:dataset` values will surface in the
+    # access log via the request args themselves.
+    tag_request()
+    try:
+        result = get_query_result(
+            MultiMentionsQuery,
+            request,
+            parser=target_parser,
+            source_parser=source_parser,
+        )
+    except ValueError as err:
+        raise BadRequest(str(err))
+    except ElasticsearchApiError as err:
+        # ES caps the number of boolean clauses per query at
+        # `indices.query.bool.max_clause_count` (cluster default 1024,
+        # typical aleph deploys bump it to a few thousand). With one
+        # `match_phrase` per collected source name, a large source set
+        # can blow past the cap well before reaching the 10k names
+        # budget. Surface that as a 400 so the UI shows a narrow-
+        # the-filter callout instead of a generic 500.
+        message = getattr(err, "message", None) or str(err)
+        body_err = getattr(err, "body", None) or {}
+        if isinstance(body_err, dict):
+            reason = body_err.get("error", {}).get("root_cause", [{}])[0].get(
+                "reason"
+            ) or body_err.get("error", {}).get("reason")
+            if reason:
+                message = reason
+        if "maxClauseCount" in message or "max_clause_count" in message:
+            raise BadRequest(
+                "Source filter produced too many name variants to screen in "
+                "one query (Elasticsearch clause limit). Narrow the source "
+                f"filter further. ({message})"
+            )
+        raise
     return EntitySerializer.jsonify_result(result)
 
 

@@ -912,6 +912,98 @@ class EntitiesApiTestCase(TestCase):
         res = self.client.get(url, headers=headers)
         assert res.status_code == 404, res
 
+    def test_screening(self):
+        """Batch screening across a filtered source entity set.
+
+        Creates two Persons in the test collection and a document that
+        mentions one of them by name. Hitting /api/2/screening with a
+        source filter that selects those Persons (and a target filter
+        scoping documents to the same collection) should return the
+        document. Thorough coverage of MultiMentionsQuery itself lives
+        in openaleph-search."""
+        _, headers = self.login(is_admin=True)
+
+        jane = self.client.post(
+            "/api/2/entities",
+            data=json.dumps(
+                {
+                    "schema": "Person",
+                    "collection_id": self.col_id,
+                    "properties": {"name": "Jane Q. Starling"},
+                }
+            ),
+            headers=headers,
+            content_type=JSON,
+        )
+        assert jane.status_code == 200, jane.json
+        jack = self.client.post(
+            "/api/2/entities",
+            data=json.dumps(
+                {
+                    "schema": "Person",
+                    "collection_id": self.col_id,
+                    "properties": {"name": "Jack Q. Roebuck"},
+                }
+            ),
+            headers=headers,
+            content_type=JSON,
+        )
+        assert jack.status_code == 200, jack.json
+
+        doc = self.client.post(
+            "/api/2/entities",
+            data=json.dumps(
+                {
+                    "schema": "PlainText",
+                    "collection_id": self.col_id,
+                    "properties": {
+                        "name": "starling-brief.txt",
+                        "bodyText": [
+                            "The case file notes that Jane Q. Starling "
+                            "met with local officials last autumn."
+                        ],
+                    },
+                }
+            ),
+            headers=headers,
+            content_type=JSON,
+        )
+        assert doc.status_code == 200, doc.json
+        doc_id = doc.json["id"]
+
+        # Source: Persons in this collection. Target: documents in this
+        # collection. `source:` prefix splits the two scopes server-side.
+        url = (
+            "/api/2/screening"
+            f"?source:filter:schema=Person"
+            f"&source:filter:collection_id={self.col_id}"
+            f"&filter:collection_id={self.col_id}"
+        )
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res.json
+        result_ids = {r["id"] for r in res.json.get("results", [])}
+        assert doc_id in result_ids, (
+            f"Expected document {doc_id} in screening results, "
+            f"got: {sorted(result_ids)}"
+        )
+
+    def test_screening_empty_source(self):
+        """A source filter that matches no entities should return 200
+        with zero results — not a 400 or a crash."""
+        _, headers = self.login(is_admin=True)
+        url = (
+            "/api/2/screening"
+            f"?source:filter:schema=Airplane"  # unknown schema → 0 entities
+            f"&filter:collection_id={self.col_id}"
+        )
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res.json
+        assert res.json.get("total", 0) == 0, res.json
+
+    def test_screening_requires_auth(self):
+        res = self.client.get("/api/2/screening")
+        assert res.status_code == 403, res
+
     def test_thread(self):
         # Linear thread: before -> main -> after
         #   before <- main   via entity-ref (main.inReplyToEmail = before)
