@@ -235,6 +235,49 @@ export function selectCollection(state, collectionId) {
   return collection;
 }
 
+// FTM's `Entity` constructor only preserves `schema`, `id`, and `properties` —
+// the backend-computed `caption` field is dropped on hydration, and the same
+// goes for every nested entity snippet inside an entity-typed property (walked
+// recursively by `setProperty`).  Without this post-hydration pass,
+// `EntityLabel` on a nested chip falls through to `entity.getCaption()`, which
+// picks the first value of `schema.caption[0]` — UTF-ordered, so a mixed-script
+// `name` array (`["هانا نیومن", "Hannah Neumann"]`) renders the Arabic variant
+// even when the backend's caption has a "more readable" (as in the perspective
+// from minority world) variant "Hannah Neumann". Walk the hydrated proxy
+// alongside the raw JSON and copy each `caption` onto the FTM entity instance
+// (and recursively into each nested entity-typed property).
+function hydrateNestedCaptions(ftmEntity, rawEntity) {
+  if (!ftmEntity || !rawEntity?.properties) {
+    return;
+  }
+  for (const [propName, rawValues] of Object.entries(rawEntity.properties)) {
+    let property;
+    try {
+      property = ftmEntity.schema.getProperty(propName);
+    } catch (e) {
+      continue;
+    }
+    if (!property || property.type.name !== 'entity') {
+      continue;
+    }
+    const hydratedValues = ftmEntity.getProperty(property) || [];
+    rawValues.forEach((rawValue, i) => {
+      const hydrated = hydratedValues[i];
+      if (
+        hydrated &&
+        typeof hydrated !== 'string' &&
+        rawValue &&
+        typeof rawValue === 'object'
+      ) {
+        if (rawValue.caption && !hydrated.caption) {
+          hydrated.caption = rawValue.caption;
+        }
+        hydrateNestedCaptions(hydrated, rawValue);
+      }
+    });
+  }
+}
+
 export function selectEntity(state, entityId) {
   const entity = selectObject(state, state.entities, entityId);
   const lastViewed = getRecentlyViewedItem(entityId);
@@ -245,6 +288,7 @@ export function selectEntity(state, entityId) {
       return entity;
     }
     entity.selectorCache = model.getEntity(entity);
+    hydrateNestedCaptions(entity.selectorCache, entity);
   }
   const result = entity.selectorCache;
   result.safeHtml = entity.safeHtml;

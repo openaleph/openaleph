@@ -34,6 +34,9 @@ up:
 services:
 	$(COMPOSE) up -d postgres elasticsearch redis ingest-file ftm-analyze ftm-translate
 
+services-test:  # for local pytest run
+	$(COMPOSE) up -d postgres elasticsearch redis
+
 stop:
 	$(COMPOSE) down --remove-orphans
 
