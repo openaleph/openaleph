@@ -8,8 +8,5 @@
 
 .EntityThreadMode .entity .PropertyValues > span {
   display: inline !important;
-}
-
-.EntityThreadMode .entity .current-tag {
-  margin-inline-start: 0.5 * $aleph-grid-size;
+  margin-inline-end: 0.5 * $aleph-grid-size; // Add padding before "current" tag
 }

@@ -173,11 +173,7 @@ class EntityThreadMode extends Component {
             <span className="value">
               {propVal}
               {this.props.entity.id === entity.id && (
-                <Tag
-                  className="current-tag"
-                  intent="primary"
-                  round
-                >
+                <Tag intent="primary" round>
                   <FormattedMessage
                     id="entity.thread.current"
                     defaultMessage="Current"
