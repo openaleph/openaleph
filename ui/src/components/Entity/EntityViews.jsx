@@ -299,6 +299,7 @@ class EntityViews extends React.Component {
           {entity.schema.isA("Email") && (
             <Tab
               id="thread"
+              disabled={thread.total === 0}
               title={
                 <TextLoading loading={thread.isPending}>
                   <Schema.Icon schema="Email" className="left-icon" />
