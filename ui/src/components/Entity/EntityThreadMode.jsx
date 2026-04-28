@@ -11,6 +11,7 @@ import togglePreview from 'util/togglePreview';
 import EmailPropertyValues from 'components/common/EmailPropertyValues';
 import {
   Entity,
+  ErrorSection,
   Property,
   Schema,
   Skeleton,
@@ -51,6 +52,26 @@ class EntityThreadMode extends Component {
     const schemaLabel = schema.label;
     const columns = schema.getFeaturedProperties();
     const skeletonItems = [...Array(15).keys()];
+
+    if (result.total_type === "gte") {
+      return (
+        <ErrorSection
+          title={
+            <FormattedMessage
+              id="entity.thread.too_long.title"
+              defaultMessage="This thread is too long."
+            />
+          }
+          description={
+            <FormattedMessage
+              id="entity.thread.too_long.description"
+              defaultMessage="This thread can’t be displayed because it contains more than {limit} messages."
+              values={{ limit: result.limit }}
+            />
+          }
+        />
+      );
+    }
 
     return (
       <HotkeysContainer
