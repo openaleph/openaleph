@@ -15,8 +15,7 @@ import c from 'classnames';
 import { getSearchConfig, setSearchConfig } from 'app/storage';
 import { getGroupField } from 'components/SearchField/util';
 import DualPane from './DualPane';
-import Facets from 'components/Facet/Facets';
-import SearchFieldSelect from 'components/SearchField/SearchFieldSelect';
+import FacetsSidebar from './FacetsSidebar';
 import QueryTags from 'components/QueryTags/QueryTags';
 
 import './FacetedLayout.scss';
@@ -25,14 +24,6 @@ const SMALL_SCR_BREAKPOINT = 620;
 const DEFAULT_STORAGE_KEY = 'searchConfig';
 
 const messages = defineMessages({
-  configure_facets: {
-    id: 'faceted_layout.configure',
-    defaultMessage: 'Configure filters',
-  },
-  configure_facets_placeholder: {
-    id: 'faceted_layout.configure_placeholder',
-    defaultMessage: 'Search for a filter...',
-  },
   show_facets: {
     id: 'faceted_layout.show',
     defaultMessage: 'Show filters',
@@ -55,7 +46,12 @@ class FacetedLayout extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      hideFacets: false,
+      // Caller can opt into a collapsed-by-default sidebar — useful on
+      // narrow surfaces like entity tabs where the sidebar competes
+      // with the result table for horizontal space. User can still
+      // reveal it via the toggle button.
+      hideFacets: !!props.initialHideFacets,
+      userToggled: false,
       isMobile: false,
     };
 
@@ -89,9 +85,16 @@ class FacetedLayout extends React.Component {
         }
       });
     } else {
-      this.setState(({ isMobile }) => {
+      this.setState(({ isMobile, userToggled }) => {
         if (isMobile) {
-          return { isMobile: false, hideFacets: false };
+          // On desktop, only auto-reveal if the user hasn't explicitly
+          // chosen a collapsed state (either via the toggle button or
+          // via `initialHideFacets`).
+          const shouldReveal = !userToggled && !this.props.initialHideFacets;
+          return {
+            isMobile: false,
+            hideFacets: shouldReveal ? false : this.state.hideFacets,
+          };
         }
       });
     }
@@ -113,7 +116,10 @@ class FacetedLayout extends React.Component {
   }
 
   toggleFacets() {
-    this.setState(({ hideFacets }) => ({ hideFacets: !hideFacets }));
+    this.setState(({ hideFacets }) => ({
+      hideFacets: !hideFacets,
+      userToggled: true,
+    }));
   }
 
   onFacetEdit(edited) {
@@ -145,40 +151,20 @@ class FacetedLayout extends React.Component {
   }
 
   renderFacets() {
-    const {
-      additionalFields = [],
-      facets,
-      query,
-      result,
-      intl,
-      hasCustomFacets,
-    } = this.props;
-
+    const { additionalFields, facets, query, result, hasCustomFacets } =
+      this.props;
     return (
       <div className="FacetedLayout__facets">
-        <Facets
+        <FacetsSidebar
+          additionalFields={additionalFields}
+          facets={facets}
           query={query}
           result={result}
           updateQuery={this.updateQuery}
-          facets={[...additionalFields.map(getGroupField), ...facets]}
-          isCollapsible
+          onFacetEdit={this.onFacetEdit}
+          onFacetReset={this.onFacetReset}
+          hasCustomFacets={hasCustomFacets}
         />
-        <SearchFieldSelect
-          onSelect={this.onFacetEdit}
-          onReset={hasCustomFacets && this.onFacetReset}
-          selected={facets}
-          filterProps={(prop) => prop?.type?.name !== 'text'}
-          inputProps={{
-            placeholder: intl.formatMessage(
-              messages.configure_facets_placeholder
-            ),
-          }}
-        >
-          <Button
-            icon="filter-list"
-            text={intl.formatMessage(messages.configure_facets)}
-          />
-        </SearchFieldSelect>
       </div>
     );
   }

@@ -9,8 +9,6 @@ import { querySimilar } from 'actions';
 import { selectSimilarResult } from 'selectors';
 import {
   ErrorSection,
-  FacetedLayout,
-  QueryInfiniteLoad,
   JudgementButtons,
   Score,
   Collection,
@@ -18,6 +16,7 @@ import {
   EntityDecisionHotkeys,
   EntityDecisionRow,
 } from 'components/common';
+import FacetedResultList from 'components/EntitySearch/FacetedResultList';
 import EntityCompare from 'components/Entity/EntityCompare';
 import { entitySimilarQuery } from 'queries';
 import { pairwiseJudgement } from 'actions';
@@ -150,15 +149,17 @@ class EntitySimilarMode extends Component {
     const skeletonItems = [...Array(10).keys()];
 
     return (
-      <FacetedLayout
+      <FacetedResultList
         query={query}
         result={result}
         navigate={navigate}
         location={location}
+        fetch={this.props.querySimilar}
         defaultFacets={['schema', 'countries']}
         additionalFields={['collection_id']}
         storageKey="entity:similar"
         hideSidebarWhenEmpty
+        previewHotkeys={false}
       >
         <div className="EntitySimilarMode">
           {result.total === 0 ? (
@@ -179,15 +180,10 @@ class EntitySimilarMode extends Component {
                   </tbody>
                 </table>
               </EntityDecisionHotkeys>
-              <QueryInfiniteLoad
-                query={query}
-                result={result}
-                fetch={this.props.querySimilar}
-              />
             </>
           )}
         </div>
-      </FacetedLayout>
+      </FacetedResultList>
     );
   }
 }
