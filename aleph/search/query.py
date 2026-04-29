@@ -202,8 +202,10 @@ class MessageThreadQuery:
         # Opt-in bodyText preview snippets per hit (`?highlight=true`),
         # mirroring the API convention used by EntitiesQuery et al.
         self.highlight: bool = parser.highlight
-        # Cap the caller-provided limit with the hard backend max.
-        self.limit: int = min(parser.limit, self.MAX_RESULTS)
+        # Cap the caller-provided limit with the hard backend max. The "current"
+        # email is always included so the actual limit for "other" emails in
+        # thread is limit-1
+        self.limit: int = max(min(parser.limit, self.MAX_RESULTS) - 1, 0)
         # e.g. "properties.inReplyToEmail" / "properties.inReplyToMessage"
         self.reply_entity_field = f"{Field.PROPERTIES}.inReplyTo{self.schema}"
         self.in_reply_to_field = f"{Field.PROPERTIES}.inReplyTo"

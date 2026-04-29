@@ -1,0 +1,12 @@
+@import 'app/variables.scss';
+
+.EntityThreadMode .current {
+  outline: 1px solid rgba($pt-intent-primary, 0.25);
+  outline-offset: -1px;
+  border-radius: 6px;
+}
+
+.EntityThreadMode .entity .PropertyValues > span {
+  display: inline !important;
+  margin-inline-end: 0.5 * $aleph-grid-size; // Add padding before "current" tag
+}

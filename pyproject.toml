@@ -1,6 +1,6 @@
 [project]
 name = "aleph"
-version = "5.3.0-rc3"
+version = "5.3.0-rc8"
 description = "Search and browse documents and data; find the people and companies you look for."
 authors = [
     { name = "Friedrich Lindenberg", email = "friedrich@pudo.org" },
@@ -106,3 +106,4 @@ NOMENKLATURA_XREF_ALGORITHM = "logic-v1"
 ALEPH_HEALTH_CHECK_API_KEY = "test-health-key"
 ALEPH_ALLOW_REGISTRATION = 1
 OPENALEPH_SEARCH_PERCOLATION = 1
+OPENALEPH_SEARCH_MATCHING_SINGLE_TOKEN_MIN_LENGTH = 7

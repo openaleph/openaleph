@@ -29,6 +29,7 @@ export {
   queryEntities,
   querySimilar,
   queryMoreLikeThis,
+  queryThread,
   queryNearby,
   queryPercolate,
   queryMentions,

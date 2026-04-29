@@ -4,6 +4,7 @@ import {
   queryEntities,
   querySimilar,
   queryMoreLikeThis,
+  queryThread,
   queryNearby,
   queryPercolate,
   queryMentions,
@@ -88,6 +89,9 @@ export default createReducer(
       resultObjects(state, result),
 
     [queryMentions.COMPLETE]: (state, { result }) =>
+      resultObjects(state, result),
+
+    [queryThread.COMPLETE]: (state, { result }) =>
       resultObjects(state, result),
 
     [querySimilar.COMPLETE]: (state, { result }) =>
