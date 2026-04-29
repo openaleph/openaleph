@@ -12,6 +12,7 @@ import { queryMentions } from 'actions';
 import { selectMentionsResult } from 'selectors';
 import {
   ErrorSection,
+  FacetedLayout,
   HotkeysContainer,
   QueryInfiniteLoad,
   Entity,
@@ -186,17 +187,8 @@ class EntityMentionsMode extends Component {
   }
 
   render() {
-    const { intl, query, result, results } = this.props;
+    const { intl, query, result, results, navigate, location } = this.props;
     const skeletonItems = [...Array(10).keys()];
-
-    if (result.total === 0) {
-      return (
-        <ErrorSection
-          icon="document"
-          title={intl.formatMessage(messages.empty)}
-        />
-      );
-    }
 
     const hotkeysGroupLabel = {
       group: intl.formatMessage(messages.group_label),
@@ -237,22 +229,42 @@ class EntityMentionsMode extends Component {
           },
         ]}
       >
-        <div className="EntityMentionsMode">
-          {this.renderSummary()}
-          <table className="data-table">
-            {this.renderHeader()}
-            <tbody>
-              {results.map((entity) => this.renderRow(entity))}
-              {result.isPending &&
-                skeletonItems.map((idx) => this.renderSkeleton(idx))}
-            </tbody>
-          </table>
-          <QueryInfiniteLoad
-            query={query}
-            result={result}
-            fetch={this.props.queryMentions}
-          />
-        </div>
+        <FacetedLayout
+          query={query}
+          result={result}
+          navigate={navigate}
+          location={location}
+          defaultFacets={['schema', 'countries']}
+          additionalFields={['collection_id']}
+          storageKey="entity:mentions"
+          hideSidebarWhenEmpty
+        >
+          <div className="EntityMentionsMode">
+            {result.total === 0 ? (
+              <ErrorSection
+                icon="document"
+                title={intl.formatMessage(messages.empty)}
+              />
+            ) : (
+              <>
+                {this.renderSummary()}
+                <table className="data-table">
+                  {this.renderHeader()}
+                  <tbody>
+                    {results.map((entity) => this.renderRow(entity))}
+                    {result.isPending &&
+                      skeletonItems.map((idx) => this.renderSkeleton(idx))}
+                  </tbody>
+                </table>
+                <QueryInfiniteLoad
+                  query={query}
+                  result={result}
+                  fetch={this.props.queryMentions}
+                />
+              </>
+            )}
+          </div>
+        </FacetedLayout>
       </HotkeysContainer>
     );
   }

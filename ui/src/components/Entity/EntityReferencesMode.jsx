@@ -14,6 +14,7 @@ import {
   Collection,
   Entity,
   ErrorSection,
+  FacetedLayout,
   HotkeysContainer,
   Property,
   QueryInfiniteLoad,
@@ -115,7 +116,7 @@ class EntityReferencesMode extends React.Component {
   }
 
   getCurrentPreviewIndex() {
-    const { location, previewId, results } = this.props;
+    const { previewId, results } = this.props;
     return results.findIndex(
       (entity) => entity.id === previewId
     );
@@ -258,7 +259,7 @@ class EntityReferencesMode extends React.Component {
   }
 
   render() {
-    const { intl, reference, query, result, results, schema, isThing, hideCollection } =
+    const { intl, reference, query, result, results, schema, isThing, hideCollection, navigate, location } =
       this.props;
 
     if (!reference) {
@@ -318,6 +319,15 @@ class EntityReferencesMode extends React.Component {
           },
         ]}
       >
+        <FacetedLayout
+          query={query}
+          result={result}
+          navigate={navigate}
+          location={location}
+          defaultFacets={['schema', 'countries', 'dates']}
+          storageKey="entity:references"
+          hideSidebarWhenEmpty
+        >
         <section className="EntityReferencesTable">
           <EntityActionBar
             query={query}
@@ -387,6 +397,7 @@ class EntityReferencesMode extends React.Component {
             />
           )}
         </section>
+        </FacetedLayout>
       </HotkeysContainer>
     );
   }

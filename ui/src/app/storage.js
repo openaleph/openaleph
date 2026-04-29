@@ -65,10 +65,18 @@ export const expireRecentlyViewed = () => {
   localStorage.setItem('recentlyViewed', JSON.stringify(recentlyViewed));
 };
 
-export const setSearchConfig = (searchConfig) => {
-  localStorage.setItem('searchConfig', JSON.stringify(searchConfig));
+const DEFAULT_SEARCH_CONFIG_KEY = 'searchConfig';
+
+// setSearchConfig(cfg)          -> writes to the default key
+// setSearchConfig(key, cfg)     -> writes to the named key (e.g. 'entity:references')
+export const setSearchConfig = (keyOrCfg, maybeCfg) => {
+  const [key, cfg] =
+    maybeCfg === undefined
+      ? [DEFAULT_SEARCH_CONFIG_KEY, keyOrCfg]
+      : [keyOrCfg, maybeCfg];
+  localStorage.setItem(key, JSON.stringify(cfg));
 };
 
-export const getSearchConfig = () => {
-  return JSON.parse(localStorage.getItem('searchConfig'));
+export const getSearchConfig = (key = DEFAULT_SEARCH_CONFIG_KEY) => {
+  return JSON.parse(localStorage.getItem(key));
 };

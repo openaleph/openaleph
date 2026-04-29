@@ -13,6 +13,7 @@ import {
   Collection,
   Entity,
   ErrorSection,
+  FacetedLayout,
   HotkeysContainer,
   Property,
   QueryInfiniteLoad,
@@ -230,7 +231,7 @@ class EntityNearbyMode extends React.Component {
   }
 
   render() {
-    const { intl, query, result, results, model, hideCollection } = this.props;
+    const { intl, query, result, results, model, hideCollection, navigate, location } = this.props;
     const schema = model.getSchema('Address');
 
     if (!result) {
@@ -286,6 +287,16 @@ class EntityNearbyMode extends React.Component {
           },
         ]}
       >
+        <FacetedLayout
+          query={query}
+          result={result}
+          navigate={navigate}
+          location={location}
+          defaultFacets={['schema']}
+          additionalFields={['collection_id']}
+          storageKey="entity:nearby"
+          hideSidebarWhenEmpty
+        >
         <section className="EntityReferencesTable">
           <EntityActionBar
             query={query}
@@ -342,6 +353,7 @@ class EntityNearbyMode extends React.Component {
             />
           )}
         </section>
+        </FacetedLayout>
       </HotkeysContainer>
     );
   }
