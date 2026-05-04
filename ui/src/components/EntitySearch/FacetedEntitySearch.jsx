@@ -1,6 +1,5 @@
 import React from 'react';
 import _ from 'lodash';
-import queryString from 'query-string';
 import { defineMessages, injectIntl } from 'react-intl';
 import { Button } from '@blueprintjs/core';
 import { compose } from 'redux';
@@ -18,12 +17,11 @@ import {
 import {
   ErrorSection,
   FacetedLayout,
-  HotkeysContainer,
+  PreviewHotkeys,
 } from 'components/common';
 import EntitySearch from 'components/EntitySearch/EntitySearch';
 import SearchActionBar from 'components/common/SearchActionBar';
 import SearchFieldSelect from 'components/SearchField/SearchFieldSelect';
-import togglePreview from 'util/togglePreview';
 import { selectModel } from 'selectors';
 
 import './FacetedEntitySearch.scss';
@@ -49,21 +47,9 @@ const messages = defineMessages({
     id: 'search.no_results_description',
     defaultMessage: 'Try making your search more general',
   },
-  group_label: {
+  preview_group: {
     id: 'hotkeys.search.group_label',
     defaultMessage: 'Search preview',
-  },
-  next: {
-    id: 'hotkeys.search.unsure',
-    defaultMessage: 'Preview next result',
-  },
-  previous: {
-    id: 'hotkeys.search.different',
-    defaultMessage: 'Preview previous result',
-  },
-  close_preview: {
-    id: 'hotkeys.search.close_preview',
-    defaultMessage: 'Close preview',
   },
   configure_columns: {
     id: 'search.columns.configure',
@@ -79,51 +65,8 @@ class FacetedEntitySearch extends React.Component {
   constructor(props) {
     super(props);
 
-    this.getCurrentPreviewIndex = this.getCurrentPreviewIndex.bind(this);
     this.onColumnsEdit = this.onColumnsEdit.bind(this);
     this.onColumnsReset = this.onColumnsReset.bind(this);
-    this.showNextPreview = this.showNextPreview.bind(this);
-    this.showPreviousPreview = this.showPreviousPreview.bind(this);
-    this.showPreview = this.showPreview.bind(this);
-    this.closePreview = this.closePreview.bind(this);
-  }
-
-  getCurrentPreviewIndex() {
-    const { location } = this.props;
-    const parsedHash = queryString.parse(location.hash);
-    return this.props.result.results.findIndex(
-      (entity) => entity.id === parsedHash['preview:id']
-    );
-  }
-
-  showNextPreview(event) {
-    const currentSelectionIndex = this.getCurrentPreviewIndex();
-    const nextEntity = this.props.result.results[1 + currentSelectionIndex];
-
-    if (nextEntity && currentSelectionIndex >= 0) {
-      event.preventDefault();
-      this.showPreview(nextEntity);
-    }
-  }
-
-  showPreviousPreview(event) {
-    event.preventDefault();
-    const currentSelectionIndex = this.getCurrentPreviewIndex();
-    const previousEntity = this.props.result.results[currentSelectionIndex - 1];
-    if (previousEntity && currentSelectionIndex >= 0) {
-      event.preventDefault();
-      this.showPreview(previousEntity);
-    }
-  }
-
-  showPreview(entity) {
-    const { navigate, location } = this.props;
-    togglePreview(navigate, location, entity);
-  }
-
-  closePreview() {
-    const { navigate, location } = this.props;
-    togglePreview(navigate, location);
   }
 
   onColumnsEdit(edited) {
@@ -162,44 +105,10 @@ class FacetedEntitySearch extends React.Component {
 
     const exportLink = result.total > 0 ? result.links?.export : null;
 
-    const hotkeysGroupLabel = {
-      group: intl.formatMessage(messages.group_label),
-    };
-
     return (
-      <HotkeysContainer
-        hotkeys={[
-          {
-            combo: 'j',
-            label: intl.formatMessage(messages.next),
-            onKeyDown: this.showNextPreview,
-            ...hotkeysGroupLabel,
-          },
-          {
-            combo: 'k',
-            label: intl.formatMessage(messages.previous),
-            onKeyDown: this.showPreviousPreview,
-            ...hotkeysGroupLabel,
-          },
-          {
-            combo: 'up',
-            label: intl.formatMessage(messages.previous),
-            onKeyDown: this.showPreviousPreview,
-            ...hotkeysGroupLabel,
-          },
-          {
-            combo: 'down',
-            label: intl.formatMessage(messages.next),
-            onKeyDown: this.showNextPreview,
-            ...hotkeysGroupLabel,
-          },
-          {
-            combo: 'esc',
-            label: intl.formatMessage(messages.close_preview),
-            onKeyDown: this.closePreview,
-            ...hotkeysGroupLabel,
-          },
-        ]}
+      <PreviewHotkeys
+        result={result}
+        groupLabel={intl.formatMessage(messages.preview_group)}
       >
         <FacetedLayout
           query={query}
@@ -250,7 +159,7 @@ class FacetedEntitySearch extends React.Component {
             </>
           )}
         </FacetedLayout>
-      </HotkeysContainer>
+      </PreviewHotkeys>
     );
   }
 }
