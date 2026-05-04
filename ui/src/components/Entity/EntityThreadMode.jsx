@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { Component, Fragment } from 'react';
 import { connect } from 'react-redux';
 import withRouter from 'app/withRouter';
 import { defineMessages, FormattedMessage, injectIntl } from 'react-intl';
@@ -14,6 +14,7 @@ import {
   ErrorSection,
   Property,
   Schema,
+  SearchHighlight,
   Skeleton,
   HotkeysContainer,
 } from 'components/common';
@@ -133,15 +134,21 @@ class EntityThreadMode extends Component {
     const { previewId } = this.props;
 
     return (
-      <tr
-        key={entity.id}
-        className={c('nowrap', {
+      <Fragment key={entity.id}>
+        <tr className={c('nowrap', {
           active: previewId === entity.id,
           current: this.props.entity.id === entity.id,
-        })}
-      >
-        {columns.map((prop) => this.renderCell(prop, entity))}
-      </tr>
+        })}>
+          {columns.map((prop) => this.renderCell(prop, entity))}
+        </tr>
+        {entity.highlight && (
+          <tr>
+            <td colSpan="100%" className="highlights">
+              <SearchHighlight highlight={entity.highlight} />
+            </td>
+          </tr>
+        )}
+      </Fragment>
     );
   }
 
