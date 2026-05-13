@@ -2226,6 +2226,7 @@ files = [
     {file = "greenlet-3.5.0-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:e5ddf316ced87539144621453c3aef229575825fe60c604e62bedc4003f372b2"},
     {file = "greenlet-3.5.0-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:4a448128607be0de65342dc9b31be7f948ef4cc0bc8832069350abefd310a8f2"},
     {file = "greenlet-3.5.0-cp314-cp314t-win_amd64.whl", hash = "sha256:d60097128cb0a1cab9ea541186ea13cd7b847b8449a7787c2e2350da0cb82d86"},
+    {file = "greenlet-3.5.0.tar.gz", hash = "sha256:d419647372241bc68e957bf38d5c1f98852155e4146bd1e4121adea81f4f01e4"},
 ]
 
 [package.extras]
@@ -3940,16 +3941,17 @@ resolved_reference = "014c1aff940765199a187c3e98310bc18af1782e"
 
 [[package]]
 name = "openaleph-servicelayer"
-version = "1.23.4"
+version = "1.24.0"
 description = "Basic remote service functions for openaleph components"
 optional = false
 python-versions = "*"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "openaleph_servicelayer-1.24.0-py2.py3-none-any.whl", hash = "sha256:cbf8a53ae79888fd02bf8d7b2412778a8fff90b67d234e92b7d092e176e21085"},
+    {file = "openaleph_servicelayer-1.24.0.tar.gz", hash = "sha256:d4637c7582ae17529f2faf27b3905f17a66558c5e7fc1bb3bcb9401d496fb268"},
+]
 
 [package.dependencies]
-anystore = {git = "https://github.com/dataresearchcenter/anystore.git", optional = true, markers = "extra == \"anystore\""}
 banal = ">=1.0.6,<2.0.0"
 colorama = ">=0.4.6,<1.0.0"
 fakeredis = ">=2.22.0,<3.0.0"
@@ -3960,15 +3962,9 @@ structlog = ">=24.1.0,<25.0.0"
 
 [package.extras]
 amazon = ["boto3 (>=1.11.9,<2.0.0)"]
-anystore = ["anystore @ git+https://github.com/dataresearchcenter/anystore.git"]
-dev = ["boto3 (>=1.11.9,<2.0.0)", "coverage", "moto (<5)", "pytest (>=3.6)", "pytest-cov", "time-machine (>=2.14.1,<3.0.0)", "twine", "uvicorn"]
+anystore = ["anystore (>=0.1.9)"]
+dev = ["boto3 (>=1.11.9,<2.0.0)", "coverage", "fastapi", "moto (<5)", "pytest (>=3.6)", "pytest-cov", "time-machine (>=2.14.1,<3.0.0)", "twine", "uvicorn"]
 google = ["google-cloud-storage (>=1.31.0,<3.0.0)", "grpcio (>=1.32.0,<2.0.0)"]
-
-[package.source]
-type = "git"
-url = "https://github.com/openaleph/openaleph-servicelayer.git"
-reference = "feat/http-api"
-resolved_reference = "26340fac71ca657229342c34a5e6600713dbcaea"
 
 [[package]]
 name = "openpyxl"
@@ -6813,4 +6809,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "b8e7f68c90fa991319fa65abd6a3c1cfb41b932b05ca2fb167f78e83e7c85b51"
+content-hash = "cfb75456a6cc66b6a88ba6eb4e8a862b67e150390b35be9c9cbe27f1ce8e942d"

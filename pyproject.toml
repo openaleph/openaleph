@@ -49,7 +49,7 @@ dependencies = [
     "prometheus-client (>=0.17.1)",
     "followthemoney-compare @ git+https://github.com/dataresearchcenter/followthemoney-compare.git",
     # servicelayer extras requirements
-    "openaleph-servicelayer[anystore] @ git+https://github.com/openaleph/openaleph-servicelayer.git@feat/http-api",
+    "openaleph-servicelayer (>=1.24.0,<2.0.0)",
     "boto3 (>=1.11.9,<2.0.0)",
     "grpcio (>=1.32.0,<2.0.0)",
     "google-cloud-storage (>=1.31.0,<3.0.0)",
