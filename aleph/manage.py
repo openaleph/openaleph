@@ -55,6 +55,8 @@ from aleph.logic.roles import (
     user_del,
 )
 from aleph.logic.xref import xref_collection
+from aleph.logic.xref.cleanup import cleanup_orphaned_edges
+from aleph.logic.xref.migrate import migrate_xref_index
 from aleph.migration import cleanup_deleted, destroy_db, upgrade_system
 from aleph.model import Collection, EntitySet, Role
 from aleph.model.document import Document
@@ -1338,6 +1340,24 @@ def resetcache():
 @click.option("-p", "--prefix", help="Scan a subset with a prefix")
 def cleanuparchive(prefix):
     cleanup_archive(prefix=prefix)
+
+
+@cli.command("cleanup-xref")
+@click.option("--dry-run", is_flag=True, default=False, help="Only count, don't delete")
+def cleanup_xref(dry_run=False):
+    """Remove orphaned xref edges referencing non-existing entities."""
+    result = cleanup_orphaned_edges(dry_run=dry_run)
+    log.info(
+        "Cleanup result: scanned=%d, orphaned=%d",
+        result["scanned"],
+        result["orphaned"],
+    )
+
+
+@cli.command("migrate-xref")
+def migrate_xref():
+    """Migrate xref-v1 and profiles to xref-v2 resolver edges."""
+    migrate_xref_index()
 
 
 @cli.command()
