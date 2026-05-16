@@ -67,7 +67,27 @@ RUN mkdir -p /opt/ftm-compare/word-frequencies/ \
     && curl -L -o "/opt/ftm-compare/model.pkl" "$ALEPH_FTM_COMPARE_MODEL_URI"
 
 # =============================================================================
-# Stage 3: Runtime
+# Stage 3: Download custom FollowTheMoney schema
+# =============================================================================
+# Fetch the DARC FollowTheMoney schema overlay so it can be mounted at runtime
+# via FTM_MODEL_PATH.
+FROM debian:bookworm-slim AS ftm-schema
+
+ARG FTM_SCHEMA_URL=https://github.com/dataresearchcenter/followthemoney-darc-schema/archive/refs/heads/main.tar.gz
+
+RUN apt-get -qq -y update \
+    && apt-get -qq --no-install-recommends -y install ca-certificates curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /tmp/extract \
+    && curl -fsSL -o /tmp/s.tgz "${FTM_SCHEMA_URL}" \
+    && tar -xzf /tmp/s.tgz -C /tmp/extract --strip-components=1 \
+    && mv /tmp/extract/schema /opt/ftm-schema \
+    && rm -rf /tmp/s.tgz /tmp/extract
+
+# =============================================================================
+# Stage 4: Runtime
 # =============================================================================
 # Minimal runtime image without build tools.
 FROM python:3.13-slim AS runtime
@@ -109,6 +129,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Copy model files from models stage
 COPY --from=models /opt/ftm-compare /opt/ftm-compare
 
+# Copy custom FollowTheMoney schema
+COPY --from=ftm-schema /opt/ftm-schema /opt/ftm-schema
+
 # Copy application code
 COPY --chown=app:app aleph /aleph/aleph
 COPY --chown=app:app gunicorn.conf.py /aleph/gunicorn.conf.py
@@ -128,6 +151,7 @@ ENV OPENALEPH_ELASTICSEARCH_URI=http://elasticsearch:9200/ \
     ARCHIVE_TYPE=file \
     ARCHIVE_PATH=/data \
     FTM_COMPARE_FREQUENCIES_DIR=/opt/ftm-compare/word-frequencies/ \
+    FTM_MODEL_PATH=/opt/ftm-schema \
     # FTM_COMPARE_MODEL=/opt/ftm-compare/model.pkl \
     NOMENKLATURA_XREF_MODEL=regression-v1 \
     PROCRASTINATE_APP=aleph.procrastinate.tasks.app \
