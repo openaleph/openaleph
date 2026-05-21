@@ -21,6 +21,9 @@ import AppItem from './AppItem';
 import csvContextLoader from './csvContextLoader';
 import EntitySet from './EntitySet';
 import DualPane from './DualPane';
+import FacetedLayout from './FacetedLayout';
+import FacetsSidebar from './FacetsSidebar';
+import PreviewHotkeys from './PreviewHotkeys';
 import Entity from './Entity';
 import FileImport from './FileImport';
 import Mention from './Mention';
@@ -78,6 +81,9 @@ export {
   Collection,
   EntitySet,
   DualPane,
+  FacetedLayout,
+  FacetsSidebar,
+  PreviewHotkeys,
   HotkeysContainer,
   Entity,
   AppItem,

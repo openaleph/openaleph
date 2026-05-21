@@ -5,7 +5,6 @@ import { compose } from 'redux';
 import { connect } from 'react-redux';
 import { Button } from '@blueprintjs/core';
 import queryString from 'query-string';
-import togglePreview from 'util/togglePreview';
 import c from 'classnames';
 
 import withRouter from 'app/withRouter';
@@ -14,13 +13,12 @@ import {
   Collection,
   Entity,
   ErrorSection,
-  HotkeysContainer,
   Property,
-  QueryInfiniteLoad,
   Schema,
   Skeleton,
   SortableTH,
 } from 'components/common';
+import FacetedResultList from 'components/EntitySearch/FacetedResultList';
 import EntityProperties from 'components/Entity/EntityProperties';
 import ensureArray from 'util/ensureArray';
 import { queryEntities } from 'actions/index';
@@ -48,18 +46,6 @@ const messages = defineMessages({
     id: 'entity.references.search.placeholder_default',
     defaultMessage: 'Search entities',
   },
-  next_preview: {
-    id: 'entity.references.next_preview',
-    defaultMessage: 'Preview next {schema}',
-  },
-  previous_preview: {
-    id: 'entity.references.previous_preview',
-    defaultMessage: 'Preview previous {schema}',
-  },
-  close_preview: {
-    id: 'entity.references.close_preview',
-    defaultMessage: 'Close preview',
-  },
 });
 
 class EntityReferencesMode extends React.Component {
@@ -67,11 +53,6 @@ class EntityReferencesMode extends React.Component {
     super(props);
     this.onSearchSubmit = this.onSearchSubmit.bind(this);
     this.sortColumn = this.sortColumn.bind(this);
-    this.getCurrentPreviewIndex = this.getCurrentPreviewIndex.bind(this);
-    this.showNextPreview = this.showNextPreview.bind(this);
-    this.showPreviousPreview = this.showPreviousPreview.bind(this);
-    this.showPreview = this.showPreview.bind(this);
-    this.closePreview = this.closePreview.bind(this);
   }
 
   onSearchSubmit(queryText) {
@@ -114,73 +95,43 @@ class EntityReferencesMode extends React.Component {
     );
   }
 
-  getCurrentPreviewIndex() {
-    const { location, previewId, results } = this.props;
-    return results.findIndex(
-      (entity) => entity.id === previewId
-    );
-  }
-
-  showNextPreview(event) {
-    const { results } = this.props;
-    const currentSelectionIndex = this.getCurrentPreviewIndex();
-    const nextEntity = results[1 + currentSelectionIndex];
-
-    if (nextEntity && currentSelectionIndex >= 0) {
-      event.preventDefault();
-      this.showPreview(nextEntity);
-    }
-  }
-
-  showPreviousPreview(event) {
-    const { results } = this.props;
-    const currentSelectionIndex = this.getCurrentPreviewIndex();
-    const previousEntity = results[currentSelectionIndex - 1];
-
-    if (previousEntity && currentSelectionIndex >= 0) {
-      event.preventDefault();
-      this.showPreview(previousEntity);
-    }
-  }
-
-  showPreview(entity) {
-    const { navigate, location } = this.props;
-    togglePreview(navigate, location, entity);
-  }
-
-  closePreview() {
-    const { navigate, location } = this.props;
-    togglePreview(navigate, location);
-  }
-
   renderCell(prop, entity) {
     const { schema, isThing, isPreview } = this.props;
-    const propVal = prop.qname === 'Email:from' ? (
-      // This is a workaround to make the email sender a link
-      <EmailPropertyValues
-        entity={entity}
-        prop={prop.name}
-        preview={!isPreview}
-      />
-    ) : (
-      <Property.Values
-        prop={prop}
-        values={entity.getProperty(prop.name)}
-        translitLookup={entity.latinized}
-        preview={!isPreview}
-        showTime={schema.isAny(['Message', 'Email'])}
-      />
-    );
-    if (isThing && schema.caption.indexOf(prop.name) !== -1) {
+    const isCaption = isThing && schema.caption.indexOf(prop.name) !== -1;
+
+    // For the caption column render the entity's *single* display
+    // caption — `entity.caption` from the backend takes precedence,
+    // falling through to `entity.getCaption()`. Passing children to
+    // `Entity.Link` with `<Property.Values>` would instead render the
+    // full `name` array, which is ES-ordered and can surface a
+    // non-Latin variant ahead of the preferred Latin name. Letting
+    // `Entity.Link` fall through to `VLEntity.Label` is the same
+    // render the rest of the app uses for entity chips.
+    if (isCaption) {
       return (
         <td key={prop.name} className="entity">
-          <Entity.Link entity={entity} preview={!isPreview}>
-            <Schema.Icon schema={entity.schema} className="left-icon" />
-            {propVal}
-          </Entity.Link>
+          <Entity.Link entity={entity} icon preview={!isPreview} />
         </td>
       );
     }
+
+    const propVal =
+      prop.qname === 'Email:from' ? (
+        // This is a workaround to make the email sender a link
+        <EmailPropertyValues
+          entity={entity}
+          prop={prop.name}
+          preview={!isPreview}
+        />
+      ) : (
+        <Property.Values
+          prop={prop}
+          values={entity.getProperty(prop.name)}
+          translitLookup={entity.latinized}
+          preview={!isPreview}
+          showTime={schema.isAny(['Message', 'Email'])}
+        />
+      );
     return (
       <td key={prop.name} className={prop.type.name}>
         {propVal}
@@ -258,8 +209,19 @@ class EntityReferencesMode extends React.Component {
   }
 
   render() {
-    const { intl, reference, query, result, results, schema, isThing, hideCollection } =
-      this.props;
+    const {
+      intl,
+      reference,
+      query,
+      result,
+      results,
+      schema,
+      isThing,
+      hideCollection,
+      navigate,
+      location,
+      isPreview,
+    } = this.props;
 
     if (!reference) {
       return (
@@ -284,39 +246,18 @@ class EntityReferencesMode extends React.Component {
     const { field: sortedField, direction } = query.getSort();
 
     return (
-      <HotkeysContainer
-        hotkeys={[
-          {
-            combo: 'j',
-            label: intl.formatMessage(messages.next_preview, { schema: schemaLabel }),
-            onKeyDown: this.showNextPreview,
-            group: schema.plural,
-          },
-          {
-            combo: 'k',
-            label: intl.formatMessage(messages.previous_preview, { schema: schemaLabel }),
-            onKeyDown: this.showPreviousPreview,
-            group: schema.plural,
-          },
-          {
-            combo: 'up',
-            label: intl.formatMessage(messages.next_preview, { schema: schemaLabel }),
-            onKeyDown: this.showPreviousPreview,
-            group: schema.plural,
-          },
-          {
-            combo: 'down',
-            label: intl.formatMessage(messages.previous_preview, { schema: schemaLabel }),
-            onKeyDown: this.showNextPreview,
-            group: schema.plural,
-          },
-          {
-            combo: 'esc',
-            label: intl.formatMessage(messages.close_preview),
-            onKeyDown: this.closePreview,
-            group: schema.plural,
-          },
-        ]}
+      <FacetedResultList
+        query={query}
+        result={result}
+        navigate={navigate}
+        location={location}
+        fetch={this.props.queryEntities}
+        defaultFacets={['schema', 'countries', 'dates']}
+        storageKey="entity:references"
+        hideSidebarWhenEmpty
+        previewGroupLabel={schema.plural}
+        showFacets={!isPreview}
+        previewHotkeys={!isPreview}
       >
         <section className="EntityReferencesTable">
           <EntityActionBar
@@ -325,48 +266,41 @@ class EntityReferencesMode extends React.Component {
             searchPlaceholder={placeholder}
           ></EntityActionBar>
           {result.total !== 0 && (
-            <>
-              <table className="data-table references-data-table">
-                <thead>
-                  <tr>
-                    {!isThing && <th key="expand" />}
-                    {columns.map((prop) => {
-                      const fieldName = `properties.${prop.name}`;
-                      const isSortable = prop.type.name !== 'text';
-                      return (
-                        <SortableTH
-                          key={prop.name}
-                          sortable={isSortable}
-                          sorted={sortedField === fieldName && (direction === 'desc' ? 'desc' : 'asc')}
-                          onClick={() => this.sortColumn(fieldName)}
-                          className={prop.type.name}
-                        >
-                          <Property.Name prop={prop} />
-                        </SortableTH>
-                      );
-                    })}
-                    {!hideCollection && (
-                      <th>
-                        <FormattedMessage
-                          id="xref.match_collection"
-                          defaultMessage="Dataset"
-                        />
-                      </th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.map((entity) => this.renderRow(columns, entity))}
-                  {result.isPending &&
-                    skeletonItems.map((idx) => this.renderSkeleton(columns, idx))}
-                </tbody>
-              </table>
-              <QueryInfiniteLoad
-                query={query}
-                result={result}
-                fetch={this.props.queryEntities}
-              />
-            </>
+            <table className="data-table references-data-table">
+              <thead>
+                <tr>
+                  {!isThing && <th key="expand" />}
+                  {columns.map((prop) => {
+                    const fieldName = `properties.${prop.name}`;
+                    const isSortable = prop.type.name !== 'text';
+                    return (
+                      <SortableTH
+                        key={prop.name}
+                        sortable={isSortable}
+                        sorted={sortedField === fieldName && (direction === 'desc' ? 'desc' : 'asc')}
+                        onClick={() => this.sortColumn(fieldName)}
+                        className={prop.type.name}
+                      >
+                        <Property.Name prop={prop} />
+                      </SortableTH>
+                    );
+                  })}
+                  {!hideCollection && (
+                    <th>
+                      <FormattedMessage
+                        id="xref.match_collection"
+                        defaultMessage="Dataset"
+                      />
+                    </th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {results.map((entity) => this.renderRow(columns, entity))}
+                {result.isPending &&
+                  skeletonItems.map((idx) => this.renderSkeleton(columns, idx))}
+              </tbody>
+            </table>
           )}
           {result.total === 0 && (
             <ErrorSection
@@ -387,7 +321,7 @@ class EntityReferencesMode extends React.Component {
             />
           )}
         </section>
-      </HotkeysContainer>
+      </FacetedResultList>
     );
   }
 }

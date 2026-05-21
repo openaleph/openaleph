@@ -17,6 +17,11 @@ export const queryMoreLikeThis = asyncActionCreator(
   { name: 'QUERY_MORE_LIKE_THIS' }
 );
 
+export const queryThread = asyncActionCreator(
+  (query) => async () => queryEndpoint(query),
+  { name: 'QUERY_THREAD' }
+);
+
 export const queryNearby = asyncActionCreator(
   (query) => async () => queryEndpoint(query),
   { name: 'QUERY_NEARBY' }

@@ -94,7 +94,7 @@ export class EntitySearch extends Component {
         <QueryInfiniteLoad
           query={query}
           result={result}
-          fetch={this.props.queryEntities}
+          fetch={this.props.fetch || this.props.queryEntities}
         />
       </div>
     );

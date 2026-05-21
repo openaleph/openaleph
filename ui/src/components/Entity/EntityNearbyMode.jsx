@@ -13,15 +13,13 @@ import {
   Collection,
   Entity,
   ErrorSection,
-  HotkeysContainer,
   Property,
-  QueryInfiniteLoad,
   Schema,
   Skeleton,
 } from 'components/common';
+import FacetedResultList from 'components/EntitySearch/FacetedResultList';
 import EntityProperties from 'components/Entity/EntityProperties';
 import ensureArray from 'util/ensureArray';
-import togglePreview from 'util/togglePreview';
 import { queryNearby } from 'actions/index';
 import EntityActionBar from './EntityActionBar';
 
@@ -50,66 +48,12 @@ const messages = defineMessages({
     id: 'entity.nearby.group_label',
     defaultMessage: 'Nearby entities preview',
   },
-  next_preview: {
-    id: 'entity.nearby.next_preview',
-    defaultMessage: 'Preview next nearby entity',
-  },
-  previous_preview: {
-    id: 'entity.nearby.previous_preview',
-    defaultMessage: 'Preview previous nearby entity',
-  },
-  close_preview: {
-    id: 'entity.nearby.close_preview',
-    defaultMessage: 'Close preview',
-  },
 });
 
 class EntityNearbyMode extends React.Component {
   constructor(props) {
     super(props);
     this.onSearchSubmit = this.onSearchSubmit.bind(this);
-    this.getCurrentPreviewIndex = this.getCurrentPreviewIndex.bind(this);
-    this.showNextPreview = this.showNextPreview.bind(this);
-    this.showPreviousPreview = this.showPreviousPreview.bind(this);
-    this.showPreview = this.showPreview.bind(this);
-    this.closePreview = this.closePreview.bind(this);
-  }
-
-  getCurrentPreviewIndex() {
-    const { previewId, results } = this.props;
-    return results.findIndex((entity) => entity.id === previewId);
-  }
-
-  showNextPreview(event) {
-    const { results } = this.props;
-    const currentSelectionIndex = this.getCurrentPreviewIndex();
-    const nextEntity = results[1 + currentSelectionIndex];
-
-    if (nextEntity && currentSelectionIndex >= 0) {
-      event.preventDefault();
-      this.showPreview(nextEntity);
-    }
-  }
-
-  showPreviousPreview(event) {
-    const { results } = this.props;
-    const currentSelectionIndex = this.getCurrentPreviewIndex();
-    const previousEntity = results[currentSelectionIndex - 1];
-
-    if (previousEntity && currentSelectionIndex >= 0) {
-      event.preventDefault();
-      this.showPreview(previousEntity);
-    }
-  }
-
-  showPreview(entity) {
-    const { navigate, location } = this.props;
-    togglePreview(navigate, location, entity);
-  }
-
-  closePreview() {
-    const { navigate, location } = this.props;
-    togglePreview(navigate, location);
   }
 
   onSearchSubmit(queryText) {
@@ -136,6 +80,16 @@ class EntityNearbyMode extends React.Component {
   }
 
   renderCell(prop, entity) {
+    // For the address caption column let `Entity.Link` fall through to
+    // `EntityLabel`, which prefers `entity.caption` over the raw first
+    // `name[]` value (UTF-ordered, would surface non-Latin variants).
+    if (prop.name === 'full') {
+      return (
+        <td key={prop.name} className="entity">
+          <Entity.Link entity={entity} icon preview />
+        </td>
+      );
+    }
     const propVal = (
       <Property.Values
         prop={prop}
@@ -144,16 +98,6 @@ class EntityNearbyMode extends React.Component {
         preview
       />
     );
-    if (prop.name === 'full') {
-      return (
-        <td key={prop.name} className="entity">
-          <Entity.Link entity={entity} preview>
-            <Schema.Icon schema={entity.schema} className="left-icon" />
-            {propVal}
-          </Entity.Link>
-        </td>
-      );
-    }
     return (
       <td key={prop.name} className={prop.type.name}>
         {propVal}
@@ -230,7 +174,7 @@ class EntityNearbyMode extends React.Component {
   }
 
   render() {
-    const { intl, query, result, results, model, hideCollection } = this.props;
+    const { intl, query, result, results, model, hideCollection, navigate, location } = this.props;
     const schema = model.getSchema('Address');
 
     if (!result) {
@@ -247,44 +191,19 @@ class EntityNearbyMode extends React.Component {
       schema: schemaLabel,
     });
     const skeletonItems = [...Array(15).keys()];
-    const hotkeysGroupLabel = {
-      group: intl.formatMessage(messages.group_label),
-    };
 
     return (
-      <HotkeysContainer
-        hotkeys={[
-          {
-            combo: 'j',
-            label: intl.formatMessage(messages.next_preview),
-            onKeyDown: this.showNextPreview,
-            ...hotkeysGroupLabel,
-          },
-          {
-            combo: 'k',
-            label: intl.formatMessage(messages.previous_preview),
-            onKeyDown: this.showPreviousPreview,
-            ...hotkeysGroupLabel,
-          },
-          {
-            combo: 'up',
-            label: intl.formatMessage(messages.previous_preview),
-            onKeyDown: this.showPreviousPreview,
-            ...hotkeysGroupLabel,
-          },
-          {
-            combo: 'down',
-            label: intl.formatMessage(messages.next_preview),
-            onKeyDown: this.showNextPreview,
-            ...hotkeysGroupLabel,
-          },
-          {
-            combo: 'esc',
-            label: intl.formatMessage(messages.close_preview),
-            onKeyDown: this.closePreview,
-            ...hotkeysGroupLabel,
-          },
-        ]}
+      <FacetedResultList
+        query={query}
+        result={result}
+        navigate={navigate}
+        location={location}
+        fetch={this.props.queryNearby}
+        defaultFacets={['schema']}
+        additionalFields={['collection_id']}
+        storageKey="entity:nearby"
+        hideSidebarWhenEmpty
+        previewGroupLabel={intl.formatMessage(messages.group_label)}
       >
         <section className="EntityReferencesTable">
           <EntityActionBar
@@ -293,43 +212,36 @@ class EntityNearbyMode extends React.Component {
             searchPlaceholder={placeholder}
           ></EntityActionBar>
           {result.total !== 0 && (
-            <>
-              <table className="data-table references-data-table">
-                <thead>
-                  <tr>
-                    <th key="distance" />
-                    <th key="expand" />
-                    {columns.map((prop) => (
-                      <th key={prop.name} className={prop.type}>
-                        <Property.Name prop={prop} />
-                      </th>
-                    ))}
-                    {!hideCollection && (
-                      <th>
-                        <FormattedMessage
-                          id="xref.match_collection"
-                          defaultMessage="Dataset"
-                        />
-                      </th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.map((entity) =>
-                    this.renderRow(columns, entity, model)
+            <table className="data-table references-data-table">
+              <thead>
+                <tr>
+                  <th key="distance" />
+                  <th key="expand" />
+                  {columns.map((prop) => (
+                    <th key={prop.name} className={prop.type}>
+                      <Property.Name prop={prop} />
+                    </th>
+                  ))}
+                  {!hideCollection && (
+                    <th>
+                      <FormattedMessage
+                        id="xref.match_collection"
+                        defaultMessage="Dataset"
+                      />
+                    </th>
                   )}
-                  {result.isPending &&
-                    skeletonItems.map((idx) =>
-                      this.renderSkeleton(columns, idx)
-                    )}
-                </tbody>
-              </table>
-              <QueryInfiniteLoad
-                query={query}
-                result={result}
-                fetch={this.props.queryNearby}
-              />
-            </>
+                </tr>
+              </thead>
+              <tbody>
+                {results.map((entity) =>
+                  this.renderRow(columns, entity, model)
+                )}
+                {result.isPending &&
+                  skeletonItems.map((idx) =>
+                    this.renderSkeleton(columns, idx)
+                  )}
+              </tbody>
+            </table>
           )}
           {result.total === 0 && (
             <ErrorSection
@@ -342,7 +254,7 @@ class EntityNearbyMode extends React.Component {
             />
           )}
         </section>
-      </HotkeysContainer>
+      </FacetedResultList>
     );
   }
 }

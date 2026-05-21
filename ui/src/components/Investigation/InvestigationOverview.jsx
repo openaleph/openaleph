@@ -13,7 +13,7 @@ import { selectCollection, selectNotificationsResult } from 'selectors';
 
 import './InvestigationOverview.scss';
 
-const guidesURLPrefix = 'https://openaleph.org/docs/user-guide/103/';
+const guidesURLPrefix = 'https://openaleph.org/docs/user-guide/103';
 
 class InvestigationOverview extends React.Component {
   render() {
