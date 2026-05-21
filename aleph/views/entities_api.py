@@ -238,6 +238,11 @@ def match():
           type: array
           items:
             type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntityUpdate'
       responses:
         '200':
           description: Returns a list of entities in result
@@ -245,11 +250,6 @@ def match():
             application/json:
               schema:
                 $ref: '#/components/schemas/EntitiesResponse'
-      requestBody:
-        content:
-          application/json
-            schema:
-              $ref: '#/components/schemas/EntityUpdate'
       tags:
       - Entity
     """
