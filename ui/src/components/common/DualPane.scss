@@ -20,7 +20,8 @@
 .DualPane .ContentPane {
   @extend .pane-layout-main;
   padding: 0;
-  @include rtlSupportInvertedProp(padding, left, $aleph-content-padding, null);
+  overflow-x: hidden;
+  @include rtlSupportInvertedProp(padding, left, $aleph-content-padding * 1.2, null);
 
   @media screen and (max-width: $aleph-screen-sm-max-width) {
     order: 2;
@@ -33,7 +34,7 @@
   @include rtlSupportInvertedProp(
     border,
     right,
-    1px solid $aleph-border-color,
+    1px solid $darc-gray-300,
     null
   );
   @include rtlSupportInvertedProp(padding, right, $aleph-content-padding, null);

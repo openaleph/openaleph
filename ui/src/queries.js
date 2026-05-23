@@ -169,11 +169,49 @@ export function entityMoreLikeThisQuery(location, entityId) {
   return Query.fromLocation(
     path,
     location,
-    { dehydrate: true }, // this excludes entity properties from the response
+    {
+      dehydrate: true, // this excludes entity properties from the response
+      highlight: true, // this renders some nice preview snippets but is expensive
+    },
     'more_like_this'
   )
     .defaultFacet('collection_id', true)
     .limit(10);
+}
+
+export function entityMentionsQuery(location, entityId) {
+  const path = entityId ? `entities/${entityId}/mentions` : undefined;
+  return Query.fromLocation(
+    path,
+    location,
+    {
+      highlight: true,
+      dehydrate: true,
+    },
+    'mentions'
+  )
+    .defaultFacet('collection_id', true)
+    .limit(10);
+}
+
+export function entityPercolateQuery(location, entityId) {
+  const path = entityId ? `entities/${entityId}/percolate` : undefined;
+  return Query.fromLocation(
+    path,
+    location,
+    {
+      'filter:schemata': 'LegalEntity',
+      highlight: true,
+    },
+    'percolate'
+  )
+    .defaultFacet('collection_id', true)
+    .limit(30);
+}
+
+export function entityThreadQuery(location, entityId) {
+  const path = entityId ? `entities/${entityId}/thread` : undefined;
+  return Query.fromLocation(path, location, { highlight: true }, 'thread');
 }
 
 export function entityNearbyQuery(location, entityId) {

@@ -1,14 +1,19 @@
 @import 'app/variables.scss';
 
+$navbar-height: 50px + $aleph-grid-size * 2;
+
 .AdvancedSearch {
   .#{$bp-ns}-overlay.#{$bp-ns}-overlay-container {
-    position: static;
+    position: fixed;
+    top: $navbar-height;
+    left: 0;
+    right: 0;
   }
   .#{$bp-ns}-drawer {
-    position: static;
+    position: relative;
     overflow-x: scroll;
     margin-bottom: $aleph-grid-size * 3;
-    margin-left: $aleph-grid-size;
+    margin-left: $aleph-content-padding;
     box-shadow:
       0 0 0 1px rgba(16, 22, 26, 0.1),
       0 2px 4px rgba(16, 22, 26, 0.2),
@@ -25,7 +30,6 @@
 
   .#{$bp-ns}-portal {
     z-index: 101;
-    top: 50px !important;
   }
 
   .#{$bp-ns}-label {

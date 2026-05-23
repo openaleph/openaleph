@@ -32,7 +32,10 @@ up:
 # =============================================================================
 
 services:
-	$(COMPOSE) up -d postgres elasticsearch redis ingest-file ftm-analyze
+	$(COMPOSE) up -d postgres elasticsearch redis ingest-file ftm-analyze ftm-translate
+
+services-test:  # for local pytest run
+	$(COMPOSE) up -d postgres elasticsearch redis
 
 stop:
 	$(COMPOSE) down --remove-orphans
@@ -143,6 +146,6 @@ migrations:
 	FLASK_APP=aleph.wsgi flask db migrate
 
 documentation:
-	mkdocs build
+	zensical build
 
 .PHONY: services stop api worker ui upgrade update shell tail test lint format build install dev clean up

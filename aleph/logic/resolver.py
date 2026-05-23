@@ -40,7 +40,7 @@ def cached_entities_by_ids(ids, schemata=None):
         if entity is not None:
             entities[entity.get("id")] = entity
 
-    missing = [i for i in ids if entities.get(id) is None]
+    missing = [i for i in ids if entities.get(i) is None]
     for entity in entities_by_ids(missing, schemata):
         entities[entity["id"]] = entity
         key = cache.object_key(Entity, entity["id"])
@@ -83,21 +83,25 @@ def resolve(stub):
         schemata[cid] = schema
 
     keys = list(cache_keys.keys())
-    queries = defaultdict(list)
+    entity_misses = defaultdict(list)
     for cid, value in cache.get_many_complex(keys):
         clazz, key = cache_keys.get(cid)
         if value is None:
-            # log.info("MISS [%s]: %s", clazz.__name__, key)
             if clazz == Entity:
-                queries[schemata.get(cid)].append(key)
-            loader = LOADERS.get(clazz)
-            if loader is not None:
-                value = loader(key)
+                entity_misses[schemata.get(cid)].append(key)
+            else:
+                loader = LOADERS.get(clazz)
+                if loader is not None:
+                    value = loader(key)
         stub._rx_cache[(clazz, key)] = value
 
-    for schema, ids in queries.items():
-        for entity in cached_entities_by_ids(ids, schemata=schema):
-            stub._rx_cache[(Entity, entity.get("id"))] = entity
+    # Fetch entity cache misses directly from ES (single mget), cache results
+    for schema, ids in entity_misses.items():
+        for entity in entities_by_ids(ids, schema):
+            entity_id = entity.get("id")
+            cid = cache.object_key(Entity, entity_id)
+            cache.set_complex(cid, entity, expires=60 * 60 * 2)
+            stub._rx_cache[(Entity, entity_id)] = entity
 
 
 def get(stub, clazz, key):

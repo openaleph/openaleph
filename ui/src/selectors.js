@@ -94,6 +94,24 @@ export function selectExperimentalBookmarksFeatureEnabled(state) {
   return loggedIn && featureFlag;
 }
 
+export function selectTimelinesFeatureEnabled(state) {
+  const loggedIn = !!selectSession(state).loggedIn;
+  const featureFlag = !!selectFeatureFlags(state).timelines;
+  return loggedIn && featureFlag;
+}
+
+export function selectListsFeatureEnabled(state) {
+  const loggedIn = !!selectSession(state).loggedIn;
+  const featureFlag = !!selectFeatureFlags(state).lists;
+  return loggedIn && featureFlag;
+}
+
+export function selectNetworksFeatureEnabled(state) {
+  const loggedIn = !!selectSession(state).loggedIn;
+  const featureFlag = !!selectFeatureFlags(state).networks;
+  return loggedIn && featureFlag;
+}
+
 export function selectFeedbackUrls(state) {
   return selectMetadata(state)?.feedback_urls;
 }
@@ -217,6 +235,49 @@ export function selectCollection(state, collectionId) {
   return collection;
 }
 
+// FTM's `Entity` constructor only preserves `schema`, `id`, and `properties` —
+// the backend-computed `caption` field is dropped on hydration, and the same
+// goes for every nested entity snippet inside an entity-typed property (walked
+// recursively by `setProperty`).  Without this post-hydration pass,
+// `EntityLabel` on a nested chip falls through to `entity.getCaption()`, which
+// picks the first value of `schema.caption[0]` — UTF-ordered, so a mixed-script
+// `name` array (`["هانا نیومن", "Hannah Neumann"]`) renders the Arabic variant
+// even when the backend's caption has a "more readable" (as in the perspective
+// from minority world) variant "Hannah Neumann". Walk the hydrated proxy
+// alongside the raw JSON and copy each `caption` onto the FTM entity instance
+// (and recursively into each nested entity-typed property).
+function hydrateNestedCaptions(ftmEntity, rawEntity) {
+  if (!ftmEntity || !rawEntity?.properties) {
+    return;
+  }
+  for (const [propName, rawValues] of Object.entries(rawEntity.properties)) {
+    let property;
+    try {
+      property = ftmEntity.schema.getProperty(propName);
+    } catch (e) {
+      continue;
+    }
+    if (!property || property.type.name !== 'entity') {
+      continue;
+    }
+    const hydratedValues = ftmEntity.getProperty(property) || [];
+    rawValues.forEach((rawValue, i) => {
+      const hydrated = hydratedValues[i];
+      if (
+        hydrated &&
+        typeof hydrated !== 'string' &&
+        rawValue &&
+        typeof rawValue === 'object'
+      ) {
+        if (rawValue.caption && !hydrated.caption) {
+          hydrated.caption = rawValue.caption;
+        }
+        hydrateNestedCaptions(hydrated, rawValue);
+      }
+    });
+  }
+}
+
 export function selectEntity(state, entityId) {
   const entity = selectObject(state, state.entities, entityId);
   const lastViewed = getRecentlyViewedItem(entityId);
@@ -227,6 +288,7 @@ export function selectEntity(state, entityId) {
       return entity;
     }
     entity.selectorCache = model.getEntity(entity);
+    hydrateNestedCaptions(entity.selectorCache, entity);
   }
   const result = entity.selectorCache;
   result.safeHtml = entity.safeHtml;
@@ -249,6 +311,7 @@ export function selectEntity(state, entityId) {
   result.bookmarked = entity.bookmarked;
   result.caption = entity.caption;
   result.tags = entity.tags;
+  result.processing_status = entity.processing_status;
 
   return result;
 }
@@ -409,7 +472,11 @@ export function selectEntityView(state, entityId, mode, isPreview, location) {
   if (isPreview && location && schema && schema.isDocument()) {
     const parsedHash = queryString.parse(location.hash);
     const parsedSearch = queryString.parse(location.search);
-    const isSearchPreview = !!(parsedHash['preview:id'] && parsedHash.q && (parsedSearch.q || parsedSearch.csq));
+    const isSearchPreview = !!(
+      parsedHash['preview:id'] &&
+      parsedHash.q &&
+      (parsedSearch.q || parsedSearch.csq)
+    );
 
     if (isSearchPreview) {
       return 'text';
@@ -480,11 +547,29 @@ export function selectMoreLikeThisResult(state, query) {
   return result;
 }
 
+export function selectPercolateResult(state, query) {
+  const result = selectResult(state, query, selectEntity);
+  return result;
+}
+
+export function selectMentionsResult(state, query) {
+  const result = selectResult(state, query, selectEntity);
+  return result;
+}
+
+export function selectThreadResult(state, query) {
+  const result = selectResult(state, query, selectEntity);
+  return result;
+}
+
 export function selectNearbyResult(state, query) {
   const result = selectResult(state, query, undefined);
-  result.results.forEach((obj) => {
-    obj.entity = selectEntity(state, obj.id);
-  });
+  result.results = result.results
+    .filter((obj) => obj && typeof obj === 'object')
+    .map((obj) => ({
+      ...obj,
+      entity: selectEntity(state, obj.id),
+    }));
   return result;
 }
 
@@ -521,14 +606,6 @@ export function selectBookmarksResult(state, query) {
   return result;
 }
 
-// TODO: Remove after deadline
-// See https://github.com/alephdata/aleph/issues/2864
-export function selectLocalBookmarks(state) {
-  return (
-    state?.localBookmarks?.sort((a, b) => b.bookmarkedAt - a.bookmarkedAt) || []
-  );
-}
-
 export function selectConfigValue(state, name) {
   return state?.config?.[name];
 }
@@ -539,4 +616,8 @@ export function selectServiceUrls(state) {
 
 export function selectServiceUrl(state, key) {
   return selectServiceUrls(state)?.[key];
+}
+
+export function selectTranslateSourceLanguages(state) {
+  return selectMetadata(state)?.services?.translate?.source_languages || [];
 }

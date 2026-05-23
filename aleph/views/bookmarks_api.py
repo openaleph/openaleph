@@ -1,7 +1,6 @@
 import logging
 
 from flask import Blueprint, request
-from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
 from aleph.core import db
@@ -125,58 +124,3 @@ def delete(entity_id):
     db.session.commit()
 
     return "", 204
-
-
-@blueprint.route("/api/2/bookmarks/migrate", methods=["POST"])
-def migrate():
-    """Migrate bookmarks.
-    ---
-    post:
-      summary: Migrate bookmarks
-      tags: [Bookmarks]
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/BookmarkMigrate'
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  errors:
-                    items:
-                      type: string
-                      format: entity-id
-    """
-    require(request.authz.session_write)
-    data = parse_request("BookmarkMigrate")
-    values = []
-    errors = []
-
-    for bookmark in data:
-        try:
-            entity = get_index_entity(bookmark.get("entity_id"))
-        except (NotFound, Forbidden):
-            errors.append(bookmark.get("entity_id"))
-            continue
-        values.append(
-            {
-                "role_id": request.authz.id,
-                "entity_id": bookmark.get("entity_id"),
-                "collection_id": int(entity.get("collection_id")),
-                "created_at": bookmark.get("created_at"),
-            }
-        )
-
-    stmt = postgres_insert(Bookmark).values(values)
-    stmt = stmt.on_conflict_do_nothing(
-        index_elements=[Bookmark.role_id, Bookmark.entity_id],
-    )
-    db.session.execute(stmt)
-    db.session.commit()
-
-    return jsonify({"errors": errors}, 201)

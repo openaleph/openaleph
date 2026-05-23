@@ -26,8 +26,12 @@ import {
   DualPane,
   Schema,
 } from 'components/common';
-import { DialogToggleButton } from 'components/Toolbar';
-import { DownloadButton } from 'components/Toolbar';
+import {
+  DialogToggleButton,
+  DownloadButton,
+  TranscribeButton,
+  TranslateButton,
+} from 'components/Toolbar';
 import { deleteEntity } from 'actions';
 import { selectEntity, selectEntityView, selectServiceUrl } from 'selectors';
 import getProfileLink from 'util/getProfileLink';
@@ -111,6 +115,8 @@ class EntityScreen extends Component {
       <ButtonGroup>
         <BookmarkButton entity={entity} />
         <DownloadButton document={entity} />
+        {entity?.links?.transcribe && <TranscribeButton entity={entity} />}
+        {entity?.links?.translate && <TranslateButton entity={entity} />}
         {entity?.collection?.writeable && (
           <>
             <DialogToggleButton
@@ -178,7 +184,12 @@ class EntityScreen extends Component {
                 )}
                 {ftmAssetsApi && (
                   <div className="ItemOverview__image">
-                    <EntityImage api={ftmAssetsApi} entity={entity} thumbnail />
+                    <EntityImage
+                      api={ftmAssetsApi}
+                      entity={entity}
+                      thumbnail
+                      fallback={false}
+                    />
                   </div>
                 )}
                 {addressEntity && (

@@ -20,6 +20,12 @@ RUN npm ci --ignore-scripts
 # Rebuilds when source code changes, but reuses cached dependencies.
 FROM node:20-slim AS builder
 
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN apt-get -qq -y update && apt-get -qq -y install python3-pip \
+    make g++ pkg-config build-essential libcairo2-dev \
+    libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev rsync
+
 WORKDIR /app
 
 # Copy dependencies from deps stage

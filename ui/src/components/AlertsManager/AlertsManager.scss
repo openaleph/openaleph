@@ -24,7 +24,7 @@
   &__text {
     @include rtl(text-align, left, right);
     &.text-date {
-      color: $gray3;
+      color: $aleph-greyed-text;
       @include rtl(text-align, right, left);
     }
 

@@ -1,5 +1,5 @@
 import React, { PureComponent, Component } from 'react';
-import { Classes, Divider, Icon } from '@blueprintjs/core';
+import { Classes, Icon } from '@blueprintjs/core';
 import c from 'classnames';
 
 import {
@@ -134,9 +134,7 @@ export default class Breadcrumbs extends Component {
     return (
       <>
         {status}
-        {status && search && <Divider />}
         {search}
-        {search && operation && <Divider />}
         {operation}
       </>
     );

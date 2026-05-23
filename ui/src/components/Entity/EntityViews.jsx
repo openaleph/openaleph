@@ -17,11 +17,14 @@ import {
   TextLoading,
 } from 'components/common';
 import {
+  entityMentionsQuery,
   entityNearbyQuery,
+  entityPercolateQuery,
   entityReferenceQuery,
   entitySimilarQuery,
   entityMoreLikeThisQuery,
   folderDocumentsQuery,
+  entityThreadQuery,
 } from 'queries';
 import {
   selectEntitiesResult,
@@ -30,16 +33,24 @@ import {
   selectEntityReference,
   selectSimilarResult,
   selectMoreLikeThisResult,
+  selectMentionsResult,
   selectNearbyResult,
+  selectPercolateResult,
+  selectThreadResult,
 } from 'selectors';
 import EntityProperties from 'components/Entity/EntityProperties';
 import EntityReferencesMode from 'components/Entity/EntityReferencesMode';
 import EntityTagsMode from 'components/Entity/EntityTagsMode';
 import EntitySimilarMode from 'components/Entity/EntitySimilarMode';
 import EntityMoreLikeThisMode from 'components/Entity/EntityMoreLikeThisMode';
+import EntityMentionsMode from 'components/Entity/EntityMentionsMode';
+import EntityScreeningMode from 'components/Entity/EntityScreeningMode';
 import EntityMappingMode from 'components/Entity/EntityMappingMode';
 import EntityNearbyMode from 'components/Entity/EntityNearbyMode';
 import DocumentViewMode from 'components/Document/DocumentViewMode';
+import TranslationViewer from 'viewers/TranslationViewer';
+import CSVExplorer from 'viewers/CSVExplorer';
+import EntityThreadMode from './EntityThreadMode';
 
 import './EntityViews.scss';
 
@@ -73,6 +84,9 @@ class EntityViews extends React.Component {
       tags,
       similar,
       moreLikeThis,
+      mentions,
+      screening,
+      thread,
       nearby,
       children,
       reference,
@@ -88,6 +102,7 @@ class EntityViews extends React.Component {
     const hasTextMode =
       hasTextOnlyMode || entity.schema.isAny(['Video', 'Audio']);
     const hasBrowseMode = entity.schema.isA('Folder');
+    const hasCSVExplorer = !isPreview && entity.schema.isA('Table');
     const hasViewer = entity.schema.isAny([
       'Pages',
       'Email',
@@ -99,6 +114,7 @@ class EntityViews extends React.Component {
     const hasDocumentViewMode =
       hasViewer || (!hasBrowseMode && !hasTextOnlyMode);
     const hasViewMode = entity.schema.isDocument() && hasDocumentViewMode;
+    const hasTranslation = !!entity.getFirst('translatedText');
     const processingError = entity.getProperty('processingError');
     const entityParent = entity.getFirst('parent');
     const showWorkbookWarning =
@@ -160,6 +176,21 @@ class EntityViews extends React.Component {
               }
             />
           )}
+          {hasCSVExplorer && (
+            <Tab
+              id="csv-explorer"
+              title={
+                <>
+                  <Icon icon="database" className="left-icon" />
+                  <FormattedMessage
+                    id="entity.info.csv_explorer"
+                    defaultMessage="Explore data"
+                  />
+                </>
+              }
+              panel={<CSVExplorer document={entity} />}
+            />
+          )}
           {hasTextMode && (
             <Tab
               id="text"
@@ -186,6 +217,29 @@ class EntityViews extends React.Component {
                   activeMode={activeMode}
                   textMode
                 />
+              }
+            />
+          )}
+          {hasTranslation && (
+            <Tab
+              id="translation"
+              title={
+                <>
+                  <Icon icon="translate" className="left-icon" />
+                  <FormattedMessage
+                    id="entity.info.translation"
+                    defaultMessage="Translation"
+                  />
+                </>
+              }
+              panel={
+                <section className="DocumentViewMode">
+                  <div className="outer">
+                    <div className="inner">
+                      <TranslationViewer document={entity} />
+                    </div>
+                  </div>
+                </section>
               }
             />
           )}
@@ -234,12 +288,34 @@ class EntityViews extends React.Component {
                   query={referenceQuery}
                   reference={reference}
                   hideCollection={true}
+                  isPreview={isPreview}
                 />
               }
             />
           ))}
           {!references.total && references.isPending && (
             <Tab id="loading" title={<TextLoading loading={true} />} />
+          )}
+          {entity.schema.isA("Email") && (
+            <Tab
+              id="thread"
+              disabled={thread.total === 0}
+              title={
+                <TextLoading loading={thread.isPending}>
+                  <Schema.Icon schema="Email" className="left-icon" />
+                  <FormattedMessage
+                    id="entity.info.thread"
+                    defaultMessage="Thread"
+                  />
+                  <ResultCount result={thread} />
+                </TextLoading>
+              }
+              panel={
+                <EntityThreadMode
+                  entity={entity}
+                  isPreview={isPreview}
+                />}
+            />
           )}
           {entity.schema.isDocument() &&
             (!processingError || !processingError.length) && (
@@ -299,6 +375,23 @@ class EntityViews extends React.Component {
               panel={<EntitySimilarMode entity={entity} />}
             />
           )}
+          {entity?.schema?.isA('LegalEntity') && !isPreview && (
+            <Tab
+              id="mentions"
+              disabled={mentions.total === 0}
+              title={
+                <TextLoading loading={mentions.total === undefined}>
+                  <Icon icon="document" className="left-icon" />
+                  <FormattedMessage
+                    id="entity.info.mentions"
+                    defaultMessage="Document Results"
+                  />
+                  <ResultCount result={mentions} />
+                </TextLoading>
+              }
+              panel={<EntityMentionsMode entity={entity} />}
+            />
+          )}
           {entity.schema.isDocument() && !isPreview && (
             <Tab
               id="more-like-this"
@@ -314,6 +407,23 @@ class EntityViews extends React.Component {
                 </TextLoading>
               }
               panel={<EntityMoreLikeThisMode entity={entity} />}
+            />
+          )}
+          {entity.schema.isDocument() && !isPreview && (
+            <Tab
+              id="screening"
+              disabled={screening.total === 0}
+              title={
+                <TextLoading loading={screening.total === undefined}>
+                  <Icon icon="shield" className="left-icon" />
+                  <FormattedMessage
+                    id="entity.info.screening"
+                    defaultMessage="Screening"
+                  />
+                  <ResultCount result={screening} />
+                </TextLoading>
+              }
+              panel={<EntityScreeningMode entity={entity} />}
             />
           )}
           {entity?.collection?.writeable && entity.schema.isA('Table') && (
@@ -341,39 +451,43 @@ const mapStateToProps = (state, ownProps) => {
   const { entity, location, activeMode, isPreview } = ownProps;
   const childrenQuery = folderDocumentsQuery(location, entity.id, undefined);
   const reference = selectEntityReference(state, entity.id, activeMode);
-  
+
   // Check if we're in a search preview and get search result count
   let searchResultCount = null;
   let isSearchPreview = false;
-  
+
   if (isPreview && location && entity.schema && entity.schema.isDocument()) {
     const parsedHash = queryString.parse(location.hash);
     const parsedSearch = queryString.parse(location.search);
     isSearchPreview = !!(parsedHash['preview:id'] && parsedHash.q && (parsedSearch.q || parsedSearch.csq));
-    
+
     if (isSearchPreview) {
       // Create the same query that PdfViewer uses to get search count
       const hashQuery = queryString.parse(location.hash);
       const queryText = hashQuery.q;
-      
+
       if (queryText) {
-        const baseQuery = Query.fromLocation('entities', location, {}, 'document')
+        const baseQuery = Query.fromLocation(
+          'entities',
+          location,
+          {},
+          'document'
+        )
           .setFilter('properties.document', entity.id)
           .setFilter('schema', 'Page');
-        const countQuery = baseQuery.setString('q', undefined).offset(0).limit(0);
         const searchCountQuery = baseQuery
           .set('highlight', true)
           .set('q', queryText)
           .sortBy('properties.index', 'asc')
           .clear('limit')
           .clear('offset');
-        
+
         const searchCountResult = selectEntitiesResult(state, searchCountQuery);
         searchResultCount = searchCountResult.total;
       }
     }
   }
-  
+
   return {
     reference,
     references: selectEntityReferences(state, entity.id),
@@ -387,6 +501,15 @@ const mapStateToProps = (state, ownProps) => {
       state,
       entityMoreLikeThisQuery(location, entity.id)
     ),
+    mentions: selectMentionsResult(
+      state,
+      entityMentionsQuery(location, entity.id)
+    ),
+    screening: selectPercolateResult(
+      state,
+      entityPercolateQuery(location, entity.id)
+    ),
+    thread: selectThreadResult(state, entityThreadQuery(location, entity.id)),
     nearby: selectNearbyResult(state, entityNearbyQuery(location, entity.id)),
     nearbyQuery: entityNearbyQuery(location, entity.id),
     children: selectEntitiesResult(state, childrenQuery),

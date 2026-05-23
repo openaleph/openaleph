@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { compose } from 'redux';
 import { connect } from 'react-redux';
 import { defineMessages, injectIntl } from 'react-intl';
-import { Button, Intent } from '@blueprintjs/core';
+import { Button } from '@blueprintjs/core';
 
 import withRouter from 'app/withRouter';
 import { queryCollections } from 'actions';
@@ -127,7 +127,6 @@ export class CollectionIndex extends Component {
                   )}
                   onClick={this.toggleCreatedBy}
                   minimal
-                  intent={Intent.PRIMARY}
                 />
               }
             />

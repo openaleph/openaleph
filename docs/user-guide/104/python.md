@@ -2,7 +2,7 @@
 
 OpenAleph's Python library provides programmatic access to your instance. You can upload files, ingest structured data, and build custom graphs of entities and relationships - all from Python scripts.
 
-Make sure you also familiarize yourself with the [FtM API and its tooling](https://followthemoney.tech/docs/api/)!
+Make sure you also familiarize yourself with the [FtM API and its tooling](https://followthemoney.tech/python/)!
 
 ## Authentication
 

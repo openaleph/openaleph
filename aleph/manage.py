@@ -2,11 +2,19 @@ import json
 import logging
 from itertools import count
 from pathlib import Path
+from typing import Any, TextIO
+from warnings import warn
 
 import click
 from flask.cli import FlaskGroup
-from followthemoney.cli.util import write_object
+from followthemoney import EntityProxy
+from followthemoney.namespace import Namespace
 from normality import slugify
+from openaleph_procrastinate.util import (
+    QUERY_LIMIT,
+    get_page_entity_fragments,
+    make_file_entity,
+)
 from openaleph_search.index.admin import delete_index
 from openaleph_search.index.entities import get_entity as _get_index_entity
 from openaleph_search.index.entities import iter_proxies
@@ -15,7 +23,7 @@ from tabulate import tabulate
 from aleph.authz import Authz
 from aleph.core import cache, create_app, db
 from aleph.index.collections import get_collection as _get_index_collection
-from aleph.logic.aggregator import get_aggregator
+from aleph.logic.aggregator import get_aggregator, get_aggregator_name
 from aleph.logic.archive import cleanup_archive
 from aleph.logic.collections import (
     aggregate_model,
@@ -51,7 +59,10 @@ from aleph.migration import cleanup_deleted, destroy_db, upgrade_system
 from aleph.model import Collection, EntitySet, Role
 from aleph.model.document import Document
 from aleph.procrastinate.queues import (
+    OP_INGEST,
+    queue_analyze,
     queue_cancel_collection,
+    queue_index,
     queue_ingest,
     queue_reindex,
 )
@@ -59,6 +70,15 @@ from aleph.procrastinate.status import get_collection_status, get_status
 from aleph.util import JSONEncoder
 
 log = logging.getLogger("aleph")
+
+
+# FIXME followthemoney 4.8.0
+def write_object(stream: TextIO, obj: Any) -> None:
+    warn("write_object() is deprecated.", DeprecationWarning, stacklevel=2)
+    if hasattr(obj, "to_dict"):
+        obj = obj.to_dict()
+    data = json.dumps(obj)
+    stream.write(data + "\n")
 
 
 def get_expanded_entity(entity_id):
@@ -236,6 +256,7 @@ def _reindex_collection(
     schema=None,
     since=None,
     until=None,
+    origin=None,
 ):
     log.info("[%s] Starting to re-index", collection)
     try:
@@ -251,6 +272,7 @@ def _reindex_collection(
             schema=schema,
             since=since,
             until=until,
+            origin=origin,
         )
     except Exception:
         log.exception("Failed to re-index: %s", collection)
@@ -305,6 +327,12 @@ def _reindex_collection(
         "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
     ),
 )
+@click.option(
+    "--origin",
+    type=str,
+    default=None,
+    help="Filter entities by aggregator origin (e.g., 'xref', 'aleph')",
+)
 def reindex(
     foreign_id,
     flush=False,
@@ -317,6 +345,7 @@ def reindex(
     schema=None,
     since=None,
     until=None,
+    origin=None,
 ):
     """Index all the aggregator contents for a collection."""
     collection = get_collection(foreign_id)
@@ -332,6 +361,7 @@ def reindex(
         schema=schema,
         since=since,
         until=until,
+        origin=origin,
     )
 
 
@@ -860,6 +890,148 @@ def reingest_casefiles(index_flush=True, ingest_flush=True):
             index_flush=index_flush,
             ingest_flush=ingest_flush,
         )
+
+
+@cli.command()
+@click.option("--resolve-mentions/--no-resolve-mentions", is_flag=True, default=False)
+@click.option("--annotate/--no-annotate", is_flag=True, default=False)
+@click.option("--validate-names/--no-validate-names", is_flag=True, default=False)
+@click.option("--refine-mentions/--no-refine-mentions", is_flag=True, default=False)
+@click.option("--refine-locations/--no-refine-locations", is_flag=True, default=False)
+@click.option("--overwrite-lang/--no-overwrite-lang", is_flag=True, default=False)
+@click.argument("foreign_id")
+def reanalyze_collection(
+    foreign_id: str,
+    resolve_mentions: bool = False,
+    annotate: bool = False,
+    validate_names: bool = False,
+    refine_mentions: bool = False,
+    refine_locations: bool = False,
+    overwrite_lang: bool = False,
+):
+    """Reanalyze a collection by foreign_id"""
+    to_analyze = []
+    batch_len = 1_000
+    collection = get_collection(foreign_id)
+    ingest_data = get_aggregator(collection, origin=OP_INGEST)
+    for ingest_entity in ingest_data.iterate(origin=OP_INGEST):
+        if ingest_entity.schema.is_a("Analyzable"):
+            to_analyze.append(make_file_entity(ingest_entity, quiet=True))
+            if len(to_analyze) == batch_len:
+                queue_analyze(
+                    collection,
+                    to_analyze,
+                    resolve_mentions=resolve_mentions,
+                    annotate=annotate,
+                    validate_names=validate_names,
+                    refine_mentions=refine_mentions,
+                    refine_locations=refine_locations,
+                    overwrite_lang=overwrite_lang,
+                )
+                to_analyze.clear()
+    queue_analyze(
+        collection,
+        to_analyze,
+        resolve_mentions=resolve_mentions,
+        annotate=annotate,
+        validate_names=validate_names,
+        refine_mentions=refine_mentions,
+        refine_locations=refine_locations,
+        overwrite_lang=overwrite_lang,
+    )
+
+
+@cli.command()
+@click.option(
+    "-f",
+    "--foreign-id",
+    required=True,
+    help="Foreign ID of the collection that translations should be purged from",
+)
+@click.option(
+    "-e",
+    "--entity-id",
+    required=False,
+    help="Entity ID of the entity with translated text that should be deleted",
+)
+@click.option(
+    "-i",
+    "--infile",
+    required=False,
+    type=click.File("r"),
+    help="File path containing entity IDs of the entities \
+        with translated text that should be deleted",
+)
+def delete_translation(entity_id, foreign_id, infile):  # noqa: C901
+    """Delete translations from one entity, one entire collection \
+        or from all entities in a list. Delete FTM-Entities with origin=translate."""
+    if not entity_id and not foreign_id and not infile:
+        raise click.BadParameter("At least one of the following options needs to be \
+                provided: -e [entity_id] / -f [foreign_id] / -f [/path/to/file]")
+
+    collection = get_collection(foreign_id)
+    if not collection:
+        raise click.ClickException(f"Collection {foreign_id} not found")
+
+    ns = Namespace(foreign_id)
+    origin = "translate"
+    to_index: list[EntityProxy] = []
+    to_delete: list[str] = []
+    entity_ids: list[str] = []
+    aggregator = get_aggregator(collection)
+    aggregator_name = get_aggregator_name(collection)
+
+    if entity_id:
+        entity_ids.append(entity_id)
+    if infile:
+        entity_ids.extend(infile.readlines())
+        entity_ids = [e.strip() for e in entity_ids]
+
+    ix = 1
+    for id in entity_ids:
+        entity_data = list(aggregator.fragments(id, fragment="default"))
+        if not entity_data:
+            raise click.ClickException(
+                f"Entity {id} not found in collection {collection.id}"
+            )
+        entity = EntityProxy.from_dict(entity_data[0])
+        if entity.schema.is_a("Pages"):
+            to_delete.append(id)
+            to_index.append(entity)
+            for page_data in get_page_entity_fragments(entity, aggregator_name, ns):
+                page_entity = EntityProxy.from_dict(page_data)
+                to_delete.append(page_entity.id)
+                to_index.append(page_entity)
+                ix += 1
+                if ix >= QUERY_LIMIT:
+                    log.info(
+                        f"Deleting {QUERY_LIMIT} translations, queueing entities for re-index"
+                    )
+                    aggregator.delete_many(to_delete, origin=origin)
+                    queue_index(collection, to_index)
+                    to_delete.clear()
+                    to_index.clear()
+                    ix = 1
+        else:
+            to_delete.append(id)
+            to_index.append(entity)
+
+            if len(to_delete) >= QUERY_LIMIT:
+                log.info(
+                    f"Deleting {QUERY_LIMIT} translations, queueing entities for re-index"
+                )
+                aggregator.delete_many(to_delete, origin=origin)
+                queue_index(collection, to_index)
+                to_delete.clear()
+                to_index.clear()
+
+    if to_delete:
+        aggregator.delete_many(to_delete, origin=origin)
+        queue_index(collection, to_index)
+
+    if not entity_id and not infile:
+        aggregator.delete(origin=origin)
+        queue_reindex(collection)
 
 
 @cli.command()

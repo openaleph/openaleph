@@ -11,6 +11,9 @@ import { defineMessages, FormattedMessage, injectIntl } from 'react-intl';
 import withRouter from 'app/withRouter';
 import {
   AnimatedCount,
+  DatasetGroup,
+  DatasetGroups,
+  HighlightTopics,
   SearchBox,
   Category,
   Country,
@@ -88,7 +91,7 @@ export class HomeScreen extends Component {
         exemptFromRequiredAuth
       >
         <div className="HomeScreen">
-          <section className="HomeScreen__section title-section">
+          <section className="HomeScreen__section HomeScreen__section--light title-section">
             <div className="HomeScreen__section__content">
               <h1 className="HomeScreen__app-title">{title}</h1>
               {description && (
@@ -102,41 +105,63 @@ export class HomeScreen extends Component {
                   })}
                   inputProps={{ large: true, autoFocus: true }}
                 />
-                <div className="HomeScreen__thirds">
-                  <AnimatedCount
-                    count={statistics?.things}
-                    isPending={statistics.isPending}
-                    label={intl.formatMessage(messages.count_entities)}
-                  />
-                  <AnimatedCount
-                    count={statistics?.collections}
-                    isPending={statistics.isPending}
-                    label={intl.formatMessage(messages.count_datasets)}
-                  />
-                  <AnimatedCount
-                    count={_.size(statistics?.countries)}
-                    isPending={statistics.isPending}
-                    label={intl.formatMessage(messages.count_countries)}
-                  />
-                </div>
+              </div>
+              <div className="HomeScreen__stats">
+                <AnimatedCount
+                  count={statistics?.things}
+                  isPending={statistics.isPending}
+                  label={intl.formatMessage(messages.count_entities)}
+                />
+                <AnimatedCount
+                  count={statistics?.collections}
+                  isPending={statistics.isPending}
+                  label={intl.formatMessage(messages.count_datasets)}
+                />
+                <AnimatedCount
+                  count={_.size(statistics?.countries)}
+                  isPending={statistics.isPending}
+                  label={intl.formatMessage(messages.count_countries)}
+                />
               </div>
             </div>
           </section>
+
           {appHomePage?.content && (
-            <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+            <ReactMarkdown
+              rehypePlugins={[rehypeRaw]}
+              components={{
+                datasetgroup: DatasetGroup,
+                datasetgroups: DatasetGroups,
+                highlighttopics: HighlightTopics,
+              }}
+            >
               {appHomePage.content}
             </ReactMarkdown>
           )}
-          <section className="HomeScreen__section">
+          <section className="HomeScreen__section HomeScreen__section--light">
             <div className="HomeScreen__section__content">
-              <h1 className="HomeScreen__title">
-                <FormattedMessage
-                  id="home.stats.title"
-                  defaultMessage="Get started exploring public data"
-                />
-              </h1>
-              <div className="HomeScreen__thirds">
-                <div>
+              <div className="oa-header oa-header--light">
+                <div className="oa-pill">
+                  <FormattedMessage
+                    id="home.stats.pill"
+                    defaultMessage="Explore"
+                  />
+                </div>
+                <h1 className="HomeScreen__title">
+                  <FormattedMessage
+                    id="home.stats.title"
+                    defaultMessage="Get started exploring public data"
+                  />
+                </h1>
+                <p>
+                  <FormattedMessage
+                    id="home.stats.subtitle"
+                    defaultMessage="Browse by entity type, dataset category, or country."
+                  />
+                </p>
+              </div>
+              <div className="oa-grid">
+                <div className="oa-stat-card">
                   <Statistics
                     styleType="dark"
                     headline={
@@ -156,7 +181,7 @@ export class HomeScreen extends Component {
                     )}
                   />
                 </div>
-                <div>
+                <div className="oa-stat-card">
                   <Statistics
                     styleType="dark"
                     headline={
@@ -176,7 +201,7 @@ export class HomeScreen extends Component {
                     itemLabel={(name) => <Category.Label category={name} />}
                   />
                 </div>
-                <div>
+                <div className="oa-stat-card">
                   <Statistics
                     styleType="dark"
                     headline={

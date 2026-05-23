@@ -1,6 +1,6 @@
 [project]
 name = "aleph"
-version = "5.1.0"
+version = "5.3.0-rc15"
 description = "Search and browse documents and data; find the people and companies you look for."
 authors = [
     { name = "Friedrich Lindenberg", email = "friedrich@pudo.org" },
@@ -12,11 +12,11 @@ license = "MIT"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
-    "followthemoney @ git+https://github.com/dataresearchcenter/followthemoney.git@fix/pickle",
-    "openaleph-search @ git+https://github.com/openaleph/openaleph-search.git",
-    "openaleph-procrastinate (>=5.2.0,<6.0.0)",
-    "ftmq[postgres] (>=4.5.3,<5.0.0)",
-    "nomenklatura (>=4.6.1,<4.6.2)",
+    "followthemoney (>=4.8.2,<5.0.0)",
+    "openaleph-search (>=5.3.0,<6.0.0)",
+    "openaleph-procrastinate (>=5.3.0,<6.0.0)",
+    "ftmq[postgres] (>=4.8.2,<5.0.0)",
+    "nomenklatura (>=4.7.2,<5.0.0)",
     "normality (>=3.0.2,<4.0.0)",
     "pydantic (>=2.10.6,<3.0.0)",
     "banal (>=1.0.6,<2.0.0)",
@@ -38,6 +38,7 @@ dependencies = [
     "apispec-webframeworks (==1.2.0)",
     "blinker (==1.9.0)",
     "babel (==2.16.0)",
+    "orjson (>=3.10,<4.0.0)",
     "pyyaml (==6.0.2)",
     "python-frontmatter (==1.1.0)",
     "pyjwt (==2.9.0)",
@@ -48,7 +49,7 @@ dependencies = [
     "prometheus-client (>=0.17.1)",
     "followthemoney-compare @ git+https://github.com/dataresearchcenter/followthemoney-compare.git",
     # servicelayer extras requirements
-    "openaleph-servicelayer (>=1.23.4,<2.0.0)",
+    "openaleph-servicelayer (>=1.24.0,<2.0.0)",
     "boto3 (>=1.11.9,<2.0.0)",
     "grpcio (>=1.32.0,<2.0.0)",
     "google-cloud-storage (>=1.31.0,<3.0.0)",
@@ -82,8 +83,8 @@ ipdb = "^0.13.13"
 pytest-env = "^1.1.5"
 fakeredis = "<2.31"
 mkdocs = "^1.6.1"
-mkdocs-material = "^9.6.11"
 pre-commit = "^4.5.1"
+zensical = "^0.0.36"
 
 
 [build-system]
@@ -102,3 +103,7 @@ OPENALEPH_SEARCH_AUTH_FIELD = "collection_id"
 PROCRASTINATE_SYNC = 1
 PROCRASTINATE_APP = "aleph.procrastinate.tasks.app"
 NOMENKLATURA_XREF_ALGORITHM = "logic-v1"
+ALEPH_HEALTH_CHECK_API_KEY = "test-health-key"
+ALEPH_ALLOW_REGISTRATION = 1
+OPENALEPH_SEARCH_PERCOLATION = 1
+OPENALEPH_SEARCH_MATCHING_SINGLE_TOKEN_MIN_LENGTH = 7

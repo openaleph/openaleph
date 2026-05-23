@@ -8,7 +8,7 @@ const csvContextLoader = (Viewer) =>
 
       this.state = {
         url: null,
-        requestedRow: 400,
+        requestedRow: 50,
         rows: [],
         parser: null,
       };

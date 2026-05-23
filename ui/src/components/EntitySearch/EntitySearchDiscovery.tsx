@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Tag } from '@blueprintjs/core';
 import { endpoint } from 'app/api';
+import './EntitySearchDiscovery.scss';
 
 interface EntitySearchDiscoveryProps {
   result: {
@@ -33,6 +34,7 @@ const EntitySearchDiscovery: React.FC<EntitySearchDiscoveryProps> = ({
   const [discoveryResult, setDiscoveryResult] = useState<DiscoveryResult>({
     loading: false,
   });
+  const [fetched, setFetched] = useState(false);
 
   const parseSearchQuery = (query: string): string[] => {
     const phrases: string[] = [];
@@ -114,53 +116,56 @@ const EntitySearchDiscovery: React.FC<EntitySearchDiscoveryProps> = ({
     });
   };
 
+  const fetchDiscoveryData = async () => {
+    if (!result.query_q?.trim() && !result.filters?.names?.length) {
+      setDiscoveryResult({ loading: false });
+      return;
+    }
+
+    setDiscoveryResult({ loading: true });
+    setFetched(true);
+
+    try {
+      const params: Record<string, any> = {
+        q: result.query_q,
+        limit: 5,
+        facet_significant: 'names',
+      };
+
+      // Add collection_id filter if it exists in the result filters
+      if (result.filters?.collection_id?.length) {
+        params['filter:collection_id'] = result.filters.collection_id;
+      }
+
+      // Add names filter if it exists in the result filters
+      if (result.filters?.names?.length) {
+        params['filter:names'] = result.filters.names;
+      }
+
+      const response = await endpoint.get('entities', {
+        params,
+      });
+
+      const significantTerms =
+        response.data.facets?.['names.significant_terms']?.values || [];
+
+      setDiscoveryResult({
+        loading: false,
+        results: significantTerms,
+        total: significantTerms.length,
+      });
+    } catch (error) {
+      setDiscoveryResult({
+        loading: false,
+        error: 'Failed to load discovery results',
+      });
+    }
+  };
+
+  // Reset when query/filters change so the user can fetch again
   useEffect(() => {
-    const fetchDiscoveryData = async () => {
-      if (!result.query_q?.trim() && !result.filters?.names?.length) {
-        setDiscoveryResult({ loading: false });
-        return;
-      }
-
-      setDiscoveryResult({ loading: true });
-
-      try {
-        const params: Record<string, any> = {
-          q: result.query_q,
-          limit: 5,
-          facet_significant: 'names',
-        };
-
-        // Add collection_id filter if it exists in the result filters
-        if (result.filters?.collection_id?.length) {
-          params['filter:collection_id'] = result.filters.collection_id;
-        }
-
-        // Add names filter if it exists in the result filters
-        if (result.filters?.names?.length) {
-          params['filter:names'] = result.filters.names;
-        }
-
-        const response = await endpoint.get('entities', {
-          params,
-        });
-
-        const significantTerms =
-          response.data.facets?.['names.significant_terms']?.values || [];
-
-        setDiscoveryResult({
-          loading: false,
-          results: significantTerms,
-          total: significantTerms.length,
-        });
-      } catch (error) {
-        setDiscoveryResult({
-          loading: false,
-          error: 'Failed to load discovery results',
-        });
-      }
-    };
-
-    fetchDiscoveryData();
+    setFetched(false);
+    setDiscoveryResult({ loading: false });
   }, [result.query_q, result.filters?.names, result.filters?.collection_id]);
 
   if (!result.query_q?.trim() && !result.filters?.names?.length) {
@@ -191,47 +196,45 @@ const EntitySearchDiscovery: React.FC<EntitySearchDiscoveryProps> = ({
   return (
     <div className="EntitySearchDiscovery">
       {queryPhrases.length > 0 && (
-        <div style={{ marginBottom: '10px' }}>
-          <span>Search terms: </span>
-          {queryPhrases.map((phrase, index) => (
-            <Tag
-              key={index}
-              intent="primary"
-              onRemove={() => removePhrase(phrase)}
-              style={{ marginRight: '5px' }}
-            >
-              {phrase}
-            </Tag>
-          ))}
+        <div className="EntitySearchDiscovery__row">
+          <div className="EntitySearchDiscovery__label">Search terms</div>
+          <div className="EntitySearchDiscovery__pills">
+            {queryPhrases.map((phrase, index) => (
+              <Tag
+                key={index}
+                intent="primary"
+                onRemove={() => removePhrase(phrase)}
+              >
+                {phrase}
+              </Tag>
+            ))}
+          </div>
         </div>
       )}
-      {discoveryResult.loading && <p>Loading discovery results...</p>}
+      {(!fetched || discoveryResult.loading) && (
+        <button
+          className={`EntitySearchDiscovery__discover-btn${discoveryResult.loading ? ' EntitySearchDiscovery__discover-btn--loading' : ''}`}
+          onClick={fetchDiscoveryData}
+          disabled={discoveryResult.loading}
+        >
+          {discoveryResult.loading ? 'Loading\u2026' : 'Discover related terms'}
+        </button>
+      )}
       {discoveryResult.error && <p>Error: {discoveryResult.error}</p>}
       {filteredSignificantTerms && filteredSignificantTerms.length > 0 && (
-        <div>
-          <p>
-            Your search query is often mentioned with these related terms:{' '}
+        <div className="EntitySearchDiscovery__row">
+          <div className="EntitySearchDiscovery__label">Related terms</div>
+          <div className="EntitySearchDiscovery__pills">
             {filteredSignificantTerms.map((term, index) => (
-              <span key={term.id || index}>
-                <button
-                  onClick={() => handleTermClick(term.label)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#137cbd',
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    padding: 0,
-                    margin: 0,
-                    font: 'inherit',
-                  }}
-                >
-                  {term.label}
-                </button>
-                {index < filteredSignificantTerms.length - 1 && ', '}
-              </span>
+              <button
+                key={term.id || index}
+                className="EntitySearchDiscovery__term"
+                onClick={() => handleTermClick(term.label)}
+              >
+                {term.label}
+              </button>
             ))}
-          </p>
+          </div>
         </div>
       )}
     </div>

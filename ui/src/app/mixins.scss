@@ -1,3 +1,8 @@
+@mixin pillButton {
+  border-radius: 9999px;
+  cursor: pointer;
+}
+
 @mixin breakText {
   overflow-wrap: break-word;
   word-wrap: break-word;

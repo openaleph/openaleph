@@ -36,6 +36,22 @@ QueryResponse:
       type: string
       example: eq
 
+ErrorResponse:
+  type: object
+  properties:
+    status:
+      type: string
+      example: error
+    message:
+      type: string
+      description: Human-readable error message
+    errors:
+      type: object
+      nullable: true
+      description: Field-level validation errors, if applicable
+      additionalProperties:
+        type: string
+
 DatedModel:
   type: object
   properties:

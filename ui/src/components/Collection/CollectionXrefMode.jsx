@@ -2,7 +2,7 @@ import React from 'react';
 import { defineMessages, injectIntl } from 'react-intl';
 import { compose } from 'redux';
 import { connect } from 'react-redux';
-import { Button, Intent } from '@blueprintjs/core';
+import { Button } from '@blueprintjs/core';
 import queryString from 'query-string';
 
 import withRouter from 'app/withRouter';
@@ -17,7 +17,6 @@ import { collectionXrefFacetsQuery } from 'queries';
 import {
   selectCollection,
   selectCollectionXrefResult,
-  selectTester,
 } from 'selectors';
 import {
   queryCollectionXref,
@@ -102,8 +101,7 @@ export class CollectionXrefMode extends React.Component {
   }
 
   actions() {
-    const { collection, result, query, isTester, isRandomSort, intl } =
-      this.props;
+    const { collection, result, query, isRandomSort, intl } = this.props;
     const exportLink = collection?.links?.xref_export;
 
     return (
@@ -120,21 +118,18 @@ export class CollectionXrefMode extends React.Component {
             this.props.triggerCollectionXrefDownload(collection.id)
           }
         >
-          {isTester && (
-            <SortingBar
-              filterButtonLabel={intl.formatMessage(messages.sort_label)}
-              filterButton={
-                <Button
-                  text={intl.formatMessage(
-                    messages[isRandomSort ? 'sort_random' : 'sort_default']
-                  )}
-                  onClick={this.toggleSort}
-                  minimal
-                  intent={Intent.PRIMARY}
-                />
-              }
-            />
-          )}
+          <SortingBar
+            filterButtonLabel={intl.formatMessage(messages.sort_label)}
+            filterButton={
+              <Button
+                text={intl.formatMessage(
+                  messages[isRandomSort ? 'sort_random' : 'sort_default']
+                )}
+                onClick={this.toggleSort}
+                minimal
+              />
+            }
+          />
         </SearchActionBar>
       </div>
     );
@@ -147,7 +142,6 @@ const mapStateToProps = (state, ownProps) => {
   return {
     collection: selectCollection(state, collectionId),
     query,
-    isTester: selectTester(state),
     isRandomSort: query.getSort()?.field === 'random',
     result: selectCollectionXrefResult(state, query),
   };

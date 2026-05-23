@@ -13,7 +13,7 @@ import {
 import c from 'classnames';
 
 import withRouter from 'app/withRouter';
-import { CheckboxList, Schema } from 'components/common';
+import { CheckboxList, Country, Schema } from 'components/common';
 import DateFacet from 'components/Facet/DateFacet';
 
 import './Facet.scss';
@@ -119,7 +119,13 @@ class Facet extends Component {
             id,
             ...rest,
           }))
-        : facet?.values;
+        : field === 'countries'
+          ? facet?.values?.map(({ id, label, ...rest }) => ({
+              label: <Country.Name code={id} />,
+              id,
+              ...rest,
+            }))
+          : facet?.values;
 
     return (
       <>

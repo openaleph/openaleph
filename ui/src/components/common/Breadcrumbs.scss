@@ -3,7 +3,8 @@
 
 .Breadcrumbs {
   z-index: 1;
-  padding: $aleph-grid-size * 0.5 $aleph-content-padding;
+  padding: $aleph-grid-size * 1.2 $aleph-content-padding;
+  border-bottom: 1px solid rgba($black, 0.08);
   background-color: $aleph-breadcrumbs-background;
 
   @media screen and (max-width: $aleph-screen-sm-max-width) {
@@ -30,7 +31,7 @@
     }
 
     .#{$bp-ns}-divider {
-      border-color: $light-gray4;
+      border-color: rgba(255, 255, 255, 0.2);
     }
   }
 
@@ -52,6 +53,7 @@
 
   &__right {
     display: flex;
+    gap: $aleph-grid-size * 2;
 
     .#{$bp-ns}-button-group {
       align-items: center;
@@ -61,11 +63,11 @@
       display: none;
     }
 
-    .#{$bp-ns}-control-group,
-    .#{$bp-ns}-input,
-    .#{$bp-ns}-button-group {
-      border-radius: $aleph-border-radius !important;
-    }
+    // .#{$bp-ns}-control-group,
+    // .#{$bp-ns}-input,
+    // .#{$bp-ns}-button-group {
+    //   border-radius: $aleph-border-radius !important;
+    // }
 
     .#{$bp-ns}-input-group {
       min-width: $aleph-grid-size * 20.5;
@@ -102,10 +104,10 @@
   }
 
   .#{$bp-ns}-breadcrumb-current {
-    color: $blue1;
+    color: $aleph-link-color;
 
     .#{$bp-ns}-spinner-head {
-      stroke: $blue1;
+      stroke: $aleph-link-color;
     }
   }
 

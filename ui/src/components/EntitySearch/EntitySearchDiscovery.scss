@@ -1,0 +1,89 @@
+@import 'app/variables.scss';
+@import 'app/mixins.scss';
+
+.EntitySearchDiscovery {
+  border-left: 3px solid $aleph-accent-color;
+  padding: $aleph-grid-size * 1.5;
+  margin-bottom: $aleph-grid-size;
+  background: $darc-gray-50;
+  border-radius: 0 $aleph-border-radius $aleph-border-radius 0;
+
+  &__row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 6px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &__label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $darc-gray-500;
+    white-space: nowrap;
+    min-width: 110px;
+  }
+
+  &__pills {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .#{$bp-ns}-tag {
+    padding: 4px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    border-radius: 9999px;
+  }
+}
+
+.EntitySearchDiscovery__discover-btn {
+  @include pillButton;
+  background: none;
+  border: 1px solid $darc-gray-300;
+  color: $aleph-accent-color;
+  padding: 6px 18px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+
+  &:hover {
+    border-color: $aleph-accent-color;
+    background-color: rgba($aleph-accent-color, 0.05);
+  }
+
+  &--loading {
+    opacity: 0.7;
+    cursor: wait;
+  }
+}
+
+.EntitySearchDiscovery__term {
+  @include pillButton;
+  background: none;
+  border: 1px solid $darc-gray-300;
+  color: $aleph-accent-color;
+  padding: 4px 14px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+
+  &:hover {
+    border-color: $aleph-accent-color;
+    background-color: rgba($aleph-accent-color, 0.05);
+  }
+}

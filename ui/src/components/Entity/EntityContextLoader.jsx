@@ -9,7 +9,10 @@ import {
   queryEntities,
   querySimilar,
   queryMoreLikeThis,
+  queryThread,
   queryNearby,
+  queryPercolate,
+  queryMentions,
   queryEntityExpand,
 } from 'actions';
 import {
@@ -18,12 +21,18 @@ import {
   selectEntitiesResult,
   selectSimilarResult,
   selectMoreLikeThisResult,
+  selectThreadResult,
   selectNearbyResult,
+  selectPercolateResult,
+  selectMentionsResult,
   selectEntityExpandResult,
 } from 'selectors';
 import {
   entitySimilarQuery,
   entityMoreLikeThisQuery,
+  entityPercolateQuery,
+  entityMentionsQuery,
+  entityThreadQuery,
   entityNearbyQuery,
   folderDocumentsQuery,
   entityReferencesQuery,
@@ -65,6 +74,24 @@ class EntityContextLoader extends PureComponent {
       this.props.queryMoreLikeThis({ query: moreLikeThisQuery });
     }
 
+    const { percolateQuery, percolateResult } = this.props;
+    const showPercolate = entity?.schema?.isDocument() && !isPreview;
+    if (showPercolate && percolateResult.shouldLoad) {
+      this.props.queryPercolate({ query: percolateQuery });
+    }
+
+    const { mentionsQuery, mentionsResult } = this.props;
+    const showMentions = entity?.schema?.isA('LegalEntity') && !isPreview;
+    if (showMentions && mentionsResult.shouldLoad) {
+      this.props.queryMentions({ query: mentionsQuery });
+    }
+
+    const { threadQuery, threadResult } = this.props;
+    const showThread = entity?.schema?.isA("Email");
+    if (showThread && threadResult.shouldLoad) {
+      this.props.queryThread({ query: threadQuery });
+    }
+
     const { nearbyQuery, nearbyResult } = this.props;
     const showNearby = entity?.schema?.isA('Address') && !isPreview;
     if (showNearby && nearbyResult.shouldLoad) {
@@ -86,6 +113,9 @@ const mapStateToProps = (state, ownProps) => {
   const { entityId, location } = ownProps;
   const similarQuery = entitySimilarQuery(location, entityId);
   const moreLikeThisQuery = entityMoreLikeThisQuery(location, entityId);
+  const percolateQuery = entityPercolateQuery(location, entityId);
+  const mentionsQuery = entityMentionsQuery(location, entityId);
+  const threadQuery = entityThreadQuery(location, entityId);
   const nearbyQuery = entityNearbyQuery(location, entityId);
   const childrenQuery = folderDocumentsQuery(location, entityId, undefined);
   const expandQuery = entityReferencesQuery(entityId);
@@ -96,6 +126,12 @@ const mapStateToProps = (state, ownProps) => {
     similarResult: selectSimilarResult(state, similarQuery),
     moreLikeThisQuery,
     moreLikeThisResult: selectMoreLikeThisResult(state, moreLikeThisQuery),
+    percolateQuery,
+    percolateResult: selectPercolateResult(state, percolateQuery),
+    mentionsQuery,
+    mentionsResult: selectMentionsResult(state, mentionsQuery),
+    threadQuery,
+    threadResult: selectThreadResult(state, threadQuery),
     nearbyQuery,
     nearbyResult: selectNearbyResult(state, nearbyQuery),
     expandQuery,
@@ -109,7 +145,10 @@ const mapDispatchToProps = {
   queryEntities,
   querySimilar,
   queryMoreLikeThis,
+  queryThread,
   queryNearby,
+  queryPercolate,
+  queryMentions,
   queryEntityExpand,
   fetchEntity,
   fetchEntityTags,

@@ -9,7 +9,6 @@ import { querySimilar } from 'actions';
 import { selectSimilarResult } from 'selectors';
 import {
   ErrorSection,
-  QueryInfiniteLoad,
   JudgementButtons,
   Score,
   Collection,
@@ -17,6 +16,7 @@ import {
   EntityDecisionHotkeys,
   EntityDecisionRow,
 } from 'components/common';
+import FacetedResultList from 'components/EntitySearch/FacetedResultList';
 import EntityCompare from 'components/Entity/EntityCompare';
 import { entitySimilarQuery } from 'queries';
 import { pairwiseJudgement } from 'actions';
@@ -64,7 +64,7 @@ class EntitySimilarMode extends Component {
           `}
           values={{
             resultCount: result.total,
-            datasetCount: result.facets.collection_id.total,
+            datasetCount: result.facets?.collection_id?.total ?? 0,
           }}
         />
       </Callout>
@@ -145,37 +145,45 @@ class EntitySimilarMode extends Component {
   }
 
   render() {
-    const { intl, query, result } = this.props;
+    const { intl, query, result, navigate, location } = this.props;
     const skeletonItems = [...Array(10).keys()];
 
-    if (result.total === 0) {
-      return (
-        <ErrorSection
-          icon="similar"
-          title={intl.formatMessage(messages.empty)}
-        />
-      );
-    }
-
     return (
-      <div className="EntitySimilarMode">
-        {this.renderSummary()}
-        <EntityDecisionHotkeys result={result} onDecide={this.onDecide}>
-          <table className="data-table">
-            {this.renderHeader()}
-            <tbody>
-              {result.results?.map((res, i) => this.renderRow(res, i))}
-              {result.isPending &&
-                skeletonItems.map((idx) => this.renderSkeleton(idx))}
-            </tbody>
-          </table>
-        </EntityDecisionHotkeys>
-        <QueryInfiniteLoad
-          query={query}
-          result={result}
-          fetch={this.props.querySimilar}
-        />
-      </div>
+      <FacetedResultList
+        query={query}
+        result={result}
+        navigate={navigate}
+        location={location}
+        fetch={this.props.querySimilar}
+        defaultFacets={['schema', 'countries']}
+        additionalFields={['collection_id']}
+        storageKey="entity:similar"
+        hideSidebarWhenEmpty
+        previewHotkeys={false}
+      >
+        <div className="EntitySimilarMode">
+          {result.total === 0 ? (
+            <ErrorSection
+              icon="similar"
+              title={intl.formatMessage(messages.empty)}
+            />
+          ) : (
+            <>
+              {this.renderSummary()}
+              <EntityDecisionHotkeys result={result} onDecide={this.onDecide}>
+                <table className="data-table">
+                  {this.renderHeader()}
+                  <tbody>
+                    {result.results?.map((res, i) => this.renderRow(res, i))}
+                    {result.isPending &&
+                      skeletonItems.map((idx) => this.renderSkeleton(idx))}
+                  </tbody>
+                </table>
+              </EntityDecisionHotkeys>
+            </>
+          )}
+        </div>
+      </FacetedResultList>
     );
   }
 }

@@ -9,6 +9,15 @@
     font-weight: bold;
   }
 
+  .settings-table {
+    border-spacing: 0 2px;
+
+    td {
+      padding-top: $aleph-grid-size * 0.5;
+      padding-bottom: $aleph-grid-size * 0.5;
+    }
+  }
+
   .#{$bp-ns}-callout {
     margin-top: $aleph-grid-size;
   }

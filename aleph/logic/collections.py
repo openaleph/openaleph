@@ -354,6 +354,7 @@ def _process_batches(
     schema: str | None = None,
     since=None,
     until=None,
+    origin: str | None = None,
 ):
     """Process entities in batches."""
     aggregator = get_aggregator(collection)
@@ -364,7 +365,7 @@ def _process_batches(
         )
     else:
         batches = aggregator.get_sorted_id_batches(
-            batch_size, schema=schema, since=since, until=until
+            batch_size, schema=schema, since=since, until=until, origin=origin
         )
 
     for batch in batches:
@@ -385,6 +386,7 @@ def reindex_collection(
     schema=None,
     since=None,
     until=None,
+    origin=None,
 ):
     """Re-index all entities from the model, mappings and aggregator cache.
 
@@ -401,6 +403,7 @@ def reindex_collection(
         schema: Filter entities by schema (e.g., Person, Company)
         since: Optional timestamp filter for aggregator (ISO format or timestamp)
         until: Optional timestamp filter for aggregator (ISO format or timestamp)
+        origin: Filter entities by aggregator origin (e.g., 'xref', 'aleph')
     """
     from aleph.logic.profiles import profile_fragments
 
@@ -451,6 +454,7 @@ def reindex_collection(
         schema,
         since_dt,
         until_dt,
+        origin=origin,
     )
     if not queue_batches:
         compute_collection(collection, force=True)

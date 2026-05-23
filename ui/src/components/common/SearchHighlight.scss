@@ -1,11 +1,50 @@
 @import 'app/variables.scss';
 
-.SearchHighlight em {
-  background-color: $aleph-text-highlight-color;
-  font-style: inherit;
+.SearchHighlight {
+  background-color: rgba($darc-yellow-500, 0.08);
+  border-left: 3px solid rgba($darc-yellow-500, 0.5);
+  padding: 6px 10px;
+  border-radius: 0 4px 4px 0;
+
+  em {
+    background-color: $aleph-text-highlight-color;
+    font-style: inherit;
+  }
 }
 
 .SearchHighlight__names {
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-bottom: 10px;
+
+  .#{$bp-ns}-tag {
+    background: transparent !important;
+    color: $darc-gray-700;
+    border: 1px solid $darc-gray-300;
+    margin: 2px 0;
+
+    .tag-icon {
+      color: $darc-gray-500;
+    }
+  }
+}
+
+.SearchHighlight__translation {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: $gray3;
+
+  &-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: $gray3;
+    background: rgba($gray5, 0.15);
+    border-radius: 3px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
 }

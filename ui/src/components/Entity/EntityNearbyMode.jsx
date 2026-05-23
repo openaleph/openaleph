@@ -14,13 +14,13 @@ import {
   Entity,
   ErrorSection,
   Property,
-  QueryInfiniteLoad,
   Schema,
   Skeleton,
 } from 'components/common';
+import FacetedResultList from 'components/EntitySearch/FacetedResultList';
 import EntityProperties from 'components/Entity/EntityProperties';
 import ensureArray from 'util/ensureArray';
-import { queryEntities } from 'actions/index';
+import { queryNearby } from 'actions/index';
 import EntityActionBar from './EntityActionBar';
 
 const messages = defineMessages({
@@ -43,6 +43,10 @@ const messages = defineMessages({
   search_placeholder_default: {
     id: 'entity.references.search.placeholder_default',
     defaultMessage: 'Search entities',
+  },
+  group_label: {
+    id: 'entity.nearby.group_label',
+    defaultMessage: 'Nearby entities preview',
   },
 });
 
@@ -76,23 +80,24 @@ class EntityNearbyMode extends React.Component {
   }
 
   renderCell(prop, entity) {
+    // For the address caption column let `Entity.Link` fall through to
+    // `EntityLabel`, which prefers `entity.caption` over the raw first
+    // `name[]` value (UTF-ordered, would surface non-Latin variants).
+    if (prop.name === 'full') {
+      return (
+        <td key={prop.name} className="entity">
+          <Entity.Link entity={entity} icon preview />
+        </td>
+      );
+    }
     const propVal = (
       <Property.Values
         prop={prop}
         values={entity.getProperty(prop.name)}
         translitLookup={entity.latinized}
+        preview
       />
     );
-    if (prop.name === 'full') {
-      return (
-        <td key={prop.name} className="entity">
-          <Entity.Link entity={entity}>
-            <Schema.Icon schema={entity.schema} className="left-icon" />
-            {propVal}
-          </Entity.Link>
-        </td>
-      );
-    }
     return (
       <td key={prop.name} className={prop.type.name}>
         {propVal}
@@ -101,12 +106,18 @@ class EntityNearbyMode extends React.Component {
   }
 
   renderRow(columns, entity, model) {
-    const { expandedId, hideCollection } = this.props;
+    const { expandedId, previewId, hideCollection } = this.props;
     const isExpanded = entity.id === expandedId;
     const expandIcon = isExpanded ? 'chevron-up' : 'chevron-down';
 
     const mainRow = (
-      <tr key={entity.id} className={c('nowrap', { prefix: isExpanded })}>
+      <tr
+        key={entity.id}
+        className={c('nowrap', {
+          prefix: isExpanded,
+          active: previewId === entity.id,
+        })}
+      >
         <td className="distance" style={{ width: 'auto', minWidth: '50px' }}>
           {parseFloat(entity._sort[0]).toFixed(2)} km
         </td>
@@ -163,7 +174,7 @@ class EntityNearbyMode extends React.Component {
   }
 
   render() {
-    const { intl, query, result, model, hideCollection } = this.props;
+    const { intl, query, result, results, model, hideCollection, navigate, location } = this.props;
     const schema = model.getSchema('Address');
 
     if (!result) {
@@ -174,7 +185,6 @@ class EntityNearbyMode extends React.Component {
         />
       );
     }
-    const results = _.uniqBy(ensureArray(result.results), 'id');
     const columns = schema.getFeaturedProperties();
     const schemaLabel = schema.plural.toLowerCase();
     const placeholder = intl.formatMessage(messages.search_placeholder, {
@@ -183,14 +193,25 @@ class EntityNearbyMode extends React.Component {
     const skeletonItems = [...Array(15).keys()];
 
     return (
-      <section className="EntityReferencesTable">
-        <EntityActionBar
-          query={query}
-          onSearchSubmit={this.onSearchSubmit}
-          searchPlaceholder={placeholder}
-        ></EntityActionBar>
-        {result.total !== 0 && (
-          <>
+      <FacetedResultList
+        query={query}
+        result={result}
+        navigate={navigate}
+        location={location}
+        fetch={this.props.queryNearby}
+        defaultFacets={['schema']}
+        additionalFields={['collection_id']}
+        storageKey="entity:nearby"
+        hideSidebarWhenEmpty
+        previewGroupLabel={intl.formatMessage(messages.group_label)}
+      >
+        <section className="EntityReferencesTable">
+          <EntityActionBar
+            query={query}
+            onSearchSubmit={this.onSearchSubmit}
+            searchPlaceholder={placeholder}
+          ></EntityActionBar>
+          {result.total !== 0 && (
             <table className="data-table references-data-table">
               <thead>
                 <tr>
@@ -216,27 +237,24 @@ class EntityNearbyMode extends React.Component {
                   this.renderRow(columns, entity, model)
                 )}
                 {result.isPending &&
-                  skeletonItems.map((idx) => this.renderSkeleton(columns, idx))}
+                  skeletonItems.map((idx) =>
+                    this.renderSkeleton(columns, idx)
+                  )}
               </tbody>
             </table>
-            <QueryInfiniteLoad
-              query={query}
-              result={result}
-              fetch={this.props.queryEntities}
+          )}
+          {result.total === 0 && (
+            <ErrorSection
+              icon={
+                <Schema.Icon schema={schema} className="left-icon" size={60} />
+              }
+              title={intl.formatMessage(messages.no_results, {
+                schema: schemaLabel,
+              })}
             />
-          </>
-        )}
-        {result.total === 0 && (
-          <ErrorSection
-            icon={
-              <Schema.Icon schema={schema} className="left-icon" size={60} />
-            }
-            title={intl.formatMessage(messages.no_results, {
-              schema: schemaLabel,
-            })}
-          />
-        )}
-      </section>
+          )}
+        </section>
+      </FacetedResultList>
     );
   }
 }
@@ -244,16 +262,20 @@ class EntityNearbyMode extends React.Component {
 const mapStateToProps = (state, ownProps) => {
   const { location, query } = ownProps;
   const parsedHash = queryString.parse(location.hash);
+  const result = selectNearbyResult(state, query);
+  const results = _.uniqBy(ensureArray(result.results), 'id');
   return {
     model: selectModel(state),
     parsedHash,
     expandedId: parsedHash.expand,
-    result: selectNearbyResult(state, query),
+    previewId: parsedHash['preview:id'],
+    result,
+    results,
   };
 };
 
 export default compose(
   withRouter,
-  connect(mapStateToProps, { queryEntities }),
+  connect(mapStateToProps, { queryNearby }),
   injectIntl
 )(EntityNearbyMode);

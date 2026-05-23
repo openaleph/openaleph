@@ -844,3 +844,288 @@ class EntitiesApiTestCase(TestCase):
         assert (
             membership_count == 0
         ), f"Expected 0 for membershipOrganization, got {membership_count}"
+
+    def test_mentions(self):
+        """Basic e2e for /entities/<entity_id>/mentions.
+
+        Creates a Person and a Document whose text mentions the person's name.
+        The mentions endpoint should return the document.
+        Thorough coverage lives in openaleph-search's test_mentions.py.
+        """
+        _, headers = self.login(is_admin=True)
+
+        # Create a person entity
+        person_data = {
+            "schema": "Person",
+            "collection_id": self.col_id,
+            "properties": {"name": "Winnie the Pooh"},
+        }
+        person = self.client.post(
+            "/api/2/entities",
+            data=json.dumps(person_data),
+            headers=headers,
+            content_type=JSON,
+        )
+        assert person.status_code == 200, person.json
+        person_id = person.json["id"]
+
+        # Create a document that mentions the person
+        doc_data = {
+            "schema": "PlainText",
+            "collection_id": self.col_id,
+            "properties": {
+                "name": "story.txt",
+                "bodyText": [
+                    "Once upon a time, Winnie the Pooh went to the forest "
+                    "to find some honey."
+                ],
+            },
+        }
+        doc = self.client.post(
+            "/api/2/entities",
+            data=json.dumps(doc_data),
+            headers=headers,
+            content_type=JSON,
+        )
+        assert doc.status_code == 200, doc.json
+        doc_id = doc.json["id"]
+
+        # Query mentions for the person
+        url = f"/api/2/entities/{person_id}/mentions"
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res.json
+        results = res.json.get("results", [])
+        matched_ids = {r["id"] for r in results}
+        assert doc_id in matched_ids, (
+            f"Expected document {doc_id} in mentions results, "
+            f"got: {[r.get('id') for r in results]}"
+        )
+
+    def test_mentions_requires_auth(self):
+        url = f"/api/2/entities/{self.id}/mentions"
+        res = self.client.get(url)
+        assert res.status_code == 403, res
+
+    def test_mentions_nonexistent_entity(self):
+        _, headers = self.login(is_admin=True)
+        url = "/api/2/entities/nonexistent-id/mentions"
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 404, res
+
+    def test_screening(self):
+        """Batch screening across a filtered source entity set.
+
+        Creates two Persons in the test collection and a document that
+        mentions one of them by name. Hitting /api/2/screening with a
+        source filter that selects those Persons (and a target filter
+        scoping documents to the same collection) should return the
+        document. Thorough coverage of MultiMentionsQuery itself lives
+        in openaleph-search."""
+        _, headers = self.login(is_admin=True)
+
+        jane = self.client.post(
+            "/api/2/entities",
+            data=json.dumps(
+                {
+                    "schema": "Person",
+                    "collection_id": self.col_id,
+                    "properties": {"name": "Jane Q. Starling"},
+                }
+            ),
+            headers=headers,
+            content_type=JSON,
+        )
+        assert jane.status_code == 200, jane.json
+        jack = self.client.post(
+            "/api/2/entities",
+            data=json.dumps(
+                {
+                    "schema": "Person",
+                    "collection_id": self.col_id,
+                    "properties": {"name": "Jack Q. Roebuck"},
+                }
+            ),
+            headers=headers,
+            content_type=JSON,
+        )
+        assert jack.status_code == 200, jack.json
+
+        doc = self.client.post(
+            "/api/2/entities",
+            data=json.dumps(
+                {
+                    "schema": "PlainText",
+                    "collection_id": self.col_id,
+                    "properties": {
+                        "name": "starling-brief.txt",
+                        "bodyText": [
+                            "The case file notes that Jane Q. Starling "
+                            "met with local officials last autumn."
+                        ],
+                    },
+                }
+            ),
+            headers=headers,
+            content_type=JSON,
+        )
+        assert doc.status_code == 200, doc.json
+        doc_id = doc.json["id"]
+
+        # Source: Persons in this collection. Target: documents in this
+        # collection. `source:` prefix splits the two scopes server-side.
+        url = (
+            "/api/2/screening"
+            f"?source:filter:schema=Person"
+            f"&source:filter:collection_id={self.col_id}"
+            f"&filter:collection_id={self.col_id}"
+        )
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res.json
+        result_ids = {r["id"] for r in res.json.get("results", [])}
+        assert doc_id in result_ids, (
+            f"Expected document {doc_id} in screening results, "
+            f"got: {sorted(result_ids)}"
+        )
+
+    def test_screening_empty_source(self):
+        """A source filter that matches no entities should return 200
+        with zero results — not a 400 or a crash."""
+        _, headers = self.login(is_admin=True)
+        url = (
+            "/api/2/screening"
+            f"?source:filter:schema=Airplane"  # unknown schema → 0 entities
+            f"&filter:collection_id={self.col_id}"
+        )
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res.json
+        assert res.json.get("total", 0) == 0, res.json
+
+    def test_screening_requires_auth(self):
+        res = self.client.get("/api/2/screening")
+        assert res.status_code == 403, res
+
+    def test_thread(self):
+        # Linear thread: before -> main -> after
+        #   before <- main   via entity-ref (main.inReplyToEmail = before)
+        #   main   <- after  via message-id string (after.inReplyTo = main.messageId)
+        _, headers = self.login(is_admin=True)
+        before = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "parent",
+                    "messageId": "<parent@example.com>",
+                    "date": "2024-01-01",
+                },
+            },
+            self.col,
+        )
+        before_id = self.col.ns.sign(before.id)
+        main = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "main",
+                    "messageId": "<main@example.com>",
+                    "inReplyToEmail": before_id,
+                    "date": "2024-01-02",
+                },
+            },
+            self.col,
+        )
+        main_id = self.col.ns.sign(main.id)
+        after = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "child",
+                    "messageId": "<child@example.com>",
+                    "inReplyTo": "<main@example.com>",
+                    "date": "2024-01-03",
+                },
+            },
+            self.col,
+        )
+        after_id = self.col.ns.sign(after.id)
+        db.session.commit()
+        index_entity(before)
+        index_entity(main)
+        index_entity(after)
+
+        # Full thread from main — all three entities, chronological order
+        res = self.client.get(f"/api/2/entities/{main_id}/thread", headers=headers)
+        assert res.status_code == 200, res.json
+        ids = [r["id"] for r in res.json["results"]]
+        assert before_id in ids, f"parent missing: {ids}"
+        assert main_id in ids, f"source missing: {ids}"
+        assert after_id in ids, f"child missing: {ids}"
+        # Chronological order
+        assert (
+            ids.index(before_id) < ids.index(main_id) < ids.index(after_id)
+        ), f"Expected chronological order, got: {ids}"
+
+    def test_thread_branching(self):
+        # Tree: root -> {branch_a, branch_b -> leaf}
+        # Starting from leaf, should return the full tree including
+        # sibling branch_a which is not in leaf's direct ancestry.
+        _, headers = self.login(is_admin=True)
+        root = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "root",
+                    "messageId": "<root@ex.com>",
+                    "date": "2024-01-01",
+                },
+            },
+            self.col,
+        )
+        root_id = self.col.ns.sign(root.id)
+        branch_a = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "branch_a",
+                    "inReplyTo": "<root@ex.com>",
+                    "date": "2024-01-02",
+                },
+            },
+            self.col,
+        )
+        branch_a_id = self.col.ns.sign(branch_a.id)
+        branch_b = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "branch_b",
+                    "inReplyTo": "<root@ex.com>",
+                    "date": "2024-01-03",
+                },
+            },
+            self.col,
+        )
+        branch_b_id = self.col.ns.sign(branch_b.id)
+        leaf = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "leaf",
+                    "inReplyToEmail": branch_b_id,
+                    "date": "2024-01-04",
+                },
+            },
+            self.col,
+        )
+        leaf_id = self.col.ns.sign(leaf.id)
+        db.session.commit()
+        for e in (root, branch_a, branch_b, leaf):
+            index_entity(e)
+
+        # Starting from leaf — should get full tree including sibling
+        res = self.client.get(f"/api/2/entities/{leaf_id}/thread", headers=headers)
+        assert res.status_code == 200, res.json
+        ids = [r["id"] for r in res.json["results"]]
+        assert root_id in ids, f"root missing: {ids}"
+        assert branch_a_id in ids, f"sibling branch_a missing: {ids}"
+        assert branch_b_id in ids, f"branch_b missing: {ids}"
+        assert leaf_id in ids, f"source leaf missing: {ids}"

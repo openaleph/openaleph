@@ -5,6 +5,18 @@ theme:
   name: material
   logo: https://openaleph.org/assets/Logo/RGB/Open-Aleph-Logo-RGB-Square-Neg.svg
   favicon: https://openaleph.org/favicon.ico
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: lucide/sun
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: lucide/moon
+        name: Switch to dark mode
+
   features:
     - navigation.instant
     - navigation.tracking
@@ -14,16 +26,17 @@ theme:
     - content.code.copy
   custom_dir: docs/overrides
 extra_css:
-  - stylesheets/extra.css
+  - https://dataresearchcenter.github.io/zensical-theme-darc/stylesheets/darc-zensical.css
 extra:
+  logo_light: https://openaleph.org/assets/Logo/RGB/Open-Aleph-Logo-RGB-Square-Pos.svg
   social:
-    - icon: material/mail
+    - icon: lucide/mail
       link: mailto:hi@dataresearchcenter.org
-    - icon: material/web
+    - icon: lucide/globe
       link: https://openaleph.org
-    - icon: material/github
+    - icon: simple/github
       link: https://github.com/openaleph/openaleph
-    - icon: material/linkedin
+    - icon: fontawesome/brands/linkedin
       link: https://www.linkedin.com/company/dataresearchcenter/
 markdown_extensions:
   - pymdownx.highlight:
@@ -38,11 +51,14 @@ markdown_extensions:
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.details
-  - admonition
   - pymdownx.tasklist:
       custom_checkbox: true
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
   - attr_list
   - md_in_html
+  - footnotes
 plugins:
   - search
   # - mkdocstrings:

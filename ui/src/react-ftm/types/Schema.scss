@@ -1,3 +1,77 @@
+@import 'src/react-ftm/variables.scss';
+
 .SchemaIcon {
   color: inherit !important;
+}
+
+.SchemaLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+
+  .SchemaIcon {
+    flex-shrink: 0;
+  }
+
+  // Person — DARC orange
+  &--person {
+    background-color: $darc-orange-50;
+    color: $darc-orange-900;
+
+    .SchemaIcon {
+      color: $darc-orange-900 !important;
+    }
+  }
+
+  // LegalEntity — DARC yellow
+  &--legalentity {
+    background-color: $darc-yellow-50;
+    color: $darc-yellow-900;
+
+    .SchemaIcon {
+      color: $darc-yellow-900 !important;
+    }
+  }
+
+  // Document — DARC purple
+  &--document {
+    background-color: $darc-purple-50;
+    color: $darc-purple-900;
+
+    .SchemaIcon {
+      color: $darc-purple-900 !important;
+    }
+  }
+
+  // Default — gray
+  &--default {
+    background-color: #F2F2F2;
+    color: #595959;
+
+    .SchemaIcon {
+      color: #595959 !important;
+    }
+  }
+
+  // Neutral — no background, fully inherits from parent
+  &--neutral {
+    display: inline;
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    border-radius: 0;
+
+    .SchemaIcon {
+      color: inherit !important;
+    }
+  }
 }

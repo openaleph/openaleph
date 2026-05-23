@@ -5,6 +5,10 @@ import Breadcrumbs from './Breadcrumbs';
 import SignInCallout from './SignInCallout';
 import ClipboardInput from './ClipboardInput';
 import Category from './Category';
+import CollectionList from './CollectionList';
+import DatasetGroup from './DatasetGroup';
+import DatasetGroups from './DatasetGroups';
+import HighlightTopics from './HighlightTopics';
 import EntityDecisionHotkeys from './EntityDecisionHotkeys';
 import EntityDecisionRow from './EntityDecisionRow';
 import Frequency from './Frequency';
@@ -17,6 +21,9 @@ import AppItem from './AppItem';
 import csvContextLoader from './csvContextLoader';
 import EntitySet from './EntitySet';
 import DualPane from './DualPane';
+import FacetedLayout from './FacetedLayout';
+import FacetsSidebar from './FacetsSidebar';
+import PreviewHotkeys from './PreviewHotkeys';
 import Entity from './Entity';
 import FileImport from './FileImport';
 import Mention from './Mention';
@@ -48,6 +55,7 @@ import ExportLink from './ExportLink';
 import UpdateStatus from './UpdateStatus';
 import JudgementButtons from './JudgementButtons';
 import LinkMenuItem from './LinkMenuItem';
+import Panel from './Panel';
 import LinkButton from './LinkButton';
 import WidthBoundary from './WidthBoundary';
 import DeleteDialog from './DeleteDialog';
@@ -62,6 +70,10 @@ export {
   SignInCallout,
   ClipboardInput,
   Category,
+  CollectionList,
+  DatasetGroup,
+  DatasetGroups,
+  HighlightTopics,
   Frequency,
   Restricted,
   csvContextLoader,
@@ -69,6 +81,9 @@ export {
   Collection,
   EntitySet,
   DualPane,
+  FacetedLayout,
+  FacetsSidebar,
+  PreviewHotkeys,
   HotkeysContainer,
   Entity,
   AppItem,
@@ -105,6 +120,7 @@ export {
   UpdateStatus,
   JudgementButtons,
   LinkMenuItem,
+  Panel,
   LinkButton,
   WidthBoundary,
   DeleteDialog,

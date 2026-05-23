@@ -1,10 +1,14 @@
 import logging
+from typing import Generator
 
-from banal import ensure_dict
+from banal import ensure_dict, is_mapping
 from flask_babel import gettext
-from followthemoney import model
+from followthemoney import EntityProxy, model
 from followthemoney.exc import InvalidData
+from followthemoney.namespace import Namespace
 from followthemoney.types import registry
+from followthemoney.util import make_entity_id
+from openaleph_procrastinate.defer import tasks
 from openaleph_search.index import entities as index
 
 from aleph.core import cache, db
@@ -19,9 +23,24 @@ from aleph.procrastinate.queues import (
     queue_prune_entity,
     queue_update_entity,
 )
+from aleph.settings import SETTINGS
 from aleph.util import make_entity_proxy
 
 log = logging.getLogger(__name__)
+
+
+def _deduce_page_ids(
+    collection_id: int, foreign_id: str, e: EntityProxy
+) -> Generator[str, None, None]:
+    """This is an endless generator of child "Page" entity IDs. This doesn't
+    mean they exist. Consumers are responsible to stop at one point."""
+    if e.schema.name == "Pages":
+        ns = Namespace(foreign_id)
+        i = 1
+        while True:
+            id_ = make_entity_id(e.id, i, key_prefix=f"collection_{collection_id}")
+            yield ns.sign(id_)
+            i += 1
 
 
 def upsert_entity(data, collection, authz=None, sync=False, sign=False, job_id=None):
@@ -72,7 +91,7 @@ def update_entity(collection, entity_id=None, job_id=None):
     aggregator = get_aggregator(collection, origin=MODEL_ORIGIN)
     profile_fragments(collection, aggregator, entity_id=entity_id)
     inline_names(aggregator, proxy)
-    queue_analyze(collection, proxy, batch=job_id)
+    queue_analyze(collection, [proxy], batch=job_id)
 
 
 def index_entity(collection, entity_id):
@@ -123,7 +142,72 @@ def validate_entity(data):
     # only those values that can be inserted for each property,
     # making it valid -- all this does, therefore, is to raise an
     # exception that notifies the user.
-    schema.validate(data)
+    # FIXME the following seems a bit hacky/unnecessary, but `validate_entity` is
+    # only called from the api if `?validate=true` only, which defaults to
+    # `false`, and who knows how long we will have this user edits in this
+    # stack anyways ;)
+    # followthemoney 4.6.0: We need to turn entity references (nested payload)
+    # to their IDs first:
+    properties = {}
+    _data = {k: v for k, v in data.items()}
+    for prop, values in _data.pop("properties", {}).items():
+        properties[prop] = []
+        for value in values:
+            if is_mapping(value):
+                schema.validate(value)
+                id_ = value.get("id")
+                if id_:
+                    properties[prop].append(id_)
+            else:
+                properties[prop].append(value)
+    _data["properties"] = properties
+    # FTM 4.6.0 only validates properties present in the dict, so missing
+    # required properties would slip through. Check explicitly:
+    for req in schema.required:
+        if not properties.get(req):
+            raise InvalidData(
+                gettext("Entity validation failed"),
+                errors={"properties": {req: gettext("Required")}},
+            )
+    schema.validate(_data)
+
+
+def should_transcribe(proxy: EntityProxy) -> bool:
+    """Check if an entity is eligible for transcription."""
+    if not tasks.transcribe.defer:
+        return False
+    return proxy.schema.is_a("Video") or proxy.schema.is_a("Audio")
+
+
+def should_translate(collection_id: int, foreign_id: str, proxy: EntityProxy) -> bool:
+    """Check if an entity is eligible for translation. Should be used on 'detail
+    views' and not in lists for many entities because of the costly call for
+    Pages schemata."""
+    if not tasks.translate.defer:
+        return False
+    if not SETTINGS.FTM_TRANSLATE_SOURCE_LANGUAGES:
+        return False
+    if proxy.has(
+        "translatedText", quiet=True
+    ):  # already translated, don't allow user-side retrigger
+        return False
+    # this is hacky but the most efficient way to do this. For "Pages" schemata,
+    # we deduce the first few child Page ids, try to get them from the index and
+    # look if they have translated text. We test the first 3 possible pages.
+    if proxy.schema.name == "Pages":
+        for ix, page_id in enumerate(
+            _deduce_page_ids(collection_id, foreign_id, proxy)
+        ):
+            if ix > 3:
+                break
+            page_entity = index.get_entity(page_id)
+            if page_entity is None:
+                continue
+            if "translatedText" in page_entity.get("properties", {}):
+                return False
+    if proxy.schema.is_a("Document"):
+        return True
+    return False
 
 
 def check_write_entity(entity, authz):
@@ -131,10 +215,10 @@ def check_write_entity(entity, authz):
     system for serialisers and API."""
     if authz.is_admin:
         return True
-    collection_id = ensure_dict(entity.get("collection")).get("id")
-    collection_id = entity.get("collection_id", collection_id)
     if not entity.get("mutable"):
         return False
+    collection_id = ensure_dict(entity.get("collection")).get("id")
+    collection_id = entity.get("collection_id", collection_id)
     return authz.can(collection_id, authz.WRITE)
 
 

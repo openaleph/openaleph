@@ -107,7 +107,7 @@ def _bulk_compare_ftmc_model(proxies):
 
 def _bulk_compare_nomenklatura(
     proxies: list[tuple[E, E]],
-) -> typing.Generator[tuple[float, None, str]]:
+) -> typing.Generator[tuple[float, None, str], None, None]:
     algorithm = _get_nk_algorithm()
     if algorithm is not None:
         for entity, candidate in proxies:
@@ -299,7 +299,14 @@ def xref_collection(collection):
     index_matches(collection, _query_entities(collection))
     index_matches(collection, _query_mentions(collection))
     log.info(f"[{collection}] Xref done, re-indexing to reify mentions...")
-    reindex_collection(collection, sync=False, model=False)
+    reindex_collection(
+        collection,
+        sync=False,
+        model=False,
+        mappings=False,
+        profiles=False,
+        origin="xref",
+    )
 
 
 def _format_date(proxy):
@@ -380,7 +387,7 @@ def export_matches(export_id):
         sheet = excel.make_sheet("Cross-reference", headers)
         batch = []
 
-        for match in iter_matches(collection.name, authz.search_auth):
+        for match in iter_matches(collection, authz):
             batch.append(match)
             if len(batch) >= BULK_PAGE:
                 _iter_match_batch(excel, sheet, batch)

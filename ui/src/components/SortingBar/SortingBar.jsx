@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { defineMessages, FormattedMessage, injectIntl } from 'react-intl';
 import { compose } from 'redux';
 import { connect } from 'react-redux';
-import { Button, Intent, MenuItem } from '@blueprintjs/core';
+import { Button, MenuItem } from '@blueprintjs/core';
 
 import SortingBarSelect from 'components/SortingBar/SortingBarSelect';
 
@@ -123,7 +123,6 @@ class SortingBar extends Component {
                 })
               }
               minimal
-              intent={Intent.PRIMARY}
             />
           </div>
         </div>

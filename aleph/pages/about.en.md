@@ -15,3 +15,5 @@ OpenAleph is a [DARC](https://dataresearchcenter.org) project and is open source
 [Register](./register) for a research account to get access to more documents and structured data.
 
 Please refer to the [documentation](https://docs.openaleph.org/) for more details.
+
+_Most icons designed by [OpenMoji](https://openmoji.org) – the open-source emoji and icon project. [License: CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)_

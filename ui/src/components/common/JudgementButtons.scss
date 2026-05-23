@@ -2,5 +2,6 @@
 @import 'app/mixins.scss';
 
 .JudgementButtons {
+  padding-left: $aleph-grid-size;
   @include rtlSupportInvertedProp(margin, left, $aleph-grid-size * -1, null);
 }

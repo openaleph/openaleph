@@ -4,13 +4,15 @@ import { connect } from 'react-redux';
 
 import { selectMetadata } from 'selectors';
 
+import './Frequency.scss';
+
 class FrequencyLabel extends PureComponent {
   render() {
     const { frequency, frequencies } = this.props;
     const label = frequencies[frequency];
     return (
       <span className="FrequencyLabel">
-        <Tag icon="automatic-updates" title={label}>
+        <Tag icon="automatic-updates" title={label} minimal>
           {label}
         </Tag>
       </span>

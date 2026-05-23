@@ -2,14 +2,17 @@
 @import 'app/mixins.scss';
 
 .Facet {
-  margin-bottom: $aleph-grid-size;
+  margin-bottom: $aleph-grid-size * 1.5;
+  background: #fff;
+  border-radius: $aleph-border-radius;
+  overflow: hidden;
 
   & > .opener {
     display: flex;
-    padding: 0 $aleph-grid-size;
+    padding: $aleph-grid-size * 0.3 $aleph-grid-size * 1.5;
     align-items: center;
     cursor: pointer;
-    background: $aleph-facet-background !important;
+    background: transparent !important;
 
     &.active {
       font-weight: bold;
@@ -56,7 +59,6 @@
       @include rtl(left, null, $aleph-grid-size * 0.5);
 
       &a:hover {
-        // Element is on a background (set by .clickable), so invert its own background.
         background: $aleph-content-background;
       }
     }
@@ -78,7 +80,8 @@
   }
 
   .CheckboxList {
-    margin-top: $aleph-grid-size;
+    margin-top: $aleph-grid-size * 0.5;
+    padding: 0 $aleph-grid-size * 0.5 $aleph-grid-size * 0.5;
   }
 
   &__no-options {
@@ -86,9 +89,9 @@
     margin: 0 $aleph-grid-size * 2.5 $aleph-grid-size * 1.5;
   }
 
-  .DateFacet.#{$bp-ns}-card {
+  .DateFacet.Panel {
     box-shadow: none;
-    padding: $aleph-grid-size * 1.5 $aleph-grid-size 0;
+    padding: $aleph-grid-size * 1.5 $aleph-grid-size * 1.5 0;
   }
 
   p {
@@ -101,7 +104,9 @@
 
   .ShowMore {
     margin-top: $aleph-grid-size;
+    padding: 0 $aleph-grid-size * 1.5 $aleph-grid-size;
     font-weight: bold;
+
   }
 
   .updating {

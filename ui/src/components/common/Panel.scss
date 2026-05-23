@@ -1,0 +1,8 @@
+@import 'app/variables.scss';
+
+.Panel {
+  background-color: #fff;
+  border-radius: $aleph-border-radius;
+  box-shadow: none;
+  padding: $aleph-grid-size * 2;
+}

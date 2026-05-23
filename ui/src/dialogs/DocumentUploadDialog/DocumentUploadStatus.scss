@@ -1,11 +1,11 @@
-@import '~@blueprintjs/core/lib/scss/variables';
+@import 'app/variables.scss';
 
 ul.DocumentUploadStatus__list {
   max-height: 20vh;
   overflow-y: auto;
   margin-bottom: 1rem;
   background: $white;
-  border: 1px solid $light-gray1;
+  border: 1px solid $darc-gray-200;
 
   .DocumentUploadTrace {
     padding: 0.5rem;

@@ -6,7 +6,7 @@ from followthemoney.proxy import EntityProxy
 from openaleph_procrastinate import defer
 from openaleph_procrastinate.app import make_app
 from openaleph_procrastinate.model import DatasetJob
-from openaleph_procrastinate.settings import DeferSettings
+from openaleph_procrastinate.settings import DeferSettings, OpenAlephSettings
 from openaleph_procrastinate.tasks import Priorities
 
 from aleph.logic.aggregator import get_aggregator_name
@@ -16,6 +16,7 @@ from aleph.settings import SETTINGS
 log = structlog.get_logger(__name__)
 app = make_app(SETTINGS.PROCRASTINATE_TASKS, sync=True)
 settings = DeferSettings()
+oa_settings = OpenAlephSettings()
 
 OP_INGEST = "ingest"
 OP_ANALYZE = "analyze"
@@ -38,7 +39,7 @@ class Context(TypedDict):
     priority: int | None
 
 
-def get_context(collection: Collection) -> Context:
+def get_context(collection: Collection, priority: int | None = None) -> Context:
     """Set some task context variables that configure the ingestors."""
     from aleph.logic.aggregator import get_aggregator_name
 
@@ -47,7 +48,7 @@ def get_context(collection: Collection) -> Context:
             "languages": [x for x in collection.languages if x],
             "ftmstore": get_aggregator_name(collection),
             "namespace": collection.foreign_id,
-            "priority": Priorities.USER if collection.casefile else None,
+            "priority": priority or (Priorities.USER if collection.casefile else None),
         }
     )
 
@@ -56,14 +57,39 @@ def queue_ingest(collection: Collection, proxy: EntityProxy, **context: Any) -> 
     context = {**context, **get_context(collection)}
     dataset = get_aggregator_name(collection)
     with app.open():
-        defer.ingest(app, dataset, [proxy], **context)
+        defer.ingest(app, dataset, [proxy], dehydrate=False, **context)
 
 
-def queue_analyze(collection: Collection, proxy: EntityProxy, **context: Any) -> None:
-    context = {**context, **get_context(collection)}
+def queue_analyze(
+    collection: Collection, entities: list[EntityProxy], **context: Any
+) -> None:
+    context = {**context, **get_context(collection, Priorities.USER)}
     dataset = get_aggregator_name(collection)
     with app.open():
-        defer.analyze(app, dataset, [proxy], **context)
+        defer.analyze(app, dataset, entities, **context)
+
+
+def queue_transcribe(
+    collection: Collection, proxy: EntityProxy, **context: Any
+) -> None:
+    context = {**context, **get_context(collection, Priorities.USER)}
+    dataset = get_aggregator_name(collection)
+    with app.open():
+        defer.transcribe(app, dataset, [proxy], **context)
+
+
+def queue_translate(
+    collection: Collection,
+    proxy: EntityProxy,
+    **context: Any,
+) -> None:
+    context = {**context, **get_context(collection, Priorities.USER)}
+    dataset = get_aggregator_name(collection)
+    with app.open():
+        defer.translate(app, dataset, [proxy], **context)
+    # we want to trace the processing status for the UI:
+    tracer = defer.tasks.translate.get_tracer(oa_settings.redis_url)
+    tracer.add(proxy.id)
 
 
 def queue_index(

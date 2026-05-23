@@ -1,4 +1,5 @@
 import logging
+import re
 
 from banal import ensure_list
 from flask import request
@@ -7,10 +8,16 @@ from followthemoney import model
 from followthemoney.helpers import entity_filename
 from followthemoney.types import registry
 from rigour.mime.types import CSV, PDF
+from servicelayer import env
 
 from aleph.core import url_for
 from aleph.logic import resolver
-from aleph.logic.entities import check_write_entity, transliterate_values
+from aleph.logic.entities import (
+    check_write_entity,
+    should_transcribe,
+    should_translate,
+    transliterate_values,
+)
 from aleph.logic.util import archive_url, collection_url, entity_url
 from aleph.model import (
     Alert,
@@ -23,15 +30,20 @@ from aleph.model import (
     Export,
     Role,
 )
+from aleph.procrastinate.queues import defer
 from aleph.util import make_entity_proxy
 from aleph.views.util import clean_object, jsonify
 
 log = logging.getLogger(__name__)
 
+TRACER_URI = env.get("REDIS_URL")
+BASE64_ENCODED_PATTERN = re.compile(r"=\?{1}(.+)\?{1}([B|Q])\?{1}(.+)\?{1}=.*")
+
 
 class Serializer(object):
-    def __init__(self, nested=False):
+    def __init__(self, nested=False, detail_view=False):
         self.nested = nested
+        self.detail_view = detail_view
 
     def collect(self, obj):
         pass
@@ -90,8 +102,8 @@ class Serializer(object):
         return obj
 
     @classmethod
-    def jsonify(cls, obj, **kwargs):
-        data = cls().serialize(obj)
+    def jsonify(cls, obj, detail_view=False, **kwargs):
+        data = cls(detail_view=detail_view).serialize(obj)
         return jsonify(data, **kwargs)
 
     @classmethod
@@ -100,15 +112,17 @@ class Serializer(object):
         if extra is not None:
             data.update(extra)
         # Sometimes part of the result might be missing because of some
-        # inconsistency (eg: a failed re-indexing). We try to spot those
-        # inconsistencies.
+        # inconsistency (eg: a failed re-indexing, stale xref docs). We try
+        # to spot those inconsistencies.
         total = data.get("total", 0)
         limit = data.get("limit", 0)
         offset = data.get("offset", 0)
-        # we have calls that doesn't include hits but aggregagtions, that's fine
+        # Significant aggregation queries set ES size=0 (no hits) but still
+        # have parser limit > 0 and facets present, so we skip when facets
+        # are returned.
         if total > 0 and not data.get("results") and not data.get("facets"):
             if not (limit == 0 or offset >= total):
-                log.exception(f"Expected more results in the response: {data}")
+                log.error(f"Expected more results in the response: {data}")
                 data = {
                     "status": "error",
                     "message": gettext(
@@ -199,7 +213,7 @@ class EntitySerializer(Serializer):
         self.queue(Collection, obj.get("collection_id"))
         self.queue(Role, obj.get("role_id"))
         schema = model.get(obj.get("schema"))
-        if schema is None or self.nested:
+        if schema is None or self.nested:  # FIXME what does that
             return
         properties = obj.get("properties", {})
         for name, values in properties.items():
@@ -209,7 +223,7 @@ class EntitySerializer(Serializer):
             for value in ensure_list(values):
                 self.queue(Entity, value, schema=prop.range)
 
-    def _serialize(self, obj):
+    def _serialize(self, obj):  # noqa: C901
         proxy = make_entity_proxy(dict(obj))
         properties = {}
         for prop, value in proxy.itervalues():
@@ -220,6 +234,8 @@ class EntitySerializer(Serializer):
                     entity["shallow"] = True
                     value = entity
             if value is not None:
+                if type(value) is str and BASE64_ENCODED_PATTERN.search(value):
+                    continue
                 properties[prop.name].append(value)
         obj["properties"] = properties
         links = {
@@ -229,7 +245,7 @@ class EntitySerializer(Serializer):
             "ui": entity_url(proxy.id),
         }
 
-        if proxy.schema.is_a(Document.SCHEMA):
+        if self.detail_view and proxy.schema.is_a(Document.SCHEMA):
             content_hash = proxy.first("contentHash", quiet=True)
             if content_hash:
                 name = entity_filename(proxy)
@@ -263,6 +279,11 @@ class EntitySerializer(Serializer):
             return None
         obj["collection"] = self.resolve(Collection, coll_id, CollectionSerializer)
         role_id = obj.pop("role_id", None)
+        # FIXME: some real world ES docs have an array here, we don't know why
+        # currently. If there is ever a bug, this _could_ solve it:
+        # if is_listish(role_id):
+        #     if len(ensure_list(role_id)) == 1:
+        #         role_id = role_id[0]
         obj["role"] = self.resolve(Role, role_id, RoleSerializer)
         obj["links"] = links
         obj["latinized"] = transliterate_values(proxy)
@@ -271,6 +292,23 @@ class EntitySerializer(Serializer):
         # Phasing out multi-values here (2021-01):
         obj["created_at"] = min(ensure_list(obj.get("created_at")), default=None)
         obj["updated_at"] = max(ensure_list(obj.get("updated_at")), default=None)
+
+        # Adding processing triggers and status for documents only (detail view)
+        if self.detail_view and proxy.schema.is_a(Document.SCHEMA):
+            if should_transcribe(proxy):
+                links["transcribe"] = url_for(
+                    "entities_api.transcribe", entity_id=proxy.id
+                )
+            if should_translate(
+                obj["collection"]["id"], obj["collection"]["foreign_id"], proxy
+            ):
+                links["translate"] = url_for(
+                    "entities_api.translate", entity_id=proxy.id
+                )
+
+            tracer = defer.tasks.translate.get_tracer(TRACER_URI)
+            obj["processing_status"] = {"translate": tracer.is_processing(obj["id"])}
+
         return obj
 
 
@@ -291,6 +329,13 @@ class XrefSerializer(Serializer):
         obj["writeable"] = request.authz.can(collection_id, request.authz.WRITE)
         if obj["entity"] and obj["match"]:
             return obj
+        log.warning(
+            "Dropping xref result: entity=%s (resolved=%s) match=%s (resolved=%s)",
+            entity_id,
+            bool(obj["entity"]),
+            match_id,
+            bool(obj["match"]),
+        )
 
 
 class SimilarSerializer(Serializer):

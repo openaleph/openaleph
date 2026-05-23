@@ -14,7 +14,7 @@ from openaleph_search.index.util import (
     index_name,
     index_settings,
 )
-from openaleph_search.query.util import bool_query
+from openaleph_search.query.util import BoolQuery, bool_query
 
 from aleph.core import cache, es
 from aleph.model import Collection, Entity
@@ -29,6 +29,17 @@ STATS_FACETS = [
     "languages",
 ]
 log = logging.getLogger(__name__)
+
+
+def _collection_things_count(collection_id: int) -> BoolQuery:
+    query = bool_query()
+    query["bool"]["must"] = [{"term": {"collection_id": collection_id}}]
+    # don't count too much:
+    query["bool"]["must_not"] = [
+        {"term": {"schema": "Mention"}},
+        {"term": {"schema": "Page"}},
+    ]
+    return query
 
 
 def collections_index():
@@ -127,7 +138,7 @@ def get_collection(collection_id):
     data = collection.to_dict()
 
     index = entities_read_index(schema=Entity.THING)
-    query = {"term": {"collection_id": collection_id}}
+    query = _collection_things_count(collection_id)
     result = es.count(index=index, body={"query": query})
     data["count"] = result.get("count", 0)
     cache.set_complex(key, data, expires=cache.EXPIRE)
@@ -150,7 +161,6 @@ def get_collection_stats(collection_id):
 
 def update_collection_stats(collection_id, facets=STATS_FACETS):
     """Compute some statistics on the content of a collection."""
-    query = bool_query()
     aggs = {}
     for facet in facets:
         # Regarding facet size, 300 would be optimal because it's
@@ -159,12 +169,7 @@ def update_collection_stats(collection_id, facets=STATS_FACETS):
         # this goes.
         aggs[facet + ".values"] = {"terms": {"field": facet, "size": 100}}
         aggs[facet + ".total"] = {"cardinality": {"field": facet}}
-    query["bool"]["must"] = [{"term": {"collection_id": collection_id}}]
-    # don't count too much:
-    query["bool"]["must_not"] = [
-        {"term": {"schema": "Mention"}},
-        {"term": {"schema": "Page"}},
-    ]
+    query = _collection_things_count(collection_id)
     body = {"size": 0, "query": query, "aggs": aggs}
     index = entities_read_index()
     result = es.search(index=index, body=body, request_timeout=3600, timeout="20m")

@@ -29,8 +29,13 @@ export {
   queryEntities,
   querySimilar,
   queryMoreLikeThis,
+  queryThread,
   queryNearby,
+  queryPercolate,
+  queryMentions,
   queryEntityExpand,
+  triggerEntityTranscribe,
+  triggerEntityTranslate,
   updateEntity,
 } from './entityActions';
 export {
@@ -73,7 +78,6 @@ export {
   queryBookmarks,
   createBookmark,
   deleteBookmark,
-  migrateLocalBookmarks,
 } from './bookmarkActions';
 
 export { createAction };
