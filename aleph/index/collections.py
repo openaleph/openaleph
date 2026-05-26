@@ -87,6 +87,7 @@ def configure_collections():
             "contains_ai": FieldType.BOOL,
             "contains_ai_comment": {"type": "text"},
             "taggable": FieldType.BOOL,
+            "external": FieldType.BOOL,
             "created_at": {"type": "date"},
             "updated_at": {"type": "date"},
             "count": {"type": "long"},
