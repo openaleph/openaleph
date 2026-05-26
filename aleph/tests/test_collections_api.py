@@ -504,3 +504,27 @@ class CollectionsApiTestCase(TestCase):
         )
         res = self.client.post(bulk_url, headers=headers, data=bulk_data)
         assert res.status_code == 403, res
+
+    def test_collection_create_restricted(self):
+        """Only "investigators" can create collections"""
+
+        SETTINGS.INVESTIGATOR_GROUP = "investigator"
+
+        role, headers = self.login()
+        assert not role.is_investigator
+        assert not role.is_admin
+
+        url = "/api/2/collections"
+        data = {"foreign_id": "cannot_create_this", "label": "bar"}
+
+        res = self.client.post(url, json=data, headers=headers)
+        assert res.status_code == 403
+
+        SETTINGS.INVESTIGATOR_GROUP = None
+
+        # if no group set, everyone is allowed
+        role, headers = self.login()
+        assert role.is_investigator
+        assert not role.is_admin
+        res = self.client.post(url, json=data, headers=headers)
+        assert res.status_code == 200
