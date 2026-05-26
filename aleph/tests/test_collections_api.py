@@ -1,9 +1,14 @@
 import json
 
+import pytest
+from followthemoney.exc import InvalidData
+
 from aleph.authz import Authz
 from aleph.core import db
-from aleph.logic.collections import compute_collection
+from aleph.logic.aggregator import get_aggregator
+from aleph.logic.collections import compute_collection, update_collection
 from aleph.model import EntitySet
+from aleph.model.role import Role
 from aleph.settings import SETTINGS
 from aleph.tests.util import JSON, TestCase
 from aleph.views.util import validate
@@ -364,7 +369,7 @@ class CollectionsApiTestCase(TestCase):
         assert res.status_code == 200, res
         assert res.json["taggable"] is False
 
-    def test_external_collection_read_only(self):
+    def test_external_collection(self):
         _, headers = self.login(is_admin=True)
 
         # Default: external is False and collection is writeable
@@ -374,30 +379,46 @@ class CollectionsApiTestCase(TestCase):
         assert res.json["external"] is False
         assert res.json["writeable"] is True
 
-        # Set external=True via direct DB update (simulating external system)
-        self.col.external = True
-        db.session.add(self.col)
-        db.session.commit()
+        # create external collection
+        self.col_external = self.create_collection(
+            creator=Role.load_cli_user(),  # admin
+            label="External Collection",
+            foreign_id="test_coll_external",
+            category="leak",
+            countries=["us"],
+            languages=["eng"],
+            external=True,
+        )
 
-        # Admin cannot update external collection metadata
+        # collection is not writeable for admin
+        url = "/api/2/collections/%s" % self.col_external.id
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, res
         assert res.json["external"] is True
         assert res.json["writeable"] is False
 
+        # Admin still can update external collection metadata via api
         data = res.json
-        data["label"] = "Should Not Work"
+        data["label"] = "New label"
         res = self.client.post(
             url, data=json.dumps(data), headers=headers, content_type=JSON
         )
-        assert res.status_code == 403, res
+        assert res.status_code == 200, res
+
+        # but not change to casefile
+        data = res.json
+        data["category"] = "casefile"
+        res = self.client.post(
+            url, data=json.dumps(data), headers=headers, content_type=JSON
+        )
+        assert res.status_code == 400, res
 
         # Admin cannot delete external collection
         res = self.client.delete(url, headers=headers)
         assert res.status_code == 403, res
 
-        # Admin cannot bulk write to external collection
-        bulk_url = "/api/2/collections/%s/_bulk" % self.col.id
+        # Admin still can bulk write to external collection
+        bulk_url = "/api/2/collections/%s/_bulk" % self.col_external.id
         bulk_data = json.dumps(
             [
                 {
@@ -408,12 +429,24 @@ class CollectionsApiTestCase(TestCase):
             ]
         )
         res = self.client.post(bulk_url, headers=headers, data=bulk_data)
-        assert res.status_code == 403, res
+        assert res.status_code == 204, res
 
-        # Collection is still readable
-        res = self.client.get(url, headers=headers)
-        assert res.status_code == 200, res
-        assert res.json["label"] == "Test Collection"
+        # external collections bulk write goes straight to index, so no ftm
+        # store was populated:
+        aggregator = get_aggregator(self.col_external)
+        assert len(list(aggregator.iterate())) == 0
+
+        # Can't create "external casefile" via db path
+        with pytest.raises(InvalidData, match="casefile"):
+            self.create_collection(
+                creator=Role.load_cli_user(),  # admin
+                label="External Collection",
+                foreign_id="test_coll_external_casefile",
+                category="casefile",
+                countries=["us"],
+                languages=["eng"],
+                external=True,
+            )
 
     def test_external_collection_non_admin(self):
         role, headers = self.login()
@@ -425,19 +458,49 @@ class CollectionsApiTestCase(TestCase):
         assert res.status_code == 200, res
         assert res.json["writeable"] is True
 
+        # Can bulk import
+        bulk_url = "/api/2/collections/%s/_bulk" % self.col.id
+        bulk_data = json.dumps(
+            [
+                {
+                    "id": "1234567890",
+                    "schema": "Person",
+                    "properties": {"name": "Test"},
+                },
+            ]
+        )
+        res = self.client.post(bulk_url, headers=headers, data=bulk_data)
+        assert res.status_code == 204, res
+
         # Set external=True
         self.col.external = True
         db.session.add(self.col)
         db.session.commit()
+        update_collection(self.col, sync=True)  # sync with index
 
-        # Non-admin user also cannot write to external collection
+        # Non-admin user cannot write to external collection
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, res
         assert res.json["writeable"] is False
+        assert res.json["external"] is True
 
         data = res.json
         data["label"] = "Should Not Work"
         res = self.client.post(
             url, data=json.dumps(data), headers=headers, content_type=JSON
         )
+        assert res.status_code == 403, res
+
+        # Non-Admin now can't bulk write to external collection
+        bulk_url = "/api/2/collections/%s/_bulk" % self.col.id
+        bulk_data = json.dumps(
+            [
+                {
+                    "id": "1234567890",
+                    "schema": "Person",
+                    "properties": {"name": "Test"},
+                },
+            ]
+        )
+        res = self.client.post(bulk_url, headers=headers, data=bulk_data)
         assert res.status_code == 403, res

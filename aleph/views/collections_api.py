@@ -159,7 +159,12 @@ def update(collection_id):
               schema:
                 $ref: '#/components/schemas/Collection'
     """
-    collection = get_db_collection(collection_id, request.authz.WRITE)
+    # FIXME this needs a permission logic rewrite at one point. Admin can bulk
+    # import to "external" collections even if it can't write (change data).
+    if request.authz.is_admin:
+        collection = get_db_collection(collection_id, request.authz.READ)
+    else:
+        collection = get_db_collection(collection_id, request.authz.WRITE)
     data = parse_request("CollectionUpdate")
     sync = get_flag("sync")
     collection.update(data, request.authz)
@@ -275,7 +280,12 @@ def bulk(collection_id):
       tags:
       - Collection
     """
-    collection = get_db_collection(collection_id, request.authz.WRITE)
+    # FIXME this needs a permission logic rewrite at one point. Admin can bulk
+    # import to "external" collections even if it can't write (change data).
+    if request.authz.is_admin:
+        collection = get_db_collection(collection_id, request.authz.READ)
+    else:
+        collection = get_db_collection(collection_id, request.authz.WRITE)
     require(request.authz.can_bulk_import())
     entityset = request.args.get("entityset_id")
     if entityset is not None:
@@ -317,7 +327,9 @@ def bulk(collection_id):
             )
     collection.touch()
     db.session.commit()
-    queue_index(collection, entities)
+    # if external, it was already sent to the index in "bulk_write"
+    if not collection.external:
+        queue_index(collection, entities)
     return ("", 204)
 
 

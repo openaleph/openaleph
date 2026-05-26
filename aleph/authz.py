@@ -80,16 +80,15 @@ class Authz(object):
             except (TypeError, ValueError):
                 return False
 
-        # Block writes on external collections for everyone, including admins
+        # Block writes on external collections even for admins
         if action == self.WRITE:
             if collection_obj is not None:
                 if collection_obj.external:
                     return False
             elif self._is_external_collection(collection):
                 return False
-
-        if self.is_admin:
-            return True
+            if self.is_admin:
+                return True
         return collection in self.collections(action)
 
     def _is_external_collection(self, collection_id):
