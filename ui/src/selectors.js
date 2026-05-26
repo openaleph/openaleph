@@ -195,6 +195,12 @@ export function selectTester(state) {
   return role.is_tester || false;
 }
 
+export function selectInvestigator(state) {
+  const role = selectCurrentRole(state);
+  /* eslint-disable camelcase */
+  return role.is_investigator || false;
+}
+
 export function selectAdmin(state) {
   const role = selectCurrentRole(state);
   /* eslint-disable camelcase */

@@ -164,6 +164,7 @@ class Role(db.Model, IdModel, SoftDeleteModel):
                 "is_admin": self.is_admin,
                 "is_muted": self.is_muted,
                 "is_tester": self.is_tester,
+                "is_investigator": self.is_investigator,
                 "has_password": self.has_password,
                 # 'notified_at': self.notified_at
             }
