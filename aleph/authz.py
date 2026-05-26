@@ -87,8 +87,8 @@ class Authz(object):
                     return False
             elif self._is_external_collection(collection):
                 return False
-            if self.is_admin:
-                return True
+        if self.is_admin:
+            return True
         return collection in self.collections(action)
 
     def _is_external_collection(self, collection_id):

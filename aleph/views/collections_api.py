@@ -163,6 +163,8 @@ def update(collection_id):
     # import to "external" collections even if it can't write (change data).
     if request.authz.is_admin:
         collection = get_db_collection(collection_id, request.authz.READ)
+        if not collection.external:
+            collection = get_db_collection(collection_id, request.authz.WRITE)
     else:
         collection = get_db_collection(collection_id, request.authz.WRITE)
     data = parse_request("CollectionUpdate")
@@ -284,6 +286,8 @@ def bulk(collection_id):
     # import to "external" collections even if it can't write (change data).
     if request.authz.is_admin:
         collection = get_db_collection(collection_id, request.authz.READ)
+        if not collection.external:
+            collection = get_db_collection(collection_id, request.authz.WRITE)
     else:
         collection = get_db_collection(collection_id, request.authz.WRITE)
     require(request.authz.can_bulk_import())
