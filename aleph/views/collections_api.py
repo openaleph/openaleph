@@ -1,6 +1,6 @@
 from banal import ensure_list
 from flask import Blueprint, request
-from werkzeug.exceptions import BadRequest
+from werkzeug.exceptions import BadRequest, Forbidden
 
 from aleph.core import db
 from aleph.index.collections import update_collection_stats
@@ -159,14 +159,7 @@ def update(collection_id):
               schema:
                 $ref: '#/components/schemas/Collection'
     """
-    # FIXME this needs a permission logic rewrite at one point. Admin can bulk
-    # import to "external" collections even if it can't write (change data).
-    if request.authz.is_admin:
-        collection = get_db_collection(collection_id, request.authz.READ)
-        if not collection.external:
-            collection = get_db_collection(collection_id, request.authz.WRITE)
-    else:
-        collection = get_db_collection(collection_id, request.authz.WRITE)
+    collection = get_db_collection(collection_id, request.authz.WRITE)
     data = parse_request("CollectionUpdate")
     sync = get_flag("sync")
     collection.update(data, request.authz)
@@ -282,14 +275,7 @@ def bulk(collection_id):
       tags:
       - Collection
     """
-    # FIXME this needs a permission logic rewrite at one point. Admin can bulk
-    # import to "external" collections even if it can't write (change data).
-    if request.authz.is_admin:
-        collection = get_db_collection(collection_id, request.authz.READ)
-        if not collection.external:
-            collection = get_db_collection(collection_id, request.authz.WRITE)
-    else:
-        collection = get_db_collection(collection_id, request.authz.WRITE)
+    collection = get_db_collection(collection_id, request.authz.WRITE)
     require(request.authz.can_bulk_import())
     entityset = request.args.get("entityset_id")
     if entityset is not None:
@@ -467,6 +453,8 @@ def delete(collection_id):
         - Collection
     """
     collection = get_db_collection(collection_id, request.authz.WRITE)
+    if collection.external:
+        raise Forbidden("Cannot delete external collection")
     keep_metadata = get_flag("keep_metadata", default=False)
     sync = get_flag("sync", default=True)
     delete_collection(collection, keep_metadata=keep_metadata, sync=sync)
