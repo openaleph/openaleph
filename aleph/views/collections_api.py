@@ -1,6 +1,6 @@
 from banal import ensure_list
 from flask import Blueprint, request
-from werkzeug.exceptions import BadRequest, Forbidden
+from werkzeug.exceptions import BadRequest
 
 from aleph.core import db
 from aleph.index.collections import update_collection_stats
@@ -453,8 +453,6 @@ def delete(collection_id):
         - Collection
     """
     collection = get_db_collection(collection_id, request.authz.WRITE)
-    if collection.external:
-        raise Forbidden("Cannot delete external collection")
     keep_metadata = get_flag("keep_metadata", default=False)
     sync = get_flag("sync", default=True)
     delete_collection(collection, keep_metadata=keep_metadata, sync=sync)

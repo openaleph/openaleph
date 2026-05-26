@@ -413,10 +413,6 @@ class CollectionsApiTestCase(TestCase):
         )
         assert res.status_code == 400, res
 
-        # Admin cannot delete external collection
-        res = self.client.delete(url, headers=headers)
-        assert res.status_code == 403, res
-
         # Admin still can bulk write to external collection
         bulk_url = "/api/2/collections/%s/_bulk" % self.col_external.id
         bulk_data = json.dumps(
@@ -447,6 +443,10 @@ class CollectionsApiTestCase(TestCase):
                 languages=["eng"],
                 external=True,
             )
+
+        # Admin can delete external collection
+        res = self.client.delete(url, headers=headers)
+        assert res.status_code == 204, res
 
     def test_external_collection_non_admin(self):
         role, headers = self.login()

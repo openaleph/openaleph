@@ -78,6 +78,8 @@ class Authz(object):
             return False
         if action == self.WRITE and not self.session_write:
             return False
+        if self.is_admin:
+            return True
 
         if isinstance(collection, Collection):
             collection_obj = collection
@@ -89,15 +91,13 @@ class Authz(object):
             except (TypeError, ValueError):
                 return False
 
-        # Block writes on external collections even for admins
+        # Block writes on external collections
         if action == self.WRITE:
             if collection_obj is not None:
                 if collection_obj.external:
                     return False
             elif self._is_external_collection(collection):
                 return False
-        if self.is_admin:
-            return True
         return collection in self.collections(action)
 
     def _is_external_collection(self, collection_id):
