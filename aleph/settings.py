@@ -100,6 +100,9 @@ class Settings:
         self.OAUTH_TOKEN_METHOD = env.get("ALEPH_OAUTH_TOKEN_METHOD", "POST")
         self.OAUTH_ADMIN_GROUP = env.get("ALEPH_OAUTH_ADMIN_GROUP", "superuser")
 
+        # Restrict permission to create investigations to this group
+        self.INVESTIGATOR_GROUP = env.get("ALEPH_INVESTIGATOR_GROUP")
+
         # No authentication. Everyone is admin.
         self.SINGLE_USER = env.to_bool("ALEPH_SINGLE_USER")
 

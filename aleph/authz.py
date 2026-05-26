@@ -26,11 +26,20 @@ class Authz(object):
     ACCESS = "authzca"
     TOKENS = "authztk"
 
-    def __init__(self, role_id, roles, is_admin=False, token_id=None, expire=None):
+    def __init__(
+        self,
+        role_id,
+        roles,
+        is_admin=False,
+        token_id=None,
+        expire=None,
+        is_investigator=False,
+    ):
         self.id = role_id
         self.logged_in = role_id is not None
         self.roles = set(roles)
         self.is_admin = is_admin
+        self.is_investigator = is_investigator
         self.token_id = token_id
         self.expire = expire or SETTINGS.SESSION_EXPIRE
         self.session_write = not SETTINGS.MAINTENANCE and self.logged_in
@@ -126,6 +135,13 @@ class Authz(object):
             return False
         return True
 
+    def can_create_investigation(self):
+        if not self.session_write:
+            return False
+        if self.is_admin:
+            return True
+        return self.is_investigator
+
     def match(self, roles):
         """See if there's overlap in roles."""
         roles = ensure_list(roles)
@@ -175,7 +191,9 @@ class Authz(object):
         roles.add(role.id)
         roles.add(Role.load_id(Role.SYSTEM_USER))
         roles.update([g.id for g in role.roles])
-        return cls(role.id, roles, is_admin=role.is_admin)
+        return cls(
+            role.id, roles, is_admin=role.is_admin, is_investigator=role.is_investigator
+        )
 
     @classmethod
     def from_token(cls, token_id):

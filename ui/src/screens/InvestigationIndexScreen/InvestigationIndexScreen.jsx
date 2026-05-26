@@ -9,6 +9,7 @@ import Dashboard from 'components/Dashboard/Dashboard';
 import CollectionIndex from 'components/CollectionIndex/CollectionIndex';
 import InvestigationCreateButton from 'components/Toolbar/InvestigationCreateButton';
 import { investigationsQuery } from 'queries';
+import { selectInvestigator } from 'selectors';
 
 const messages = defineMessages({
   title: {
@@ -31,11 +32,16 @@ const messages = defineMessages({
     id: 'cases.no_results',
     defaultMessage: 'No investigations were found matching this query.',
   },
+  not_investigator: {
+    id: 'cases.not_allowed',
+    defaultMessage:
+      'You are not authorized to create new investigations. Contact your platform administrator.',
+  },
 });
 
 export class InvestigationIndexScreen extends Component {
   render() {
-    const { query, intl } = this.props;
+    const { query, intl, canCreate } = this.props;
     return (
       <Screen
         className="InvestigationIndexScreen"
@@ -53,12 +59,18 @@ export class InvestigationIndexScreen extends Component {
                 defaultMessage="Investigations let you upload and share documents and data which belong to a particular story. You can upload PDFs, email archives or spreadsheets, and they will be made easy to search and browse."
               />
             </p>
-            <div className="Dashboard__actions">
-              <InvestigationCreateButton
-                icon="briefcase"
-                text={intl.formatMessage(messages.create)}
-              />
-            </div>
+            {canCreate ? (
+              <div className="Dashboard__actions">
+                <InvestigationCreateButton
+                  icon="briefcase"
+                  text={intl.formatMessage(messages.create)}
+                />
+              </div>
+            ) : (
+              <p className="Dashboard__subheading">
+                {intl.formatMessage(messages.not_investigator)}
+              </p>
+            )}
           </div>
           <CollectionIndex
             query={query}
@@ -75,7 +87,10 @@ export class InvestigationIndexScreen extends Component {
 
 const mapStateToProps = (state, ownProps) => {
   const { location } = ownProps;
-  return { query: investigationsQuery(location) };
+  return {
+    query: investigationsQuery(location),
+    canCreate: selectInvestigator(state),
+  };
 };
 
 export default compose(
