@@ -5,6 +5,7 @@ from functools import cache
 from banal import ensure_dict, ensure_list
 from flask_babel import lazy_gettext
 from followthemoney.dataset.util import dataset_name_check
+from followthemoney.exc import InvalidData
 from followthemoney.namespace import Namespace
 from followthemoney.types import registry
 from normality import stringify
@@ -83,6 +84,9 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
     # allows tagging of entities
     taggable = db.Column(db.Boolean, default=False)
 
+    # external managed, appears read-only in UI even for admins
+    external = db.Column(db.Boolean, default=False)
+
     # Collection inherits the `updated_at` column from `DatedModel`.
     # These two fields are used to express different semantics: while
     # `updated_at` is used to describe the last change of the metadata,
@@ -130,14 +134,17 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
         self.contains_ai = data.get("contains_ai")
         self.contains_ai_comment = data.get("contains_ai_comment")
 
-        # tagging functionality
-        self.taggable = data.get("taggable", self.taggable)
+        # tagging functionality (external collections can't be tagged)
+        self.taggable = data.get("taggable", self.taggable) and not self.external
 
-        # Some fields are editable only by admins in order to have
-        # a strict separation between source evidence and case
-        # material.
+        # Some fields are editable only by admins in order to have a strict
+        # separation between source evidence and case material. As well,
+        # casefiles must never be "external"
         if authz.is_admin:
             self.category = data.get("category", self.category)
+            self.external = data.get("external", False)
+            if self.external and self.category == self.CASEFILE:
+                raise InvalidData("Can't set casefile for external collection")
             creator = ensure_dict(data.get("creator"))
             creator_id = data.get("creator_id", creator.get("id"))
             creator = Role.by_id(creator_id)
@@ -220,6 +227,7 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
                 "restricted": self.restricted,
                 "contains_ai": self.contains_ai,
                 "contains_ai_comment": self.contains_ai_comment,
+                "external": self.external,
                 "taggable": self.taggable,
             }
         )

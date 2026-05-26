@@ -108,8 +108,14 @@ def get_index_entity(entity_id, action=Authz.READ, **kwargs):
 
 
 def get_db_collection(collection_id, action=Authz.READ):
+    # FIXME this needs a permission logic rewrite at one point. Admin can bulk
+    # import to "external" collections, change their metadata and permissions
+    # via API even if to the frontend it is exposed as writeable=False
     collection = obj_or_404(Collection.by_id(collection_id))
-    require(request.authz.can(collection.id, action))
+    if collection.external and request.authz.is_admin:
+        require(request.authz.can(collection.id, Authz.READ))
+    else:
+        require(request.authz.can(collection.id, action))
     return collection
 
 

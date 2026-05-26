@@ -1312,11 +1312,17 @@ def publish(foreign_id):
 
 
 @cli.command()
-def upgrade():
+@click.option(
+    "--destructive",
+    type=bool,
+    default=False,
+    help="Allow the upgrade command to perform potential destructive data migrations",
+)
+def upgrade(destructive):
     """Create or upgrade the search index and database."""
     upgrade_system()
     # update_roles()
-    # upgrade_collections()
+    upgrade_collections(cleanup_external=destructive)
 
 
 @cli.command()

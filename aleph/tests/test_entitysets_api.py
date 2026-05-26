@@ -3,35 +3,11 @@ import logging
 from pprint import pprint  # noqa
 from unittest import skip  # noqa
 
-from banal import ensure_list
-from followthemoney import model
-from followthemoney.exc import InvalidData
-from followthemoney.types import registry
-from followthemoney.util import get_entity_id
-
 from aleph.logic.collections import delete_collection
 from aleph.tests.util import TestCase
 from aleph.views.util import validate
 
 log = logging.getLogger(__name__)
-
-
-def _normalize_data(data):
-    """Turn entities in properties into entity ids"""
-    entities = data["layout"]["entities"]
-    for obj in entities:
-        schema = model.get(obj.get("schema"))
-        if schema is None:
-            raise InvalidData("Invalid schema %s" % obj.get("schema"))
-        properties = obj.get("properties", {})
-        for name, values in list(properties.items()):
-            prop = schema.get(name)
-            if prop.type == registry.entity:
-                properties[prop.name] = []
-                for value in ensure_list(values):
-                    entity_id = get_entity_id(value)
-                    properties[prop.name].append(entity_id)
-    return data
 
 
 class EntitySetAPITest(TestCase):
