@@ -1627,13 +1627,14 @@ files = [
 
 [[package]]
 name = "followthemoney"
-version = "4.8.2"
+version = "4.8.3"
 description = "A data model for anti corruption data modeling and analysis."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "followthemoney-4.8.2-py3-none-any.whl", hash = "sha256:d6e9c20032290697f1c9a5c32087294896524069379d74184561a3c1d55e77d2"},
+    {file = "followthemoney-4.8.3-py3-none-any.whl", hash = "sha256:01b73462e6174f9c18ab16304f205707d8eff4a7f0c3b7b2207d7819840c3138"},
+    {file = "followthemoney-4.8.3.tar.gz", hash = "sha256:d0b36fc43d130eae4a3295a34f447d5030e8e827335f727c4daf93206932e8d0"},
 ]
 
 [package.dependencies]
@@ -6686,4 +6687,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "411b08179dff0538624e5c808ba9eb823125e092189b8819c8601330a34d4c88"
+content-hash = "cc6a5d2a28627c0bfda68fe02f30dd2a62267ca1359f7789c25ec13ab9846557"
