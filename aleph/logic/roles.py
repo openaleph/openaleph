@@ -1,15 +1,26 @@
 import logging
-from flask_babel import gettext
-from flask import render_template
 
-from aleph.core import db, cache
-from aleph.settings import SETTINGS
+from flask import render_template
+from flask_babel import gettext
+
 from aleph.authz import Authz
-from aleph.model import Role, Alert, Permission, EntitySet, Export
-from aleph.model import Collection, Document, Entity, EntitySetItem, Mapping
-from aleph.model.role import membership
+from aleph.core import cache, db
 from aleph.logic.mail import email_role
 from aleph.logic.notifications import get_role_channels
+from aleph.model import (
+    Alert,
+    Collection,
+    Document,
+    Entity,
+    EntitySet,
+    EntitySetItem,
+    Export,
+    Mapping,
+    Permission,
+    Role,
+)
+from aleph.model.role import membership
+from aleph.settings import SETTINGS
 
 log = logging.getLogger(__name__)
 
@@ -105,15 +116,15 @@ def create_group(name):
 
 
 def user_add(group, user):
-    user = Role.by_email(user)
-    if user is None:
-        user = Role.by_foreign_id(user)
-    group = Role.by_foreign_id("group:{}".format(group))
-    if user is not None and group is not None:
-        user.add_role(group)
+    user_obj = Role.by_email(user)
+    if user_obj is None:
+        user_obj = Role.by_foreign_id(user)
+    group_obj = Role.by_foreign_id("group:{}".format(group))
+    if user_obj is not None and group_obj is not None:
+        user_obj.add_role(group_obj)
         db.session.commit()
-        update_role(user)
-    return user, group
+        update_role(user_obj)
+    return user_obj, group_obj
 
 
 def user_del(group, user):

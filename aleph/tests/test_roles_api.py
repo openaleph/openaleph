@@ -1,10 +1,11 @@
 import json
 
 from aleph.core import db, mail
-from aleph.settings import SETTINGS
+from aleph.logic.roles import create_group, user_add
 from aleph.model import Role
-from aleph.tests.util import TestCase
+from aleph.settings import SETTINGS
 from aleph.tests.factories.models import RoleFactory
+from aleph.tests.util import TestCase
 
 
 class RolesApiTestCase(TestCase):
@@ -138,3 +139,54 @@ class RolesApiTestCase(TestCase):
         res = self.client.post("/api/2/roles", data=payload)
 
         self.assertEqual(res.status_code, 409)
+
+    def test_roles_investigator_group(self):
+        """Handling of role.is_investigator"""
+
+        # default: no group set
+        assert SETTINGS.INVESTIGATOR_GROUP is None
+
+        # admin
+        role, headers = self.login("investigator1", is_admin=True)
+        assert role.is_admin
+        assert role.is_investigator
+        url = f"/api/2/roles/{role.id}"
+        res = self.client.get(url, headers=headers)
+        assert res.json["is_investigator"] is True
+
+        # normal user
+        role, headers = self.login("investigator2", is_admin=False)
+        assert not role.is_admin
+        assert role.is_investigator
+        url = f"/api/2/roles/{role.id}"
+        res = self.client.get(url, headers=headers)
+        assert res.json["is_investigator"] is True
+
+        # explicit group
+        SETTINGS.INVESTIGATOR_GROUP = "investigator"
+
+        # admin still investigator
+        role, headers = self.login("investigator1", is_admin=True)
+        assert role.is_admin
+        assert role.is_investigator
+        url = f"/api/2/roles/{role.id}"
+        res = self.client.get(url, headers=headers)
+        assert res.json["is_investigator"] is True
+
+        # normal user not anymore
+        role, headers = self.login("investigator2", is_admin=False)
+        assert not role.is_admin
+        assert not role.is_investigator
+        url = f"/api/2/roles/{role.id}"
+        res = self.client.get(url, headers=headers)
+        assert res.json["is_investigator"] is False
+
+        # add user to the group
+        group = create_group("investigator")
+        user_add(group.name, role.foreign_id)
+        assert role.is_investigator
+        res = self.client.get(url, headers=headers)
+        assert res.json["is_investigator"] is True
+
+        # reset
+        SETTINGS.INVESTIGATOR_GROUP = None

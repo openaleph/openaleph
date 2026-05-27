@@ -79,6 +79,8 @@ class Role(db.Model, IdModel, SoftDeleteModel):
         create their own investigations."""
         if not self.is_actor:
             return False
+        if self.is_admin:
+            return True
         if SETTINGS.INVESTIGATOR_GROUP is not None:
             return SETTINGS.INVESTIGATOR_GROUP in [r.name for r in self.roles]
         return True
