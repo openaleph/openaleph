@@ -1316,6 +1316,7 @@ def publish(foreign_id):
     "--destructive",
     type=bool,
     default=False,
+    is_flag=True,
     help="Allow the upgrade command to perform potential destructive data migrations",
 )
 def upgrade(destructive):
