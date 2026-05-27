@@ -185,7 +185,7 @@ class CollectionSerializer(Serializer):
             "ui": collection_url(pk),
         }
         obj["shallow"] = obj.get("shallow", True)
-        obj["writeable"] = not obj["external"] and request.authz.can(
+        obj["writeable"] = not obj.get("external") and request.authz.can(
             pk, request.authz.WRITE
         )
         creator_id = obj.pop("creator_id", None)
