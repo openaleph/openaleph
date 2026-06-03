@@ -58,7 +58,7 @@ dependencies = [
     "legacy-cgi; python_version >= '3.13'",
     "lxml[html-clean] (>=5.4.0,<6.0.0)",
     "dateparser (>=1.2.2,<2.0.0)",
-    "anystore @ git+https://github.com/dataresearchcenter/anystore.git",
+    "anystore (>=1.2.0,<2.0.0)",
 ]
 
 [project.scripts]
