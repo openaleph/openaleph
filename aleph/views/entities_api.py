@@ -541,7 +541,7 @@ def percolate(entity_id):
       tags:
       - Entity
     """
-    entity = get_index_entity(entity_id, request.authz.READ)
+    entity = resources.get_index_entity(entity_id, request.authz.READ)
     tag_request(collection_id=entity.get("collection_id"))
     try:
         result = get_query_result(PercolatorQuery, request, entity_id=entity_id)
@@ -585,7 +585,7 @@ def mentions(entity_id):
       tags:
       - Entity
     """
-    entity = get_index_entity(entity_id, request.authz.READ)
+    entity = resources.get_index_entity(entity_id, request.authz.READ)
     tag_request(collection_id=entity.get("collection_id"))
     try:
         result = get_query_result(MentionsQuery, request, entity_id=entity_id)
@@ -817,7 +817,7 @@ def thread(entity_id):
       tags:
       - Entity
     """
-    entity = get_index_entity(entity_id, request.authz.READ)
+    entity = resources.get_index_entity(entity_id, request.authz.READ)
     collection_id = int(entity["collection_id"])
     tag_request(collection_id=collection_id)
     proxy = make_entity_proxy(entity)
