@@ -1,20 +1,26 @@
 import functools
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
 
 from banal import ensure_dict, ensure_list
 from flask_babel import lazy_gettext
 from followthemoney.dataset.coverage import DataCoverage
 from followthemoney.dataset.publisher import DataPublisher
-from followthemoney.dataset.util import dataset_name_check
+from followthemoney.dataset.util import dataset_name_check, serialize_dt
 from followthemoney.exc import InvalidData
 from followthemoney.namespace import Namespace
 from followthemoney.types import registry
 from ftmq.model.dataset import Dataset as FtmDataset
 from normality import stringify
 from openaleph_procrastinate.model import DatasetStatus
-from pydantic import ConfigDict, Field, computed_field, model_validator
+from pydantic import (
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    computed_field,
+    model_validator,
+)
 from sqlalchemy import event
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import aliased
@@ -346,6 +352,30 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
 _FREQUENCY_MAP: dict[str, str] = {"annual": "annually"}
 
 
+def _serialize_lax_dt(value: datetime | str | None) -> str | None:
+    """Serialize a ``datetime`` to ISO; pass ISO strings through unchanged.
+
+    ftm's ``DateTimeISO`` serializer (``serialize_dt``) requires a real
+    ``datetime``, but the resolver reloads cached schemas via
+    ``model_construct`` (``model_validate=False``, which skips coercion —
+    trusted data, no revalidation), so these fields can still hold the
+    ISO string they were stored as. Re-serializing that with
+    ``serialize_dt`` would raise ``AttributeError``; pass strings through.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    return serialize_dt(value)
+
+
+# ftm's ``DateTimeISO``, but tolerant of an already-serialized ISO string on
+# dump — needed for resolver-cache round-trip safety (see _serialize_lax_dt).
+LaxDateTimeISO = Annotated[
+    datetime | None, PlainSerializer(_serialize_lax_dt, when_used="always")
+]
+
+
 class CollectionSchema(FtmDataset):
     """Wire format for an Aleph :class:`Collection`.
 
@@ -363,6 +393,12 @@ class CollectionSchema(FtmDataset):
     # str(int PK) — carried for the resolver cache key and legacy
     # serializer compat. Will be dropped when IDs move to foreign_id.
     id: str
+
+    # Override FTM's ``DateTimeISO`` with a serializer that tolerates an
+    # already-ISO string, so resolver-cache reloads (model_construct, no
+    # coercion) survive re-serialization. Otherwise identical to FTM.
+    updated_at: LaxDateTimeISO = None
+    last_export: LaxDateTimeISO = None
 
     # FTM core models countries via ``coverage.countries``; languages
     # are an Aleph extension.
