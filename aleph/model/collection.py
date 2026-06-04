@@ -357,6 +357,44 @@ _FREQUENCY_MAP: dict[str, str] = {"annual": "annually"}
 Categories = StrEnum("Categories", {k: k for k in Collection.CATEGORIES})
 
 
+def _fold_legacy_dict(data: SDict) -> SDict:
+    """Map legacy flat dict input (``Collection.to_dict()`` / old index
+    docs) onto the FTM canonical fields expected by CollectionSchema.
+
+    Extracted from ``CollectionSchema._from_collection`` — applied to
+    every mapping input before validation."""
+    if "name" not in data and "foreign_id" in data:
+        data["name"] = data["foreign_id"]
+    if "title" not in data and "label" in data:
+        data["title"] = data["label"]
+    if "url" not in data and "info_url" in data:
+        data["url"] = data["info_url"]
+    # Legacy flat shape: ``publisher`` is a plain string column
+    # (with ``publisher_url`` beside it) — fold both into the FTM
+    # ``DataPublisher`` shape, mirroring the ORM branch of
+    # ``_from_collection``. Proper dict-shaped publishers (cached
+    # schema dumps) pass through untouched.
+    publisher = data.get("publisher")
+    if isinstance(publisher, str) or (publisher is None and data.get("publisher_url")):
+        data["publisher"] = {
+            "name": publisher or "",
+            "url": stringify(data.get("publisher_url")) or None,
+        }
+    # Legacy flat ``frequency`` → ``coverage.frequency``, applying
+    # the same Aleph→FTM value mapping as the ORM branch
+    # ("annual" → "annually"). An existing coverage dict (cached
+    # schema dumps) keeps its own frequency.
+    if "frequency" in data:
+        frequency = _FREQUENCY_MAP.get(data["frequency"] or "", data["frequency"])
+        if frequency:
+            coverage = data.get("coverage")
+            if coverage is None:
+                data["coverage"] = {"frequency": frequency}
+            elif isinstance(coverage, dict):
+                coverage.setdefault("frequency", frequency)
+    return data
+
+
 def _serialize_lax_dt(value: datetime | str | None) -> str | None:
     """Serialize a ``datetime`` to ISO; pass ISO strings through unchanged.
 
@@ -456,11 +494,7 @@ class CollectionSchema(StripNoneMixin, FtmDataset):
     def _from_collection(cls, data: Any) -> Any:
         # Dict input: map Aleph aliases → FTM canonical fields
         if isinstance(data, dict):
-            if "name" not in data and "foreign_id" in data:
-                data["name"] = data["foreign_id"]
-            if "title" not in data and "label" in data:
-                data["title"] = data["label"]
-            return data
+            return _fold_legacy_dict(data)
         if not isinstance(data, Collection):
             return data
 
