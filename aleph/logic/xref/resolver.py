@@ -13,7 +13,7 @@ import logging
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import timedelta
-from typing import Generator, Optional, Set
+from typing import Generator, Optional
 
 from anystore.io import smart_stream_json_models, smart_write_models
 from anystore.types import Uri
@@ -454,24 +454,30 @@ class ElasticsearchResolver(Resolver[SE]):
     # -- get_linker (override: parent uses SQL) ---
 
     def get_linker(self) -> Linker[SE]:
-        """Build a Linker from POSITIVE edges in ES."""
-        entities: dict[Identifier, Set[Identifier]] = {}
+        """Build a Linker from POSITIVE edges in ES.
+
+        Mirrors ``nomenklatura.resolver.Resolver.get_linker``: since 4.9
+        the Linker stores ``dict[str, tuple[str, ...]]`` — every node id
+        maps to its cluster as a sorted tuple, canonical id first.
+        """
+        mapping: dict[str, tuple[str, ...]] = {}
         filters = [{"term": {"judgement": "positive"}}]
         if self._auth:
             filters.extend(auth_filters(self._auth))
         for es_edge in scan_edges(filters):
-            source = Identifier.get(str(es_edge.source))
-            target = Identifier.get(str(es_edge.target))
-            cluster = entities.get(source)
-            if cluster is None:
-                cluster = set([source])
-            other = entities.get(target)
-            if other is None:
-                other = set([target])
-            cluster.update(other)
+            source_id = str(es_edge.source)
+            target_id = str(es_edge.target)
+            idents = set([Identifier.get(source_id), Identifier.get(target_id)])
+            sources = mapping.get(source_id)
+            if sources is not None:
+                idents.update(Identifier.get(n) for n in sources)
+            targets = mapping.get(target_id)
+            if targets is not None:
+                idents.update(Identifier.get(n) for n in targets)
+            cluster = tuple(i.id for i in sorted(idents, reverse=True))
             for node in cluster:
-                entities[node] = cluster
-        return Linker(entities)
+                mapping[node] = cluster
+        return Linker(mapping)
 
     # -- dump / load ---
 

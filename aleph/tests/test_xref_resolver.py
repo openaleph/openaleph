@@ -161,7 +161,7 @@ def test_linker(resolver: ElasticsearchResolver):
     #   Q123 canon_a a1 a2 # removed a3
     #   canon_b b1 b2
     #   c2
-    assert len(linker._entities) == 7, linker._entities
+    assert len(linker._mapping) == 7, linker._mapping
     assert "a1" in linker.get_referents("Q123")
     assert "a2" in linker.get_referents("Q123")
     assert canon_a.id in linker.get_referents("Q123")
