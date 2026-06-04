@@ -1,6 +1,7 @@
 """Entity assembler — request-time enrichment of EntitySchema."""
 
 import logging
+import re
 
 from banal import ensure_list
 from followthemoney import EntityProxy, model
@@ -26,6 +27,7 @@ from aleph.procrastinate.queues import defer
 
 log = logging.getLogger(__name__)
 TRACER_URI = env.get("REDIS_URL")
+BASE64_ENCODED_PATTERN = re.compile(r"=\?{1}(.+)\?{1}([B|Q])\?{1}(.+)\?{1}=.*")
 
 
 class EntityAssembler(Assembler):
@@ -90,6 +92,8 @@ class EntityAssembler(Assembler):
                     nested.shallow = True
                     value = nested
             if value is not None:
+                if type(value) is str and BASE64_ENCODED_PATTERN.search(value):
+                    continue
                 properties[prop.name].append(value)
         return properties
 

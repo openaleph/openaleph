@@ -24,7 +24,8 @@ class CollectionAssembler(Assembler):
     def assemble(self, obj: CollectionSchema) -> CollectionSchema:
         self._resolve_nested(obj)
         obj.links = self._build_links(obj)
-        obj.writeable = self.authz.can(obj.id, self.authz.WRITE)
+        # external collections appear read-only in the UI even for admins
+        obj.writeable = not obj.external and self.authz.can(obj.id, self.authz.WRITE)
         obj.shallow = not self.detail
         obj.creator = (
             self.resolver.get(RoleSchema, obj.creator_id) if obj.creator_id else None
