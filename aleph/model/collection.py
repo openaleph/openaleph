@@ -34,6 +34,7 @@ from aleph.model.common import (
     ResolveFrom,
     SDict,
     SoftDeleteModel,
+    StripNoneMixin,
     make_textid,
 )
 from aleph.model.permission import Permission
@@ -380,7 +381,7 @@ LaxDateTimeISO = Annotated[
 ]
 
 
-class CollectionSchema(FtmDataset):
+class CollectionSchema(StripNoneMixin, FtmDataset):
     """Wire format for an Aleph :class:`Collection`.
 
     Subclasses :class:`ftmq.model.dataset.Dataset` (which subclasses the

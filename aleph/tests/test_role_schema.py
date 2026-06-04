@@ -109,3 +109,24 @@ def test_role_update_all_optional():
     # Name min length still enforced when supplied:
     with pytest.raises(ValidationError):
         RoleUpdate.model_validate({"name": "abc"})  # < 4 chars
+
+
+def test_role_schema_none_values_fall_back_to_defaults():
+    # APIBaseModel inherits StripNoneMixin: explicit ``None`` input is
+    # dropped before validation, so every defaulted field falls back to
+    # its declared default instead of raising type errors.
+    r = RoleSchema.model_validate(
+        {
+            "id": "5",
+            "type": "user",
+            "name": "n",
+            "foreign_id": "f",
+            "label": "L",
+            "is_admin": None,
+            "writeable": None,
+            "shallow": None,
+        }
+    )
+    assert r.is_admin is None  # optional flag: default None preserved
+    assert r.writeable is False  # non-optional bool: default applies
+    assert r.shallow is True  # non-False default applies too

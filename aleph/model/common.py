@@ -1,6 +1,7 @@
 import logging
 import secrets
 import uuid
+from collections.abc import Mapping
 from datetime import date, datetime
 from typing import Any
 
@@ -8,7 +9,7 @@ from anystore.types import SDict
 from anystore.util import clean_dict
 from anystore.util import model_dump as _anystore_model_dump
 from flask_babel import lazy_gettext
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 from sqlalchemy import false
 
 from aleph.core import db
@@ -153,7 +154,31 @@ class Status(object):
 # attributes.
 
 
-class APIBaseModel(BaseModel):
+class StripNoneMixin(BaseModel):
+    """Drop explicit ``None`` values from mapping input before validation.
+
+    Legacy dicts (and nullable SQLA columns surfaced through
+    object→dict converters like ``CollectionSchema._from_collection``)
+    routinely carry ``None`` for fields the schema declares with a
+    non-optional default — e.g. ``contains_ai: bool = False`` failing
+    with ``bool_type, input_value=None``. Removing those keys up front
+    lets pydantic's regular default machinery apply instead.
+
+    Inheritance ordering guarantees this runs *after* any subclass
+    ``mode="before"`` validator, so converters that produce dicts are
+    covered too. Required fields are unaffected (a stripped ``None``
+    surfaces as the usual "Field required" error).
+    """
+
+    @model_validator(mode="before")
+    @classmethod
+    def _strip_none_values(cls, data: Any) -> Any:
+        if isinstance(data, Mapping):
+            return {key: value for key, value in data.items() if value is not None}
+        return data
+
+
+class APIBaseModel(StripNoneMixin):
     """Base for every API model.
 
     - ``from_attributes=True`` lets us validate directly off SQLAlchemy
@@ -284,6 +309,7 @@ class ResolveFrom:
 
 __all__ = [
     "APIBaseModel",
+    "StripNoneMixin",
     "DatedSchema",
     "ENTITY_ID_LEN",
     "DatedModel",

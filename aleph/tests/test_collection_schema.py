@@ -61,6 +61,42 @@ def test_collection_schema_aleph_extras_default_false():
     assert dumped["taggable"] is False
 
 
+def test_collection_schema_none_bools_fall_back_to_default():
+    # StripNoneMixin: explicit ``None`` values are dropped from mapping
+    # input before validation (legacy dicts / nullable SQLA columns), so
+    # pydantic applies the field default instead of raising bool_type
+    # errors — e.g. ``contains_ai``.
+    c = CollectionSchema.model_validate(
+        {
+            "id": "42",
+            "name": "x",
+            "title": "X",
+            "contains_ai": None,
+            "external": None,
+            "secret": None,
+            "languages": None,
+        }
+    )
+    assert c.contains_ai is False
+    assert c.external is False
+    assert c.secret is False
+    assert c.languages == []
+
+
+def test_collection_schema_none_optional_and_required():
+    # Optional fields keep their ``None`` default; required fields
+    # without a fallback still fail — as "missing" instead of a type
+    # error, since the ``None`` is stripped before validation.
+    c = CollectionSchema.model_validate(
+        {"id": "42", "name": "x", "title": "X", "summary": None}
+    )
+    assert c.summary is None
+    with pytest.raises(ValidationError) as exc:
+        CollectionSchema.model_validate({"name": "x", "title": "X", "id": None})
+    assert exc.value.errors()[0]["type"] == "missing"
+    assert exc.value.errors()[0]["loc"] == ("id",)
+
+
 def test_facet_counts_default_empty():
     f = FacetCounts()
     dumped = model_dump(f)
