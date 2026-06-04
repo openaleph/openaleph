@@ -381,7 +381,7 @@ class EntitiesApiTestCase(TestCase):
 
         # the side-effect of calling the similar endpoint is that edges are
         # created for xref. Clear xref and check that this doesn't exist yet:
-        delete_xref()
+        delete_xref(sync=True)
         url = "/api/2/collections/%s/xref" % self.col_id
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, res
