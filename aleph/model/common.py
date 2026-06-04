@@ -229,40 +229,19 @@ class DatedSchema(APIBaseModel):
         return str(v)
 
 
-def _strip_empty_containers(data: SDict) -> SDict:
-    """Recursively drop keys whose value is an empty container.
-
-    ``anystore``'s ``clean=True`` removes ``None``, empty strings and
-    empty mappings, but as of anystore 1.2 it keeps empty lists. We drop
-    those here (and any mapping they leave empty) to preserve the
-    documented "drop empty containers recursively" behavior. Recursion
-    follows mappings only, matching ``anystore.util.clean_dict``.
-    """
-    cleaned: SDict = {}
-    for key, value in data.items():
-        if isinstance(value, dict):
-            value = _strip_empty_containers(value)
-        if isinstance(value, (list, dict)) and not value:
-            continue
-        cleaned[key] = value
-    return cleaned
-
-
 def model_dump(model: BaseModel) -> SDict:
     """Dump a pydantic model to a dict, dropping ``None``, empty strings
     and empty containers recursively.
 
-    Wraps ``anystore.util.model_dump(obj, clean=True)`` (which drops
-    ``None``, empty strings and empty mappings) and additionally strips
-    empty lists via :func:`_strip_empty_containers`, since anystore 1.2
-    no longer drops those. Replaces ``aleph.views.util.clean_object()``
-    and is the canonical way to serialize an API response. The frontend
-    uses defensive accessors (``entity?.collection?.foreign_id``), so
-    dropping empty values is safe. ``cache_key`` is a regular
-    ``@property`` on :class:`APIBaseModel` so it never appears in the
-    dump output.
+    Wraps ``anystore.util.model_dump(obj, clean=True)`` (which drops ``None``,
+    empty strings and empty mappings). Replaces
+    ``aleph.views.util.clean_object()`` and is the canonical way to serialize an
+    API response. The frontend uses defensive accessors
+    (``entity?.collection?.foreign_id``), so dropping empty values is safe.
+    ``cache_key`` is a regular ``@property`` on :class:`APIBaseModel` so it
+    never appears in the dump output.
     """
-    return _strip_empty_containers(_anystore_model_dump(model, clean=True))
+    return _anystore_model_dump(model, clean=True)
 
 
 __all__ = [

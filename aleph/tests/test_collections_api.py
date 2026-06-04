@@ -517,7 +517,7 @@ class CollectionsApiTestCase(TestCase):
         self.col.external = True
         db.session.add(self.col)
         db.session.commit()
-        update_collection(self.col, sync=True)  # sync with index
+        update_collection(self.col)  # sync with index
 
         # Non-admin user cannot write to external collection
         res = self.client.get(url, headers=headers)
