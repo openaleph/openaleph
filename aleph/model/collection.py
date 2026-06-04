@@ -504,9 +504,9 @@ class CollectionSchema(FtmDataset):
             "taggable": bool(data.taggable),
             "contains_ai": bool(data.contains_ai),
             "contains_ai_comment": data.contains_ai_comment,
-            "casefile": data.casefile,
-            "external": data.external,
-            "secret": data.secret,
+            "casefile": bool(data.casefile),
+            "external": bool(data.external),
+            "secret": bool(data.secret),
             "creator_id": stringify(data.creator_id),
             "team_id": list(data.team_id) if hasattr(data, "team_id") else [],
         }
