@@ -48,7 +48,7 @@ class Assembler:
     def __init__(
         self,
         resolver: RequestResolver,
-        authz: Authz | None = None,
+        authz: Authz,
         detail: bool = False,
     ) -> None:
         self.resolver = resolver
