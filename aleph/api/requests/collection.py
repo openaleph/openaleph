@@ -28,6 +28,7 @@ class CollectionCreate(APIBaseModel):
     contains_ai: bool | None = None
     contains_ai_comment: str | None = None
     taggable: bool | None = None
+    external: bool | None = None
 
 
 class CollectionUpdate(CollectionCreate):
