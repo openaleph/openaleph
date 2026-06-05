@@ -175,7 +175,7 @@ class EntitySchema(EntityModel, APIBaseModel):
 
     # Search-time fields.
     score: float | None = None
-    highlight: list[str] = []
+    highlight: SDict = {}
 
     # Per-user state.
     bookmarked: bool | None = None
