@@ -365,6 +365,9 @@ class RoleSchema(DatedSchema):
     is_blocked: bool | None = None
     is_investigator: bool | None = None
 
+    # Deep-view aggregate (``get_deep_role``): alert/entityset/casefile/
+    counts: SDict | None = None
+
     writeable: bool = False
     shallow: bool = True
     links: SDict = {}

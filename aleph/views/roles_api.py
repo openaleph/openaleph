@@ -200,7 +200,10 @@ def view(id):
         # This results in the email address not being shown on the profile page in
         # maintenance mode, but there is no other way to prevent constant re-fetching.
         data.update({"shallow": False})
-    return RoleSerializer.jsonify(data)
+    # detail_view=True: the assembler sets ``shallow = not detail`` — the UI
+    # keeps deep-fetching (AuthButtons ``shouldLoadDeep``) until the detail
+    # response reports ``shallow: false``.
+    return RoleSerializer.jsonify(data, detail_view=True)
 
 
 @blueprint.route("/api/2/roles/<int:id>", methods=["POST", "PUT"])
