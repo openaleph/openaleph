@@ -21,11 +21,11 @@ Discover how to install, use, and contribute to OpenAleph through our [documenta
 
 OpenAleph can run be deployed locally with Docker, for testing purposes:
 
-1. Run `cp aleph.env.tmpl aleph.env` and then edit `aleph.env`. Assign a value to `ALEPH_SECRET_KEY`. You can also set `ALEPH_SINGLE_USER=true` or create an admit user following the instructions [in the documentation](https://docs.aleph.occrp.org/developers/getting-started/development-environment/#create-an-admin-user).
+1. Run `cp aleph.env.tmpl aleph.env` and then edit `aleph.env`. Assign a value to `ALEPH_SECRET_KEY`. You can also set `ALEPH_SINGLE_USER=true` or create an admit user following the instructions [in the documentation](https://openaleph.org/docs/dev-admin-guide/104/setup/).
 2. Run `make build; make upgrade; make web`.
 3. Navigate to `http://localhost:8080/`.
 
-This deployment method should not be used for production environments. The technical documentation details [different ways](https://docs.aleph.occrp.org/developers/getting-started/production-deployment/) to run OpenAleph in production.
+This deployment method should not be used for production environments. The technical documentation details [different ways](https://openaleph.org/docs/dev-admin-guide/101/#read-this-first) to run OpenAleph in production.
 
 ## Join the Conversation
 
