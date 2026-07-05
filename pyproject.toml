@@ -12,10 +12,10 @@ license = "MIT"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
-    "followthemoney (>=4.8.3,<5.0.0)",
+    "followthemoney (>=4.9.2,<5.0.0)",
     "openaleph-search (>=5.3.0,<6.0.0)",
     "openaleph-procrastinate (>=5.3.0,<6.0.0)",
-    "ftmq[postgres] (>=4.8.2,<5.0.0)",
+    "ftmq[postgres] (>=4.9.2,<5.0.0)",
     "nomenklatura (>=4.7.2,<5.0.0)",
     "normality (>=3.0.2,<4.0.0)",
     "pydantic (>=2.10.6,<3.0.0)",
@@ -28,7 +28,7 @@ dependencies = [
     "Flask-Cors (==5.0.0)",
     "flask-babel (==4.0.0)",
     "flask-talisman (==1.1.0)",
-    "SQLAlchemy (==2.0.36)",
+    "sqlalchemy (>=2.0.51,<3.0.0)",
     "alembic (==1.14.0)",
     "Authlib (==0.15.5)",
     "marshmallow (==3.23.1)",
@@ -58,6 +58,7 @@ dependencies = [
     "legacy-cgi; python_version >= '3.13'",
     "lxml[html-clean] (>=5.4.0,<6.0.0)",
     "dateparser (>=1.2.2,<2.0.0)",
+    "anystore[http,s3] (>=1.2.4,<2.0.0)",
 ]
 
 [project.scripts]
