@@ -3637,13 +3637,13 @@ files = [
 
 [[package]]
 name = "nomenklatura"
-version = "4.11.2"
+version = "4.10.0"
 description = "Make record linkages in followthemoney data."
 optional = false
 python-versions = ">=3.11"
 groups = ["main"]
 files = [
-    {file = "nomenklatura-4.11.2-py3-none-any.whl", hash = "sha256:36f0161fa63f09757a529febd21e2ca2db32fe585a136aebafe60fed39aaf451"},
+    {file = "nomenklatura-4.10.0-py3-none-any.whl", hash = "sha256:e9b39d96116a0408457b7f7643d6f00033eac27bcac5d44fa68d7d683c9ed4cd"},
 ]
 
 [package.dependencies]
@@ -3757,45 +3757,53 @@ name = "openaleph-procrastinate"
 version = "5.3.0"
 description = "Task queue logic for OpenAleph built upon procrastinate"
 optional = false
-python-versions = "<3.14,>=3.11"
+python-versions = ">=3.11,<3.14"
 groups = ["main"]
-files = [
-    {file = "openaleph_procrastinate-5.3.0-py3-none-any.whl", hash = "sha256:2ec078c4f7b0de33c6901a2706136bbf1e4122d897c2b18dce55fc33d8519ba0"},
-    {file = "openaleph_procrastinate-5.3.0.tar.gz", hash = "sha256:cc04289c389c967e4919f6965efee61dda0c3def568028e1818165a0e16d6bd6"},
-]
+files = []
+develop = false
 
 [package.dependencies]
-anystore = ">=1.2.0,<2.0.0"
+anystore = {version = ">=1.2.4,<2.0.0", extras = ["http", "s3"]}
 cachetools = "<6"
-followthemoney = ">=4.8.2,<5.0.0"
-ftmq = ">=4.8.2,<5.0.0"
-procrastinate = ">=3.8.1,<4.0.0"
-psycopg = ">=3.3.3,<4.0.0"
-psycopg-pool = ">=3.3.0,<4.0.0"
+followthemoney = ">=4.9.2,<5.0.0"
+ftmq = ">=4.9.2,<5.0.0"
+procrastinate = ">=3.9.0,<4.0.0"
+psycopg = ">=3.3.4,<4.0.0"
+psycopg-pool = ">=3.3.1,<4.0.0"
 pydantic = ">=2.11.7,<3.0.0"
-pydantic-settings = ">=2.10.1,<3.0.0"
+pydantic-settings = ">=2.14.2,<3.0.0"
+
+[package.source]
+type = "git"
+url = "https://github.com/openaleph/openaleph-procrastinate.git"
+reference = "HEAD"
+resolved_reference = "81f6848802b26d5dbf3a5e8ccf84c413db364fba"
 
 [[package]]
 name = "openaleph-search"
 version = "5.3.0"
 description = "OpenAleph index & search module"
 optional = false
-python-versions = "<3.14,>=3.12"
+python-versions = ">=3.12,<3.14"
 groups = ["main"]
-files = [
-    {file = "openaleph_search-5.3.0-py3-none-any.whl", hash = "sha256:c0dbee710dda01479400dc7c624879b7147242d81a7df229612d6c0222d9d81c"},
-    {file = "openaleph_search-5.3.0.tar.gz", hash = "sha256:8fb1759fdc3223d32948a3bdaf63a7a6aa8c382a6c1e69319b0575567eea62ab"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 cachetools = "<6"
-elasticsearch = ">=9.0.0,<10.0.0"
-followthemoney = ">=4.8.2,<5.0.0"
-ftmq = ">=4.8.2,<5.0.0"
+elasticsearch = ">=9.4.1,<10.0.0"
+followthemoney = ">=4.9.2,<5.0.0"
+ftmq = ">=4.9.2,<5.0.0"
 pydantic = ">=2.11.9,<3.0.0"
-pydantic-settings = ">=2.10.1,<3.0.0"
-rigour = ">=2.1.1,<3.0.0"
+pydantic-settings = ">=2.14.2,<3.0.0"
+rigour = ">=2.1.2,<3.0.0"
 werkzeug = ">=3.1.3,<4.0.0"
+
+[package.source]
+type = "git"
+url = "https://github.com/openaleph/openaleph-search.git"
+reference = "HEAD"
+resolved_reference = "c06f15535bf439fcaeed411c3f9900bb5042f565"
 
 [[package]]
 name = "openaleph-servicelayer"
@@ -6655,4 +6663,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "bf43586a5018fe487a92016742ba8ab3c4487bcf80566d486420860908cb0c04"
+content-hash = "adfba232a042933ae9067db1b67d2bb36f83701546ea984893b6123d563ce942"
