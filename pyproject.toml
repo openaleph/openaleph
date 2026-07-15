@@ -10,13 +10,13 @@ authors = [
 ]
 license = "MIT"
 readme = "README.md"
-requires-python = ">=3.12,<3.14"
+requires-python = ">=3.12,<3.15"
 dependencies = [
-    "followthemoney (>=4.9.2,<5.0.0)",
+    "followthemoney (>=4.10.0,<5.0.0)",
     "openaleph-search @ git+https://github.com/openaleph/openaleph-search.git",
     "openaleph-procrastinate @ git+https://github.com/openaleph/openaleph-procrastinate.git",
-    "ftmq[postgres] (>=4.9.2,<5.0.0)",
-    "nomenklatura (<4.11)",
+    "ftmq[postgres] @ git+https://github.com/dataresearchcenter/ftmq.git",
+    "nomenklatura (>=4.11.4,<5.0.0)",
     "normality (>=3.0.2,<4.0.0)",
     "pydantic (>=2.10.6,<3.0.0)",
     "banal (>=1.0.6,<2.0.0)",
@@ -56,7 +56,7 @@ dependencies = [
     # TODO - remove sentry eventually
     "sentry-sdk[flask] (==2.19.2)",
     "legacy-cgi; python_version >= '3.13'",
-    "lxml[html-clean] (>=5.4.0,<6.0.0)",
+    "lxml[html-clean] (>=6.1.1,<7.0.0)",
     "dateparser (>=1.2.2,<2.0.0)",
     "anystore[http,s3] (>=1.2.4,<2.0.0)",
 ]

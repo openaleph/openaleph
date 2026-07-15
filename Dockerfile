@@ -3,7 +3,7 @@
 # =============================================================================
 # This stage installs build tools and compiles Python dependencies.
 # Heavy packages like pyicu require compilation.
-FROM python:3.13-slim AS builder
+FROM python:3.14-slim AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -50,7 +50,7 @@ RUN find /opt/venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || 
 # =============================================================================
 # Separate stage for downloading large model files.
 # This allows model updates without rebuilding dependencies.
-FROM python:3.13-slim AS models
+FROM python:3.14-slim AS models
 
 RUN apt-get -qq -y update \
     && apt-get -qq --no-install-recommends -y install curl \
@@ -103,7 +103,7 @@ RUN test -n "${FTM_SCHEMA_SHA}" \
 # Stage 4: Runtime
 # =============================================================================
 # Minimal runtime image without build tools.
-FROM python:3.13-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 LABEL org.opencontainers.image.source="https://github.com/openaleph/openaleph"
 LABEL org.opencontainers.image.description="Aleph - Follow The Money"
