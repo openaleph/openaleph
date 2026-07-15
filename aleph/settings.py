@@ -145,6 +145,14 @@ class Settings:
         # Maximum number of entities to return per property when expanding entities
         self.MAX_EXPAND_ENTITIES = env.to_int("ALEPH_MAX_EXPAND_ENTITIES", 200)
 
+        # Max size (characters) of caller-supplied text for POST /api/2/percolate.
+        # The abuse budget analogous to screening's MAX_SOURCE_NAMES: a percolate
+        # document is matched against every stored query, so an unbounded body is
+        # a cheap way to load the cluster. 100k chars is comfortably longer than
+        # any realistic screening input (an article, a bundle of related-party
+        # names) while capping worst-case cost.
+        self.PERCOLATE_MAX_TEXT = env.to_int("ALEPH_PERCOLATE_MAX_TEXT", 100_000)
+
         # API rate limiting (req/min for anonymous users)
         self.API_RATE_LIMIT = env.to_int("ALEPH_API_RATE_LIMIT", 30)
         self.API_RATE_WINDOW = 15  # minutes
