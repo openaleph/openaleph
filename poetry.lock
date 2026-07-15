@@ -1824,10 +1824,12 @@ name = "ftmq"
 version = "4.10.0"
 description = "followthemoney query dsl and io helpers"
 optional = false
-python-versions = ">=3.11,<3.15"
+python-versions = "<3.15,>=3.11"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "ftmq-4.10.0-py3-none-any.whl", hash = "sha256:abbd1ff0f816bf0fc65815161e7d87b58fa03711d4adfe30c6ebaf3c5279dea4"},
+    {file = "ftmq-4.10.0.tar.gz", hash = "sha256:346e66035608a1b341b32402ef442f3e75641c2a14afc750cfeecb33d2ec141c"},
+]
 
 [package.dependencies]
 anystore = ">=1.2.5,<2.0.0"
@@ -1837,10 +1839,10 @@ followthemoney = ">=4.10.0,<5.0.0"
 nomenklatura = ">=4.11.4,<5.0.0"
 normality = ">=3.1.0,<4.0.0"
 orjson = ">=3.10.18,<4.0.0"
-psycopg = {version = ">=3.2.9,<4.0.0", extras = ["pool"], optional = true}
+psycopg = {version = ">=3.2.9,<4.0.0", extras = ["pool"], optional = true, markers = "extra == \"postgres\""}
 pydantic = ">=2.13.3,<3.0.0"
 rigour = ">=2.1.2,<3.0.0"
-sqlalchemy = {version = ">=2.0.51,<3.0.0", optional = true}
+sqlalchemy = {version = ">=2.0.51,<3.0.0", optional = true, markers = "extra == \"postgres\""}
 
 [package.extras]
 aleph = ["alephclient (>=2.6.0,<3.0.0)", "furl (>=2.1.4,<3.0.0)"]
@@ -1849,12 +1851,6 @@ level = ["plyvel (>=1.5.1,<2.0.0)"]
 postgres = ["psycopg[pool] (>=3.2.9,<4.0.0)", "sqlalchemy (>=2.0.51,<3.0.0)"]
 redis = ["fakeredis (>=2.36.2,<3.0.0)", "redis (>=5.2.1,<6.0.0)"]
 sql = ["sqlalchemy (>=2.0.51,<3.0.0)"]
-
-[package.source]
-type = "git"
-url = "https://github.com/dataresearchcenter/ftmq.git"
-reference = "HEAD"
-resolved_reference = "e9c430cd7e184951806308c5ad363c0295f26abd"
 
 [[package]]
 name = "fuzzywuzzy"
@@ -3738,10 +3734,12 @@ name = "openaleph-procrastinate"
 version = "5.3.1"
 description = "Task queue logic for OpenAleph built upon procrastinate"
 optional = false
-python-versions = ">=3.11,<3.15"
+python-versions = "<3.15,>=3.11"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "openaleph_procrastinate-5.3.1-py3-none-any.whl", hash = "sha256:40a779fe3c03c18178413382299d799986a649a9b6fa0750233511a3f5b7dcea"},
+    {file = "openaleph_procrastinate-5.3.1.tar.gz", hash = "sha256:7a262808d410218a536cdd37756ffc00a6e0a4d1644bc8194d22bccb344e499b"},
+]
 
 [package.dependencies]
 anystore = {version = ">=1.2.5,<2.0.0", extras = ["http", "s3"]}
@@ -3753,12 +3751,6 @@ psycopg = ">=3.3.4,<4.0.0"
 psycopg-pool = ">=3.3.1,<4.0.0"
 pydantic = ">=2.11.7,<3.0.0"
 pydantic-settings = ">=2.14.2,<3.0.0"
-
-[package.source]
-type = "git"
-url = "https://github.com/openaleph/openaleph-procrastinate.git"
-reference = "HEAD"
-resolved_reference = "47d8ae6ef1ceac11fa374162114484da07b93da4"
 
 [[package]]
 name = "openaleph-search"
@@ -6647,4 +6639,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.15"
-content-hash = "4309c71d1ad813797ad9cede29e03f072980db80325fe7a428be00db01aa6944"
+content-hash = "cef9947af686ee73213ef514d9a74dba4881c0baffe397ce9168569369e5bcd9"
