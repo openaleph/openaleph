@@ -54,7 +54,7 @@ dependencies = [
     # TODO - remove sentry eventually
     "sentry-sdk[flask] (==2.19.2)",
     "legacy-cgi; python_version >= '3.13'",
-    "lxml[html-clean] (>=6.1.1,<7.0.0)",
+    "nh3 (>=0.3.6,<0.4.0)",
     "dateparser (>=1.4.1,<2.0.0)",
     "anystore[http,s3] (>=1.2.4,<2.0.0)",
 ]
@@ -84,6 +84,7 @@ fakeredis = "<2.31"
 mkdocs = "^1.6.1"
 pre-commit = "^4.5.1"
 zensical = "^0.0.36"
+lxml = "^6.1.1"
 
 
 [build-system]

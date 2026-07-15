@@ -141,7 +141,7 @@ class EntitiesApiTestCase(TestCase):
         res = self.client.get(url, headers=headers)
 
         actual = res.json["safeHtml"]
-        expected = ["<html><body><div><p>Hello World!</p></div></body></html>"]
+        expected = ["<p>Hello World!</p>"]
         assert actual == expected, actual
 
     def test_view_sanitize_html_multi_value(self):
@@ -161,8 +161,8 @@ class EntitiesApiTestCase(TestCase):
 
         actual = res.json["safeHtml"]
         expected = [
-            "<html><body><p>This is part 1.</p></body></html>",
-            "<html><body><p>This is part 2.</p></body></html>",
+            "This is part 1.",
+            "This is part 2.",
         ]
         assert actual == expected, actual
 
