@@ -193,6 +193,10 @@
       &.sorted-desc {
         background: #ebf1f5;
       }
+
+      .bp4-popover2-target {
+        display: block;
+      }
     }
 
     tbody td {
@@ -208,6 +212,24 @@
     tbody tr:hover td {
       background: #f5f8fa;
     }
+  }
+
+  &__link-button {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: #106ba3;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  // rendered in a portal outside the component tree, hence a flat selector
+  &__col-menu.bp4-menu {
+    min-width: 130px;
   }
 
   &__pagination {

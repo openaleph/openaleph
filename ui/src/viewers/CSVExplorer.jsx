@@ -3,7 +3,7 @@
 // sort and pagination queries against it without any server round-trips.
 // Requires public/sql-wasm.wasm (copied from node_modules/sql.js/dist/).
 import { Component } from 'react';
-import { Tooltip, Button, Spinner, NonIdealState, Position } from '@blueprintjs/core';
+import { Tooltip, Button, Spinner, NonIdealState, Position, Menu, MenuItem, MenuDivider } from '@blueprintjs/core';
 import { defineMessages, injectIntl, FormattedMessage } from 'react-intl';
 
 import './CSVExplorer.scss';
@@ -28,6 +28,18 @@ const messages = defineMessages({
     id: 'document.csv_explorer.retry',
     defaultMessage: 'Retry',
   },
+  sort_asc: {
+    id: 'document.csv_explorer.sort_asc',
+    defaultMessage: 'Sort asc.',
+  },
+  sort_desc: {
+    id: 'document.csv_explorer.sort_desc',
+    defaultMessage: 'Sort desc.',
+  },
+  hide_column: {
+    id: 'document.csv_explorer.hide_column',
+    defaultMessage: 'Hide',
+  },
 });
 
 class CSVExplorer extends Component {
@@ -50,11 +62,11 @@ class CSVExplorer extends Component {
       filterCol: '',
       filterOp: 'contains',
       filterVal: '',
+      hiddenCols: new Set(),
     };
     this.worker = null;
     this.timer = null;
     this.onSearch = this.onSearch.bind(this);
-    this.onSort = this.onSort.bind(this);
     this.onPage = this.onPage.bind(this);
     this.onApplyFilter = this.onApplyFilter.bind(this);
   }
@@ -92,6 +104,7 @@ class CSVExplorer extends Component {
           filterVal: '',
           filters: {},
           page: 1,
+          hiddenCols: new Set(),
           loading: false,
           ...separatorUpdate,
         }, () => {
@@ -140,16 +153,20 @@ class CSVExplorer extends Component {
     this.timer = setTimeout(() => this.runQuery(), 350);
   }
 
-  onSort(col) {
-    this.setState(({ sortCol, sortDir }) => ({
-      sortCol: col,
-      sortDir: sortCol === col && sortDir === 'ASC' ? 'DESC' : 'ASC',
-      page: 1,
-    }), () => this.runQuery());
+  onSortDir(col, dir) {
+    this.setState({ sortCol: col, sortDir: dir, page: 1 }, () => this.runQuery());
   }
 
   onPage(page) {
     this.setState({ page }, () => this.runQuery());
+  }
+
+  onHideCol(i) {
+    this.setState(({ hiddenCols }) => {
+      const next = new Set(hiddenCols);
+      next.add(i);
+      return { hiddenCols: next };
+    });
   }
 
   onApplyFilter() {
@@ -223,7 +240,7 @@ class CSVExplorer extends Component {
 
   renderToolbar() {
     const { intl } = this.props;
-    const { search, total, skiprows } = this.state;
+    const { search, total, skiprows, hiddenCols } = this.state;
     const delimiter = this.state.separator === '\t' ? 'tab' : this.state.separator || "auto";
 
     return (
@@ -237,6 +254,15 @@ class CSVExplorer extends Component {
         />
         <span className="CSVExplorer__meta">
           Total: {total.toLocaleString()} • Skipped: {skiprows.toLocaleString()} • Separator: "{delimiter}"
+          {hiddenCols.size > 0 && (
+            <>
+              {' '}• {hiddenCols.size} hidden (
+              <button
+                className="CSVExplorer__link-button"
+                onClick={() => this.setState({ hiddenCols: new Set() })}
+              >show all</button>)
+            </>
+          )}
       </span>
         <Popover2
           content={this.renderSettings()}
@@ -313,7 +339,8 @@ class CSVExplorer extends Component {
   }
 
   render() {
-    const { loading, error, columns, rows, sortCol, sortDir, page, total } = this.state;
+    const { intl } = this.props;
+    const { loading, error, columns, rows, sortCol, sortDir, page, total, hiddenCols } = this.state;
     const totalPages = Math.ceil(total / PAGE_SIZE);
 
     return (
@@ -341,14 +368,42 @@ class CSVExplorer extends Component {
               <table className="CSVExplorer__table">
                 <thead>
                   <tr>
-                    {columns.map((col, i) => (
+                    {columns.map((col, i) => !hiddenCols.has(i) && (
                       <th
                         key={i}
-                        onClick={() => this.onSort(col)}
                         className={sortCol === col ? `sorted-${sortDir.toLowerCase()}` : ''}
                       >
-                        {col}
-                        {sortCol === col && (sortDir === 'ASC' ? ' ↑' : ' ↓')}
+                        <Popover2
+                          content={
+                            <Menu className="CSVExplorer__col-menu">
+                              <MenuItem
+                                icon="sort-asc"
+                                text={intl.formatMessage(messages.sort_asc)}
+                                active={sortCol === col && sortDir === 'ASC'}
+                                onClick={() => this.onSortDir(col, 'ASC')}
+                              />
+                              <MenuItem
+                                icon="sort-desc"
+                                text={intl.formatMessage(messages.sort_desc)}
+                                active={sortCol === col && sortDir === 'DESC'}
+                                onClick={() => this.onSortDir(col, 'DESC')}
+                              />
+                              <MenuDivider />
+                              <MenuItem
+                                icon="eye-off"
+                                text={intl.formatMessage(messages.hide_column)}
+                                onClick={() => this.onHideCol(i)}
+                              />
+                            </Menu>
+                          }
+                          position={Position.BOTTOM}
+                          minimal
+                        >
+                          <span className="CSVExplorer__th-label">
+                            {col}
+                            {sortCol === col && (sortDir === 'ASC' ? ' ↑' : ' ↓')}
+                          </span>
+                        </Popover2>
                       </th>
                     ))}
                   </tr>
@@ -356,7 +411,7 @@ class CSVExplorer extends Component {
                 <tbody>
                   {rows.map((row, i) => (
                     <tr key={i}>
-                      {row.map((cell, j) => (
+                      {row.map((cell, j) => !hiddenCols.has(j) && (
                         <td key={j}>{cell}</td>
                       ))}
                     </tr>
