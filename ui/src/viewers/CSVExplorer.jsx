@@ -3,8 +3,16 @@
 // sort and pagination queries against it without any server round-trips.
 // Requires public/sql-wasm.wasm (copied from node_modules/sql.js/dist/).
 import { Component } from 'react';
-import { Tooltip, Button, Spinner, NonIdealState, Position } from '@blueprintjs/core';
+import {
+  Tooltip,
+  Button,
+  Spinner,
+  NonIdealState,
+  Position,
+} from '@blueprintjs/core';
 import { defineMessages, injectIntl, FormattedMessage } from 'react-intl';
+
+import { resolveArchiveUrl } from 'util/archiveUrl';
 
 import './CSVExplorer.scss';
 import { Popover2 } from '@blueprintjs/popover2';
@@ -68,7 +76,13 @@ class CSVExplorer extends Component {
 
     if (this.worker) this.worker.terminate();
 
-    this.setState({ loading: true, error: null, columns: [], rows: [], total: 0 });
+    this.setState({
+      loading: true,
+      error: null,
+      columns: [],
+      rows: [],
+      total: 0,
+    });
 
     this.worker = new Worker(new URL('../util/sqlWorker.js', import.meta.url));
 
@@ -76,10 +90,14 @@ class CSVExplorer extends Component {
       const { type } = event.data;
       if (type === 'ready') {
         const { columns, total, delimiter } = event.data;
-        const separatorUpdate = this.state.separator === 'auto' ? { separator: delimiter } : {};
-        this.setState({ columns, total, loading: false, ...separatorUpdate }, () => {
-          this.runQuery();
-        });
+        const separatorUpdate =
+          this.state.separator === 'auto' ? { separator: delimiter } : {};
+        this.setState(
+          { columns, total, loading: false, ...separatorUpdate },
+          () => {
+            this.runQuery();
+          }
+        );
       } else if (type === 'results') {
         this.setState({ rows: event.data.rows, total: event.data.total });
       } else if (type === 'error') {
@@ -87,13 +105,22 @@ class CSVExplorer extends Component {
       }
     };
 
-    this.worker.postMessage({
-      type: 'init',
-      csvUrl: document.links.file || document.links.csv,
-      skiprows,
-      genericHeaders,
-      separator,
-    });
+    // resolve the archive link to a fresh signed URL first, as the worker
+    // fetches it without the session's Authorization header
+    const worker = this.worker;
+    resolveArchiveUrl(document.links.file || document.links.csv)
+      .then((csvUrl) => {
+        worker.postMessage({
+          type: 'init',
+          csvUrl,
+          skiprows,
+          genericHeaders,
+          separator,
+        });
+      })
+      .catch((error) => {
+        this.setState({ error: error.message, loading: false });
+      });
   }
 
   runQuery() {
@@ -114,11 +141,14 @@ class CSVExplorer extends Component {
   }
 
   onSort(col) {
-    this.setState(({ sortCol, sortDir }) => ({
-      sortCol: col,
-      sortDir: sortCol === col && sortDir === 'ASC' ? 'DESC' : 'ASC',
-      page: 1,
-    }), () => this.runQuery());
+    this.setState(
+      ({ sortCol, sortDir }) => ({
+        sortCol: col,
+        sortDir: sortCol === col && sortDir === 'ASC' ? 'DESC' : 'ASC',
+        page: 1,
+      }),
+      () => this.runQuery()
+    );
   }
 
   onPage(page) {
@@ -128,7 +158,10 @@ class CSVExplorer extends Component {
   onApplyFilter() {
     const { filterCol, filterOp, filterVal, filters } = this.state;
     if (!filterCol) return;
-    const newFilters = { ...filters, [filterCol]: { op: filterOp, val: filterVal } };
+    const newFilters = {
+      ...filters,
+      [filterCol]: { op: filterOp, val: filterVal },
+    };
     this.setState({ filters: newFilters, page: 1 }, () => this.runQuery());
   }
 
@@ -143,7 +176,10 @@ class CSVExplorer extends Component {
 
   onSettingsChange(patch) {
     this.setState(patch, () => {
-      if (this.worker) { this.worker.postMessage({ type: 'updateSettings', ...patch }); }});
+      if (this.worker) {
+        this.worker.postMessage({ type: 'updateSettings', ...patch });
+      }
+    });
   }
 
   renderSettings() {
@@ -159,13 +195,20 @@ class CSVExplorer extends Component {
             min={0}
             value={skiprows}
             disabled={genericHeaders}
-            onChange={(e) => this.onSettingsChange({ skiprows: parseInt(e.target.value) || 0 })}
+            onChange={(e) =>
+              this.onSettingsChange({ skiprows: parseInt(e.target.value) || 0 })
+            }
           />
         </label>
         <label>
           <span>Separator</span>
           <div className="bp4-html-select bp4-small">
-            <select value={separator} onChange={(e) => this.onSettingsChange({ separator: e.target.value })}>
+            <select
+              value={separator}
+              onChange={(e) =>
+                this.onSettingsChange({ separator: e.target.value })
+              }
+            >
               <option value="auto">auto</option>
               <option value=",">,</option>
               <option value=";">;</option>
@@ -181,7 +224,9 @@ class CSVExplorer extends Component {
           <input
             type="checkbox"
             checked={genericHeaders}
-            onChange={(e) => this.onSettingsChange({ genericHeaders: e.target.checked })}
+            onChange={(e) =>
+              this.onSettingsChange({ genericHeaders: e.target.checked })
+            }
           />
         </label>
       </div>
@@ -191,7 +236,7 @@ class CSVExplorer extends Component {
   renderToolbar() {
     const { intl } = this.props;
     const { search, total, skiprows } = this.state;
-    const delimiter = this.state.separator || "auto";
+    const delimiter = this.state.separator || 'auto';
 
     return (
       <div className="CSVExplorer__toolbar">
@@ -203,8 +248,9 @@ class CSVExplorer extends Component {
           onChange={this.onSearch}
         />
         <span className="CSVExplorer__meta">
-          Total: {total.toLocaleString()} • Skipped: {skiprows.toLocaleString()} • Separator: "{delimiter}"
-      </span>
+          Total: {total.toLocaleString()} • Skipped: {skiprows.toLocaleString()}{' '}
+          • Separator: "{delimiter}"
+        </span>
         <Popover2
           content={this.renderSettings()}
           position={Position.BOTTOM_RIGHT}
@@ -225,16 +271,26 @@ class CSVExplorer extends Component {
       <div className="CSVExplorer__filterbar">
         <div className="CSVExplorer__filterbar-row">
           <div className="bp4-html-select bp4-small">
-            <select value={filterCol} onChange={(e) => this.setState({ filterCol: e.target.value })}>
-              <option value="">{intl.formatMessage(messages.filter_column_placeholder)}</option>
+            <select
+              value={filterCol}
+              onChange={(e) => this.setState({ filterCol: e.target.value })}
+            >
+              <option value="">
+                {intl.formatMessage(messages.filter_column_placeholder)}
+              </option>
               {columns.map((col, i) => (
-                <option key={i} value={col}>{col}</option>
+                <option key={i} value={col}>
+                  {col}
+                </option>
               ))}
             </select>
             <span className="bp4-icon bp4-icon-double-caret-vertical" />
           </div>
           <div className="bp4-html-select bp4-small">
-            <select value={filterOp} onChange={(e) => this.setState({ filterOp: e.target.value })}>
+            <select
+              value={filterOp}
+              onChange={(e) => this.setState({ filterOp: e.target.value })}
+            >
               <option value="contains">contains</option>
               <option value="not_contains">not contains</option>
               <option value="equals">=</option>
@@ -252,10 +308,16 @@ class CSVExplorer extends Component {
             onChange={(e) => this.setState({ filterVal: e.target.value })}
             onKeyDown={(e) => e.key === 'Enter' && this.onApplyFilter()}
           />
-          <Tooltip 
-            content="Select a column and enter a filter value" 
-            disabled={this.filterState} >
-            <Button small intent="primary" disabled={!this.filterState} onClick={this.onApplyFilter}>
+          <Tooltip
+            content="Select a column and enter a filter value"
+            disabled={this.filterState}
+          >
+            <Button
+              small
+              intent="primary"
+              disabled={!this.filterState}
+              onClick={this.onApplyFilter}
+            >
               <FormattedMessage {...messages.filter_apply} />
             </Button>
           </Tooltip>
@@ -264,13 +326,29 @@ class CSVExplorer extends Component {
           <div className="CSVExplorer__filterbar-tags">
             {activeFilters.map(([col, { op, val }]) => (
               <span key={col} className="CSVExplorer__filter-tag">
-                <strong>{col}</strong> {({ contains: 'contains', not_contains: 'not contains', equals: '=', starts: 'starts with', ends: 'ends with', lt: '<', gt: '>' })[op]} "{val}"
+                <strong>{col}</strong>{' '}
+                {
+                  {
+                    contains: 'contains',
+                    not_contains: 'not contains',
+                    equals: '=',
+                    starts: 'starts with',
+                    ends: 'ends with',
+                    lt: '<',
+                    gt: '>',
+                  }[op]
+                }{' '}
+                "{val}"
                 <button
                   onClick={() => {
                     const { [col]: _removed, ...rest } = this.state.filters;
-                    this.setState({ filters: rest, page: 1 }, () => this.runQuery());
+                    this.setState({ filters: rest, page: 1 }, () =>
+                      this.runQuery()
+                    );
                   }}
-                >×</button>
+                >
+                  ×
+                </button>
               </span>
             ))}
           </div>
@@ -280,7 +358,8 @@ class CSVExplorer extends Component {
   }
 
   render() {
-    const { loading, error, columns, rows, sortCol, sortDir, page, total } = this.state;
+    const { loading, error, columns, rows, sortCol, sortDir, page, total } =
+      this.state;
     const totalPages = Math.ceil(total / PAGE_SIZE);
 
     if (error) {
@@ -291,9 +370,7 @@ class CSVExplorer extends Component {
       <div className="CSVExplorer__table-container">
         {this.renderToolbar()}
         {columns.length > 0 && this.renderFilterBar()}
-        {loading && (
-          <NonIdealState icon={<Spinner />} title="Loading…" />
-        )}
+        {loading && <NonIdealState icon={<Spinner />} title="Loading…" />}
         {!loading && columns.length > 0 && (
           <>
             <div className="CSVExplorer__scroll">
@@ -304,7 +381,11 @@ class CSVExplorer extends Component {
                       <th
                         key={i}
                         onClick={() => this.onSort(col)}
-                        className={sortCol === col ? `sorted-${sortDir.toLowerCase()}` : ''}
+                        className={
+                          sortCol === col
+                            ? `sorted-${sortDir.toLowerCase()}`
+                            : ''
+                        }
                       >
                         {col}
                         {sortCol === col && (sortDir === 'ASC' ? ' ↑' : ' ↓')}
@@ -325,9 +406,23 @@ class CSVExplorer extends Component {
             </div>
             {totalPages > 1 && (
               <div className="CSVExplorer__pagination">
-                <Button minimal small disabled={page === 1} onClick={() => this.onPage(page - 1)} icon="chevron-left" />
-                <span>{page} / {totalPages}</span>
-                <Button minimal small disabled={page === totalPages} onClick={() => this.onPage(page + 1)} icon="chevron-right" />
+                <Button
+                  minimal
+                  small
+                  disabled={page === 1}
+                  onClick={() => this.onPage(page - 1)}
+                  icon="chevron-left"
+                />
+                <span>
+                  {page} / {totalPages}
+                </span>
+                <Button
+                  minimal
+                  small
+                  disabled={page === totalPages}
+                  onClick={() => this.onPage(page + 1)}
+                  icon="chevron-right"
+                />
               </div>
             )}
           </>
