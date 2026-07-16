@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta
 
 from flask import Blueprint, redirect, request, send_file
 from flask.wrappers import Response
@@ -33,7 +34,10 @@ def resolve() -> WerkzeugResponse:
     Unlike the signed URLs embedded directly into (browser-cached) entity
     payloads in the past, this endpoint checks the requesting user's read
     permission on the entity at request time and redirects to a freshly
-    signed archive URL that never arrives stale at the client.
+    signed archive URL that never arrives stale at the client. For storage
+    backends that support signing (S3, Google Cloud Storage), this is the
+    storage URL directly; otherwise a token-authorized link to the retrieve
+    endpoint below.
     ---
     get:
       summary: Resolve an entity property to an archive download URL
@@ -100,12 +104,26 @@ def resolve() -> WerkzeugResponse:
     file_name = entity_filename(proxy, extension=extension)
     if mime_type is None:
         mime_type = proxy.first("mimeType", quiet=True)
-    url = archive_url(
+    expire = datetime.utcnow() + timedelta(days=1)
+    # For storage backends that support signing (S3, GCS), hand out the
+    # signed storage URL directly and save clients the extra hop through
+    # the retrieve endpoint below.
+    url = archive.generate_url(
         content_hash,
         file_name=file_name,
         mime_type=mime_type,
-        role_id=request.authz.id,
+        expire=expire,
     )
+    if url is None:
+        # The storage backend cannot sign URLs (e.g. local file archive),
+        # so hand out a token-authorized link to the retrieve endpoint.
+        url = archive_url(
+            content_hash,
+            file_name=file_name,
+            mime_type=mime_type,
+            expire=expire,
+            role_id=request.authz.id,
+        )
     if not get_flag("redirect", default=True):
         return jsonify({"url": url})
     return redirect(url)

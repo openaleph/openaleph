@@ -1,3 +1,4 @@
+from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 from aleph.core import archive, db
@@ -108,3 +109,18 @@ class ArchiveApiTestCase(TestCase):
         assert res.status_code == 200, res.status_code
         disposition = res.headers.get("Content-Disposition")
         assert "website.html" in disposition, disposition
+
+    def test_resolve_signing_backend(self):
+        # storage backends that support signing (S3, GCS) hand out the
+        # signed storage URL directly, skipping the retrieve endpoint
+        signed_url = "https://storage.example.org/signed-blob-url"
+        url = "/api/2/archive/resolve?entity=%s" % self.doc_id
+        with patch("aleph.views.archive_api.archive") as mock_archive:
+            mock_archive.generate_url.return_value = signed_url
+            res = self.client.get(url, headers=self.headers)
+            assert res.status_code == 302, res
+            assert res.headers.get("Location") == signed_url, res.headers
+
+            res = self.client.get(url + "&redirect=false", headers=self.headers)
+            assert res.status_code == 200, res
+            assert res.json.get("url") == signed_url, res.json
