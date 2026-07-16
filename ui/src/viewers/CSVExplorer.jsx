@@ -3,7 +3,7 @@
 // sort and pagination queries against it without any server round-trips.
 // Requires public/sql-wasm.wasm (copied from node_modules/sql.js/dist/).
 import { Component } from 'react';
-import { Button, Spinner, NonIdealState, Position } from '@blueprintjs/core';
+import { Tooltip, Button, Spinner, NonIdealState, Position } from '@blueprintjs/core';
 import { defineMessages, injectIntl, FormattedMessage } from 'react-intl';
 
 import './CSVExplorer.scss';
