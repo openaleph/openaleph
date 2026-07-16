@@ -48,6 +48,7 @@ class CSVExplorer extends Component {
       filterVal: '',
     };
     this.worker = null;
+    this.timer = null;
     this.onSearch = this.onSearch.bind(this);
     this.onSort = this.onSort.bind(this);
     this.onPage = this.onPage.bind(this);
@@ -59,6 +60,7 @@ class CSVExplorer extends Component {
   }
 
   componentWillUnmount() {
+    clearTimeout(this.timer);
     if (this.worker) this.worker.terminate();
   }
 
@@ -128,7 +130,9 @@ class CSVExplorer extends Component {
   }
 
   onSearch(e) {
-    this.setState({ search: e.target.value, page: 1 }, () => this.runQuery());
+    this.setState({ search: e.target.value, page: 1 });
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.runQuery(), 350);
   }
 
   onSort(col) {
