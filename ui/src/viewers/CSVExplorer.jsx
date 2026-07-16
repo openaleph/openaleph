@@ -177,7 +177,7 @@ class CSVExplorer extends Component {
               <option value=",">,</option>
               <option value=";">;</option>
               <option value=":">:</option>
-              <option value="\t">tab</option>
+              <option value={'\t'}>tab</option>
               <option value="|">|</option>
             </select>
             <span className="bp4-icon bp4-icon-double-caret-vertical" />
@@ -198,7 +198,7 @@ class CSVExplorer extends Component {
   renderToolbar() {
     const { intl } = this.props;
     const { search, total, skiprows } = this.state;
-    const delimiter = this.state.separator || "auto";
+    const delimiter = this.state.separator === '\t' ? 'tab' : this.state.separator || "auto";
 
     return (
       <div className="CSVExplorer__toolbar">
