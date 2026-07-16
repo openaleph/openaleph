@@ -160,7 +160,7 @@ class CSVExplorer extends Component {
   }
 
   onSettingsChange(patch) {
-    this.setState(patch, () => {
+    this.setState({ ...patch, loading: true }, () => {
       if (this.worker) { this.worker.postMessage({ type: 'updateSettings', ...patch }); }});
   }
 
