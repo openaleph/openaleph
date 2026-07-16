@@ -24,6 +24,10 @@ const messages = defineMessages({
     id: 'document.csv_explorer.filter_apply',
     defaultMessage: 'Apply',
   },
+  retry: {
+    id: 'document.csv_explorer.retry',
+    defaultMessage: 'Retry',
+  },
 });
 
 class CSVExplorer extends Component {
@@ -117,6 +121,7 @@ class CSVExplorer extends Component {
   }
 
   runQuery() {
+    if (!this.worker || this.state.error) return;
     const { search, filters, sortCol, sortDir, page } = this.state;
     this.worker.postMessage({
       type: 'query',
@@ -164,6 +169,12 @@ class CSVExplorer extends Component {
   }
 
   onSettingsChange(patch) {
+    // in the error state the worker may be dead: only stage the settings,
+    // the retry action re-inits from state
+    if (this.state.error) {
+      this.setState(patch);
+      return;
+    }
     this.setState({ ...patch, loading: true }, () => {
       if (this.worker) { this.worker.postMessage({ type: 'updateSettings', ...patch }); }});
   }
@@ -305,18 +316,26 @@ class CSVExplorer extends Component {
     const { loading, error, columns, rows, sortCol, sortDir, page, total } = this.state;
     const totalPages = Math.ceil(total / PAGE_SIZE);
 
-    if (error) {
-      return <NonIdealState icon="error" title="Error" description={error} />;
-    }
-
     return (
       <div className="CSVExplorer__table-container">
         {this.renderToolbar()}
-        {columns.length > 0 && this.renderFilterBar()}
-        {loading && (
+        {error && (
+          <NonIdealState
+            icon="error"
+            title="Error"
+            description={error}
+            action={
+              <Button intent="primary" onClick={() => this.initWorker()}>
+                <FormattedMessage {...messages.retry} />
+              </Button>
+            }
+          />
+        )}
+        {!error && columns.length > 0 && this.renderFilterBar()}
+        {!error && loading && (
           <NonIdealState icon={<Spinner />} title="Loading…" />
         )}
-        {!loading && columns.length > 0 && (
+        {!error && !loading && columns.length > 0 && (
           <>
             <div className="CSVExplorer__scroll">
               <table className="CSVExplorer__table">
