@@ -41,6 +41,7 @@ async function init(csvUrl, skiprows, genericHeaders, separator) {
 async function processCSV() {
   const { skiprows, genericHeaders, separator } = currentSettings;
   const SQL = await initSqlJs({ locateFile: () => '/sql-wasm.wasm' });
+  if (db) db.close();
   db = new SQL.Database();
 
   const lines = csvText.split(/\r?\n/);
