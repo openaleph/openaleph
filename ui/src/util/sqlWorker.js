@@ -16,17 +16,26 @@ const FLOAT = /^\s*-?(\d+\.?|\.\d+|\d+\.\d+)([eE][-+]?\d+)?\s*$/;
 const MAX_FLOAT = Math.pow(2, 53);
 const EURO_NUMBER = /^[+-]?(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d+)?$/;
 
-function typeValue(value) {
-  const trimmed = value.trim();
-  if (trimmed === '') return null;
+
+function parseNumber(trimmed) {
   const normalized = EURO_NUMBER.test(trimmed)
     ? trimmed.replace(/\./g, '').replace(',', '.')
-    : value;
+    : trimmed;
   if (FLOAT.test(normalized)) {
     const num = parseFloat(normalized);
     if (num > -MAX_FLOAT && num < MAX_FLOAT) return num;
   }
-  return normalized;
+  return undefined;
+}
+
+function typeValue(value) {
+  const trimmed = value.trim();
+  if (trimmed === '') return null;
+  const num = parseNumber(trimmed);
+  if (num !== undefined) return num;
+  return EURO_NUMBER.test(trimmed)
+    ? trimmed.replace(/\./g, '').replace(',', '.')
+    : value;
 }
 
 async function init(csvUrl, skiprows, genericHeaders, separator) {
@@ -106,9 +115,24 @@ function query({ search, filters, sortCol, sortDir, page, pageSize }) {
     const idx = columns.indexOf(displayCol);
     if (idx === -1) continue;
     const alias = colAliases[idx];
+    const num = parseNumber(val.trim());
     if (op === 'equals') {
-      whereClauses.push(`${alias} = ?`);
-      params.push(val);
+      if (num !== undefined) {
+        whereClauses.push(`(${alias} = ? OR ${alias} = ?)`);
+        params.push(val, num);
+      } else {
+        whereClauses.push(`${alias} = ?`);
+        params.push(val);
+      }
+    } else if (op === 'lt' || op === 'gt') {
+      const cmp = op === 'lt' ? '<' : '>';
+      if (num !== undefined) {
+        whereClauses.push(`(typeof(${alias}) IN ('integer', 'real') AND ${alias} ${cmp} ?)`);
+        params.push(num);
+      } else {
+        whereClauses.push(`(typeof(${alias}) = 'text' AND ${alias} ${cmp} ?)`);
+        params.push(val);
+      }
     } else if (op === 'starts') {
       whereClauses.push(`${alias} LIKE ?`);
       params.push(`${val}%`);
@@ -118,12 +142,6 @@ function query({ search, filters, sortCol, sortDir, page, pageSize }) {
     } else if (op === 'not_contains') {
       whereClauses.push(`${alias} NOT LIKE ?`);
       params.push(`%${val}%`);
-    } else if (op === 'lt') {
-      whereClauses.push(`${alias} < ?`);
-      params.push(parseFloat(val) || 0);
-    } else if (op === 'gt') {
-      whereClauses.push(`${alias} > ?`);
-      params.push(parseFloat(val) || 0);
     } else {
       whereClauses.push(`${alias} LIKE ?`);
       params.push(`%${val}%`);
