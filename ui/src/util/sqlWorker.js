@@ -8,6 +8,36 @@ let colAliases = [];  // internal SQLite names: c0, c1, c2, ...
 let csvText = null;
 let currentSettings = {};
 
+// Typing based on papaparse's own parseDynamic (see papaparse.js, ParserHandle)
+// minus two branches: ISO dates, because sql.js cannot bind Date objects and
+// timestamps should keep their original text, and booleans, which we want to
+// stay text as well. FLOAT and the 2^53 bounds are copied from papaparse.
+const FLOAT = /^\s*-?(\d+\.?|\.\d+|\d+\.\d+)([eE][-+]?\d+)?\s*$/;
+const MAX_FLOAT = Math.pow(2, 53);
+const EURO_NUMBER = /^[+-]?(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d+)?$/;
+
+
+function parseNumber(trimmed) {
+  const normalized = EURO_NUMBER.test(trimmed)
+    ? trimmed.replace(/\./g, '').replace(',', '.')
+    : trimmed;
+  if (FLOAT.test(normalized)) {
+    const num = parseFloat(normalized);
+    if (num > -MAX_FLOAT && num < MAX_FLOAT) return num;
+  }
+  return undefined;
+}
+
+function typeValue(value) {
+  const trimmed = value.trim();
+  if (trimmed === '') return null;
+  const num = parseNumber(trimmed);
+  if (num !== undefined) return num;
+  return EURO_NUMBER.test(trimmed)
+    ? trimmed.replace(/\./g, '').replace(',', '.')
+    : value;
+}
+
 async function init(csvUrl, skiprows, genericHeaders, separator) {
   if (!csvText || currentSettings.csvUrl !== csvUrl) {
     const response = await fetch(csvUrl);
@@ -20,30 +50,18 @@ async function init(csvUrl, skiprows, genericHeaders, separator) {
 async function processCSV() {
   const { skiprows, genericHeaders, separator } = currentSettings;
   const SQL = await initSqlJs({ locateFile: () => '/sql-wasm.wasm' });
+  if (db) db.close();
   db = new SQL.Database();
 
   const lines = csvText.split(/\r?\n/);
-  // I could not get papaparse skipFirstNLines to do anything
+  // papaparse < 5.5 has no skipFirstNLines, so slice manually
   const csv = (skiprows > 0 ? lines.slice(skiprows) : lines).join('\n');
 
   const parsed = Papa.parse(csv, {
-    dynamicTyping: true,
     skipEmptyLines: 'greedy',
     delimiter: separator === 'auto' ? '' : separator,
     delimitersToGuess: separator === 'auto' ? [',', '\t', '|', ';'] : undefined,
-    transform: function(value) {
-    if (value != null && typeof value === 'string') {
-      const trimmed = value.trim();
-      const euroRegex = /^[+-]?(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d+)?$/;
-
-      if (euroRegex.test(trimmed)) {
-        return trimmed
-          .replace(/\./g, '')
-          .replace(',', '.');
-      }
-    }
-    return value;
-  }
+    transform: typeValue,
   });
 
   if (!parsed.data.length) {
@@ -97,9 +115,24 @@ function query({ search, filters, sortCol, sortDir, page, pageSize }) {
     const idx = columns.indexOf(displayCol);
     if (idx === -1) continue;
     const alias = colAliases[idx];
+    const num = parseNumber(val.trim());
     if (op === 'equals') {
-      whereClauses.push(`${alias} = ?`);
-      params.push(val);
+      if (num !== undefined) {
+        whereClauses.push(`(${alias} = ? OR ${alias} = ?)`);
+        params.push(val, num);
+      } else {
+        whereClauses.push(`${alias} = ?`);
+        params.push(val);
+      }
+    } else if (op === 'lt' || op === 'gt') {
+      const cmp = op === 'lt' ? '<' : '>';
+      if (num !== undefined) {
+        whereClauses.push(`(typeof(${alias}) IN ('integer', 'real') AND ${alias} ${cmp} ?)`);
+        params.push(num);
+      } else {
+        whereClauses.push(`(typeof(${alias}) = 'text' AND ${alias} ${cmp} ?)`);
+        params.push(val);
+      }
     } else if (op === 'starts') {
       whereClauses.push(`${alias} LIKE ?`);
       params.push(`${val}%`);
@@ -109,12 +142,6 @@ function query({ search, filters, sortCol, sortDir, page, pageSize }) {
     } else if (op === 'not_contains') {
       whereClauses.push(`${alias} NOT LIKE ?`);
       params.push(`%${val}%`);
-    } else if (op === 'lt') {
-      whereClauses.push(`${alias} < ?`);
-      params.push(parseFloat(val) || 0);
-    } else if (op === 'gt') {
-      whereClauses.push(`${alias} > ?`);
-      params.push(parseFloat(val) || 0);
     } else {
       whereClauses.push(`${alias} LIKE ?`);
       params.push(`%${val}%`);
@@ -140,22 +167,19 @@ function query({ search, filters, sortCol, sortDir, page, pageSize }) {
 
 self.onmessage = async (event) => {
   const { type } = event.data;
-  if (type === 'init') {
-    const { csvUrl, skiprows, genericHeaders, separator } = event.data;
-    try {
+  try {
+    if (type === 'init') {
+      const { csvUrl, skiprows, genericHeaders, separator } = event.data;
       await init(csvUrl, skiprows, genericHeaders, separator);
-    } catch (e) {
-      self.postMessage({ type: 'error', message: e.message });
-    }
-  } else if (type === 'updateSettings') {
-    const { skiprows, genericHeaders, separator } = event.data;
-    try {
+    } else if (type === 'updateSettings') {
+      const { skiprows, genericHeaders, separator } = event.data;
       currentSettings = { ...currentSettings, skiprows, genericHeaders, separator };
       await processCSV();
-    } catch (e) {
-      self.postMessage({ type: 'error', message: e.message });
+    } else if (type === 'query') {
+      query(event.data);
     }
-  } else if (type === 'query') {
-    query(event.data);
+  } catch (e) {
+    // sql.js throws plain strings, so e.message alone may be undefined
+    self.postMessage({ type: 'error', message: e.message || String(e) });
   }
 };
