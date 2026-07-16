@@ -77,7 +77,18 @@ class CSVExplorer extends Component {
       if (type === 'ready') {
         const { columns, total, delimiter } = event.data;
         const separatorUpdate = this.state.separator === 'auto' ? { separator: delimiter } : {};
-        this.setState({ columns, total, page: 1, loading: false, ...separatorUpdate }, () => {
+        this.setState({
+          columns,
+          total,
+          sortCol: null,
+          filterCol: '',
+          filterOp: 'contains',
+          filterVal: '',
+          filters: {},
+          page: 1,
+          loading: false,
+          ...separatorUpdate,
+        }, () => {
           this.runQuery();
         });
       } else if (type === 'results') {
