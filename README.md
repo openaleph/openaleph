@@ -19,13 +19,14 @@
 
 Discover how to install, use, and contribute to OpenAleph through our [documentation](https://openaleph.org/docs/).
 
-OpenAleph can run be deployed locally with Docker, for testing purposes:
+OpenAleph can be deployed locally with Docker, for testing purposes:
 
-1. Run `cp aleph.env.tmpl aleph.env` and then edit `aleph.env`. Assign a value to `ALEPH_SECRET_KEY`. You can also set `ALEPH_SINGLE_USER=true` or create an admit user following the instructions [in the documentation](https://docs.aleph.occrp.org/developers/getting-started/development-environment/#create-an-admin-user).
-2. Run `make build; make upgrade; make web`.
-3. Navigate to `http://localhost:8080/`.
+1. Run `cp aleph.env.tmpl aleph.env` and then edit `aleph.env`. Assign a value to `ALEPH_SECRET_KEY` — the Docker images already default to the bundled postgres, elasticsearch and redis services; see the [Docker setup guide](https://openaleph.org/docs/dev-admin-guide/102/docker/) for more configuration options. You can also set `ALEPH_SINGLE_USER=true` or create an admin user following the instructions [in the documentation](https://openaleph.org/docs/dev-admin-guide/104/setup/).
+2. Run `docker compose -f docker-compose.example.yml up -d` to start the full stack with prebuilt images (or `make up` to run it in the foreground).
+3. Once Elasticsearch reports a green health status in the logs, run `docker compose -f docker-compose.example.yml run --rm worker aleph upgrade` to initialize the database and search index.
+4. Navigate to `http://localhost:8080/`.
 
-This deployment method should not be used for production environments. The technical documentation details [different ways](https://docs.aleph.occrp.org/developers/getting-started/production-deployment/) to run OpenAleph in production.
+This deployment method should not be used for production environments. The technical documentation details [different ways](https://openaleph.org/docs/dev-admin-guide/101/#read-this-first) to run OpenAleph in production.
 
 ## Join the Conversation
 
@@ -33,7 +34,7 @@ Connect with fellow researchers, developers, and enthusiasts on our community pl
 
 ## How to Contribute
 
-We invite contributions of all kinds: code improvements, bug reports, feature ideas, or even better documentation. To help us grow together, please review our [contribution guidelines](CONTRIBUTING.md). Make sure you familiarize yourself with out [Code of Conduct](CODE_OF_CONDUCT.md), too.
+We invite contributions of all kinds: code improvements, bug reports, feature ideas, or even better documentation. To help us grow together, please review our [contribution guidelines](CONTRIBUTING.md). Make sure you familiarize yourself with our [Code of Conduct](CODE_OF_CONDUCT.md), too.
 
 ## Need Support?
 
@@ -45,4 +46,4 @@ OpenAleph is open source software. See the [LICENSE](LICENSE.txt) file for detai
 
 ---
 
-_Standing on the shoulders of giants_: OpenAleph builds on the brilliant work of the many contributors of the [Aleph](https://github.com/alephdata/aleph) project, it's predecessor. We've published a blog post about the decision to fork and continue the OpenAleph open source project [here](https://openaleph.org/blog/2025/03/OpenAleph-commits-to-the-commons/3510138e-16b3-4b5d-a06c-41af0aa2d517/).
+_Standing on the shoulders of giants_: OpenAleph builds on the brilliant work of the many contributors of the [Aleph](https://github.com/alephdata/aleph) project, its predecessor. We've published a blog post about the decision to fork and continue the OpenAleph open source project [here](https://openaleph.org/blog/2025/03/OpenAleph-commits-to-the-commons/3510138e-16b3-4b5d-a06c-41af0aa2d517/).

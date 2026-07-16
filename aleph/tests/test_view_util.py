@@ -3,9 +3,9 @@ import json
 from lxml.html import document_fromstring
 from werkzeug.exceptions import BadRequest
 
-from aleph.logic.html import sanitize_html, html_link
-from aleph.views.util import get_url_path, validate
+from aleph.logic.html import html_link, sanitize_html
 from aleph.tests.util import TestCase
+from aleph.views.util import get_url_path, validate
 
 
 class ViewUtilTest(TestCase):
@@ -36,10 +36,29 @@ class ViewUtilTest(TestCase):
         assert html.find(".//a").get("target") == "_blank", html
         assert "nofollow" in html.find(".//a").get("rel"), html
 
+    def test_sanitize_html_link_referrer_leak(self) -> None:
+        # Regression: the old lxml implementation rewrote every <a> tag to
+        # open in a new tab without leaking the referrer. The nh3 port must
+        # keep doing this, including overriding attacker-supplied values.
+        html_str = (
+            '<p><a href="https://evil.example/a">plain</a>'
+            '<a href="https://evil.example/b" rel="opener referrer">hostile rel</a>'
+            '<a href="https://evil.example/c" target="_self">hostile target</a>'
+            '<a href="/relative">relative</a></p>'
+        )
+        rel = "nofollow noreferrer external noopener"
+        for base_url in (None, "https://example.org/doc", "::not a url::"):
+            processed = sanitize_html(html_str, base_url)
+            links = document_fromstring(processed).findall(".//a")
+            assert len(links) == 4, processed
+            for link in links:
+                assert link.get("target") == "_blank", processed
+                assert link.get("rel") == rel, processed
+
     def test_sanitize_html_no_self_closing_tags(self):
         html_str = '<html><body><noscript><script src="https://example.org></script></noscript></body></html>'
         processed = sanitize_html(html_str, "https://example.org")
-        assert processed == "<html><body><div><noscript></noscript></div></body></html>"
+        assert processed == "", processed
 
     def test_validate_returns_errors_for_paths(self):
         # given
