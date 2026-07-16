@@ -87,6 +87,13 @@ class CSVExplorer extends Component {
       }
     };
 
+    this.worker.onerror = (event) => {
+      this.setState({
+        error: event.message || 'Explorer failed unexpectedly.',
+        loading: false,
+      });
+    };
+
     this.worker.postMessage({
       type: 'init',
       csvUrl: document.links.file || document.links.csv,
