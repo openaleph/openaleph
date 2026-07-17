@@ -1,36 +1,73 @@
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
+import flask_migrate
 import pytest
 from followthemoney import Statement
 from nomenklatura.judgement import Judgement
 from nomenklatura.resolver import Identifier
 from nomenklatura.resolver.edge import Edge
+from openaleph_procrastinate.manage.db import get_db
+from openaleph_search.core import get_es
+from servicelayer import env
+from sqlalchemy import text as sa_text
 
-from aleph.index.xref import delete_xref
-from aleph.logic.xref.resolver import ElasticsearchResolver, get_resolver
+from aleph.core import create_app, db
+from aleph.index.admin import delete_index, upgrade_search
+from aleph.index.xref import (
+    configure_xref,
+    count_edges,
+    scan_node_ids,
+    xref_index,
+)
+from aleph.logic.xref.resolver import XrefResolver, get_resolver
+from aleph.logic.xref.store import purge_xref
+from aleph.migration import destroy_db
+from aleph.settings import SETTINGS
+
+
+def _ensure_test_state() -> None:
+    """One-time test database/index reset (mirrors TestCase.setUp)."""
+    if hasattr(SETTINGS, "_global_test_state"):
+        return
+    SETTINGS._global_test_state = True
+    destroy_db()
+    flask_migrate.upgrade()
+    if not env.to_bool("TESTING_KEEP_INDEX"):
+        delete_index()
+        upgrade_search()
+    procrastinate_db = get_db()
+    procrastinate_db.configure()
+
+
+@pytest.fixture(scope="module")
+def flask_app():
+    """App context for the SQL judgement store (db.engine)."""
+    app = create_app({"TESTING": True})
+    with app.app_context():
+        yield app
 
 
 @pytest.fixture()
-def resolver():
-    """Provide a fresh ElasticsearchResolver with a clean xref index."""
-    from openaleph_search.core import get_es
-
-    from aleph.index.xref import configure_xref, xref_index
-
+def resolver(flask_app):
+    """Provide a fresh XrefResolver with clean xref stores (ES + SQL)."""
+    _ensure_test_state()
     # Drop stale index and recreate with proper mapping (copy_to: entities)
     es = get_es()
     es.indices.delete(index=xref_index(), ignore=[404])
     configure_xref()
+    with db.engine.connect() as conn:
+        conn.execute(sa_text("TRUNCATE xref_edge, xref_cluster"))
+        conn.commit()
     return get_resolver(sync=True)
 
 
-def test_resolver(resolver: ElasticsearchResolver):
+def test_resolver(resolver: XrefResolver):
 
     a_canon = resolver.decide("a1", "a2", Judgement.POSITIVE)
     assert a_canon.canonical, a_canon
     assert Identifier.get("a2") in resolver.connected(Identifier.get("a1"))
-    assert set(n.id for n in resolver.nodes) == {"a1", "a2", a_canon.id}
+    assert set(scan_node_ids([])) == {"a1", "a2", a_canon.id}
 
     assert resolver.get_judgement("a1", "a2") == Judgement.POSITIVE
     resolver.decide("b1", "b2", Judgement.POSITIVE)
@@ -68,18 +105,18 @@ def test_resolver(resolver: ElasticsearchResolver):
     resolver.suggest("c1", "c2", 7.0)
     assert (c1c2 := resolver.get_edge("c1", "c2")) and c1c2.score == 7.0
     resolver.suggest("c1", "c2", 8.0)
-    edge_count = len(resolver.edges)
+    edge_count = count_edges()
     # subsequent suggest() updates score
     assert (c1c2 := resolver.get_edge("c1", "c2")) and c1c2.score == 8.0
-    assert c1c2 in resolver.edges, resolver.edges
+    assert resolver.get_edge(c1c2.source, c1c2.target) is not None
     ccn = resolver.decide("c1", "c2", Judgement.POSITIVE)
     assert resolver.get_edge("c1", "c2") is None
     assert (ccnc2 := resolver.get_edge(ccn, "c2")) and ccnc2.score is None
     # positive decide() replaces non-canon edge with two towards canonical
 
-    assert ccnc2.key in resolver.edges, resolver.edges
-    assert c1c2.key not in resolver.edges, resolver.edges
-    assert len(resolver.edges) == edge_count + 1
+    assert resolver.get_edge(ccn, "c2") is not None
+    assert resolver.get_edge("c1", "c2") is None
+    assert count_edges() == edge_count + 1
 
     assert "a1" in resolver.get_referents(a_canon)
     assert "a1" in resolver.get_referents(a_canon, canonicals=False)
@@ -95,7 +132,7 @@ def test_resolver(resolver: ElasticsearchResolver):
     resolver.commit()
 
 
-def test_cluster_to_cluster(resolver: ElasticsearchResolver):
+def test_cluster_to_cluster(resolver: XrefResolver):
     a_canon = resolver.decide("a1", "a2", Judgement.POSITIVE)
     b_canon = resolver.decide("b1", "b2", Judgement.POSITIVE)
     resolver.decide(a_canon, b_canon, Judgement.UNSURE)
@@ -144,7 +181,7 @@ def test_cluster_to_cluster(resolver: ElasticsearchResolver):
     resolver.commit()
 
 
-def test_linker(resolver: ElasticsearchResolver):
+def test_linker(resolver: XrefResolver):
     canon_a = resolver.decide("a1", "a2", Judgement.POSITIVE)
     canon_a = resolver.decide(canon_a, "a3", Judgement.POSITIVE)
     resolver.remove("a3")
@@ -173,7 +210,7 @@ def test_linker(resolver: ElasticsearchResolver):
     assert linker.get_canonical("a3") == "a3"
 
 
-def test_resolver_store_load(resolver: ElasticsearchResolver):
+def test_resolver_store_load(resolver: XrefResolver):
     with NamedTemporaryFile("w") as fh:
         path = Path(fh.name)
 
@@ -187,12 +224,12 @@ def test_resolver_store_load(resolver: ElasticsearchResolver):
         with open(path, "r") as fh:
             assert len(fh.readlines()) == 3  # no soft-delete
 
-        # clear ES
-        delete_xref(sync=True)
-        assert len(resolver.edges) == 0
+        # clear both stores (SQL graph + ES index)
+        purge_xref(sync=True)
+        assert count_edges() == 0
 
         resolver.load(path)
-        assert len(resolver.edges) == 3
+        assert count_edges() == 3
 
         edge = resolver.get_edge("a2", "b2")
         assert edge is not None, edge
@@ -203,7 +240,7 @@ def test_resolver_store_load(resolver: ElasticsearchResolver):
         assert edge is None, edge
 
 
-def test_resolver_candidates(resolver: ElasticsearchResolver):
+def test_resolver_candidates(resolver: XrefResolver):
     candidates = list(resolver.get_candidates())
     assert len(candidates) == 0, candidates
 
@@ -223,7 +260,7 @@ def test_resolver_candidates(resolver: ElasticsearchResolver):
     resolver.commit()
 
 
-def test_get_judgements(resolver: ElasticsearchResolver):
+def test_get_judgements(resolver: XrefResolver):
     canon = resolver.decide("a1", "a2", Judgement.POSITIVE)
     resolver.decide(canon, "a3", Judgement.POSITIVE)
     resolver.decide(canon, "a4", Judgement.POSITIVE)
@@ -242,7 +279,7 @@ def test_get_judgements(resolver: ElasticsearchResolver):
     ]
 
 
-def test_suggest_metadata(resolver: ElasticsearchResolver):
+def test_suggest_metadata(resolver: XrefResolver):
     """suggest() persists collection IDs and other metadata on xref edges."""
     from aleph.index.xref import scan_edges
 
@@ -317,7 +354,7 @@ def test_suggest_metadata(resolver: ElasticsearchResolver):
         assert {50, 60} == all_colls, (edge, all_colls)
 
 
-def test_resolver_statements(resolver: ElasticsearchResolver):
+def test_resolver_statements(resolver: XrefResolver):
     canon = resolver.decide("a1", "a2", Judgement.POSITIVE)
     resolver.decide("a2", "b2", Judgement.NEGATIVE)
 

@@ -79,6 +79,8 @@ from aleph.model.role import Role, RoleSchema, RoleType
 from aleph.model.tag import Tag, TagSchema
 from aleph.model.xref import (
     ESEdge,
+    XrefCluster,
+    XrefEdge,
     XrefSchema,
 )
 
@@ -143,5 +145,7 @@ __all__ = [
     "StatementSchema",
     "TagSchema",
     "Term",
+    "XrefCluster",
+    "XrefEdge",
     "XrefSchema",
 ]

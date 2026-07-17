@@ -181,6 +181,9 @@
       white-space: nowrap;
       cursor: pointer;
       user-select: none;
+      position: sticky;
+      top: 0;
+      z-index: 1;
 
       &:hover {
         background: #ebf1f5;

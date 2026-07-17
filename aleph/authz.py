@@ -175,6 +175,7 @@ class Authz(object):
                 "id": self.id,
                 "roles": list(self.roles),
                 "is_admin": self.is_admin,
+                "is_investigator": self.is_investigator,
             }
             cache.set_complex(key, state, expires=self.expire)
         return self.token_id
@@ -205,6 +206,7 @@ class Authz(object):
             state.get("id"),
             state.get("roles"),
             is_admin=state.get("is_admin"),
+            is_investigator=state.get("is_investigator"),
             token_id=token_id,
         )
 

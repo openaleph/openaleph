@@ -11,4 +11,4 @@ from aleph.logic.xref.process import (  # noqa: F401
     xref_collection,
     xref_entity,
 )
-from aleph.logic.xref.resolver import ElasticsearchResolver, get_resolver  # noqa: F401
+from aleph.logic.xref.resolver import XrefResolver, get_resolver  # noqa: F401

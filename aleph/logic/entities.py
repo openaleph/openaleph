@@ -14,7 +14,6 @@ from openaleph_search.index import entities as index
 
 from aleph.authz import Authz
 from aleph.core import db
-from aleph.index import xref as xref_index
 from aleph.logic.aggregator import get_aggregator
 from aleph.logic.collections import MODEL_ORIGIN, refresh_collection
 from aleph.logic.notifications import flush_notifications
@@ -325,7 +324,10 @@ def prune_entity(collection, entity_id=None, job_id=None):
     EntitySetItem.delete_by_entity(entity_id)
     Bookmark.delete_by_entity(entity_id)
     Mapping.delete_by_table(entity_id)
-    xref_index.delete_xref(collection, entity_id=entity_id)
+    # Circular import: aleph.logic.xref -> process -> ... -> aleph.logic.entities
+    from aleph.logic.xref.store import purge_xref
+
+    purge_xref(collection, entity_id=entity_id)
     aggregator = get_aggregator(collection)
     aggregator.delete(entity_id=entity_id)
     refresh_entity(collection, entity_id)
