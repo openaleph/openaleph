@@ -1,8 +1,10 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from urllib.parse import parse_qs, urlparse
 
-from aleph.core import archive, db
-from aleph.index.util import index_entity
+from followthemoney.proxy import EntityProxy
+from openaleph_search.index.entities import index_proxy
+
+from aleph.core import archive
 from aleph.logic.util import archive_token, archive_url
 from aleph.tests.util import TestCase
 
@@ -16,18 +18,24 @@ class ArchiveApiTestCase(TestCase):
         self.content_hash2 = archive.archive_file(self.fixture2)
         self.role, self.headers = self.login(foreign_id="archive_admin", is_admin=True)
         self.col = self.create_collection(creator=self.role)
-        doc = {
-            "schema": "PlainText",
-            "properties": {
-                "fileName": "website.html",
-                "mimeType": "text/html",
-                "contentHash": self.content_hash,
+        # Index the document proxy directly: going through the Entity model
+        # would strip checksum-type properties like contentHash, which users
+        # must not set themselves.
+        doc = EntityProxy.from_dict(
+            {
+                "id": "document",
+                "schema": "PlainText",
+                "properties": {
+                    "fileName": "website.html",
+                    "mimeType": "text/html",
+                    "contentHash": self.content_hash,
+                },
             },
-        }
-        self.doc = self.create_entity(doc, self.col)
-        self.doc_id = self.col.ns.sign(self.doc.id)
-        db.session.commit()
-        index_entity(self.doc)
+            cleaned=False,
+        )
+        doc.id = self.col.ns.sign(doc.id)
+        index_proxy(dataset=self.col.name, collection_id=self.col.id, proxy=doc)
+        self.doc_id = doc.id
 
     def test_no_token(self):
         res = self.client.get("/api/2/archive")
@@ -112,11 +120,14 @@ class ArchiveApiTestCase(TestCase):
 
     def test_resolve_signing_backend(self):
         # storage backends that support signing (S3, GCS) hand out the
-        # signed storage URL directly, skipping the retrieve endpoint
+        # signed storage URL directly, skipping the retrieve endpoint.
+        # Pass an explicit MagicMock: patch's automatic replacement picks
+        # AsyncMock for the archive object here, which returns coroutines.
         signed_url = "https://storage.example.org/signed-blob-url"
         url = "/api/2/archive/resolve?entity=%s" % self.doc_id
-        with patch("aleph.views.archive_api.archive") as mock_archive:
-            mock_archive.generate_url.return_value = signed_url
+        mock_archive = MagicMock()
+        mock_archive.generate_url.return_value = signed_url
+        with patch("aleph.views.archive_api.archive", new=mock_archive):
             res = self.client.get(url, headers=self.headers)
             assert res.status_code == 302, res
             assert res.headers.get("Location") == signed_url, res.headers
