@@ -5,9 +5,7 @@ import re
 
 from banal import ensure_list
 from followthemoney import EntityProxy, model
-from followthemoney.helpers import entity_filename
 from followthemoney.types import registry
-from rigour.mime.types import CSV, PDF
 from servicelayer import env
 
 from aleph.api.assemblers.base import Assembler
@@ -19,7 +17,7 @@ from aleph.logic.entities import (
     should_translate,
     transliterate_values,
 )
-from aleph.logic.util import archive_url, entity_url
+from aleph.logic.util import entity_url
 from aleph.logic.xref.canonical import get_canonical_cluster
 from aleph.model import CollectionSchema, Document, EntitySchema, RoleSchema
 from aleph.model.common import SDict
@@ -109,27 +107,20 @@ class EntityAssembler(Assembler):
         return links
 
     def _add_document_links(self, links: SDict, proxy: EntityProxy) -> None:
-        content_hash = proxy.first("contentHash", quiet=True)
-        if content_hash:
-            name = entity_filename(proxy)
-            mime = proxy.first("mimeType", quiet=True)
-            links["file"] = archive_url(
-                content_hash, file_name=name, mime_type=mime, role_id=self.authz.id
-            )
-
-        pdf_hash = proxy.first("pdfHash", quiet=True)
-        if pdf_hash:
-            name = entity_filename(proxy, extension="pdf")
-            links["pdf"] = archive_url(
-                pdf_hash, file_name=name, mime_type=PDF, role_id=self.authz.id
-            )
-
-        csv_hash = proxy.first("csvHash", quiet=True)
-        if csv_hash:
-            name = entity_filename(proxy, extension="csv")
-            links["csv"] = archive_url(
-                csv_hash, file_name=name, mime_type=CSV, role_id=self.authz.id
-            )
+        # Don't embed short-lived signed archive URLs into the payload,
+        # as browsers cache it and the links go stale. Instead, link to
+        # the resolve endpoint which checks permissions at request time
+        # and redirects to a freshly signed archive URL.
+        for link, prop in (
+            ("file", "contentHash"),
+            ("pdf", "pdfHash"),
+            ("csv", "csvHash"),
+        ):
+            if proxy.first(prop, quiet=True):
+                links[link] = url_for(
+                    "archive_api.resolve",
+                    _query=[("entity", proxy.id), ("prop", prop)],
+                )
 
     def _resolve_collection(self, collection_id: int) -> CollectionSchema:
         coll = self.resolver.get_or_404(CollectionSchema, str(collection_id))

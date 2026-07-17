@@ -109,7 +109,6 @@ def metadata():
       tags:
       - System
     """
-    request.rate_limit = None
     locale = get_locale()
     data = _metadata_locale(locale)
     if SETTINGS.SINGLE_USER:
@@ -164,7 +163,6 @@ def sitemap():
       - System
     """
     enable_cache(vary_user=False)
-    request.rate_limit = None
     collections = []
     for collection in Collection.all_authz(Authz.from_role(None)):
         updated_at = collection.updated_at.date().isoformat()

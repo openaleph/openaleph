@@ -31,7 +31,6 @@ def status():
       - System
     """
     require(request.authz.logged_in)
-    request.rate_limit = None
 
     # if the current user can read the current collection, add it to the result
     statuses = [
