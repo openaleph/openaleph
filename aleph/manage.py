@@ -54,6 +54,7 @@ from aleph.logic.roles import (
     user_add,
     user_del,
 )
+from aleph.logic.xref import store as xref_store
 from aleph.logic.xref import xref_collection
 from aleph.logic.xref.cleanup import cleanup_orphaned_edges
 from aleph.logic.xref.migrate import migrate_xref_index
@@ -1358,6 +1359,21 @@ def cleanup_xref(dry_run=False):
 def migrate_xref():
     """Migrate xref-v1 and profiles to xref-v2 resolver edges."""
     migrate_xref_index()
+
+
+@cli.command("xref-reproject")
+@click.option("--sync", is_flag=True, default=False, help="Refresh the index.")
+def xref_reproject(sync=False):
+    """Rebuild the ES projection of decided xref edges from the SQL graph."""
+    count = xref_store.reproject(sync=sync)
+    log.info("Reprojected %d xref edge documents.", count)
+
+
+@cli.command("xref-rebuild-clusters")
+def xref_rebuild_clusters():
+    """Recompute xref cluster membership from positive edges (repair)."""
+    count = xref_store.rebuild_clusters()
+    log.info("Rebuilt membership for %d cluster nodes.", count)
 
 
 @cli.command()

@@ -14,7 +14,6 @@ from servicelayer.jobs import Job
 from aleph.authz import Authz
 from aleph.core import cache, db
 from aleph.index import collections as index
-from aleph.index import xref as xref_index
 from aleph.logic.aggregator import get_aggregator, get_aggregator_name
 from aleph.logic.discover import update_collection_discovery
 from aleph.logic.documents import (
@@ -461,7 +460,10 @@ def delete_collection(collection, keep_metadata=False, sync=False):
     aggregator.delete()
     flush_notifications(collection, sync=sync)
     index.delete_entities(collection.id, sync=sync)
-    xref_index.delete_xref(collection, sync=sync)
+    # Circular import: aleph.logic.xref -> process -> ... -> this module
+    from aleph.logic.xref.store import purge_xref
+
+    purge_xref(collection, sync=sync)
     Mapping.delete_by_collection(collection.id)
     EntitySet.delete_by_collection(collection.id, deleted_at)
     Entity.delete_by_collection(collection.id)

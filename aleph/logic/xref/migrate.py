@@ -15,7 +15,7 @@ from openaleph_search.index.util import index_name, unpack_result
 
 from aleph.core import es
 from aleph.index.xref import configure_xref, xref_index
-from aleph.logic.xref.resolver import ElasticsearchResolver, get_resolver
+from aleph.logic.xref.resolver import XrefResolver, get_resolver
 from aleph.model import EntitySet
 
 log = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ def _old_xref_index():
     return index_name("xref", "v1")
 
 
-def _migrate_profiles(resolver: ElasticsearchResolver) -> int:
+def _migrate_profiles(resolver: XrefResolver) -> int:
     """Replay Profile judgements into resolver edges.
 
     For each Profile EntitySet:

@@ -12,7 +12,8 @@ import logging
 
 from openaleph_search.index.entities import get_entity
 
-from aleph.index.xref import scan_edges, soft_delete_edge
+from aleph.index.xref import scan_edges
+from aleph.logic.xref.resolver import get_resolver
 
 log = logging.getLogger(__name__)
 
@@ -20,14 +21,19 @@ NK_PREFIX = "NK-"
 
 
 def cleanup_orphaned_edges(dry_run=False):
-    """Scan all active edges and soft-delete those referencing non-existing entities.
+    """Scan all active edges and remove those referencing non-existing entities.
 
     NK-* synthetic canonical IDs are excluded from existence checks since they
     don't correspond to real entities in the entity index.
+
+    Removal goes through the resolver so the SQL judgement graph, the cluster
+    membership and the ES index (decided projections AND suggestions) stay in
+    sync — soft-deleting the ES doc alone would desync from the graph.
     """
     scanned = 0
     orphaned = 0
     entity_cache = {}
+    orphan_ids: set[str] = set()
 
     def entity_exists(entity_id):
         if entity_id.startswith(NK_PREFIX):
@@ -40,13 +46,15 @@ def cleanup_orphaned_edges(dry_run=False):
 
     for doc in scan_edges([], include_deleted=False):
         scanned += 1
-        source = doc.get("source")
-        target = doc.get("target")
+        source = doc.source
+        target = doc.target
 
-        if not entity_exists(source) or not entity_exists(target):
+        for node in (source, target):
+            if not entity_exists(node):
+                orphan_ids.add(node)
+
+        if source in orphan_ids or target in orphan_ids:
             orphaned += 1
-            if not dry_run:
-                soft_delete_edge(source, target)
             if orphaned % 100 == 0:
                 log.info(
                     "Cleanup progress: scanned=%d, orphaned=%d",
@@ -60,6 +68,11 @@ def cleanup_orphaned_edges(dry_run=False):
                 scanned,
                 orphaned,
             )
+
+    if not dry_run and orphan_ids:
+        resolver = get_resolver()
+        for node in sorted(orphan_ids):
+            resolver.remove(node)
 
     log.info(
         "Cleanup complete: scanned=%d, orphaned=%d, dry_run=%s",
