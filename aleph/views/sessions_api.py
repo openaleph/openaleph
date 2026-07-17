@@ -1,27 +1,27 @@
 import logging
 from urllib.parse import urlencode
-from flask_babel import gettext
-from flask import Blueprint, redirect, request, session
-from authlib.common.errors import AuthlibBaseError
-from werkzeug.exceptions import Unauthorized, BadRequest
-from prometheus_client import Counter
 
-from aleph.settings import SETTINGS
-from aleph.core import db, url_for, cache
+from authlib.common.errors import AuthlibBaseError
+from flask import Blueprint, redirect, request, session
+from flask_babel import gettext
+from prometheus_client import Counter
+from werkzeug.exceptions import BadRequest, Unauthorized
+
 from aleph.authz import Authz
-from aleph.oauth import oauth, handle_oauth
-from aleph.model import Role
-from aleph.logic.util import ui_url
+from aleph.core import cache, db, url_for
 from aleph.logic.roles import update_role
-from aleph.views.util import get_url_path, parse_request
-from aleph.views.util import require, jsonify
+from aleph.logic.util import ui_url
+from aleph.model import Role
+from aleph.oauth import handle_oauth, oauth
+from aleph.settings import SETTINGS
+from aleph.views.util import get_url_path, jsonify, parse_request, require
 
 log = logging.getLogger(__name__)
 blueprint = Blueprint("sessions_api", __name__)
 
-AUTH_ATTEMPS = Counter(
-    "aleph_auth_attemps_total",
-    "Total number of successful/failed authentication attemps",
+AUTH_ATTEMPTS = Counter(
+    "aleph_auth_attempts_total",
+    "Total number of successful/failed authentication attempts",
     ["method", "result"],
 )
 
@@ -65,12 +65,12 @@ def password_login():
     data = parse_request("Login")
     role = Role.login(data.get("email"), data.get("password"))
     if role is None:
-        AUTH_ATTEMPS.labels(method="password", result="failed").inc()
+        AUTH_ATTEMPTS.labels(method="password", result="failed").inc()
         raise BadRequest(gettext("Invalid user or password."))
 
     role.touch()
     db.session.commit()
-    AUTH_ATTEMPS.labels(method="password", result="success").inc()
+    AUTH_ATTEMPTS.labels(method="password", result="success").inc()
     update_role(role)
     authz = Authz.from_role(role)
     return jsonify({"status": "ok", "token": authz.to_token()})
@@ -104,7 +104,7 @@ def oauth_callback():
     err = Unauthorized(gettext("Authentication has failed."))
     state = cache.get_complex(_oauth_session(request.args.get("state")))
     if state is None:
-        AUTH_ATTEMPS.labels(method="oauth", result="failed").inc()
+        AUTH_ATTEMPTS.labels(method="oauth", result="failed").inc()
         raise err
 
     try:
@@ -112,22 +112,22 @@ def oauth_callback():
         uri = state.get("redirect_uri")
         oauth_token = oauth.provider.authorize_access_token(redirect_uri=uri)
     except AuthlibBaseError as err:
-        AUTH_ATTEMPS.labels(method="oauth", result="failed").inc()
+        AUTH_ATTEMPTS.labels(method="oauth", result="failed").inc()
         log.warning("Failed OAuth: %r", err)
         raise err
     if oauth_token is None or isinstance(oauth_token, AuthlibBaseError):
-        AUTH_ATTEMPS.labels(method="oauth", result="failed").inc()
+        AUTH_ATTEMPTS.labels(method="oauth", result="failed").inc()
         log.warning("Failed OAuth: %r", oauth_token)
         raise err
 
     role = handle_oauth(oauth.provider, oauth_token)
     if role is None:
-        AUTH_ATTEMPS.labels(method="oauth", result="failed").inc()
+        AUTH_ATTEMPTS.labels(method="oauth", result="failed").inc()
         raise err
 
     db.session.commit()
     update_role(role)
-    AUTH_ATTEMPS.labels(method="oauth", result="success").inc()
+    AUTH_ATTEMPTS.labels(method="oauth", result="success").inc()
     log.debug("Logged in: %r", role)
     request.authz = Authz.from_role(role)
     token = request.authz.to_token()
@@ -156,7 +156,6 @@ def logout():
       tags:
       - Role
     """
-    request.rate_limit = None
     redirect_url = SETTINGS.APP_UI_URL
     if SETTINGS.OAUTH:
         metadata = oauth.provider.load_server_metadata()

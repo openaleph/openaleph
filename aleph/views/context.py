@@ -1,4 +1,3 @@
-import math
 import threading
 import time
 import uuid
@@ -8,13 +7,10 @@ import structlog
 from banal import hash_data
 from flask import Blueprint, Response, request
 from flask_babel import get_locale
-from servicelayer.rate_limit import RateLimit
 from structlog.contextvars import bind_contextvars, clear_contextvars
-from werkzeug.exceptions import TooManyRequests
 
 from aleph import __version__
 from aleph.authz import Authz
-from aleph.core import kv
 from aleph.model import Role
 from aleph.settings import SETTINGS
 
@@ -64,13 +60,6 @@ def enable_cache(vary_user=True, vary=None):
         raise NotModified()
 
 
-def _get_remote_ip():
-    forwarded_for = request.headers.getlist("X-Forwarded-For")
-    if len(forwarded_for):
-        return forwarded_for[0]
-    return request.remote_addr
-
-
 def _get_credential_authz(credential):
     if credential is None or not len(credential):
         return
@@ -104,23 +93,8 @@ def enable_authz(request):
     request.authz = authz
 
 
-def get_rate_limit(resource, limit=100, interval=60, unit=1):
-    return RateLimit(kv, resource, limit=limit, interval=interval, unit=unit)
-
-
-def enable_rate_limit(request):
-    if request.authz.logged_in:
-        return
-    limit = SETTINGS.API_RATE_LIMIT * SETTINGS.API_RATE_WINDOW
-    request.rate_limit = get_rate_limit(
-        _get_remote_ip(), limit=limit, interval=SETTINGS.API_RATE_WINDOW, unit=60
-    )
-    if not request.rate_limit.check():
-        raise TooManyRequests("Rate limit exceeded.")
-
-
 @blueprint.before_app_request
-def setup_request():
+def setup_request() -> None:
     """Set some request attributes at the beginning of the request.
     By default, caching will be disabled."""
     request._begin_time = time.time()
@@ -134,24 +108,17 @@ def setup_request():
     request._trace_id = str(uuid.uuid4())
 
     # First set up auth context so that we know who we are dealing with
-    # when we log their activity or enforce rate limits
+    # when we log their activity
     enable_authz(request)
     setup_logging_context(request)
-    enable_rate_limit(request)
 
 
 @blueprint.after_app_request
-def finalize_response(resp):
+def finalize_response(resp: Response) -> Response:
     """Post-request processing to set cache parameters."""
     # Compute overall request duration:
     now = time.time()
     took = now - getattr(request, "_begin_time", now)
-
-    # Finalize reporting of the rate limiter:
-    if hasattr(request, "rate_limit") and request.rate_limit is not None:
-        usage = request.rate_limit.update(amount=math.ceil(took))
-        resp.headers["X-Rate-Limit"] = request.rate_limit.limit
-        resp.headers["X-Rate-Usage"] = usage
 
     generate_request_log(resp, took)
     if resp.is_streamed:
@@ -197,7 +164,7 @@ def setup_logging_context(request):
         method=request.method,
         endpoint=request.endpoint,
         referrer=request.referrer,
-        ip=_get_remote_ip(),
+        ip=request.remote_addr,
         ua=str(request.user_agent),
         begin_time=datetime.utcfromtimestamp(request._begin_time).isoformat(),
         role_id=role_id,
