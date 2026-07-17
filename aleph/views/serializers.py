@@ -5,9 +5,7 @@ from banal import ensure_list
 from flask import request
 from flask_babel import gettext
 from followthemoney import model
-from followthemoney.helpers import entity_filename
 from followthemoney.types import registry
-from rigour.mime.types import CSV, PDF
 from servicelayer import env
 
 from aleph.core import url_for
@@ -248,30 +246,20 @@ class EntitySerializer(Serializer):
         }
 
         if self.detail_view and proxy.schema.is_a(Document.SCHEMA):
-            content_hash = proxy.first("contentHash", quiet=True)
-            if content_hash:
-                name = entity_filename(proxy)
-                mime = proxy.first("mimeType", quiet=True)
-                links["file"] = archive_url(
-                    content_hash,
-                    file_name=name,
-                    mime_type=mime,
-                    role_id=request.authz.id,
-                )
-
-            pdf_hash = proxy.first("pdfHash", quiet=True)
-            if pdf_hash:
-                name = entity_filename(proxy, extension="pdf")
-                links["pdf"] = archive_url(
-                    pdf_hash, file_name=name, mime_type=PDF, role_id=request.authz.id
-                )
-
-            csv_hash = proxy.first("csvHash", quiet=True)
-            if csv_hash:
-                name = entity_filename(proxy, extension="csv")
-                links["csv"] = archive_url(
-                    csv_hash, file_name=name, mime_type=CSV, role_id=request.authz.id
-                )
+            # Don't embed short-lived signed archive URLs into the payload,
+            # as browsers cache it and the links go stale. Instead, link to
+            # the resolve endpoint which checks permissions at request time
+            # and redirects to a freshly signed archive URL.
+            for link, prop in (
+                ("file", "contentHash"),
+                ("pdf", "pdfHash"),
+                ("csv", "csvHash"),
+            ):
+                if proxy.first(prop, quiet=True):
+                    links[link] = url_for(
+                        "archive_api.resolve",
+                        _query=[("entity", proxy.id), ("prop", prop)],
+                    )
 
         collection = obj.get("collection") or {}
         coll_id = obj.pop("collection_id", collection.get("id"))
