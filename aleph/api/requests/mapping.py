@@ -12,5 +12,5 @@ class MappingCreate(APIBaseModel):
 
 
 class MappingUpdate(MappingCreate):
-    """``PUT /api/2/collections/<id>/mappings/<id>`` body — same shape
+    """``PUT /api/2/collections/<id>/mappings/<id>`` body – same shape
     as :class:`MappingCreate`."""

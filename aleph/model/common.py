@@ -160,7 +160,7 @@ class StripNoneMixin(BaseModel):
     Legacy dicts (and nullable SQLA columns surfaced through
     object→dict converters like ``CollectionSchema._from_collection``)
     routinely carry ``None`` for fields the schema declares with a
-    non-optional default — e.g. ``contains_ai: bool = False`` failing
+    non-optional default – e.g. ``contains_ai: bool = False`` failing
     with ``bool_type, input_value=None``. Removing those keys up front
     lets pydantic's regular default machinery apply instead.
 
@@ -190,7 +190,7 @@ class APIBaseModel(StripNoneMixin):
     Subclasses inherit ``cache_key`` as a regular ``@property`` that
     defaults to the model's ``foreign_id`` (if it has one) or its
     ``id``. Override in subclasses for aggregates whose cache key needs
-    more parts — e.g. ``CollectionStatistics`` returns
+    more parts – e.g. ``CollectionStatistics`` returns
     ``f"{self.foreign_id}/stats"``. Because it is a plain property and
     not a ``computed_field``, ``cache_key`` is invisible to
     ``model_dump()`` and never leaks into API responses.
@@ -226,7 +226,7 @@ class APIBaseModel(StripNoneMixin):
         a path-style key like ``Collection/foo-dataset`` or ``Role/42``.
 
         Raises :class:`ValueError` if neither ``foreign_id`` nor ``id``
-        carries a usable value — a model with no cache key is a bug we
+        carries a usable value – a model with no cache key is a bug we
         want to surface loudly rather than store under an empty key.
         Subclasses that compose their own keys (e.g. aggregates like
         ``CollectionStatistics``) should override this and raise the
@@ -271,7 +271,7 @@ def model_dump(model: BaseModel) -> SDict:
 
 
 class ResolveFrom:
-    """``Annotated`` metadata marker — tells the assembler which sibling
+    """``Annotated`` metadata marker – tells the assembler which sibling
     ``*_id`` field holds the resolver cache key and what schema type to
     resolve.
 

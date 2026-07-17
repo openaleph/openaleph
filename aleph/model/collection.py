@@ -361,7 +361,7 @@ def _fold_legacy_dict(data: SDict) -> SDict:
     """Map legacy flat dict input (``Collection.to_dict()`` / old index
     docs) onto the FTM canonical fields expected by CollectionSchema.
 
-    Extracted from ``CollectionSchema._from_collection`` — applied to
+    Extracted from ``CollectionSchema._from_collection`` – applied to
     every mapping input before validation."""
     if "name" not in data and "foreign_id" in data:
         data["name"] = data["foreign_id"]
@@ -370,7 +370,7 @@ def _fold_legacy_dict(data: SDict) -> SDict:
     if "url" not in data and "info_url" in data:
         data["url"] = data["info_url"]
     # Legacy flat shape: ``publisher`` is a plain string column
-    # (with ``publisher_url`` beside it) — fold both into the FTM
+    # (with ``publisher_url`` beside it) – fold both into the FTM
     # ``DataPublisher`` shape, mirroring the ORM branch of
     # ``_from_collection``. Proper dict-shaped publishers (cached
     # schema dumps) pass through untouched.
@@ -400,7 +400,7 @@ def _serialize_lax_dt(value: datetime | str | None) -> str | None:
 
     ftm's ``DateTimeISO`` serializer (``serialize_dt``) requires a real
     ``datetime``, but the resolver reloads cached schemas via
-    ``model_construct`` (``model_validate=False``, which skips coercion —
+    ``model_construct`` (``model_validate=False``, which skips coercion –
     trusted data, no revalidation), so these fields can still hold the
     ISO string they were stored as. Re-serializing that with
     ``serialize_dt`` would raise ``AttributeError``; pass strings through.
@@ -413,7 +413,7 @@ def _serialize_lax_dt(value: datetime | str | None) -> str | None:
 
 
 # ftm's ``DateTimeISO``, but tolerant of an already-serialized ISO string on
-# dump — needed for resolver-cache round-trip safety (see _serialize_lax_dt).
+# dump – needed for resolver-cache round-trip safety (see _serialize_lax_dt).
 LaxDateTimeISO = Annotated[
     datetime | None, PlainSerializer(_serialize_lax_dt, when_used="always")
 ]
@@ -433,7 +433,7 @@ class CollectionSchema(StripNoneMixin, FtmDataset):
         populate_by_name=True,
     )
 
-    # str(int PK) — carried for the resolver cache key and legacy
+    # str(int PK) – carried for the resolver cache key and legacy
     # serializer compat. Will be dropped when IDs move to foreign_id.
     id: str
 
@@ -528,7 +528,7 @@ class CollectionSchema(StripNoneMixin, FtmDataset):
             )
 
         return {
-            # Aleph internal — str(int PK) for resolver cache key
+            # Aleph internal – str(int PK) for resolver cache key
             "id": stringify(data.id),
             # FTM core fields
             "name": data.foreign_id,
@@ -566,7 +566,7 @@ class CollectionStatistics(APIBaseModel):
     """Per-dataset facet aggregates. Resolver-cached aggregate keyed
     under ``CollectionStatistics/<foreign_id>/stats``.
 
-    Each facet exposes a :class:`FacetCounts` payload — the term→count
+    Each facet exposes a :class:`FacetCounts` payload – the term→count
     map plus a cardinality total. The set of facets matches
     ``aleph.index.collections.STATS_FACETS``.
     """
@@ -587,7 +587,7 @@ class CollectionStatistics(APIBaseModel):
 
 class GlobalStatistics(APIBaseModel):
     """System-wide aggregate statistics returned by
-    ``GET /api/2/statistics``. Singleton — keyed under
+    ``GET /api/2/statistics``. Singleton – keyed under
     ``GlobalStatistics/global``.
     """
 
@@ -620,7 +620,7 @@ class CollectionStatus(DatasetStatus):
 
 
 class CollectionDetailSchema(CollectionSchema):
-    """Detail-view shape — base CollectionSchema plus the per-dataset
+    """Detail-view shape – base CollectionSchema plus the per-dataset
     aggregates returned by ``GET /api/2/collections/<id>``.
 
     Keyed under ``CollectionDetailSchema/<collection_id>``.
@@ -628,7 +628,7 @@ class CollectionDetailSchema(CollectionSchema):
 
     statistics: CollectionStatistics | None = None
     counts: CollectionCounts | None = None
-    # Procrastinate job status — NOT cached, always patched live.
+    # Procrastinate job status – NOT cached, always patched live.
     status: CollectionStatus | None = None
     shallow: bool = False
 
@@ -641,7 +641,7 @@ def _on_collection_change(mapper, connection, target: Collection):
     cid = str(target.id)
     cache.invalidate(CollectionSchema, cid)
     cache.invalidate(CollectionDetailSchema, cid)
-    # ES is a derived index of the DB — sync atomically so the ES
+    # ES is a derived index of the DB – sync atomically so the ES
     # doc is visible as soon as the commit returns.
     from aleph.index.collections import index_collection
 

@@ -477,7 +477,7 @@ class XrefDecideE2ETestCase(TestCase):
         """Decide A=B (creates NK-*), then decide A=C.
 
         C should join the existing NK-* cluster. No direct A→C POSITIVE edge
-        should exist — only entity→NK-* edges.
+        should exist – only entity→NK-* edges.
         """
         _, headers = self.login("creator")
 
@@ -485,7 +485,7 @@ class XrefDecideE2ETestCase(TestCase):
         res = self._decide(headers, self.ent1.id, self.ent2.id, "positive")
         canonical_id = res.json["canonical_id"]
 
-        # Decide A=C — should add C to the existing NK-* cluster
+        # Decide A=C – should add C to the existing NK-* cluster
         res = self._decide(headers, self.ent1.id, self.ent3.id, "positive")
         assert res.status_code == 200, res.json
         # Should return the same NK-* canonical

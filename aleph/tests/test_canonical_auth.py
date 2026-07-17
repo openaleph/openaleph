@@ -93,7 +93,7 @@ class CanonicalAuthTestCase(TestCase):
         self.grant(self.col_b, self.user1, True, False)
         self.grant(self.col_c, self.user1, True, False)
 
-        # user2: partial access (col_a, col_c — NOT col_b)
+        # user2: partial access (col_a, col_c – NOT col_b)
         self.grant(self.col_a, self.user2, True, False)
         self.grant(self.col_c, self.user2, True, False)
 
@@ -129,7 +129,7 @@ class CanonicalAuthTestCase(TestCase):
         assert self.ent_c.id in entity_ids
         assert len(cluster["collection_ids"]) == 3
 
-    # -- Test case 2: User1 (has col_a, col_b, col_c) — full access --
+    # -- Test case 2: User1 (has col_a, col_b, col_c) – full access --
 
     def test_user1_canonical_resolves_same(self):
         """User1 (full access): all 3 entities resolve to same canonical."""
@@ -151,7 +151,7 @@ class CanonicalAuthTestCase(TestCase):
         assert len(entity_ids) == 3
         assert len(cluster["collection_ids"]) == 3
 
-    # -- Test case 3: User2 (has col_a, col_c but NOT col_b) — chain broken --
+    # -- Test case 3: User2 (has col_a, col_c but NOT col_b) – chain broken --
     #
     # The resolver-level get_canonical() can still reach NK-* for ent_a due
     # to the disjunctive terms query on target_collection_id={colA, colB}.
@@ -164,7 +164,7 @@ class CanonicalAuthTestCase(TestCase):
         The resolver-level get_canonical() still reaches NK-* due to the
         disjunctive terms query on the ent_a→NK-* edge. But
         get_canonical_cluster() detects that only one referent is visible
-        and returns None — a single entity is not a cluster.
+        and returns None – a single entity is not a cluster.
         """
         auth = self._auth_for(self.user2)
 

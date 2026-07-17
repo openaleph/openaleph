@@ -171,7 +171,7 @@ class ExportSchema(DatedSchema):
 
     The optional fields (``collection_id``, ``content_hash``,
     ``file_name``, ``file_size``) are populated by the export worker
-    only after the run completes successfully — exports that are
+    only after the run completes successfully – exports that are
     pending or scoped to no collection legitimately omit them.
     """
 

@@ -29,7 +29,7 @@ class ResolverE2ETestCase(TestCase):
         super().setUp()
         self.init_app()
         self.load_fixtures()
-        # Force re-registration — module-level @register decorators
+        # Force re-registration – module-level @register decorators
         # only run once at import time, so if the unit test fixture
         # cleared the registry after those imports, we need to reload.
         import importlib
@@ -74,7 +74,7 @@ class ResolverE2ETestCase(TestCase):
         r = RequestResolver()
         etag_before = r.get_etag(RoleSchema, str(self.admin.id))
 
-        # Mutate the role — Role.update calls touch() which bumps
+        # Mutate the role – Role.update calls touch() which bumps
         # updated_at. The SQLA after_update event fires invalidation.
         self.admin.update({"name": "Admin Renamed"})
         db.session.commit()
@@ -128,7 +128,7 @@ class ResolverE2ETestCase(TestCase):
         r = RequestResolver()
         self.assertIsNotNone(r.get(AlertSchema, str(alert.id)))
 
-        # Delete — SQLA after_delete event fires invalidation.
+        # Delete – SQLA after_delete event fires invalidation.
         alert.delete()
         db.session.commit()
 
@@ -155,7 +155,7 @@ class ResolverE2ETestCase(TestCase):
         etag_before = r.get_etag(ExportSchema, str(export.id))
         self.assertIsNotNone(etag_before)
 
-        # Mutate — status change triggers after_update event.
+        # Mutate – status change triggers after_update event.
         export.set_status(status=Status.SUCCESS)
         db.session.commit()
 
@@ -183,7 +183,7 @@ class ResolverE2ETestCase(TestCase):
 
         etag_before = r.get_etag(EntitySetSchema, str(entityset.id))
 
-        # Mutate — SQLA after_update event fires invalidation.
+        # Mutate – SQLA after_update event fires invalidation.
         from datetime import datetime
 
         entityset.label = "Renamed Diagram"
@@ -204,7 +204,7 @@ class ResolverE2ETestCase(TestCase):
         r = RequestResolver()
         etag_before = r.get_etag(CollectionSchema, self.public_coll.id)
 
-        # Mutate — touch() bumps updated_at, SQLA after_update fires.
+        # Mutate – touch() bumps updated_at, SQLA after_update fires.
         self.public_coll.label = "Renamed Public"
         self.public_coll.touch()
         db.session.commit()
@@ -216,7 +216,7 @@ class ResolverE2ETestCase(TestCase):
     # --- Entity ---------------------------------------------------------------
 
     def test_entity_resolve_and_batch(self):
-        """Fetch entities via the resolver — both single and batch."""
+        """Fetch entities via the resolver – both single and batch."""
         from openaleph_search.index.entities import get_entity
 
         raw = get_entity(self._kwazulu.id)
@@ -248,7 +248,7 @@ class ResolverE2ETestCase(TestCase):
         etag_before = r.get_etag(EntitySchema, self._kwazulu.id)
         self.assertIsNotNone(etag_before)
 
-        # Re-index the entity — bumps ES _seq_no, calls
+        # Re-index the entity – bumps ES _seq_no, calls
         # refresh_entity → Resolver.invalidate(EntitySchema, ...).
         from aleph.logic.entities import upsert_entity
 

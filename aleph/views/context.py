@@ -100,7 +100,7 @@ def get_authz(request):
 def enable_authz(request):
     if request.endpoint == "base_api.healthz":
         # healthz manages its own authentication against
-        # SETTINGS.HEALTH_CHECK_API_KEY — its ?api_key= parameter is not a
+        # SETTINGS.HEALTH_CHECK_API_KEY – its ?api_key= parameter is not a
         # role credential and must not resolve (or 401) as one here.
         request.authz = Authz.from_role(role=None)
         return
@@ -111,7 +111,7 @@ def enable_authz(request):
         "Authorization" in request.headers or "api_key" in request.args
     ):
         # Credentials were presented but could not be resolved (revoked or
-        # unknown API key, unsupported auth scheme). That must yield 401 —
+        # unknown API key, unsupported auth scheme). That must yield 401 –
         # not silently degrade to an anonymous session whose protected
         # requests then 403: clients re-authenticate on 401 (the UI's
         # axios interceptor resets the session), while a 403 leaves a

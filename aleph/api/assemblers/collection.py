@@ -1,4 +1,4 @@
-"""Collection assembler — request-time enrichment of CollectionSchema."""
+"""Collection assembler – request-time enrichment of CollectionSchema."""
 
 from aleph.api.assemblers.base import Assembler
 from aleph.core import url_for

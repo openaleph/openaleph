@@ -4,7 +4,7 @@ Canonical clusters are the merged view of deduplicated entities
 resolved by the nomenklatura resolver. Statements are the individual
 FTM (entity, schema, prop, value) tuples that make up a merged entity.
 
-Decoupled from xref internals — these are API-facing resources with
+Decoupled from xref internals – these are API-facing resources with
 their own endpoint (``views/canonical_api.py``).
 """
 
@@ -25,7 +25,7 @@ class CanonicalEntitySchema(EntitySchema):
 
 
 class CanonicalSchema(APIBaseModel):
-    """Wire format for a canonical (clustered) entity — replaces the
+    """Wire format for a canonical (clustered) entity – replaces the
     legacy Profile shape.
 
 
@@ -33,7 +33,7 @@ class CanonicalSchema(APIBaseModel):
     that the resolver has judged the same. ``merged`` is the FTM
     proxy of the merged result; ``entities`` are the constituent
     entities (typically served shallow). The cluster only exists
-    *because* there's a merged proxy — ``merged`` is required, and
+    *because* there's a merged proxy – ``merged`` is required, and
     the legacy ``CanonicalSerializer._serialize`` raises ``KeyError``
     on the same invariant.
     """
@@ -61,7 +61,7 @@ class StatementSchema(APIBaseModel):
     (``GET /api/2/statements`` and embedded in canonical lineage views).
 
     A statement is one (entity, schema, prop, value) tuple sourced from
-    one dataset — all five parts are required. ``id`` is also required
+    one dataset – all five parts are required. ``id`` is also required
     because :class:`followthemoney.statement.Statement` always has one
     (the ``Statement.__init__`` derives it via ``generate_key()`` if no
     explicit id was passed). When ``prop`` is an entity-typed property

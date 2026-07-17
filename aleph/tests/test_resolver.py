@@ -1,7 +1,7 @@
 """Unit tests for the typed object resolver in
 ``aleph.logic.resolver.core``.
 
-These are pure pydantic + anystore tests — no Aleph DB, no Flask app,
+These are pure pydantic + anystore tests – no Aleph DB, no Flask app,
 no Redis. The resolver's persistent store is pinned to ``memory://``
 via ``ALEPH_RESOLVER_STORE_URI`` in ``[tool.pytest_env]``, and each
 test starts from an empty store + empty registry via the autouse
@@ -73,11 +73,11 @@ def reset_resolver_state():
     ``[tool.pytest_env]``, so ``get_resolver_store()`` always returns
     an in-memory anystore Store. ``anystore.get_store()`` caches the
     Store on (uri, backend_config), so the same instance is returned
-    across tests — we wipe it via ``iterate_keys`` between tests
+    across tests – we wipe it via ``iterate_keys`` between tests
     instead of trying to mint a fresh one.
 
     The registry is scoped: we save the real registrations before the
-    test, clear to empty, and restore afterwards — so module-level
+    test, clear to empty, and restore afterwards – so module-level
     ``@register`` decorators for real schemas (Role, Entity, …) aren't
     permanently lost when running alongside the e2e test suite.
     """
@@ -127,7 +127,7 @@ def widgets(fetch_calls):
 
 
 def test_get_rejects_empty_identifier(widgets):
-    """The Resolver deliberately does not handle None / empty input —
+    """The Resolver deliberately does not handle None / empty input –
     it raises ValueError so accidental Nones surface as a loud error
     instead of silently returning empty data. Callers with an
     Optional source filter at the call site."""
@@ -161,7 +161,7 @@ def test_get_persists_to_store_then_skips_upstream(widgets, fetch_calls):
     r.get(Widget, "1")
     assert fetch_calls["one"] == 1
 
-    # New resolver instance — local cache is empty, but the persistent
+    # New resolver instance – local cache is empty, but the persistent
     # store should still have it. Upstream must NOT be hit.
     r2 = RequestResolver()
     obj = r2.get(Widget, "1")
@@ -177,12 +177,12 @@ def test_get_negative_hit_is_local_only(widgets, fetch_calls):
     assert r.get(Widget, "missing") is None
     assert fetch_calls["one"] == 1
 
-    # Same resolver: negative result is cached locally — no refetch.
+    # Same resolver: negative result is cached locally – no refetch.
     assert r.get(Widget, "missing") is None
     assert fetch_calls["one"] == 1
 
     # New resolver: negative is NOT persisted to the store, so upstream
-    # is hit again. This is intentional — see core.py docstring.
+    # is hit again. This is intentional – see core.py docstring.
     r2 = RequestResolver()
     assert r2.get(Widget, "missing") is None
     assert fetch_calls["one"] == 2
@@ -227,7 +227,7 @@ def test_refresh_fetches_from_upstream_and_updates_store(widgets, fetch_calls):
 
 
 def test_invalidate_rejects_empty_identifier(widgets):
-    """invalidate() carries the same non-empty contract as get() —
+    """invalidate() carries the same non-empty contract as get() –
     callers must filter Optional sources upstream."""
     with pytest.raises(ValueError):
         RequestResolver().invalidate(Widget, None)  # type: ignore[arg-type]
@@ -386,7 +386,7 @@ def test_get_many_negative_local_cache_blocks_refetch(widgets, fetch_calls):
     assert fetch_calls["one"] == 1
 
     # get_many for the same id within the same request should NOT
-    # refetch — the negative hit is in local cache.
+    # refetch – the negative hit is in local cache.
     result = r.get_many(Widget, ["missing"])
     assert result == []
     assert fetch_calls["one"] == 1
@@ -440,7 +440,7 @@ def test_register_etag_overrides_default(widgets):
     r = RequestResolver()
     etag = r.get_etag(Widget, "1")
     assert etag is not None
-    # Opaque, quoted, compact — no raw id or name leaking.
+    # Opaque, quoted, compact – no raw id or name leaking.
     assert etag.startswith('"') and etag.endswith('"')
     assert len(etag) == 13
     assert "1" not in etag[1:-1] or len(etag[1:-1]) == 11  # hash, not literal
@@ -454,7 +454,7 @@ def test_register_etag_overrides_default(widgets):
 
 def test_compute_etag_direct():
     """compute_etag is also usable on a model that isn't registered
-    in the resolver registry — it falls back to a content hash."""
+    in the resolver registry – it falls back to a content hash."""
     w = Widget(id="x", name="hello")
     etag = compute_etag(Widget, w)
     assert len(etag) == 13
@@ -494,7 +494,7 @@ def test_get_many_etag_with_extra_discriminator(widgets):
 
 def test_unregistered_class_raises_keyerror(widgets):
     """Asking for a class that has no registered fetcher should raise
-    KeyError — silent None would mask programming bugs."""
+    KeyError – silent None would mask programming bugs."""
     r = RequestResolver()
     with pytest.raises(KeyError):
         r.get(Gadget, "1")

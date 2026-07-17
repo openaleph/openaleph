@@ -1,4 +1,4 @@
-"""Entity assembler — request-time enrichment of EntitySchema."""
+"""Entity assembler – request-time enrichment of EntitySchema."""
 
 import logging
 import re
@@ -61,7 +61,7 @@ class EntityAssembler(Assembler):
             self.resolver.get_many(EntitySchema, list(entity_ids))
 
     def assemble(self, obj: EntitySchema) -> EntitySchema | None:
-        # Authz gate — nested entities may be resolved without authz
+        # Authz gate – nested entities may be resolved without authz
         if not self.authz.can(obj.collection_id, self.authz.READ):
             return None
 

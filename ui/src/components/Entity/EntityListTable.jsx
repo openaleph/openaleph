@@ -17,10 +17,10 @@ import {
 // Each caller just supplies:
 //   - `result` / `results` / `previewId` (from Redux)
 //   - `skeletonCount` (rows of loading placeholder)
-//   - `entityHeader` — FormattedMessage descriptor for the left column
-//   - `summary` — FormattedMessage descriptor for the "Found N ..." callout
+//   - `entityHeader` – FormattedMessage descriptor for the left column
+//   - `summary` – FormattedMessage descriptor for the "Found N ..." callout
 //     (renders only when `result.total > 0`)
-//   - `renderAccent(entity)` — optional element rendered *before* the
+//   - `renderAccent(entity)` – optional element rendered *before* the
 //     entity link (used by `EntityScreeningMode` for topic chips)
 
 function EntityResultSummary({ result, summary }) {

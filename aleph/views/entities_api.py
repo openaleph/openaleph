@@ -558,7 +558,7 @@ def mentions(entity_id):
         Given the id of a named entity (Person, Company, Organization, …),
         return Document-family entities whose indexed text contains the
         entity's caption or any of its matchable name variants. This is
-        the inverse of `/percolate` — that finds entities mentioned in a
+        the inverse of `/percolate` – that finds entities mentioned in a
         document; this finds documents that mention an entity.
 
         Supports all standard entity search filters (filter:schema to
@@ -595,8 +595,8 @@ def mentions(entity_id):
 SCREENING_SOURCE_PREFIX = "source:"
 
 # Keys dropped from `source_args` before the source parser is built.
-# The source scope drives MultiMentionsQuery's name-scroll only — it
-# doesn't surface its own faceted results — so any facet-request keys
+# The source scope drives MultiMentionsQuery's name-scroll only – it
+# doesn't surface its own faceted results – so any facet-request keys
 # (which the UI adds to track counts via a separate /api/2/entities
 # call) would be pure noise here. Worse, `EntitiesQuery.get_filters()`
 # silently skips filter fields that also appear in `facet_names`
@@ -620,7 +620,7 @@ def _split_prefixed_args(args: MultiDict, prefix: str) -> tuple[MultiDict, Multi
     Keys starting with `prefix` have the prefix stripped and go to the
     second dict; all other keys go to the first. Source-side keys that
     are irrelevant to the name-scroll (facets / highlight / sort) are
-    dropped entirely — see `_SOURCE_SKIP_PREFIXES` for why."""
+    dropped entirely – see `_SOURCE_SKIP_PREFIXES` for why."""
     target: list[tuple[str, str]] = []
     source: list[tuple[str, str]] = []
     for key, value in args.items(multi=True):
@@ -642,8 +642,8 @@ def screening():
       summary: Screen a filtered entity set against documents
       description: >-
         Batch screening (a.k.a. reverse percolation at scale): scrolls
-        a `source` entity filter — a watchlist, PEP list, sanctions
-        roster, etc., possibly spanning multiple collections — to
+        a `source` entity filter – a watchlist, PEP list, sanctions
+        roster, etc., possibly spanning multiple collections – to
         collect matchable names, then returns Document-family entities
         whose indexed text contains any of those names as a phrase.
 
@@ -661,11 +661,11 @@ def screening():
           `source:filter:topics=sanction`, etc.
 
         Source entities are scoped by the caller's dataset read ACL the
-        same way every other entity search is — entities in datasets
+        same way every other entity search is – entities in datasets
         the caller cannot read do not contribute names.
 
         Fails with 400 when the source filter resolves to more than
-        `MAX_SOURCE_NAMES` (currently 10 000) distinct names — narrow
+        `MAX_SOURCE_NAMES` (currently 10 000) distinct names – narrow
         the source filter (add `source:filter:dataset=…`,
         `source:filter:topics=…`, etc.).
       parameters:
@@ -712,7 +712,7 @@ def screening():
     )
     target_parser = SearchQueryParser(target_args, auth=request.authz.search_auth)
     source_parser = SearchQueryParser(source_args, auth=request.authz.search_auth)
-    # No single collection id to tag — the source filter can span many
+    # No single collection id to tag – the source filter can span many
     # datasets. The parsers' `filter:dataset` values will surface in the
     # access log via the request args themselves.
     tag_request()
@@ -824,7 +824,7 @@ def thread(entity_id):
             gettext("Threading is only supported for Email and Message entities")
         )
     parser = SearchQueryParser(request.values, request.authz.search_auth)
-    # Thread views are list-view consumers by default — dehydrate unless the
+    # Thread views are list-view consumers by default – dehydrate unless the
     # caller explicitly opts into the full payload with ?dehydrate=false.
     if "dehydrate" not in request.args:
         parser.dehydrate = True
@@ -836,7 +836,7 @@ def thread(entity_id):
     entities = query.to_list()
     result = QueryResult(request, parser=parser, results=entities, total=len(entities))
     if query.truncated:
-        # The emitted `total` is a floor — there's at least one more entity
+        # The emitted `total` is a floor – there's at least one more entity
         # in the thread beyond what we returned. Consumers detect this via
         # the ES-style `total_type` on the response envelope.
         result.total_type = "gte"
@@ -975,7 +975,7 @@ def delete(entity_id):
     sync = get_flag("sync", default=True)
     job_id = get_session_id()
     # Force-load the namespace (needs foreign_id) before closing the
-    # session — delete_entity uses collection.ns.sign().
+    # session – delete_entity uses collection.ns.sign().
     collection.ns  # noqa: B018
     # Release the DB transaction so the sync procrastinate task (which
     # opens its own connection) doesn't deadlock on the collection row.

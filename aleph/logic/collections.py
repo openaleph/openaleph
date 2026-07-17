@@ -194,7 +194,7 @@ def compute_collections() -> None:
 def compute_collection(collection: Collection, force: bool = False) -> None:
     """Recompute statistics and discovery for a collection.
 
-    Collection metadata sync to ES is handled by the SQLA event —
+    Collection metadata sync to ES is handled by the SQLA event –
     this function only deals with the derived aggregates.
     """
     cid = str(collection.id)

@@ -1012,7 +1012,7 @@ class EntitiesApiTestCase(TestCase):
 
     def test_screening_empty_source(self):
         """A source filter that matches no entities should return 200
-        with zero results — not a 400 or a crash."""
+        with zero results – not a 400 or a crash."""
         _, headers = self.login(is_admin=True)
         url = (
             "/api/2/screening"
@@ -1075,7 +1075,7 @@ class EntitiesApiTestCase(TestCase):
         index_entity(main)
         index_entity(after)
 
-        # Full thread from main — all three entities, chronological order
+        # Full thread from main – all three entities, chronological order
         res = self.client.get(f"/api/2/entities/{main_id}/thread", headers=headers)
         assert res.status_code == 200, res.json
         ids = [r["id"] for r in res.json["results"]]
@@ -1144,7 +1144,7 @@ class EntitiesApiTestCase(TestCase):
         for e in (root, branch_a, branch_b, leaf):
             index_entity(e)
 
-        # Starting from leaf — should get full tree including sibling
+        # Starting from leaf – should get full tree including sibling
         res = self.client.get(f"/api/2/entities/{leaf_id}/thread", headers=headers)
         assert res.status_code == 200, res.json
         ids = [r["id"] for r in res.json["results"]]

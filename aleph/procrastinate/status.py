@@ -1,6 +1,6 @@
 """Map procrastinate job status to collection IDs.
 
-Thin wrapper around ``openaleph_procrastinate`` status queries —
+Thin wrapper around ``openaleph_procrastinate`` status queries –
 extracts the collection_id from the aggregator dataset name and
 filters out system/non-collection datasets.
 """

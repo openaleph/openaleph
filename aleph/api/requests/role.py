@@ -8,13 +8,13 @@ from aleph.model.common import APIBaseModel
 
 
 class RoleCodeCreate(APIBaseModel):
-    """``POST /api/2/roles/code`` body — request a signup email."""
+    """``POST /api/2/roles/code`` body – request a signup email."""
 
     email: str
 
 
 class RoleCreate(APIBaseModel):
-    """``POST /api/2/roles`` body — finish signup with the
+    """``POST /api/2/roles`` body – finish signup with the
     email-confirmation token."""
 
     name: Annotated[str, Field(min_length=4)] | None = None
@@ -23,7 +23,7 @@ class RoleCreate(APIBaseModel):
 
 
 class RoleUpdate(APIBaseModel):
-    """``POST /api/2/roles/<id>`` body — partial role update.
+    """``POST /api/2/roles/<id>`` body – partial role update.
 
     All fields optional; ``current_password`` is required when changing
     ``password``.
@@ -38,7 +38,7 @@ class RoleUpdate(APIBaseModel):
 
 
 class RoleLogin(APIBaseModel):
-    """``POST /api/2/sessions/login`` body — email + password login."""
+    """``POST /api/2/sessions/login`` body – email + password login."""
 
     email: str
     password: str

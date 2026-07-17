@@ -65,7 +65,7 @@ def test_collection_schema_none_bools_fall_back_to_default():
     # StripNoneMixin: explicit ``None`` values are dropped from mapping
     # input before validation (legacy dicts / nullable SQLA columns), so
     # pydantic applies the field default instead of raising bool_type
-    # errors — e.g. ``contains_ai``.
+    # errors – e.g. ``contains_ai``.
     c = CollectionSchema.model_validate(
         {
             "id": "42",
@@ -85,7 +85,7 @@ def test_collection_schema_none_bools_fall_back_to_default():
 
 def test_collection_schema_legacy_flat_publisher():
     # Legacy dicts (``Collection.to_dict()`` / old index docs) carry
-    # ``publisher`` as a plain string with ``publisher_url`` beside it —
+    # ``publisher`` as a plain string with ``publisher_url`` beside it –
     # the dict branch of ``_from_collection`` folds both into the FTM
     # ``DataPublisher`` shape and maps ``info_url`` → ``url``.
     c = CollectionSchema.model_validate(
@@ -139,7 +139,7 @@ def test_collection_schema_legacy_flat_frequency():
 
 def test_collection_schema_none_optional_and_required():
     # Optional fields keep their ``None`` default; required fields
-    # without a fallback still fail — as "missing" instead of a type
+    # without a fallback still fail – as "missing" instead of a type
     # error, since the ``None`` is stripped before validation.
     c = CollectionSchema.model_validate(
         {"id": "42", "name": "x", "title": "X", "summary": None}

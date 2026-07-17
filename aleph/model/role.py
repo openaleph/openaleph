@@ -354,7 +354,7 @@ class RoleSchema(DatedSchema):
     foreign_id: str
     label: str
 
-    # Sensitive — populated only when the requester is allowed to see them.
+    # Sensitive – populated only when the requester is allowed to see them.
     email: str | None = None
     api_key: str | None = None
     locale: str | None = None

@@ -386,12 +386,12 @@ class EntitySetItem(db.Model, SoftDeleteModel):
 # === Pydantic schemas ===
 #
 # EntitySets come in three variants (list, diagram, timeline). Profiles
-# were removed when xref moved to the nomenklatura resolver — canonical
+# were removed when xref moved to the nomenklatura resolver – canonical
 # clusters live in :mod:`aleph.model.xref` now. The ``layout`` field
 # carries a DiagramLayout when the type is ``diagram``, otherwise it
 # stays None. EntitySetItem links a single entity to an EntitySet.
 # Judgement / ``compared_to_entity_id`` were profile-only leakage and
-# are dropped from the wire format — the SQLA columns survive as dead
+# are dropped from the wire format – the SQLA columns survive as dead
 # weight until a follow-up cleanup.
 
 
@@ -474,7 +474,7 @@ class EntitySetSchema(DatedSchema):
 class EntitySetItemSchema(DatedSchema):
     """Canonical wire format for an :class:`EntitySetItem`.
 
-    The wire ``id`` is the composite ``"<entityset_id>$<entity_id>"`` —
+    The wire ``id`` is the composite ``"<entityset_id>$<entity_id>"`` –
     matching the legacy ``EntitySetItem.to_dict()`` shape.
 
     The nested ``entity`` field is populated by the response builder
@@ -505,7 +505,7 @@ class EntitySetItemSchema(DatedSchema):
         extract entityset_collection_id from the relationship."""
         if isinstance(data, dict):
             return data
-        # SQLA object — extract fields that aren't direct columns
+        # SQLA object – extract fields that aren't direct columns
         entityset = getattr(data, "entityset", None)
         entityset_id = str(getattr(data, "entityset_id", ""))
         entity_id = str(getattr(data, "entity_id", ""))

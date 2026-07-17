@@ -2,12 +2,12 @@
 
 Two classes:
 
-- :class:`Cache` — the module-level singleton (``cache``). Lives for
-  the entire process lifetime. No per-request local dict — every
+- :class:`Cache` – the module-level singleton (``cache``). Lives for
+  the entire process lifetime. No per-request local dict – every
   ``get`` hits the persistent store directly. Used by SQLA events,
   logic functions, CLI commands, and anything outside a request cycle.
 
-- :class:`RequestResolver` — constructed once per HTTP request and
+- :class:`RequestResolver` – constructed once per HTTP request and
   discarded on response. Adds a per-request ``_local`` dict on top of
   the persistent store for request-scoped deduplication and negative-hit
   caching. Used by serializers and view functions via FastAPI
@@ -17,7 +17,7 @@ Both share the same persistent store (Redis / memory / fs via anystore).
 The ``cache`` singleton is the canonical interface for all non-request
 code: ``from aleph.logic.resolver import cache``.
 
-Spurious ``invalidate()`` calls are cheap — content-derived ETags
+Spurious ``invalidate()`` calls are cheap – content-derived ETags
 stay stable across re-fetches when the upstream content is unchanged,
 so the client still gets a 304. Mutation paths can invalidate
 liberally without paying for it on the wire.
@@ -46,7 +46,7 @@ from aleph.logic.resolver.ttl import STORE_TTL
 from aleph.settings import SETTINGS
 
 # Sentinel so the per-request local cache can record "fetched, not found"
-# distinct from "never asked". ``dict.get(key)`` returns None for both —
+# distinct from "never asked". ``dict.get(key)`` returns None for both –
 # which would cause the resolver to refetch every miss within a single
 # request, defeating the point of the local cache. Using a unique
 # sentinel object as the ``default`` argument disambiguates the two.
@@ -68,7 +68,7 @@ def get_resolver_store() -> Store:
     (uri, backend_config), so production callers share one Redis
     connection.
 
-    ``raise_on_nonexist=False`` is essential — anystore's default is
+    ``raise_on_nonexist=False`` is essential – anystore's default is
     True (it raises ``DoesNotExist`` on missing keys), but the
     resolver's cache logic depends on ``Store.get`` returning ``None``
     for misses so it can fall through to the upstream fetcher.
@@ -84,7 +84,7 @@ def get_resolver_store() -> Store:
 class Cache:
     """Process-level cache backed by the persistent store.
 
-    No per-request local dict — safe for use as a long-lived singleton.
+    No per-request local dict – safe for use as a long-lived singleton.
     Every ``get`` hits the store (Redis / memory) directly. Mutations
     (``invalidate``, ``populate``) take effect immediately for all
     subsequent reads across all requests.
@@ -124,7 +124,7 @@ class Cache:
         object is not found anywhere (store, upstream).
 
         ``identifier`` must be a non-empty string. The resolver
-        deliberately does not handle ``None`` / empty input — callers
+        deliberately does not handle ``None`` / empty input – callers
         with an Optional source filter at the call site, so accidental
         ``None``s show up as a ``ValueError`` instead of silently
         returning empty data.
@@ -200,7 +200,7 @@ class Cache:
 
         The Redis fast path peeks at the underlying fsspec backend
         (``store._fs``) and the redis client it owns. If the shape
-        doesn't match — different backend, future fsspec rev — we
+        doesn't match – different backend, future fsspec rev – we
         silently fall back to the generic per-key path. The generic
         path is correct for every backend; the MGET shortcut is purely
         a latency win for the entity hot path.
@@ -236,7 +236,7 @@ class Cache:
     def invalidate(self, cls_: Type[M], identifier: str) -> None:
         """Drop a key from the persistent store. Called from logic
         paths that mutate the underlying object. ``identifier`` must
-        be a non-empty string — the same tight contract as :meth:`get`.
+        be a non-empty string – the same tight contract as :meth:`get`.
 
         Acts on this instance's store, enabling future storage tiering
         (e.g. fs-backed store for some schemas, hot redis for others).
@@ -279,7 +279,7 @@ class RequestResolver(Cache):
         """Three-layer lookup: local → store → upstream.
 
         Negative hits (upstream returned None) are recorded in the
-        local cache only — never in the persistent store — to avoid
+        local cache only – never in the persistent store – to avoid
         poisoning the store with stale negatives across requests.
         """
         if not identifier:
@@ -333,7 +333,7 @@ class RequestResolver(Cache):
         a newline plus an optional ``extra`` discriminator (typically
         the search query string, so different filters get different
         ETags). Each constituent ETag is fetched via :meth:`get_etag`,
-        so this populates the local cache as a side effect — the
+        so this populates the local cache as a side effect – the
         following ``get_many`` for the same ids will hit the local
         layer.
         """
@@ -349,7 +349,7 @@ class RequestResolver(Cache):
 
 
 def get_resolver() -> RequestResolver:
-    """FastAPI dependency. Yields a fresh Resolver per request — the
+    """FastAPI dependency. Yields a fresh Resolver per request – the
     local cache lifetime is a single request, garbage collected on
     response. The persistent store is shared.
     """

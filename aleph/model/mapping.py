@@ -133,11 +133,11 @@ class MappingSchema(DatedSchema):
     A mapping rewrites a tabular entity (CSV-like) into a stream of
     FollowTheMoney entities. ``query`` (the mapping DSL),
     ``collection_id``, ``role_id`` and ``table_id`` are application
-    invariants — every mapping is created with all four. The DB
+    invariants – every mapping is created with all four. The DB
     columns are technically nullable but ``Mapping.create`` populates
     them on every write.
 
-    ``entityset_id`` is genuinely optional — a mapping that produces
+    ``entityset_id`` is genuinely optional – a mapping that produces
     free-floating entities (not part of any entityset) is allowed.
     """
 

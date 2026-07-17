@@ -33,7 +33,7 @@ class EventSchema(APIBaseModel):
     title: Any  # lazy_gettext proxy
     template: Any  # lazy_gettext proxy
     link_to: str | None = None
-    # Runtime type map for resolver dispatch — excluded from serialization
+    # Runtime type map for resolver dispatch – excluded from serialization
     # because class objects can't be JSON-serialized. The wire-format
     # ``params`` computed field produces the string version.
     param_types: dict[str, Type[BaseModel]] = Field(default={}, exclude=True)

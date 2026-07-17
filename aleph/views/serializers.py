@@ -326,7 +326,7 @@ class StatementAssembler(Assembler):
 class CanonicalAssembler(Assembler):
     def assemble_entities(self, obj: CanonicalSchema) -> list[EntitySchema]:
         # EntityAssembler.assemble returns None for entities the requester
-        # may not read — drop those from the cluster listing.
+        # may not read – drop those from the cluster listing.
         a = EntityAssembler(self.resolver, self.authz, self.detail)
         return [ent for e in obj.entities if (ent := a.assemble(e)) is not None]
 

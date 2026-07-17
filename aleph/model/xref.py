@@ -29,7 +29,7 @@ def edge_id(source: StrIdent, target: StrIdent) -> str:
 # === SQL system of record (see xref-resolver-sql.md) ===
 #
 # The judgement graph lives in Postgres: `xref_edge` holds decided edges
-# (positive/negative/unsure — suggestions stay in ES), `xref_cluster` is
+# (positive/negative/unsure – suggestions stay in ES), `xref_cluster` is
 # the cluster membership materialized in the same transaction as the
 # edges. ESEdge above remains the wire/projection format for the ES index.
 
@@ -101,8 +101,8 @@ class XrefEdge(db.Model):
 class XrefCluster(db.Model):
     """Materialized cluster membership, maintained transactionally.
 
-    One row per node of every positive cluster — entities, all NK-* ids
-    (including intermediate ones), legacy profile ids — each pointing to
+    One row per node of every positive cluster – entities, all NK-* ids
+    (including intermediate ones), legacy profile ids – each pointing to
     the cluster's current canonical, which also has a self-row. Singletons
     have no rows. The primary key on entity_id IS the union-find invariant:
     a node belongs to exactly one cluster, enforced by the database.
@@ -168,14 +168,14 @@ class ESEdge(BaseModel):
 
 
 class XrefSchema(APIBaseModel):
-    """Wire format for a cross-reference match — one ranked pair of
+    """Wire format for a cross-reference match – one ranked pair of
     similar entities, perspective-aware so the requested collection's
     entity is always served as ``entity`` (left).
 
     Both ``entity`` and ``match`` are required: ``XrefSerializer``
     drops the row entirely if either side fails to resolve, so a
     half-populated XrefSchema would be a bug. ``score`` is also
-    required — every edge produced by the nomenklatura resolver
+    required – every edge produced by the nomenklatura resolver
     carries one.
     """
 
@@ -187,7 +187,7 @@ class XrefSchema(APIBaseModel):
     collections: list[CollectionSchema] = []
     writeable: bool = False
 
-    # ES edge metadata — needed for orientation and collection resolution
+    # ES edge metadata – needed for orientation and collection resolution
     source_collection_id: list[int] = []
     target_collection_id: list[int] = []
     collection_id: list[int] = []

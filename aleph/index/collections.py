@@ -1,6 +1,6 @@
 """Elasticsearch index operations for collections.
 
-Pure ES layer — no resolver registrations, no pydantic schemas,
+Pure ES layer – no resolver registrations, no pydantic schemas,
 no caching logic. The resolver registrations live in
 ``aleph/logic/collections.py``.
 """

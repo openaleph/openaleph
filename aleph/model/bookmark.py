@@ -43,7 +43,7 @@ class BookmarkSchema(APIBaseModel):
     by row id while the response writer is free to project either.
 
     All identifier fields and ``created_at`` are application invariants
-    — every bookmark is created with a row id, an entity reference, a
+    – every bookmark is created with a row id, an entity reference, a
     collection reference, an owning role and a timestamp. The DB
     columns are technically nullable but the application never
     persists a bookmark without them.

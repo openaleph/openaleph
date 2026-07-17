@@ -26,8 +26,8 @@ def resolve_entity_or_canonical(
     """Resolve an entity or canonical ID to its collection info.
 
     Returns dict with:
-      - collection_ids: set[int] — all collections the ID belongs to
-      - schema: str | None — schema name (None for canonicals)
+      - collection_ids: set[int] – all collections the ID belongs to
+      - schema: str | None – schema name (None for canonicals)
 
     Returns None if the entity/cluster is not found.
 
@@ -67,7 +67,7 @@ def get_canonical_cluster(
 ) -> SDict | None:
     """Get the canonical cluster for an entity, with merged proxy.
 
-    This replaces get_profile() — instead of loading from EntitySet items,
+    This replaces get_profile() – instead of loading from EntitySet items,
     it uses the resolver's POSITIVE edges to find cluster members.
     """
     xref_resolver = get_resolver(auth)
@@ -88,7 +88,7 @@ def get_canonical_cluster(
     # Batch-fetch entities from ES via resolver
     fetched = cache.get_many(EntitySchema, entity_ids)
 
-    # Merge via EntityModel.to_proxy() — gives us an EntityProxy
+    # Merge via EntityModel.to_proxy() – gives us an EntityProxy
     # directly without a dict round-trip through make_entity.
     merged = None
     for entity_schema in fetched:

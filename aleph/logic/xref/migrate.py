@@ -32,7 +32,7 @@ def _profile_decisions(counts: dict[str, int]) -> Generator[ESEdge, None, None]:
     """Yield decided edges replaying Profile judgements.
 
     For each Profile EntitySet:
-    - POSITIVE items connect as a star over the first item — import
+    - POSITIVE items connect as a star over the first item – import
       canonicalization merges the component under one NK-* either way.
     - NEGATIVE/UNSURE items with compared_to_entity_id become blockers.
     - Pin the legacy profile_id as a referent of the new canonical so

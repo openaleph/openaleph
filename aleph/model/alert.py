@@ -72,7 +72,7 @@ class Alert(db.Model, DatedModel):
 class AlertSchema(DatedSchema):
     """Canonical wire format for an :class:`Alert`.
 
-    ``query`` and ``role_id`` are application invariants — every alert
+    ``query`` and ``role_id`` are application invariants – every alert
     is created with both. The DB columns are technically nullable but
     the application never persists an alert without them.
     """

@@ -129,7 +129,7 @@ class Entity(db.Model, DatedModel):
 # the runtime ``links`` block.
 #
 # The ``properties`` field is inherited from ``EntityModel`` and remains
-# a ``Mapping[str, Sequence[str | EntityModel]]`` — nested entities
+# a ``Mapping[str, Sequence[str | EntityModel]]`` – nested entities
 # inside properties are served in the FTM-canonical "shallow" form
 # without Aleph extras (matching the existing ``shallow=True`` behaviour
 # of the legacy serializer).
@@ -153,7 +153,7 @@ class EntitySchema(EntityModel, APIBaseModel):
     # Reference to Canonical cluster if any
     canonical_id: str | None = None
 
-    # Populated by the ES indexer — the schema ancestor chain.
+    # Populated by the ES indexer – the schema ancestor chain.
     # Defaults to empty so entities from older indexes or minimal
     # test fixtures still validate.
     schemata: list[str] = []
@@ -186,7 +186,7 @@ class EntitySchema(EntityModel, APIBaseModel):
     safeHtml: list[str] | None = None
     processing_status: SDict | None = None
 
-    # Transliterated property values — computed by the response builder,
+    # Transliterated property values – computed by the response builder,
     # not part of the cached entity. Defaults to empty so the resolver
     # can cache the raw ES payload without needing to compute it.
     latinized: SDict = {}

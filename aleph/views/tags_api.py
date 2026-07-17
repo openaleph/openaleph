@@ -100,7 +100,7 @@ def index():
         query = query.order_by(Tag.created_at.desc())
     else:
         # Group by tag value and order by occurrence count.
-        # Returns (tag, count) rows — not full Tag objects, so we
+        # Returns (tag, count) rows – not full Tag objects, so we
         # bypass the TagSerializer and return plain dicts.
         query = (
             db.session.query(Tag.tag, func.count(Tag.entity_id).label("count"))

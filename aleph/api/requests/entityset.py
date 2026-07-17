@@ -35,7 +35,7 @@ class EntitySetItemUpdate(APIBaseModel):
 
 
 class EntitySetEntityUpdate(APIBaseModel):
-    """``POST /api/2/entitysets/<id>/entities`` body — upsert entity."""
+    """``POST /api/2/entitysets/<id>/entities`` body – upsert entity."""
 
     id: str | None = None
     schema_: str = Field(alias="schema")

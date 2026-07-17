@@ -63,7 +63,7 @@ def _fetch_export(export_id: str) -> ExportSchema | None:
     if export is None:
         return None
     data = export.to_dict()
-    # Status values are lazy_gettext strings — pydantic strict mode
+    # Status values are lazy_gettext strings – pydantic strict mode
     # rejects them as non-str. Force to plain str.
     if "status" in data:
         data["status"] = str(data["status"])
