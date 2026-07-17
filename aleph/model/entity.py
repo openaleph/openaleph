@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from typing import Any
 
 from flask_babel import gettext
 from followthemoney import EntityProxy, model
@@ -7,7 +8,7 @@ from followthemoney.exc import InvalidData
 from followthemoney.types import registry
 from ftmq.model.entity import EntityModel
 from nomenklatura.judgement import Judgement
-from pydantic import ConfigDict
+from pydantic import ConfigDict, field_validator, model_validator
 from sqlalchemy.dialects.postgresql import JSONB
 
 from aleph.core import db
@@ -145,9 +146,14 @@ class EntitySchema(EntityModel):
         populate_by_name=True,
     )
 
-    # Always populated by the ES indexer — every entity carries its
-    # schema ancestor chain. Tightened from optional → required.
-    schemata: list[str]
+    # Populated by the ES indexer — the schema ancestor chain.
+    # Defaults to empty so entities from older indexes or minimal
+    # test fixtures still validate.
+    schemata: list[str] = []
+
+    # Every indexed entity carries its collection_id (int PK) from the
+    # ES document. Used by authz checks and xref cluster resolution.
+    collection_id: int
 
     # Resolved nested resources, populated by the response builder.
     collection: CollectionSchema | None = None
@@ -171,10 +177,13 @@ class EntitySchema(EntityModel):
     safeHtml: list[str] | None = None
     processing_status: SDict | None = None
 
-    # Transliterated property values — always computed by the response
-    # builder (may be an empty dict for entities with no transliterable
-    # property values).
-    latinized: SDict
+    # Transliterated property values — computed by the response builder,
+    # not part of the cached entity. Defaults to empty so the resolver
+    # can cache the raw ES payload without needing to compute it.
+    latinized: SDict = {}
+
+    # mutable flag persisted in the index
+    mutable: bool = False
 
     # Request-time computed fields populated by the response builder.
     writeable: bool = False
@@ -185,9 +194,26 @@ class EntitySchema(EntityModel):
     updated_at: datetime | None = None
     deleted_at: datetime | None = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def _extract_collection_id(cls, data: Any) -> Any:
+        """Pull ``collection_id`` from a nested ``collection`` dict/model
+        when ``collection_id`` is not provided directly."""
+        if isinstance(data, dict) and "collection_id" not in data:
+            collection = data.get("collection")
+            if isinstance(collection, dict) and "id" in collection:
+                data["collection_id"] = collection["id"]
+        return data
+
     @property
     def cache_key(self) -> str:
         return self.id
+
+    @field_validator("role_id", mode="before")
+    @classmethod
+    def clean_role_id(cls, v: Any) -> str | None:
+        if isinstance(v, int):
+            return str(v)
 
 
 class EntityTagSchema(APIBaseModel):

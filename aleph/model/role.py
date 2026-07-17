@@ -4,11 +4,13 @@ from typing import Literal
 
 from itsdangerous import URLSafeTimedSerializer
 from normality import stringify
-from sqlalchemy import func, not_, or_
+from sqlalchemy import event, func, not_, or_
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from aleph.core import db
+from aleph.logic.resolver import cache
 from aleph.model.common import (
+    APIBaseModel,
     DatedSchema,
     IdModel,
     SDict,
@@ -366,3 +368,39 @@ class RoleSchema(DatedSchema):
     writeable: bool = False
     shallow: bool = True
     links: SDict = {}
+
+    @property
+    def cache_key(self) -> str:
+        """Roles are referenced by int PK everywhere (Permission.role_id,
+        Alert.role_id, notification ``actor_id``, …) — not by
+        ``foreign_id``. Override the inherited default so the resolver
+        keys roles under their integer id, matching every call site
+        that asks for a role.
+        """
+        if self.id:
+            return self.id
+        raise ValueError("RoleSchema has no id; cannot derive a cache_key")
+
+
+class RoleChannels(APIBaseModel):
+    """Notification channels for a role. Resolver-cached under
+    ``RoleChannels/<role_id>``."""
+
+    role_id: str
+    channels: list[str]
+
+    @property
+    def cache_key(self) -> str:
+        return self.role_id
+
+
+# === Resolver invalidation via SQLA events ===
+
+
+def _invalidate_role(mapper, connection, target: Role):
+    cache.invalidate(RoleSchema, str(target.id))
+    cache.invalidate(RoleChannels, str(target.id))
+
+
+event.listen(Role, "after_update", _invalidate_role)
+event.listen(Role, "after_delete", _invalidate_role)

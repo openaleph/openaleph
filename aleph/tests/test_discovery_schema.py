@@ -2,7 +2,7 @@
 
 from aleph.model.common import model_dump
 from aleph.model.discover import (
-    DatasetDiscovery,
+    CollectionDiscovery,
     MentionedTerms,
     SignificantTerms,
     Term,
@@ -15,14 +15,13 @@ def test_term_computed_label_is_in_dump():
     assert dumped == {"name": "angela merkel", "count": 12, "label": "Angela Merkel"}
 
 
-def test_mentioned_terms_empty_lists_remain():
+def test_mentioned_terms_empty_lists_preserved():
     mt = MentionedTerms()
-    assert model_dump(mt) == {
-        "companiesMentioned": [],
-        "locationMentioned": [],
-        "namesMentioned": [],
-        "peopleMentioned": [],
-    }
+    dumped = model_dump(mt)
+    assert dumped["peopleMentioned"] == []
+    assert dumped["companiesMentioned"] == []
+    assert dumped["locationMentioned"] == []
+    assert dumped["namesMentioned"] == []
 
 
 def test_significant_terms_nests_term():
@@ -30,21 +29,25 @@ def test_significant_terms_nests_term():
     dumped = model_dump(st)
     assert dumped["term"]["name"] == "putin"
     assert dumped["term"]["label"] == "Putin"
+    assert dumped["peopleMentioned"] == []
+    assert dumped["companiesMentioned"] == []
+    assert dumped["locationMentioned"] == []
+    assert dumped["namesMentioned"] == []
 
 
-def test_dataset_discovery_cache_key_includes_dataset_path():
-    d = DatasetDiscovery(name="opensanctions")
-    assert d.cache_key == "opensanctions/discovery"
+def test_collection_discovery_cache_key():
+    d = CollectionDiscovery(collection_id="42")
+    assert d.cache_key == "42"
 
 
-def test_dataset_discovery_cache_key_invisible_in_dump():
-    d = DatasetDiscovery(
-        name="opensanctions",
+def test_collection_discovery_cache_key_invisible_in_dump():
+    d = CollectionDiscovery(
+        collection_id="42",
         peopleMentioned=[
             SignificantTerms(term=Term(name="putin", count=10)),
         ],
     )
     dumped = model_dump(d)
     assert "cache_key" not in dumped
-    assert dumped["name"] == "opensanctions"
+    assert dumped["collection_id"] == "42"
     assert dumped["peopleMentioned"][0]["term"]["name"] == "putin"

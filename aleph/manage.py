@@ -21,8 +21,7 @@ from openaleph_search.index.entities import iter_proxies
 from tabulate import tabulate
 
 from aleph.authz import Authz
-from aleph.core import cache, create_app, db
-from aleph.index.collections import get_collection as _get_index_collection
+from aleph.core import create_app, db, kv
 from aleph.logic.aggregator import get_aggregator, get_aggregator_name
 from aleph.logic.archive import cleanup_archive
 from aleph.logic.collections import (
@@ -45,6 +44,7 @@ from aleph.logic.export import retry_exports
 from aleph.logic.mapping import cleanup_mappings
 from aleph.logic.permissions import update_permission
 from aleph.logic.processing import bulk_write
+from aleph.logic.resolver import cache
 from aleph.logic.roles import (
     create_group,
     create_user,
@@ -58,7 +58,8 @@ from aleph.logic.xref import store as xref_store
 from aleph.logic.xref import xref_collection
 from aleph.logic.xref.migrate import migrate_xref_index
 from aleph.migration import cleanup_deleted, destroy_db, upgrade_system
-from aleph.model import Collection, EntitySet, Role
+from aleph.model import Collection, CollectionSchema, EntitySet, Role
+from aleph.model.common import model_dump
 from aleph.model.document import Document
 from aleph.procrastinate.queues import (
     OP_INGEST,
@@ -90,7 +91,8 @@ def get_expanded_entity(entity_id):
     if entity is None:
         return None
     entity.pop("_index", None)
-    entity["collection"] = _get_index_collection(entity["collection_id"])
+    coll = cache.get(CollectionSchema, str(entity["collection_id"]))
+    entity["collection"] = model_dump(coll) if coll else None
     return entity
 
 
@@ -217,7 +219,7 @@ def touch(foreign_id, sync=True):
     collection = get_collection(foreign_id)
     collection.touch()
     db.session.commit()
-    compute_collection(collection, force=True, sync=True)
+    compute_collection(collection, force=True)
 
 
 @cli.command()
@@ -1333,7 +1335,8 @@ def resetindex():
 @cli.command()
 def resetcache():
     """Clear the redis cache."""
-    cache.flush()
+    kv.flushall()
+    cache.flushall()
 
 
 @cli.command("cleanup-archive")
@@ -1368,5 +1371,6 @@ def evilshit():
     """EVIL: Delete all data and recreate the database."""
     delete_index()
     destroy_db()
-    cache.flush()
+    kv.flushall()
+    cache.flushall()
     upgrade_system()

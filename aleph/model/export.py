@@ -3,9 +3,11 @@ from datetime import datetime, timedelta
 
 from normality import stringify
 from servicelayer.cache import make_key
+from sqlalchemy import event
 from sqlalchemy.dialects.postgresql import JSONB
 
 from aleph.core import db
+from aleph.logic.resolver import cache
 from aleph.model.collection import Collection
 from aleph.model.common import (
     DatedModel,
@@ -187,3 +189,15 @@ class ExportSchema(DatedSchema):
     file_size: int | None = None
 
     links: SDict = {}
+
+
+# === Resolver invalidation via SQLA events ===
+
+
+def _invalidate_export(mapper, connection, target: Export):
+    cache.invalidate(ExportSchema, str(target.id))
+
+
+event.listen(Export, "after_insert", _invalidate_export)
+event.listen(Export, "after_update", _invalidate_export)
+event.listen(Export, "after_delete", _invalidate_export)

@@ -140,10 +140,7 @@ class DatabaseCollector(Collector):
 class QueuesCollector(Collector):
     def collect(self):
         status: dict[str, Any] = {
-            "datasets": {
-                s["dataset"]: s
-                for s in get_active_collections_status(include_collection_data=False)
-            }
+            "datasets": {s.name: s for s in get_active_collections_status()}
         }
         status["total"] = len(status["datasets"])
 

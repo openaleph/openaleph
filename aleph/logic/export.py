@@ -14,12 +14,23 @@ from openaleph_search.index.entities import checksums_count, iter_proxies
 from servicelayer.archive.util import checksum, ensure_path
 
 from aleph.core import archive, db
-from aleph.index.collections import get_collection
 from aleph.logic.aggregator import get_aggregator_name
 from aleph.logic.mail import email_role
 from aleph.logic.notifications import publish
+from aleph.logic.resolver import cache
+from aleph.logic.resolver.registry import register, register_etag
+from aleph.logic.resolver.ttl import TTL_RESOURCE
 from aleph.logic.util import archive_url, entity_url, ui_url
-from aleph.model import Entity, Events, Export, Role, Status
+from aleph.model import (
+    CollectionSchema,
+    Entity,
+    Events,
+    Export,
+    ExportSchema,
+    Role,
+    Status,
+)
+from aleph.model.common import iso_text, model_dump
 from aleph.settings import SETTINGS
 
 log = logging.getLogger(__name__)
@@ -44,6 +55,24 @@ def get_export(export_id):
     export = Export.by_id(export_id, deleted=True)
     if export is not None:
         return export.to_dict()
+
+
+@register(ExportSchema, ttl=TTL_RESOURCE)
+def _fetch_export(export_id: str) -> ExportSchema | None:
+    export = Export.by_id(int(export_id), deleted=True)
+    if export is None:
+        return None
+    data = export.to_dict()
+    # Status values are lazy_gettext strings — pydantic strict mode
+    # rejects them as non-str. Force to plain str.
+    if "status" in data:
+        data["status"] = str(data["status"])
+    return ExportSchema.model_validate(data)
+
+
+@register_etag(ExportSchema)
+def _export_etag(export: ExportSchema) -> str:
+    return f"{export.id}:{iso_text(export.updated_at) or 0}"
 
 
 def write_document(export_dir, zf, collection, entity):
@@ -79,7 +108,9 @@ def export_entities(export_id):
             for idx, entity in enumerate(proxies):
                 collection_id = entity.context.get("collection_id")
                 if collection_id not in collections:
-                    collections[collection_id] = get_collection(collection_id)
+                    coll = cache.get(CollectionSchema, str(collection_id))
+                    if coll is not None:  # FIXME
+                        collections[collection_id] = model_dump(coll)
                 collection = collections[collection_id]
                 if collection is None:
                     continue
@@ -105,6 +136,7 @@ def export_entities(export_id):
         export = Export.by_id(export_id)
         export.set_status(status=Status.FAILED)
         db.session.commit()
+
     finally:
         shutil.rmtree(export_dir)
 
@@ -126,6 +158,7 @@ def create_export(
         meta=meta,
     )
     db.session.commit()
+
     return export
 
 
@@ -145,6 +178,7 @@ def complete_export(export_id, file_path, file_name):
         export.set_status(status=Status.FAILED)
 
     db.session.commit()
+
     params = {"export": export}
     role = Role.by_id(export.creator_id)
     log.info("Export [%r] complete: %s", export, export.status)
@@ -169,6 +203,7 @@ def delete_expired_exports():
                     archive.delete_file(export.content_hash)
         export.deleted = True
         db.session.add(export)
+
     db.session.commit()
 
 

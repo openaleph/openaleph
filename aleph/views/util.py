@@ -5,17 +5,13 @@ import string
 from urllib.parse import urlparse
 
 import orjson
-from banal import as_bool, ensure_dict, is_listish, is_mapping
+from banal import as_bool, is_listish, is_mapping
 from flask import Response, render_template, request
 from flask_babel import gettext
 from normality import stringify
-from openaleph_search.index.entities import get_entity as _get_index_entity
 from servicelayer.jobs import Job
 from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
-from aleph.authz import Authz
-from aleph.index.collections import get_collection as _get_index_collection
-from aleph.model import Collection, EntitySet
 from aleph.util import json_default
 from aleph.validation import get_validator
 
@@ -99,40 +95,6 @@ def clean_object(data):
     elif isinstance(data, str):
         return data if len(data) else None
     return data
-
-
-def get_index_entity(entity_id, action=Authz.READ, **kwargs):
-    entity = obj_or_404(_get_index_entity(entity_id, **kwargs))
-    require(request.authz.can(entity["collection_id"], action))
-    return entity
-
-
-def get_db_collection(collection_id, action=Authz.READ):
-    collection = obj_or_404(Collection.by_id(collection_id))
-    require(request.authz.can(collection.id, action))
-    return collection
-
-
-def get_entityset(entityset_id, action=Authz.READ):
-    eset = obj_or_404(EntitySet.by_id(entityset_id))
-    require(request.authz.can(eset.collection_id, action))
-    return eset
-
-
-def get_nested(data, obj_field, id_field):
-    collection = ensure_dict(data.get(obj_field))
-    return data.get(id_field, collection.get("id"))
-
-
-def get_nested_collection(data, action=Authz.READ):
-    collection_id = get_nested(data, "collection", "collection_id")
-    return get_db_collection(collection_id, action)
-
-
-def get_index_collection(collection_id, action=Authz.READ):
-    collection = obj_or_404(_get_index_collection(collection_id))
-    require(request.authz.can(collection["id"], action))
-    return collection
 
 
 def get_url_path(url):

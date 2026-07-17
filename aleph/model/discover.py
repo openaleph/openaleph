@@ -1,8 +1,8 @@
 """Pre-computed dataset discovery analysis.
 
 These are computed views over a :class:`Collection` (the
-``DatasetDiscovery`` aggregate sits in the resolver cache under
-``DatasetDiscovery/<foreign_id>/discovery``). The inner ``Term`` /
+``CollectionDiscovery`` aggregate sits in the resolver cache under
+``CollectionDiscovery/<collection_id>`). The inner ``Term`` /
 ``MentionedTerms`` / ``SignificantTerms`` models are nested-only and
 never cached on their own — they inherit from :class:`APIBaseModel`
 just for the consistent ``model_dump`` semantics.
@@ -34,11 +34,11 @@ class SignificantTerms(MentionedTerms):
     term: Term
 
 
-class DatasetDiscovery(APIBaseModel):
+class CollectionDiscovery(APIBaseModel):
     """Resolver-cached aggregate keyed under
-    ``DatasetDiscovery/<foreign_id>/discovery``."""
+    ``CollectionDiscovery/<collection_id>``."""
 
-    name: str  # collection foreign_id
+    collection_id: str
     peopleMentioned: list[SignificantTerms] = []
     companiesMentioned: list[SignificantTerms] = []
     locationMentioned: list[SignificantTerms] = []
@@ -46,4 +46,4 @@ class DatasetDiscovery(APIBaseModel):
 
     @property
     def cache_key(self) -> str:
-        return f"{self.name}/discovery"
+        return self.collection_id

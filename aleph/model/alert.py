@@ -1,8 +1,10 @@
 from datetime import datetime
 
 from normality import stringify
+from sqlalchemy import event
 
 from aleph.core import db
+from aleph.logic.resolver import cache
 from aleph.model.common import DatedModel, DatedSchema, SDict
 from aleph.model.role import Role
 
@@ -81,3 +83,15 @@ class AlertSchema(DatedSchema):
 
     writeable: bool = False
     links: SDict = {}
+
+
+# === Resolver invalidation via SQLA events ===
+
+
+def _invalidate_alert(mapper, connection, target: Alert):
+    cache.invalidate(AlertSchema, str(target.id))
+
+
+event.listen(Alert, "after_insert", _invalidate_alert)
+event.listen(Alert, "after_update", _invalidate_alert)
+event.listen(Alert, "after_delete", _invalidate_alert)

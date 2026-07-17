@@ -1,23 +1,32 @@
+import functools
 import logging
 from datetime import datetime
-from functools import cache
-from typing import Any
+from typing import Annotated, Any
 
 from banal import ensure_dict, ensure_list
 from flask_babel import lazy_gettext
 from followthemoney.dataset.coverage import DataCoverage
 from followthemoney.dataset.publisher import DataPublisher
-from followthemoney.dataset.util import dataset_name_check
+from followthemoney.dataset.util import dataset_name_check, serialize_dt
 from followthemoney.exc import InvalidData
 from followthemoney.namespace import Namespace
 from followthemoney.types import registry
 from ftmq.model.dataset import Dataset as FtmDataset
 from normality import stringify
-from pydantic import ConfigDict, Field, model_validator
+from openaleph_procrastinate.model import DatasetStatus
+from pydantic import (
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    computed_field,
+    model_validator,
+)
+from sqlalchemy import event
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import aliased
 
 from aleph.core import db
+from aleph.logic.resolver import cache
 from aleph.model.common import (
     APIBaseModel,
     IdModel,
@@ -31,7 +40,7 @@ from aleph.model.role import Role, RoleSchema
 log = logging.getLogger(__name__)
 
 
-@cache
+@functools.cache
 def cached_dataset_name_check(dataset: str) -> str:
     return dataset_name_check(dataset)
 
@@ -343,6 +352,30 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
 _FREQUENCY_MAP: dict[str, str] = {"annual": "annually"}
 
 
+def _serialize_lax_dt(value: datetime | str | None) -> str | None:
+    """Serialize a ``datetime`` to ISO; pass ISO strings through unchanged.
+
+    ftm's ``DateTimeISO`` serializer (``serialize_dt``) requires a real
+    ``datetime``, but the resolver reloads cached schemas via
+    ``model_construct`` (``model_validate=False``, which skips coercion —
+    trusted data, no revalidation), so these fields can still hold the
+    ISO string they were stored as. Re-serializing that with
+    ``serialize_dt`` would raise ``AttributeError``; pass strings through.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    return serialize_dt(value)
+
+
+# ftm's ``DateTimeISO``, but tolerant of an already-serialized ISO string on
+# dump — needed for resolver-cache round-trip safety (see _serialize_lax_dt).
+LaxDateTimeISO = Annotated[
+    datetime | None, PlainSerializer(_serialize_lax_dt, when_used="always")
+]
+
+
 class CollectionSchema(FtmDataset):
     """Wire format for an Aleph :class:`Collection`.
 
@@ -356,6 +389,16 @@ class CollectionSchema(FtmDataset):
         from_attributes=True,
         populate_by_name=True,
     )
+
+    # str(int PK) — carried for the resolver cache key and legacy
+    # serializer compat. Will be dropped when IDs move to foreign_id.
+    id: str
+
+    # Override FTM's ``DateTimeISO`` with a serializer that tolerates an
+    # already-ISO string, so resolver-cache reloads (model_construct, no
+    # coercion) survive re-serialization. Otherwise identical to FTM.
+    updated_at: LaxDateTimeISO = None
+    last_export: LaxDateTimeISO = None
 
     # FTM core models countries via ``coverage.countries``; languages
     # are an Aleph extension.
@@ -382,14 +425,34 @@ class CollectionSchema(FtmDataset):
     shallow: bool = True
     links: SDict = {}
 
+    # Backwards-compat aliases — FTM uses ``name``/``title``, Aleph
+    # historically used ``foreign_id``/``label`` on the wire.
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def foreign_id(self) -> str:
+        return self.name
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def label(self) -> str:
+        return self.title
+
     @property
     def cache_key(self) -> str:
-        # FTM dataset name == Aleph foreign_id.
-        return self.name
+        # Keyed by str(int PK) for now — same pattern as RoleSchema.
+        # The numeric id → foreign_id migration is a separate refactor.
+        return self.id
 
     @model_validator(mode="before")
     @classmethod
     def _from_collection(cls, data: Any) -> Any:
+        # Dict input: map Aleph aliases → FTM canonical fields
+        if isinstance(data, dict):
+            if "name" not in data and "foreign_id" in data:
+                data["name"] = data["foreign_id"]
+            if "title" not in data and "label" in data:
+                data["title"] = data["label"]
+            return data
         if not isinstance(data, Collection):
             return data
 
@@ -415,6 +478,7 @@ class CollectionSchema(FtmDataset):
 
         category = data.category if data.category in Collection.CATEGORIES else None
 
+        data.label = data.label or data.foreign_id
         if not data.label:
             raise ValueError(
                 f"Collection {data.foreign_id!r} has no label; "
@@ -422,6 +486,8 @@ class CollectionSchema(FtmDataset):
             )
 
         return {
+            # Aleph internal — str(int PK) for resolver cache key
+            "id": stringify(data.id),
             # FTM core fields
             "name": data.foreign_id,
             "title": data.label,
@@ -438,9 +504,9 @@ class CollectionSchema(FtmDataset):
             "taggable": bool(data.taggable),
             "contains_ai": bool(data.contains_ai),
             "contains_ai_comment": data.contains_ai_comment,
-            "casefile": data.casefile,
-            "external": data.external,
-            "secret": data.secret,
+            "casefile": bool(data.casefile),
+            "external": bool(data.external),
+            "secret": bool(data.secret),
             "creator_id": stringify(data.creator_id),
             "team_id": list(data.team_id) if hasattr(data, "team_id") else [],
         }
@@ -462,7 +528,7 @@ class CollectionStatistics(APIBaseModel):
     ``aleph.index.collections.STATS_FACETS``.
     """
 
-    foreign_id: str
+    collection_id: str
     schema_: FacetCounts = Field(default_factory=FacetCounts, alias="schema")
     names: FacetCounts = FacetCounts()
     addresses: FacetCounts = FacetCounts()
@@ -473,41 +539,82 @@ class CollectionStatistics(APIBaseModel):
 
     @property
     def cache_key(self) -> str:
-        return f"{self.foreign_id}/stats"
+        return self.collection_id
 
 
-class StatusCounts(APIBaseModel):
-    """Counts for an in-flight or completed processing batch."""
+class GlobalStatistics(APIBaseModel):
+    """System-wide aggregate statistics returned by
+    ``GET /api/2/statistics``. Singleton — keyed under
+    ``GlobalStatistics/global``.
+    """
 
-    finished: int = 0
-    pending: int = 0
-    running: int = 0
-
-
-class CollectionStageStatus(StatusCounts):
-    job_id: str | None = None
-    stage: str | None = None
-
-
-class CollectionJobStatus(StatusCounts):
-    stages: list[CollectionStageStatus] = []
-
-
-class CollectionStatus(StatusCounts):
-    """Resolver-cached aggregate keyed under
-    ``CollectionStatus/<foreign_id>/status``."""
-
-    foreign_id: str | None = None
-    jobs: list[CollectionJobStatus] = []
+    collections: int = 0
+    things: int = 0
+    schemata: dict[str, int] = {}
+    countries: dict[str, int] = {}
+    categories: dict[str, int] = {}
 
     @property
     def cache_key(self) -> str:
-        return f"{self.foreign_id}/status"
+        return "global"
 
 
-class CollectionDeepSchema(CollectionSchema):
+class CollectionCounts(APIBaseModel):
+    """Mapping and entityset counts for a collection detail view."""
+
+    mappings: int = 0
+    entitysets: dict[str, int] = {}
+
+
+class CollectionStatus(DatasetStatus):
+    """Procrastinate job state enriched with the collection PK."""
+
+    @computed_field
+    @property
+    def collection_id(self) -> str:
+        # collection_1 -> 1
+        return self.name.split("_")[1]
+
+
+class CollectionDetailSchema(CollectionSchema):
     """Detail-view shape — base CollectionSchema plus the per-dataset
-    aggregates returned by ``GET /api/2/collections/<id>``."""
+    aggregates returned by ``GET /api/2/collections/<id>``.
 
-    status: CollectionStatus | None = None
+    Keyed under ``CollectionDetailSchema/<collection_id>``.
+    """
+
     statistics: CollectionStatistics | None = None
+    counts: CollectionCounts | None = None
+    # Procrastinate job status — NOT cached, always patched live.
+    status: CollectionStatus | None = None
+    shallow: bool = False
+
+
+# === Resolver invalidation + ES sync via SQLA events ===
+
+
+def _on_collection_change(mapper, connection, target: Collection):
+    """Invalidate resolver cache and sync to ES on every DB write."""
+    cid = str(target.id)
+    cache.invalidate(CollectionSchema, cid)
+    cache.invalidate(CollectionDetailSchema, cid)
+    # ES is a derived index of the DB — sync atomically so the ES
+    # doc is visible as soon as the commit returns.
+    from aleph.index.collections import index_collection
+
+    index_collection(target, sync=True)
+
+
+def _on_collection_delete(mapper, connection, target: Collection):
+    """Invalidate resolver cache and remove from ES on delete."""
+    cid = str(target.id)
+    cache.invalidate(CollectionSchema, cid)
+    cache.invalidate(CollectionDetailSchema, cid)
+    from aleph.index.collections import delete_collection_index
+
+    delete_collection_index(target.id, sync=True)
+
+
+event.listen(Collection, "after_insert", _on_collection_change)
+event.listen(Collection, "after_update", _on_collection_change)
+event.listen(Collection, "after_delete", _on_collection_delete)

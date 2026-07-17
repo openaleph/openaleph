@@ -7,14 +7,16 @@ from openaleph_search.index.util import unpack_result
 from werkzeug.exceptions import BadRequest
 
 from aleph.core import url_for
-from aleph.index.collections import get_collection_things
+from aleph.index.collections import get_things_count
 from aleph.logic.util import entity_url
 from aleph.model import Entity
+from aleph.model.common import model_dump
 from aleph.search import EntitiesQuery, MatchQuery, SearchQueryParser
 from aleph.settings import SETTINGS
 from aleph.util import make_entity_proxy
+from aleph.views import resources
 from aleph.views.context import tag_request
-from aleph.views.util import get_index_collection, jsonify, require
+from aleph.views.util import jsonify, require
 
 # See: https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API
 blueprint = Blueprint("reconcile_api", __name__)
@@ -58,7 +60,7 @@ def reconcile_index(collection=None):
     if collection is not None:
         label = "%s (%s)" % (collection.get("label"), label)
         suggest_query.append(("filter:collection_id", collection.get("id")))
-        things = get_collection_things(collection.get("id"))
+        things = get_things_count(collection.get("id"))
         schemata = [model.get(s) for s in things.keys()]
     return jsonify(
         {
@@ -127,7 +129,8 @@ def reconcile(collection_id=None):
     require(request.authz.can_browse_anonymous)
     collection = None
     if collection_id is not None:
-        collection = get_index_collection(collection_id)
+        collection = resources.get_collection(collection_id, request.authz.READ)
+        collection = model_dump(collection)
     query = request.values.get("query")
     if query is not None:
         # single

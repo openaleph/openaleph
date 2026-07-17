@@ -1,5 +1,4 @@
 import logging
-from typing import Any
 
 from flask import Blueprint, request
 from sqlalchemy import func
@@ -12,17 +11,18 @@ from aleph.logic.aggregator import get_aggregator
 from aleph.model.collection import Collection
 from aleph.model.tag import Tag
 from aleph.search import DatabaseQueryResult
+from aleph.views import resources
 from aleph.views.serializers import TagSerializer
-from aleph.views.util import get_index_entity, jsonify, parse_request, require
+from aleph.views.util import jsonify, parse_request, require
 
 log = logging.getLogger(__name__)
 blueprint = Blueprint("tags_api", __name__)
 
 
-def require_entity_taggable(entity_id: str, authz: Authz) -> dict[str, Any]:
+def require_entity_taggable(entity_id: str, authz: Authz):
     try:
-        entity = get_index_entity(entity_id, authz.READ)
-        collection = Collection.by_id(entity["collection_id"])
+        entity = resources.get_entity(entity_id, authz.READ)
+        collection = Collection.by_id(entity.collection_id)
         if not collection or not collection.taggable:
             raise Forbidden
         return entity
@@ -156,7 +156,7 @@ def create():
 
     tag = Tag(
         entity_id=entity_id,
-        collection_id=int(entity.get("collection_id")),
+        collection_id=int(entity.collection_id),
         role_id=request.authz.id,
         tag=tag_text,
     )
@@ -243,7 +243,7 @@ def delete(entity_id, tag):
     db.session.commit()
 
     # Re-index the entity to update tags in search index
-    collection = Collection.by_id(entity["collection_id"])
+    collection = Collection.by_id(entity.collection_id)
     reindex_entity(entity_id, collection)
 
     return "", 204
@@ -275,7 +275,7 @@ def delete_by_entity(entity_id):
     db.session.commit()
 
     # Re-index the entity to update tags in search index
-    collection = Collection.by_id(entity["collection_id"])
+    collection = Collection.by_id(entity.collection_id)
     reindex_entity(entity_id, collection)
 
     return "", 204

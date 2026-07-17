@@ -107,8 +107,10 @@ def create_app(config=None):
     babel.init_app(app, locale_selector=determine_locale)
     prometheus.init_app(app)
 
+    from aleph.logic.resolver import register_all
     from aleph.views import mount_app_blueprints
 
+    register_all()
     mount_app_blueprints(app)
 
     # This executes all registered init-time plugins so that other

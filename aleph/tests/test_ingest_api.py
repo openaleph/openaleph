@@ -50,7 +50,7 @@ class IngestApiTestCase(TestCase):
         assert doc.meta["languages"] == ["eng"], doc.meta
 
         # just try that this doesn't fail
-        _ = get_collection_status(self.col, include_collection_data=False)
+        _ = get_collection_status(self.col)
 
         # FIXME we need to patch test runtime envs to actually defer ingest
         # tasks to make this work:

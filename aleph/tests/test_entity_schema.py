@@ -22,6 +22,7 @@ def _entity(**overrides) -> EntitySchema:
         "schema": "Person",
         "properties": {"name": ["Alice Smith"]},
         "schemata": ["Person", "LegalEntity", "Thing"],
+        "collection_id": 1,
         "latinized": {},
     }
     base.update(overrides)
@@ -43,17 +44,19 @@ def test_entity_schema_dump_uses_schema_alias_and_hides_cache_key():
 
 
 def test_entity_schema_required_fields_raise_on_missing():
-    # `schemata` and `latinized` are now required (always populated by
-    # the indexer / response builder respectively).
+    # ``id``, ``schema`` (via alias ``schema_``), ``properties`` and
+    # ``collection_id`` are required. ``schemata`` and ``latinized``
+    # both default to empty so raw ES payloads and minimal test
+    # constructions validate without them.
     with pytest.raises(ValidationError):
+        EntitySchema(schema="Person", properties={"name": ["Alice"]})  # missing id
+    with pytest.raises(ValidationError):
+        # missing collection_id
         EntitySchema(id="x", schema="Person", properties={"name": ["Alice"]})
-    with pytest.raises(ValidationError):
-        EntitySchema(
-            id="x",
-            schema="Person",
-            properties={"name": ["Alice"]},
-            schemata=["Person"],
-        )  # missing latinized
+    # Minimal valid construction.
+    EntitySchema(
+        id="x", schema="Person", properties={"name": ["Alice"]}, collection_id=1
+    )
 
 
 def test_entity_schema_with_aleph_extras():
@@ -68,7 +71,7 @@ def test_entity_schema_with_aleph_extras():
         bookmarked=True,
         writeable=True,
         links={"self": "/api/2/entities/x"},
-        collection=CollectionSchema(name="leaks", title="Leaks"),
+        collection=CollectionSchema(id="1", name="leaks", title="Leaks"),
     )
     dumped = model_dump(e)
     assert dumped["countries"] == ["us"]
@@ -86,6 +89,7 @@ def test_entity_schema_validates_from_dict_with_datasets_referents():
             "schema": "Person",
             "properties": {"name": ["Bob"]},
             "schemata": ["Person", "LegalEntity", "Thing"],
+            "collection_id": 1,
             "latinized": {},
             "datasets": ["leaks", "opensanctions"],
             "referents": ["ofac-1234"],
@@ -153,14 +157,45 @@ def test_entity_create_accepts_inline_collection():
     payload = {
         "schema": "Person",
         "properties": {"name": ["Alice"]},
-        "collection": {"name": "leaks", "title": "Leaks"},
+        "collection": {"id": "1", "name": "leaks", "title": "Leaks"},
         "foreign_id": "alice-fid",
     }
     ec = EntityCreate.model_validate(payload)
     assert ec.foreign_id == "alice-fid"
     assert ec.collection is not None
-    assert ec.collection.name == "leaks"
+    assert ec.collection["name"] == "leaks"
 
 
 def test_entity_create_optional_id_and_collection_id():
     EntityCreate.model_validate({"schema": "Person", "properties": {"name": ["Alice"]}})
+
+
+def test_entity_collection_id_extracted_from_nested_collection():
+    """collection_id is pulled from a nested collection dict when not provided directly."""
+    e = EntitySchema(
+        id="x",
+        schema="Person",
+        properties={"name": ["Alice"]},
+        collection={"id": "42", "name": "leaks", "title": "Leaks"},
+    )
+    assert e.collection_id == 42
+    assert e.collection is not None
+    assert e.collection.name == "leaks"
+
+
+def test_entity_collection_id_direct_takes_precedence():
+    """Explicit collection_id is not overwritten by a nested collection dict."""
+    e = EntitySchema(
+        id="x",
+        schema="Person",
+        properties={"name": ["Alice"]},
+        collection_id=1,
+        collection={"id": "99", "name": "other", "title": "Other"},
+    )
+    assert e.collection_id == 1
+
+
+def test_entity_role_id_type_mismatch():
+    data = _entity().model_dump()
+    data["role_id"] = 1  # should be str, will be converted
+    EntitySchema.model_validate(data)

@@ -2,19 +2,16 @@
 Cross-reference processing logic. Moved from aleph/logic/xref.py.
 
 Handles xref pipeline orchestration: candidate querying, match generation,
-mention processing, and export.
+and mention processing.
 """
 
 import logging
-import shutil
 from dataclasses import dataclass
-from tempfile import mkdtemp
 from timeit import default_timer
 from typing import Generator, Iterable, TypeAlias
 
 from followthemoney import Schema, model
 from followthemoney.exc import InvalidData
-from followthemoney.export.excel import ExcelWriter
 from followthemoney.helpers import name_entity
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
@@ -23,20 +20,13 @@ from openaleph_search.index.indexes import entities_read_index
 from openaleph_search.index.util import unpack_result
 from openaleph_search.query import none_query
 from openaleph_search.query.matching import match_query
-from openaleph_search.settings import BULK_PAGE
 from prometheus_client import Counter, Histogram
-from servicelayer.archive.util import ensure_path
 
-from aleph.authz import Authz
-from aleph.core import db, es
-from aleph.index.xref import iter_edges
-from aleph.logic import resolver
+from aleph.core import es
 from aleph.logic.aggregator import get_aggregator
-from aleph.logic.export import complete_export
-from aleph.logic.util import entity_url
 from aleph.logic.xref.compare import compare_entities, make_suggestion
 from aleph.logic.xref.resolver import XrefResolver, get_resolver
-from aleph.model import Collection, Entity, Export, Role, Status
+from aleph.model import Collection, Entity
 from aleph.settings import SETTINGS
 from aleph.util import make_entity_proxy
 
@@ -326,102 +316,3 @@ def xref_collection(collection: Collection):
         _query_mentions(collection, xref_resolver)
 
     log.info(f"[{collection}] Xref done.")
-
-
-def _format_date(proxy: EntityProxy) -> str:
-    dates = proxy.get_type_values(registry.date)
-    if not len(dates):
-        return ""
-    return min(dates)
-
-
-def _format_country(proxy: EntityProxy) -> str:
-    countries = [c.upper() for c in proxy.countries]
-    return ", ".join(countries)
-
-
-def _iter_match_batch(stub, sheet, batch):
-    matchable = [s.name for s in model if s.matchable]
-    entities = set()
-    for match in batch:
-        entities.add(match.get("source"))
-        entities.add(match.get("target"))
-        resolver.queue(stub, Collection, match.get("target_collection_id"))
-
-    resolver.resolve(stub)
-    entities = resolver.cached_entities_by_ids(list(entities), schemata=matchable)
-    entities = {e.get("id"): e for e in entities}
-
-    for obj in batch:
-        entity = entities.get(str(obj.get("source")))
-        match = entities.get(str(obj.get("target")))
-        collection_id = obj.get("target_collection_id")
-        collection = resolver.get(stub, Collection, collection_id)
-        if entity is None or match is None or collection is None:
-            continue
-        eproxy = make_entity_proxy(entity)
-        mproxy = make_entity_proxy(match)
-        sheet.append(
-            [
-                obj.get("score"),
-                eproxy.caption,
-                _format_date(eproxy),
-                _format_country(eproxy),
-                collection.get("label"),
-                mproxy.caption,
-                _format_date(mproxy),
-                _format_country(mproxy),
-                entity_url(eproxy.id),
-                entity_url(mproxy.id),
-            ]
-        )
-
-
-def export_matches(export_id):
-    """Export the top N matches of cross-referencing for the given collection
-    to an Excel formatted export."""
-    export = Export.by_id(export_id)
-    export_dir = ensure_path(mkdtemp(prefix="aleph.export."))
-    try:
-        role = Role.by_id(export.creator_id)
-        authz = Authz.from_role(role)
-        collection = Collection.by_id(export.collection_id)
-        file_name = "%s - Crossreference.xlsx" % collection.label  # codespell:ignore
-        file_path = export_dir.joinpath(f"{export_id}.xslx")
-        excel = ExcelWriter()
-        headers = [
-            "Score",
-            "Entity Name",
-            "Entity Date",
-            "Entity Countries",
-            "Candidate Collection",
-            "Candidate Name",
-            "Candidate Date",
-            "Candidate Countries",
-            "Entity Link",
-            "Candidate Link",
-        ]
-        sheet = excel.make_sheet("Cross-reference", headers)
-        batch = []
-
-        for match in iter_edges(collection, authz):
-            batch.append(match)
-            if len(batch) >= BULK_PAGE:
-                _iter_match_batch(excel, sheet, batch)
-                batch = []
-        if len(batch):
-            _iter_match_batch(excel, sheet, batch)
-
-        with open(file_path, "wb") as fp:
-            buffer = excel.get_bytesio()
-            for data in buffer:
-                fp.write(data)
-
-        complete_export(export_id, file_path, file_name)
-    except Exception:
-        log.exception("Failed to process export [%s]", export_id)
-        export = Export.by_id(export_id)
-        export.set_status(status=Status.FAILED)
-        db.session.commit()
-    finally:
-        shutil.rmtree(export_dir)

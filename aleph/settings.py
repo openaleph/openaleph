@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 import structlog
 from flask_babel import lazy_gettext
 from servicelayer import env
+from servicelayer.settings import REDIS_URL
 
 log = structlog.get_logger(__name__)
 
@@ -27,6 +28,12 @@ class Settings:
         self.PROFILE = env.to_bool("ALEPH_PROFILE", False)
         # Propose HTTP caching to the user agents.
         self.CACHE = env.to_bool("ALEPH_CACHE", not self.DEBUG)
+        # Persistent store URI for the object resolver
+        # (``aleph.logic.resolver``). Defaults to the same Redis the
+        # legacy ``aleph.cache`` uses; tests override to ``memory://``
+        # via ``[tool.pytest_env]``. Any anystore-supported scheme
+        # works (``redis://``, ``memory://``, ``file://``, ``s3://``).
+        self.RESOLVER_STORE_URI = env.get("ALEPH_RESOLVER_STORE_URI") or REDIS_URL
         # Puts the system into read-only mode and displays a warning.
         self.MAINTENANCE = env.to_bool("ALEPH_MAINTENANCE", False)
         # Unit test context.

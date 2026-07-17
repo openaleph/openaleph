@@ -8,7 +8,10 @@ from openaleph_search.index.util import unpack_result
 from aleph.authz import Authz
 from aleph.core import db, es
 from aleph.logic.notifications import publish
-from aleph.model import Alert, Entity, Events
+from aleph.logic.resolver.registry import register, register_etag
+from aleph.logic.resolver.ttl import TTL_RESOURCE
+from aleph.model import Alert, AlertSchema, Entity, Events
+from aleph.model.common import iso_text
 
 log = logging.getLogger(__name__)
 
@@ -17,6 +20,19 @@ def get_alert(alert_id):
     alert = Alert.by_id(alert_id)
     if alert is not None:
         return alert.to_dict()
+
+
+@register(AlertSchema, ttl=TTL_RESOURCE)
+def _fetch_alert(alert_id: str) -> AlertSchema | None:
+    alert = Alert.by_id(int(alert_id))
+    if alert is None:
+        return None
+    return AlertSchema.model_validate(alert.to_dict())
+
+
+@register_etag(AlertSchema)
+def _alert_etag(alert: AlertSchema) -> str:
+    return f"{alert.id}:{iso_text(alert.updated_at) or 0}"
 
 
 def check_alerts():

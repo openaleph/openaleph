@@ -50,7 +50,7 @@ def _role() -> RoleSchema:
 
 
 def _collection() -> CollectionSchema:
-    return CollectionSchema(name="opensanctions", title="OpenSanctions")
+    return CollectionSchema(id="1", name="opensanctions", title="OpenSanctions")
 
 
 def test_entityset_schema_minimal_list():

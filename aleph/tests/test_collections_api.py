@@ -78,6 +78,47 @@ class CollectionsApiTestCase(TestCase):
         assert res.json["total"] == 1, res.json
         assert res.json["results"][0]["label"] == "OpenContracting"
 
+    def test_index_facets(self):
+        _, headers = self.login(is_admin=True)
+        facets_q = "facet=countries&facet=category&facet_total:category=true&facet_total:countries=true"
+        res = self.client.get(f"/api/2/collections?{facets_q}", headers=headers)
+        assert res.status_code == 200, res
+        assert "facets" in res.json
+
+        categories = res.json["facets"]["category"]["values"]
+        cat_ids = [v["id"] for v in categories]
+        assert "casefile" in cat_ids
+        casefile = next(v for v in categories if v["id"] == "casefile")
+        assert casefile["count"] >= 1
+        assert casefile["label"]  # should be the human-readable label
+
+        # Countries facet — setUp creates collection with countries=["us"]
+        countries = res.json["facets"]["countries"]["values"]
+        country_ids = [v["id"] for v in countries]
+        assert "us" in country_ids
+        us = next(v for v in countries if v["id"] == "us")
+        assert us["count"] >= 1
+        assert us["label"]
+
+    def test_index_facets_multiple_collections(self):
+        _, headers = self.login(is_admin=True)
+        self.create_collection(
+            label="Procurement Data",
+            countries=["de"],
+        )
+        facets_q = "facet=countries&facet=category&facet_total:category=true&facet_total:countries=true"
+        res = self.client.get(f"/api/2/collections?{facets_q}", headers=headers)
+        assert res.status_code == 200, res
+
+        categories = res.json["facets"]["category"]["values"]
+        cat_ids = [v["id"] for v in categories]
+        assert "casefile" in cat_ids
+
+        countries = res.json["facets"]["countries"]["values"]
+        country_ids = [v["id"] for v in countries]
+        assert "us" in country_ids
+        assert "de" in country_ids
+
     def test_sitemap(self):
         res = self.client.get("/api/2/sitemap.xml")
         assert res.status_code == 200, res
@@ -278,7 +319,7 @@ class CollectionsApiTestCase(TestCase):
 
     def test_statistics(self):
         self.load_fixtures()
-        compute_collection(self.private_coll, sync=True)
+        compute_collection(self.private_coll, force=True)
         _, headers = self.login(is_admin=True)
         url = "/api/2/collections/%s" % self.private_coll.id
         res = self.client.get(url, headers=headers)
@@ -476,7 +517,7 @@ class CollectionsApiTestCase(TestCase):
         self.col.external = True
         db.session.add(self.col)
         db.session.commit()
-        update_collection(self.col, sync=True)  # sync with index
+        update_collection(self.col)  # sync with index
 
         # Non-admin user cannot write to external collection
         res = self.client.get(url, headers=headers)

@@ -5,10 +5,11 @@ from typing import Literal
 from banal import ensure_list
 from nomenklatura.judgement import Judgement  # noqa: F401
 from normality import stringify
-from sqlalchemy import func
+from sqlalchemy import event, func
 from sqlalchemy.dialects.postgresql import JSONB
 
 from aleph.core import db
+from aleph.logic.resolver import cache
 from aleph.model.collection import Collection, CollectionSchema
 from aleph.model.common import (
     ENTITY_ID_LEN,
@@ -19,6 +20,7 @@ from aleph.model.common import (
     make_textid,
     query_like,
 )
+from aleph.model.entity import EntitySchema
 from aleph.model.permission import Permission
 from aleph.model.role import Role, RoleSchema
 
@@ -451,6 +453,7 @@ class EntitySetSchema(DatedSchema):
 
     summary: str | None = None
     layout: DiagramLayout | None = None
+    entities: list[EntitySchema] = []
 
     role: RoleSchema | None = None
     collection: CollectionSchema | None = None
@@ -493,3 +496,15 @@ class EntitySetItemSchema(DatedSchema):
     def cache_key(self) -> str:
         # Composite key matching the legacy wire id.
         return f"{self.entityset_id}/{self.entity_id}"
+
+
+# === Resolver invalidation via SQLA events ===
+
+
+def _invalidate_entityset(mapper, connection, target: EntitySet):
+    cache.invalidate(EntitySetSchema, str(target.id))
+
+
+event.listen(EntitySet, "after_insert", _invalidate_entityset)
+event.listen(EntitySet, "after_update", _invalidate_entityset)
+event.listen(EntitySet, "after_delete", _invalidate_entityset)

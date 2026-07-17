@@ -3,18 +3,16 @@ from flask import Blueprint, request
 from werkzeug.exceptions import BadRequest
 
 from aleph.core import db
-from aleph.index.collections import update_collection_stats
 from aleph.logic.collections import (
     create_collection,
     delete_collection,
-    get_deep_collection,
     refresh_collection,
     reingest_collection,
-    update_collection,
 )
-from aleph.logic.discover import get_collection_discovery
 from aleph.logic.entitysets import save_entityset_item
 from aleph.logic.processing import bulk_write
+from aleph.model.common import model_dump
+from aleph.model.discover import CollectionDiscovery
 from aleph.procrastinate.queues import (
     queue_cancel_collection,
     queue_index,
@@ -23,12 +21,10 @@ from aleph.procrastinate.queues import (
 from aleph.procrastinate.status import get_collection_status
 from aleph.search import CollectionsQuery
 from aleph.search.result import get_query_result
+from aleph.views import resources
 from aleph.views.serializers import CollectionSerializer
 from aleph.views.util import (
-    get_db_collection,
-    get_entityset,
     get_flag,
-    get_index_collection,
     get_session_id,
     jsonify,
     parse_request,
@@ -86,12 +82,11 @@ def create():
     """
     require(request.authz.can_create_investigation())
     data = parse_request("CollectionCreate")
-    sync = get_flag("sync", True)
     try:
-        collection = create_collection(data, request.authz, sync=sync)
+        collection = create_collection(data, request.authz)
     except ValueError:
         raise BadRequest()
-    return view(collection.get("id"))
+    return view(collection.id)
 
 
 @blueprint.route("/<int:collection_id>", methods=["GET"])
@@ -120,12 +115,10 @@ def view(collection_id):
       - Collection
     """
     require(request.authz.can_browse_anonymous)
-    data = get_index_collection(collection_id)
-    cobj = get_db_collection(collection_id)
     if get_flag("refresh", False):
-        update_collection_stats(collection_id, ["schema"])
-    data.update(get_deep_collection(cobj))
-    return CollectionSerializer.jsonify(data)
+        refresh_collection(collection_id)
+    collection = resources.get_detail_collection(collection_id, request.authz.READ)
+    return CollectionSerializer.jsonify(collection)
 
 
 @blueprint.route("/<int:collection_id>", methods=["POST", "PUT"])
@@ -159,13 +152,12 @@ def update(collection_id):
               schema:
                 $ref: '#/components/schemas/Collection'
     """
-    collection = get_db_collection(collection_id, request.authz.WRITE)
+    collection = resources.get_db_collection(collection_id, request.authz.WRITE)
     data = parse_request("CollectionUpdate")
-    sync = get_flag("sync")
     collection.update(data, request.authz)
-    db.session.commit()
-    data = update_collection(collection, sync=sync)
-    return CollectionSerializer.jsonify(data)
+    db.session.commit()  # SQLA event handles ES sync and cache invalidation
+    # update_collection(collection)  FIXME _should_ be obsolete because of SQLA event
+    return view(collection_id)
 
 
 @blueprint.route("/<int:collection_id>/reingest", methods=["POST", "PUT"])
@@ -191,7 +183,7 @@ def reingest(collection_id):
       tags:
       - Collection
     """
-    collection = get_db_collection(collection_id, request.authz.WRITE)
+    collection = resources.get_db_collection(collection_id, request.authz.WRITE)
     reingest_collection(collection, job_id=get_session_id())
     return ("", 202)
 
@@ -223,7 +215,7 @@ def reindex(collection_id):
       tags:
       - Collection
     """
-    collection = get_db_collection(collection_id, request.authz.WRITE)
+    collection = resources.get_db_collection(collection_id, request.authz.WRITE)
     queue_reindex(collection, flush=get_flag("flush", False))
     return ("", 202)
 
@@ -275,11 +267,11 @@ def bulk(collection_id):
       tags:
       - Collection
     """
-    collection = get_db_collection(collection_id, request.authz.WRITE)
+    collection = resources.get_db_collection(collection_id, request.authz.WRITE)
     require(request.authz.can_bulk_import())
     entityset = request.args.get("entityset_id")
     if entityset is not None:
-        entityset = get_entityset(entityset, request.authz.WRITE)
+        entityset = resources.get_db_entityset(entityset, request.authz.WRITE)
 
     # This will disable (if False) checksum security measures in order to allow bulk
     # loading of document data:
@@ -349,10 +341,10 @@ def status(collection_id):
       tags:
       - Collection
     """
-    collection = get_db_collection(collection_id, request.authz.READ)
-    status = get_collection_status(collection)
-    return jsonify(status.model_dump(mode="json"))
-
+    collection = resources.get_collection(collection_id, request.authz.READ)
+    status = get_collection_status(collection.id)
+    return jsonify(model_dump(status))
+  
 
 @blueprint.route("/<int:collection_id>/status", methods=["DELETE"])
 def cancel(collection_id):
@@ -380,7 +372,7 @@ def cancel(collection_id):
       tags:
       - Collection
     """
-    collection = get_db_collection(collection_id, request.authz.WRITE)
+    collection = resources.get_db_collection(collection_id, request.authz.WRITE)
     queue_cancel_collection(collection)
     refresh_collection(collection_id)
     return ("", 204)
@@ -409,15 +401,12 @@ def discover(collection_id):
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DatasetDiscovery'
+                $ref: '#/components/schemas/CollectionDiscovery'
       tags:
       - Collection
     """
-    collection = get_db_collection(collection_id, request.authz.READ)
-
-    # Return cached discovery analysis
-    discovery = get_collection_discovery(collection_id, collection.foreign_id)
-    return jsonify(discovery.model_dump(mode="json"))
+    discovery = resources.get_collection_resource(CollectionDiscovery, collection_id)
+    return jsonify(model_dump(discovery))
 
 
 @blueprint.route("/<int:collection_id>", methods=["DELETE"])
@@ -451,7 +440,7 @@ def delete(collection_id):
       tags:
         - Collection
     """
-    collection = get_db_collection(collection_id, request.authz.WRITE)
+    collection = resources.get_db_collection(collection_id, request.authz.WRITE)
     keep_metadata = get_flag("keep_metadata", default=False)
     sync = get_flag("sync", default=True)
     delete_collection(collection, keep_metadata=keep_metadata, sync=sync)

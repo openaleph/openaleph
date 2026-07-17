@@ -18,16 +18,19 @@ from aleph.core import db
 # === SQLAlchemy models ===
 from aleph.model.alert import Alert, AlertSchema
 from aleph.model.bookmark import Bookmark, BookmarkSchema
+from aleph.model.canonical import (
+    CanonicalSchema,
+    StatementSchema,
+)
 from aleph.model.collection import (
     Collection,
-    CollectionDeepSchema,
-    CollectionJobStatus,
+    CollectionCounts,
+    CollectionDetailSchema,
     CollectionSchema,
-    CollectionStageStatus,
     CollectionStatistics,
     CollectionStatus,
     FacetCounts,
-    StatusCounts,
+    GlobalStatistics,
 )
 from aleph.model.common import (
     APIBaseModel,
@@ -38,7 +41,7 @@ from aleph.model.common import (
     model_dump,
 )
 from aleph.model.discover import (
-    DatasetDiscovery,
+    CollectionDiscovery,
     MentionedTerms,
     SignificantTerms,
     Term,
@@ -65,7 +68,6 @@ from aleph.model.entityset import (
     Judgement,
 )
 from aleph.model.event import (
-    Event,
     Events,
     EventSchema,
     NotificationSchema,
@@ -76,9 +78,7 @@ from aleph.model.permission import Permission, PermissionSchema
 from aleph.model.role import Role, RoleSchema, RoleType
 from aleph.model.tag import Tag, TagSchema
 from aleph.model.xref import (
-    CanonicalSchema,
     ESEdge,
-    StatementSchema,
     XrefCluster,
     XrefEdge,
     XrefSchema,
@@ -101,7 +101,6 @@ __all__ = [
     "Entity",
     "EntitySet",
     "EntitySetItem",
-    "Event",
     "Events",
     "Export",
     "Judgement",
@@ -113,13 +112,13 @@ __all__ = [
     "AlertSchema",
     "BookmarkSchema",
     "CanonicalSchema",
-    "CollectionDeepSchema",
-    "CollectionJobStatus",
+    "CollectionCounts",
+    "CollectionDetailSchema",
     "CollectionSchema",
-    "CollectionStageStatus",
     "CollectionStatistics",
     "CollectionStatus",
-    "DatasetDiscovery",
+    "CollectionDiscovery",
+    "GlobalStatistics",
     "DiagramEdge",
     "DiagramGrouping",
     "DiagramLayout",
@@ -144,7 +143,6 @@ __all__ = [
     "SignificantTerms",
     "SimilarSchema",
     "StatementSchema",
-    "StatusCounts",
     "TagSchema",
     "Term",
     "XrefCluster",

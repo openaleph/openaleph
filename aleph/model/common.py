@@ -2,12 +2,13 @@ import logging
 import secrets
 import uuid
 from datetime import date, datetime
+from typing import Any
 
 from anystore.types import SDict
 from anystore.util import clean_dict
 from anystore.util import model_dump as _anystore_model_dump
 from flask_babel import lazy_gettext
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import false
 
 from aleph.core import db
@@ -214,21 +215,32 @@ class DatedSchema(APIBaseModel):
     updated_at: datetime | None = None
     deleted_at: datetime | None = None
 
+    @field_validator("id", mode="before")
+    @classmethod
+    def _stringify_id(cls, v: Any) -> Any:
+        """Coerce SQLA integer primary keys into the string the API
+        boundary expects. Runs before field validation so the schema
+        can validate directly off a SQLA row instance via
+        ``RoleSchema.model_validate(role)`` (using ``from_attributes``)
+        without needing each fetcher to call ``role.to_dict()`` first.
+        """
+        if v is None:
+            return v
+        return str(v)
 
-def model_dump(model: BaseModel | None) -> SDict | None:
+
+def model_dump(model: BaseModel) -> SDict:
     """Dump a pydantic model to a dict, dropping ``None``, empty strings
     and empty containers recursively.
 
-    Thin ``None``-tolerant wrapper around
-    ``anystore.util.model_dump(obj, clean=True)``. Replaces
-    ``aleph.views.util.clean_object()`` and is the canonical way to
-    serialize an API response. The frontend uses defensive accessors
-    (``entity?.collection?.foreign_id``), so dropping empty values is
-    safe. ``cache_key`` is a regular ``@property`` on
-    :class:`APIBaseModel` so it never appears in the dump output.
+    Wraps ``anystore.util.model_dump(obj, clean=True)`` (which drops ``None``,
+    empty strings and empty mappings). Replaces
+    ``aleph.views.util.clean_object()`` and is the canonical way to serialize an
+    API response. The frontend uses defensive accessors
+    (``entity?.collection?.foreign_id``), so dropping empty values is safe.
+    ``cache_key`` is a regular ``@property`` on :class:`APIBaseModel` so it
+    never appears in the dump output.
     """
-    if model is None:
-        return None
     return _anystore_model_dump(model, clean=True)
 
 

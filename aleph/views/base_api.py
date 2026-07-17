@@ -16,10 +16,12 @@ from werkzeug.exceptions import Unauthorized
 
 from aleph import __version__
 from aleph.authz import Authz
-from aleph.core import archive, cache, get_cache, url_for
+from aleph.core import archive, get_cache, url_for
 from aleph.logic.pages import load_pages
+from aleph.logic.resolver import cache
 from aleph.logic.util import collection_url
-from aleph.model import Collection, Role
+from aleph.model import Collection, GlobalStatistics, Role
+from aleph.model.common import model_dump
 from aleph.settings import SETTINGS
 from aleph.validation import get_openapi_spec
 from aleph.views.context import NotModified, enable_cache
@@ -156,10 +158,8 @@ def statistics():
       - System
     """
     enable_cache(vary_user=False)
-    key = cache.key(cache.STATISTICS)
-    data = {"countries": [], "schemata": [], "categories": []}
-    data = cache.get_complex(key) or data
-    return jsonify(data)
+    stats = cache.get(GlobalStatistics, "global") or GlobalStatistics()
+    return jsonify(model_dump(stats))
 
 
 @blueprint.route("/api/2/sitemap.xml")
