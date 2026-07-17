@@ -1,11 +1,17 @@
 import logging
 
 from banal import ensure_list
-from flask import Blueprint, redirect, request
+from flask import Blueprint, request
 from flask_babel import gettext
 from werkzeug.exceptions import BadRequest, NotFound
 
-from aleph.core import db, url_for
+from aleph.api.requests.entityset import (
+    EntitySetCreate,
+    EntitySetEntityUpdate,
+    EntitySetItemUpdate,
+    EntitySetUpdate,
+)
+from aleph.core import db
 from aleph.logic.diagrams import publish_diagram
 from aleph.logic.entities import check_write_entity, upsert_entity, validate_entity
 from aleph.logic.entitysets import (
@@ -23,6 +29,7 @@ from aleph.search import (
     SearchQueryParser,
 )
 from aleph.search.result import get_query_result
+from aleph.views import resources
 from aleph.views.context import tag_request
 from aleph.views.entities_api import view as entity_view
 from aleph.views.serializers import (
@@ -31,15 +38,12 @@ from aleph.views.serializers import (
     EntitySetSerializer,
 )
 from aleph.views.util import (
-    get_db_collection,
-    get_entityset,
     get_flag,
-    get_index_entity,
-    get_nested_collection,
     get_session_id,
     jsonify,
-    parse_request,
+    request_data,
     require,
+    validate_request,
 )
 
 blueprint = Blueprint("entitysets_api", __name__)
@@ -124,8 +128,8 @@ def create():
       tags:
       - EntitySet
     """
-    data = parse_request("EntitySetCreate")
-    collection = get_nested_collection(data, request.authz.WRITE)
+    data: dict = request_data(EntitySetCreate)
+    collection = resources.get_db_collection(data["collection_id"], request.authz.WRITE)
     entityset = create_entityset(collection, data, request.authz)
     db.session.commit()
     return EntitySetSerializer.jsonify(entityset)
@@ -155,12 +159,8 @@ def view(entityset_id):
       tags:
       - EntitySet
     """
-    entityset = get_entityset(entityset_id, request.authz.READ)
-    if entityset.type == EntitySet.PROFILE:
-        return redirect(url_for("profiles_api.view", profile_id=entityset_id))
-    data = entityset.to_dict()
-    data["shallow"] = False
-    return EntitySetSerializer.jsonify(data)
+    entityset = resources.get_entityset(entityset_id, request.authz.READ)
+    return EntitySetSerializer.jsonify(entityset, detail_view=True)
 
 
 @blueprint.route("/api/2/entitysets/<entityset_id>", methods=["POST", "PUT"])
@@ -192,9 +192,8 @@ def update(entityset_id):
       tags:
       - EntitySet
     """
-    entityset = get_entityset(entityset_id, request.authz.WRITE)
-    data = parse_request("EntitySetUpdate")
-    entityset.update(data)
+    entityset = resources.get_db_entityset(entityset_id, request.authz.WRITE)
+    entityset.update(request_data(EntitySetUpdate))
     db.session.commit()
     refresh_entityset(entityset_id)
     return view(entityset_id)
@@ -232,7 +231,7 @@ def embed(entityset_id):
       tags:
       - EntitySet
     """
-    entityset = get_entityset(entityset_id, request.authz.WRITE)
+    entityset = resources.get_db_entityset(entityset_id, request.authz.WRITE)
     if entityset.type != EntitySet.DIAGRAM:
         raise BadRequest(gettext("Only diagrams can be embedded!"))
     data = publish_diagram(entityset)
@@ -259,7 +258,7 @@ def delete(entityset_id):
       tags:
       - EntitySet
     """
-    entityset = get_entityset(entityset_id, request.authz.WRITE)
+    entityset = resources.get_db_entityset(entityset_id, request.authz.WRITE)
     entityset.delete()
     db.session.commit()
     refresh_entityset(entityset_id)
@@ -294,7 +293,7 @@ def entities_index(entityset_id):
       tags:
       - EntitySet
     """
-    entityset = get_entityset(entityset_id, request.authz.READ)
+    entityset = resources.get_db_entityset(entityset_id, request.authz.READ)
     parser = SearchQueryParser(request.args, request.authz.search_auth)
     tag_request(query=parser.text, prefix=parser.prefix)
     result = get_query_result(
@@ -346,16 +345,19 @@ def entities_update(entityset_id):
       tags:
       - Entity
     """
-    entityset = get_entityset(entityset_id, request.authz.WRITE)
-    data = parse_request("EntityUpdate")
-    entity_id = data.get("id", make_textid())
+    entityset = resources.get_db_entityset(entityset_id, request.authz.WRITE)
+    body: EntitySetEntityUpdate = validate_request(EntitySetEntityUpdate)
+    entity_id = body.id or make_textid()
     try:
-        entity = get_index_entity(entity_id, request.authz.READ)
-        collection = get_db_collection(entity.get("collection_id"), request.authz.READ)
+        entity = resources.get_entity(entity_id, request.authz.READ)
+        collection = resources.get_db_collection(
+            entity.collection_id, request.authz.READ
+        )
     except NotFound:
         entity = None
         collection = entityset.collection
     tag_request(collection_id=entityset.collection_id)
+    data = body.model_dump(by_alias=True)
     if entity is None or check_write_entity(entity, request.authz):
         if get_flag("validate", default=False):
             validate_entity(data)
@@ -405,10 +407,8 @@ def item_index(entityset_id):
       tags:
       - EntitySetItem
     """
-    entityset = get_entityset(entityset_id, request.authz.READ)
+    entityset = resources.get_db_entityset(entityset_id, request.authz.READ)
     result = DatabaseQueryResult(request, entityset.items(request.authz))
-    # The entityset is needed to check if the item is writeable in the serializer:
-    result.results = [i.to_dict(entityset=entityset) for i in result.results]
     return EntitySetItemSerializer.jsonify_result(result)
 
 
@@ -446,27 +446,29 @@ def item_update(entityset_id):
       tags:
       - EntitySetItem
     """
-    entityset = get_entityset(entityset_id, request.authz.WRITE)
-    data = parse_request("EntitySetItemUpdate")
-    entity = data.pop("entity", {})
-    entity_id = data.pop("entity_id", entity.get("id"))
-    entity = get_index_entity(entity_id, request.authz.READ)
-    collection = get_db_collection(entity["collection_id"])
-    data["added_by_id"] = request.authz.id
-    data.pop("collection", None)
-    item = save_entityset_item(entityset, collection, entity_id, **data)
+    entityset = resources.get_db_entityset(entityset_id, request.authz.WRITE)
+    body: EntitySetItemUpdate = validate_request(EntitySetItemUpdate)
+    entity_id = body.entity_id or (body.entity or {}).get("id")
+    entity = resources.get_entity(entity_id, request.authz.READ)
+    collection = resources.get_db_collection(entity.collection_id, request.authz.READ)
+    item = save_entityset_item(
+        entityset,
+        collection,
+        entity_id,
+        added_by_id=request.authz.id,
+        judgement=body.judgement,
+        compared_to_entity_id=body.compared_to_entity_id,
+    )
     db.session.commit()
     queue_update_entity(collection, entity_id=entity_id)
-    if item is not None:
-        # The entityset is needed to check if the item is writeable in the serializer:
-        item = item.to_dict(entityset=entityset)
-    else:
+    if item is None:
+        # NO_JUDGEMENT deletes the item – return a stub
         item = {
             "id": "$".join((entityset_id, entity_id)),
             "entityset_id": entityset_id,
             "entityset_collection_id": entityset.collection_id,
             "entity_id": entity_id,
-            "collection_id": entity["collection_id"],
+            "collection_id": entity.collection_id,
             "judgement": Judgement.NO_JUDGEMENT,
         }
     return EntitySetItemSerializer.jsonify(item)

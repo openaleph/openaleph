@@ -3,7 +3,6 @@ import logging
 from elasticsearch import ApiError as ElasticsearchApiError
 from flask import Blueprint, request
 from flask_babel import gettext
-from followthemoney.compare import compare
 from openaleph_procrastinate.defer import tasks
 from openaleph_search.query.mentions import MentionsQuery, MultiMentionsQuery
 from openaleph_search.query.queries import PercolatorQuery
@@ -12,6 +11,7 @@ from rigour.mime.types import ZIP
 from werkzeug.datastructures import MultiDict
 from werkzeug.exceptions import BadRequest, NotFound
 
+from aleph.api.requests.entity import EntityCreate, EntityUpdate
 from aleph.core import db, url_for
 from aleph.logic.aggregator import get_aggregator
 from aleph.logic.documents import ingest_flush
@@ -23,10 +23,11 @@ from aleph.logic.entities import (
     upsert_entity,
     validate_entity,
 )
-from aleph.logic.expand import entity_tags, expand_proxies
+from aleph.logic.expand import entity_tags, expand_proxy
 from aleph.logic.export import create_export
 from aleph.logic.html import sanitize_html
-from aleph.logic.profiles import pairwise_judgements
+from aleph.logic.xref.compare import make_suggestion
+from aleph.logic.xref.resolver import get_resolver
 from aleph.model.bookmark import Bookmark
 from aleph.model.entityset import EntitySet, Judgement
 from aleph.procrastinate.queues import (
@@ -50,6 +51,7 @@ from aleph.search import (
 from aleph.search.result import QueryResult, get_query_result
 from aleph.settings import SETTINGS
 from aleph.util import make_entity_proxy
+from aleph.views import resources
 from aleph.views.context import enable_cache, tag_request
 from aleph.views.serializers import (
     EntitySerializer,
@@ -57,14 +59,11 @@ from aleph.views.serializers import (
     SimilarSerializer,
 )
 from aleph.views.util import (
-    get_db_collection,
     get_flag,
-    get_index_entity,
-    get_nested_collection,
     get_session_id,
     jsonify,
-    parse_request,
     require,
+    validate_request,
 )
 
 log = logging.getLogger(__name__)
@@ -254,8 +253,8 @@ def match():
       - Entity
     """
     require(request.authz.can_browse_anonymous)
-    entity = parse_request("EntityUpdate")
-    entity = make_entity_proxy(entity, cleaned=False)
+    body: EntityUpdate = validate_request(EntityUpdate)
+    entity = make_entity_proxy(body.model_dump(by_alias=True), cleaned=False)
     tag_request(schema=entity.schema.name, caption=entity.caption)
     collection_ids = request.args.getlist("collection_ids")
     result = get_query_result(
@@ -298,8 +297,9 @@ def create():
       tags:
         - Entity
     """
-    data = parse_request("EntityCreate")
-    collection = get_nested_collection(data, request.authz.WRITE)
+    body: EntityCreate = validate_request(EntityCreate)
+    collection = resources.get_db_collection(body.collection_id, request.authz.WRITE)
+    data = body.model_dump(by_alias=True)
     data.pop("id", None)
     if get_flag("validate", default=False):
         validate_entity(data)
@@ -313,7 +313,7 @@ def create():
     )
     db.session.commit()
     tag_request(entity_id=entity_id, collection_id=collection.id)
-    entity = get_index_entity(entity_id, request.authz.READ)
+    entity = resources.get_entity(entity_id, request.authz.READ)
     return EntitySerializer.jsonify(entity)
 
 
@@ -342,25 +342,21 @@ def view(entity_id):
       - Entity
     """
     enable_cache()
-    excludes = ["text", "numeric.*"]
-    entity = get_index_entity(entity_id, request.authz.READ, excludes=excludes)
-    tag_request(collection_id=entity.get("collection_id"))
-    proxy = make_entity_proxy(entity)
+    entity = resources.get_entity(entity_id, request.authz.READ)
+    tag_request(collection_id=entity.collection_id)
+    proxy = entity.to_proxy()
     html = proxy.get("bodyHtml", quiet=True)
     source_url = proxy.first("sourceUrl", quiet=True)
-    encoding = proxy.first("encoding", quiet=True)
-    entity["safeHtml"] = [
-        sanitize_html(value, source_url, encoding=encoding) for value in html
-    ]
-    entity["shallow"] = False
+    entity.safeHtml = [sanitize_html(value, source_url) for value in html]
+    entity.shallow = False
 
     if request.authz.logged_in:
         bookmark = Bookmark.query.filter_by(
             role_id=request.authz.id,
-            collection_id=int(entity.get("collection_id")),
+            collection_id=int(entity.collection_id),
             entity_id=entity_id,
         ).first()
-        entity["bookmarked"] = True if bookmark else False
+        entity.bookmarked = True if bookmark else False
 
     return EntitySerializer.jsonify(entity, detail_view=True)
 
@@ -391,9 +387,9 @@ def nearby(entity_id):
       - Entity
     """
     # enable_cache()
-    entity = get_index_entity(entity_id, request.authz.READ)
-    tag_request(collection_id=entity.get("collection_id"))
-    proxy = make_entity_proxy(entity)
+    entity = resources.get_entity(entity_id, request.authz.READ)
+    tag_request(collection_id=entity.collection_id)
+    proxy = entity.to_proxy()
     parser = SearchQueryParser(request.values, request.authz.search_auth)
     result = get_query_result(GeoDistanceQuery, request, entity=proxy, parser=parser)
     return EntitySerializer.jsonify_result(result)
@@ -436,23 +432,36 @@ def similar(entity_id):
       - Entity
     """
     # enable_cache()
-    entity = get_index_entity(entity_id, request.authz.READ)
-    tag_request(collection_id=entity.get("collection_id"))
-    proxy = make_entity_proxy(entity)
+    entity = resources.get_entity(entity_id, request.authz.READ)
+    tag_request(collection_id=entity.collection_id)
+    proxy = entity.to_proxy()
     result = get_query_result(MatchQuery, request, entity=proxy)
     entities = list(result.results)
-    pairs = [(entity_id, s.get("id")) for s in entities]
-    judgements = pairwise_judgements(pairs, int(entity.get("collection_id")))
     result.results = []
-    for obj in entities:
-        score = compare(proxy, make_entity_proxy(obj))
-        item = {
-            "score": score,
-            "judgement": judgements.get((entity_id, obj.get("id"))),
-            "collection_id": entity.get("collection_id"),
-            "entity": obj,
-        }
-        result.results.append(item)
+    source_collection_id = {entity.collection_id}
+    xref_resolver = get_resolver(request.authz.search_auth, sync=True)
+    with xref_resolver.bulk():
+        for obj in entities:
+            target_collection_id = {obj["collection_id"]}
+            match_proxy = make_entity_proxy(obj)
+            judgement = xref_resolver.get_judgement(entity_id, obj["id"])
+            suggestion = make_suggestion(
+                proxy,
+                match_proxy,
+                source_collection_id=source_collection_id,
+                target_collection_id=target_collection_id,
+                user=str(request.authz.role.foreign_id),
+            )
+            # while we're on it, upsert a xref edge:
+            if judgement == Judgement.NO_JUDGEMENT:
+                xref_resolver.suggest(**suggestion)
+            item = {
+                "score": suggestion["score"],
+                "judgement": judgement,
+                "collection_id": obj["collection_id"],
+                "entity": obj,
+            }
+            result.results.append(item)
     return SimilarSerializer.jsonify_result(result)
 
 
@@ -494,9 +503,9 @@ def more_like_this(entity_id):
       - Entity
     """
     # enable_cache()
-    entity = get_index_entity(entity_id, request.authz.READ)
-    tag_request(collection_id=entity.get("collection_id"))
-    proxy = make_entity_proxy(entity)
+    entity = resources.get_entity(entity_id, request.authz.READ)
+    tag_request(collection_id=entity.collection_id)
+    proxy = entity.to_proxy()
     result = get_query_result(MoreLikeThisQuery, request, entity=proxy)
     return EntitySerializer.jsonify_result(result)
 
@@ -530,7 +539,7 @@ def percolate(entity_id):
       tags:
       - Entity
     """
-    entity = get_index_entity(entity_id, request.authz.READ)
+    entity = resources.get_index_entity(entity_id, request.authz.READ)
     tag_request(collection_id=entity.get("collection_id"))
     try:
         result = get_query_result(PercolatorQuery, request, entity_id=entity_id)
@@ -637,7 +646,7 @@ def mentions(entity_id):
         Given the id of a named entity (Person, Company, Organization, …),
         return Document-family entities whose indexed text contains the
         entity's caption or any of its matchable name variants. This is
-        the inverse of `/percolate` — that finds entities mentioned in a
+        the inverse of `/percolate` – that finds entities mentioned in a
         document; this finds documents that mention an entity.
 
         Supports all standard entity search filters (filter:schema to
@@ -662,7 +671,7 @@ def mentions(entity_id):
       tags:
       - Entity
     """
-    entity = get_index_entity(entity_id, request.authz.READ)
+    entity = resources.get_index_entity(entity_id, request.authz.READ)
     tag_request(collection_id=entity.get("collection_id"))
     try:
         result = get_query_result(MentionsQuery, request, entity_id=entity_id)
@@ -674,8 +683,8 @@ def mentions(entity_id):
 SCREENING_SOURCE_PREFIX = "source:"
 
 # Keys dropped from `source_args` before the source parser is built.
-# The source scope drives MultiMentionsQuery's name-scroll only — it
-# doesn't surface its own faceted results — so any facet-request keys
+# The source scope drives MultiMentionsQuery's name-scroll only – it
+# doesn't surface its own faceted results – so any facet-request keys
 # (which the UI adds to track counts via a separate /api/2/entities
 # call) would be pure noise here. Worse, `EntitiesQuery.get_filters()`
 # silently skips filter fields that also appear in `facet_names`
@@ -699,7 +708,7 @@ def _split_prefixed_args(args: MultiDict, prefix: str) -> tuple[MultiDict, Multi
     Keys starting with `prefix` have the prefix stripped and go to the
     second dict; all other keys go to the first. Source-side keys that
     are irrelevant to the name-scroll (facets / highlight / sort) are
-    dropped entirely — see `_SOURCE_SKIP_PREFIXES` for why."""
+    dropped entirely – see `_SOURCE_SKIP_PREFIXES` for why."""
     target: list[tuple[str, str]] = []
     source: list[tuple[str, str]] = []
     for key, value in args.items(multi=True):
@@ -721,8 +730,8 @@ def screening():
       summary: Screen a filtered entity set against documents
       description: >-
         Batch screening (a.k.a. reverse percolation at scale): scrolls
-        a `source` entity filter — a watchlist, PEP list, sanctions
-        roster, etc., possibly spanning multiple collections — to
+        a `source` entity filter – a watchlist, PEP list, sanctions
+        roster, etc., possibly spanning multiple collections – to
         collect matchable names, then returns Document-family entities
         whose indexed text contains any of those names as a phrase.
 
@@ -740,11 +749,11 @@ def screening():
           `source:filter:topics=sanction`, etc.
 
         Source entities are scoped by the caller's dataset read ACL the
-        same way every other entity search is — entities in datasets
+        same way every other entity search is – entities in datasets
         the caller cannot read do not contribute names.
 
         Fails with 400 when the source filter resolves to more than
-        `MAX_SOURCE_NAMES` (currently 10 000) distinct names — narrow
+        `MAX_SOURCE_NAMES` (currently 10 000) distinct names – narrow
         the source filter (add `source:filter:dataset=…`,
         `source:filter:topics=…`, etc.).
       parameters:
@@ -791,7 +800,7 @@ def screening():
     )
     target_parser = SearchQueryParser(target_args, auth=request.authz.search_auth)
     source_parser = SearchQueryParser(source_args, auth=request.authz.search_auth)
-    # No single collection id to tag — the source filter can span many
+    # No single collection id to tag – the source filter can span many
     # datasets. The parsers' `filter:dataset` values will surface in the
     # access log via the request args themselves.
     tag_request()
@@ -894,7 +903,7 @@ def thread(entity_id):
       tags:
       - Entity
     """
-    entity = get_index_entity(entity_id, request.authz.READ)
+    entity = resources.get_index_entity(entity_id, request.authz.READ)
     collection_id = int(entity["collection_id"])
     tag_request(collection_id=collection_id)
     proxy = make_entity_proxy(entity)
@@ -903,7 +912,7 @@ def thread(entity_id):
             gettext("Threading is only supported for Email and Message entities")
         )
     parser = SearchQueryParser(request.values, request.authz.search_auth)
-    # Thread views are list-view consumers by default — dehydrate unless the
+    # Thread views are list-view consumers by default – dehydrate unless the
     # caller explicitly opts into the full payload with ?dehydrate=false.
     if "dehydrate" not in request.args:
         parser.dehydrate = True
@@ -915,7 +924,7 @@ def thread(entity_id):
     entities = query.to_list()
     result = QueryResult(request, parser=parser, results=entities, total=len(entities))
     if query.truncated:
-        # The emitted `total` is a floor — there's at least one more entity
+        # The emitted `total` is a floor – there's at least one more entity
         # in the thread beyond what we returned. Consumers detect this via
         # the ES-style `total_type` on the response envelope.
         result.total_type = "gte"
@@ -957,9 +966,9 @@ def tags(entity_id):
     # (ibans, emails, ...) and has nothing to do with the new entity tagging
     # feature found in tags_api.py
     enable_cache()
-    entity = get_index_entity(entity_id, request.authz.READ)
-    tag_request(collection_id=entity.get("collection_id"))
-    results = entity_tags(make_entity_proxy(entity), request.authz)
+    entity = resources.get_entity(entity_id, request.authz.READ)
+    tag_request(collection_id=entity.collection_id)
+    results = entity_tags(entity.to_proxy(), request.authz)
     return jsonify({"status": "ok", "total": len(results), "results": results})
 
 
@@ -1001,14 +1010,19 @@ def update(entity_id):
       tags:
       - Entity
     """
-    data = parse_request("EntityUpdate")
+    body: EntityUpdate = validate_request(EntityUpdate)
     try:
-        entity = get_index_entity(entity_id, request.authz.WRITE)
+        entity = resources.get_entity(entity_id, request.authz.WRITE)
         require(check_write_entity(entity, request.authz))
-        collection = get_db_collection(entity.get("collection_id"), request.authz.WRITE)
+        collection = resources.get_db_collection(
+            entity.collection_id, request.authz.WRITE
+        )
     except NotFound:
-        collection = get_nested_collection(data, request.authz.WRITE)
+        collection = resources.get_db_collection(
+            body.collection_id, request.authz.WRITE
+        )
     tag_request(collection_id=collection.id)
+    data = body.model_dump(by_alias=True)
     data["id"] = entity_id
     if get_flag("validate", default=False):
         validate_entity(data)
@@ -1043,12 +1057,18 @@ def delete(entity_id):
       tags:
       - Entity
     """
-    entity = get_index_entity(entity_id, request.authz.WRITE)
-    collection = get_db_collection(entity.get("collection_id"), request.authz.WRITE)
+    entity = resources.get_entity(entity_id, request.authz.WRITE)
+    collection = resources.get_db_collection(entity.collection_id, request.authz.WRITE)
     tag_request(collection_id=collection.id)
     sync = get_flag("sync", default=True)
     job_id = get_session_id()
-    delete_entity(collection, entity, sync=sync, job_id=job_id)
+    # Force-load the namespace (needs foreign_id) before closing the
+    # session – delete_entity uses collection.ns.sign().
+    collection.ns  # noqa: B018
+    # Release the DB transaction so the sync procrastinate task (which
+    # opens its own connection) doesn't deadlock on the collection row.
+    db.session.close()
+    delete_entity(collection, entity.id, sync=sync, job_id=job_id)
     return ("", 204)
 
 
@@ -1074,11 +1094,11 @@ def ingest(entity_id):
       - Entity
       - Ingest
     """
-    entity = get_index_entity(entity_id, request.authz.WRITE)
-    collection = get_db_collection(entity.get("collection_id"), request.authz.WRITE)
+    entity = resources.get_entity(entity_id, request.authz.WRITE)
+    collection = resources.get_db_collection(entity.collection_id, request.authz.WRITE)
     tag_request(collection_id=collection.id, entity_id=entity_id)
     job_id = get_session_id()
-    proxy = make_entity_proxy(entity)
+    proxy = entity.to_proxy()
     aggregator = get_aggregator(collection)
     aggregator.put(proxy)
     ingest_flush(collection, entity_id=entity_id)
@@ -1128,16 +1148,16 @@ def expand(entity_id):
       tags:
       - Entity
     """
-    entity = get_index_entity(entity_id, request.authz.READ)
-    proxy = make_entity_proxy(entity)
-    collection_id = entity.get("collection_id")
+    entity = resources.get_entity(entity_id, request.authz.READ)
+    proxy = entity.to_proxy()
+    collection_id = entity.collection_id
     tag_request(collection_id=collection_id)
     parser = QueryParser(
         request.args, request.authz.search_auth, max_limit=SETTINGS.MAX_EXPAND_ENTITIES
     )
     properties = parser.filters.get("property")
-    results = expand_proxies(
-        [proxy],
+    results = expand_proxy(
+        proxy,
         properties=properties,
         authz=request.authz,
         limit=parser.limit,
@@ -1210,7 +1230,7 @@ def entitysets(entity_id):
       - Entity
       - Profile
     """
-    entity = get_index_entity(entity_id, request.authz.READ)
+    entity = resources.get_entity(entity_id, request.authz.READ)
 
     parser = QueryParser(request.args, request.authz.search_auth)
     collection_ids = [
@@ -1228,7 +1248,7 @@ def entitysets(entity_id):
         collection_ids = request.authz.collections(request.authz.READ)
 
     entitysets = EntitySet.by_entity_id(
-        entity["id"],
+        entity.id,
         collection_ids=collection_ids,
         judgements=judgements,
         types=types,
@@ -1272,10 +1292,10 @@ def analyze(entity_id):
     """
     if not tasks.analyze.defer:
         raise BadRequest("Analysis queue is not enabled on this OpenAleph instance")
-    entity = get_index_entity(entity_id, request.authz.WRITE)
-    collection = get_db_collection(entity.get("collection_id"), request.authz.WRITE)
+    entity = resources.get_entity(entity_id, request.authz.WRITE)
+    collection = resources.get_db_collection(entity.collection_id, request.authz.WRITE)
     tag_request(collection_id=collection.id, entity_id=entity_id)
-    proxy = make_entity_proxy(entity)
+    proxy = entity.to_proxy()
     queue_analyze(collection, [proxy])
     return ("", 202)
 
@@ -1315,10 +1335,10 @@ def transcribe(entity_id):
         raise BadRequest(
             "Transcription queue is not enabled on this OpenAleph instance"
         )
-    entity = get_index_entity(entity_id, request.authz.WRITE)
-    collection = get_db_collection(entity.get("collection_id"), request.authz.WRITE)
+    entity = resources.get_entity(entity_id, request.authz.WRITE)
+    collection = resources.get_db_collection(entity.collection_id, request.authz.WRITE)
     tag_request(collection_id=collection.id, entity_id=entity_id)
-    proxy = make_entity_proxy(entity)
+    proxy = entity.to_proxy()
     if not should_transcribe(proxy):
         raise BadRequest("Entity is not eligible for transcription")
     queue_transcribe(collection, proxy)
@@ -1358,10 +1378,10 @@ def translate(entity_id):
     """
     if not tasks.translate.defer:
         raise BadRequest("Translation queue is not enabled on this OpenAleph instance")
-    entity = get_index_entity(entity_id, request.authz.READ)
-    collection = get_db_collection(entity.get("collection_id"), request.authz.READ)
+    entity = resources.get_entity(entity_id, request.authz.READ)
+    collection = resources.get_db_collection(entity.collection_id, request.authz.READ)
     tag_request(collection_id=collection.id, entity_id=entity_id)
-    proxy = make_entity_proxy(entity)
+    proxy = entity.to_proxy()
     if not should_translate(collection.id, collection.foreign_id, proxy):
         raise BadRequest("Entity is not eligible for translation")
     data = request.get_json(silent=True) or {}

@@ -1,6 +1,6 @@
 [project]
 name = "aleph"
-version = "5.3.1-rc1"
+version = "5.3.1-rc3"
 description = "Search and browse documents and data; find the people and companies you look for."
 authors = [
     { name = "Friedrich Lindenberg", email = "friedrich@pudo.org" },
@@ -13,9 +13,9 @@ readme = "README.md"
 requires-python = ">=3.12,<3.15"
 dependencies = [
     "followthemoney (>=4.10.0,<5.0.0)",
-    "openaleph-search @ git+https://github.com/openaleph/openaleph-search.git",
-    "openaleph-procrastinate @ git+https://github.com/openaleph/openaleph-procrastinate.git",
-    "ftmq[postgres] @ git+https://github.com/dataresearchcenter/ftmq.git",
+    "openaleph-search (>=5.3.1,<6.0.0)",
+    "openaleph-procrastinate (>=5.3.1,<6.0.0)",
+    "ftmq[postgres] (>=4.10.0,<5.0.0)",
     "nomenklatura (>=4.11.4,<5.0.0)",
     "normality (>=3.1.0,<4.0.0)",
     "pydantic (>=2.10.6,<3.0.0)",
@@ -24,9 +24,7 @@ dependencies = [
     "flask-sqlalchemy (>=3.1.1,<4.0.0)",
     "flask-mail (>=0.10.0,<0.11.0)",
     "flask-migrate (>=4.1.0,<5.0.0)",
-    "flask-cors (>=6.0.5,<7.0.0)",
     "flask-babel (>=4.0.0,<5.0.0)",
-    "flask-talisman (>=1.1.0,<2.0.0)",
     "sqlalchemy (>=2.0.51,<3.0.0)",
     "alembic (>=1.18.5,<2.0.0)",
     "authlib (<1)",
@@ -54,7 +52,7 @@ dependencies = [
     # TODO - remove sentry eventually
     "sentry-sdk[flask] (==2.19.2)",
     "legacy-cgi; python_version >= '3.13'",
-    "lxml[html-clean] (>=6.1.1,<7.0.0)",
+    "nh3 (>=0.3.6,<0.4.0)",
     "dateparser (>=1.4.1,<2.0.0)",
     "anystore[http,s3] (>=1.2.4,<2.0.0)",
 ]
@@ -84,6 +82,7 @@ fakeredis = "<2.31"
 mkdocs = "^1.6.1"
 pre-commit = "^4.5.1"
 zensical = "^0.0.36"
+lxml = "^6.1.1"
 
 
 [build-system]
@@ -106,3 +105,4 @@ ALEPH_HEALTH_CHECK_API_KEY = "test-health-key"
 ALEPH_ALLOW_REGISTRATION = 1
 OPENALEPH_SEARCH_PERCOLATION = 1
 OPENALEPH_SEARCH_MATCHING_SINGLE_TOKEN_MIN_LENGTH = 7
+ALEPH_RESOLVER_STORE_URI = "memory://"

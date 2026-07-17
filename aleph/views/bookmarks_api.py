@@ -3,11 +3,13 @@ import logging
 from flask import Blueprint, request
 from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
+from aleph.api.requests.bookmark import BookmarkCreate
 from aleph.core import db
 from aleph.model import Bookmark
 from aleph.search import DatabaseQueryResult
+from aleph.views import resources
 from aleph.views.serializers import BookmarkSerializer
-from aleph.views.util import get_index_entity, jsonify, parse_request, require
+from aleph.views.util import jsonify, require, validate_request
 
 log = logging.getLogger(__name__)
 blueprint = Blueprint("bookmarks_api", __name__)
@@ -70,11 +72,11 @@ def create():
                 $ref: '#/components/schemas/Bookmark'
     """
     require(request.authz.session_write)
-    data = parse_request("BookmarkCreate")
-    entity_id = data.get("entity_id")
+    body: BookmarkCreate = validate_request(BookmarkCreate)
+    entity_id = body.entity_id
 
     try:
-        entity = get_index_entity(entity_id, request.authz.READ)
+        entity = resources.get_entity(entity_id, request.authz.READ)
     except (NotFound, Forbidden):
         raise BadRequest(
             "Could not bookmark the given entity as the entity does not exist or "
@@ -87,7 +89,7 @@ def create():
     if not bookmark:
         bookmark = Bookmark(
             entity_id=entity_id,
-            collection_id=int(entity.get("collection_id")),
+            collection_id=entity.collection_id,
             role_id=request.authz.id,
         )
 

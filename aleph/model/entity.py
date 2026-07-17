@@ -1,15 +1,29 @@
 import logging
 from datetime import datetime
+from typing import Annotated, Any
 
+from banal import is_listish
 from flask_babel import gettext
 from followthemoney import EntityProxy, model
 from followthemoney.exc import InvalidData
 from followthemoney.types import registry
+from ftmq.model.entity import EntityModel
+from nomenklatura.judgement import Judgement
+from pydantic import ConfigDict, field_validator, model_validator
 from sqlalchemy.dialects.postgresql import JSONB
 
 from aleph.core import db
-from aleph.model.collection import Collection
-from aleph.model.common import ENTITY_ID_LEN, DatedModel, iso_text, make_textid
+from aleph.model.collection import Collection, CollectionSchema
+from aleph.model.common import (
+    ENTITY_ID_LEN,
+    APIBaseModel,
+    DatedModel,
+    ResolveFrom,
+    SDict,
+    iso_text,
+    make_textid,
+)
+from aleph.model.role import RoleSchema
 from aleph.util import make_entity_proxy
 
 log = logging.getLogger(__name__)
@@ -102,3 +116,148 @@ class Entity(db.Model, DatedModel):
 
     def __repr__(self):
         return "<Entity(%r, %r)>" % (self.id, self.schema)
+
+
+# === Pydantic schemas ===
+#
+# Entities are FollowTheMoney entities served via OpenAleph. The wire
+# format extends the canonical ``ftmq.model.entity.EntityModel`` (which
+# itself wraps the FTM ``EntityModel``) with Aleph-specific extras:
+# nested collection / role, search-time fields (``score``, ``highlight``),
+# document-detail fields (``safeHtml``, ``processing_status``,
+# ``links.file``/``pdf``/``csv``), per-user state (``bookmarked``) and
+# the runtime ``links`` block.
+#
+# The ``properties`` field is inherited from ``EntityModel`` and remains
+# a ``Mapping[str, Sequence[str | EntityModel]]`` – nested entities
+# inside properties are served in the FTM-canonical "shallow" form
+# without Aleph extras (matching the existing ``shallow=True`` behaviour
+# of the legacy serializer).
+
+
+class EntitySchema(EntityModel, APIBaseModel):
+    """Wire format for an OpenAleph entity.
+
+    Subclasses :class:`ftmq.model.entity.EntityModel` for the canonical
+    FollowTheMoney shape (``id``, ``caption``, ``schema``, ``properties``,
+    ``datasets``, ``referents``) and :class:`APIBaseModel` for the
+    ``_stringify_ids`` / ``_coerce_id_fields`` validators and
+    ``cache_key`` property.
+    """
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+    )
+
+    # Reference to Canonical cluster if any
+    canonical_id: str | None = None
+
+    # Populated by the ES indexer – the schema ancestor chain.
+    # Defaults to empty so entities from older indexes or minimal
+    # test fixtures still validate.
+    schemata: list[str] = []
+
+    # Every indexed entity carries its collection_id (int PK) from the
+    # ES document. Used by authz checks and xref cluster resolution.
+    collection_id: int
+
+    # Resolved nested resources, populated by the assembler.
+    collection: Annotated[
+        CollectionSchema | None, ResolveFrom("collection_id", CollectionSchema)
+    ] = None
+    role_id: str | None = None
+    role: Annotated[RoleSchema | None, ResolveFrom("role_id", RoleSchema)] = None
+
+    # FTM property aggregates surfaced as flat fields for facet display.
+    countries: list[str] = []
+    languages: list[str] = []
+    dates: list[str] = []
+
+    # Search-time fields.
+    score: float | None = None
+    highlight: SDict = {}
+
+    # Per-user state.
+    bookmarked: bool | None = None
+
+    # Document detail fields (only populated for Document-derived schemata
+    # in detail views).
+    safeHtml: list[str] | None = None
+    processing_status: SDict | None = None
+
+    # Transliterated property values – computed by the response builder,
+    # not part of the cached entity. Defaults to empty so the resolver
+    # can cache the raw ES payload without needing to compute it.
+    latinized: SDict = {}
+
+    # mutable flag persisted in the index
+    mutable: bool = False
+
+    # Request-time computed fields populated by the response builder.
+    writeable: bool = False
+    shallow: bool = True
+    links: SDict = {}
+
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    deleted_at: datetime | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _extract_collection_id(cls, data: Any) -> Any:
+        """Pull ``collection_id`` from a nested ``collection`` dict/model
+        when ``collection_id`` is not provided directly. As well transform
+        literal ``EntityProxy`` input data."""
+        if isinstance(data, EntityProxy):
+            return data.to_dict()
+        if isinstance(data, dict) and "collection_id" not in data:
+            collection = data.get("collection")
+            if isinstance(collection, dict) and "id" in collection:
+                data["collection_id"] = collection["id"]
+        return data
+
+    @property
+    def cache_key(self) -> str:
+        return self.id
+
+    @field_validator("role_id", "mutable", mode="before")
+    @classmethod
+    def listish_to_single(cls, v: Any) -> str | None:
+        if isinstance(v, int):
+            return str(v)
+        # FIXME next major version: reindex needed, then this is fixed:
+        if is_listish(v):
+            for val in v:
+                if isinstance(val, int):
+                    val = str(val)
+                return val
+
+
+class EntityTagSchema(APIBaseModel):
+    """One row of an entity tag aggregation
+    (``GET /api/2/entities/<id>/tags``)."""
+
+    id: str
+    field: str
+    value: str
+    count: int = 0
+
+
+class EntityExpandSchema(APIBaseModel):
+    """One bucket of an entity expansion
+    (``GET /api/2/entities/<id>/expand``)."""
+
+    property: str
+    count: int = 0
+    entities: list[EntitySchema] = []
+
+
+class SimilarSchema(APIBaseModel):
+    """One result of a similar-entity query
+    (``GET /api/2/entities/<id>/similar``)."""
+
+    score: float = 0
+    entity: EntitySchema
+    judgement: Judgement = Judgement.NO_JUDGEMENT
+    writeable: bool = False

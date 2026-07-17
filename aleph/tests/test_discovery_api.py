@@ -1,8 +1,7 @@
-from aleph.core import cache
-from aleph.logic.discover import _discovery_key, update_collection_discovery
-from aleph.model.discover import DatasetDiscovery
+from aleph.logic.discover import compute_collection_discovery
+from aleph.logic.resolver import cache
+from aleph.model.discover import CollectionDiscovery
 from aleph.tests.util import TestCase
-from aleph.views.util import validate
 
 
 class DiscoveryApiTestCase(TestCase):
@@ -36,17 +35,17 @@ class DiscoveryApiTestCase(TestCase):
         url = f"/api/2/collections/{self.private_coll.id}/discover"
 
         # Clear cache to ensure fresh computation
-        cache_key = _discovery_key(self.private_coll.id)
-        cache.delete(cache_key)
+        cid = str(self.private_coll.id)
+        cache.invalidate(CollectionDiscovery, cid)
 
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200, res
-        assert validate(res.json, "DatasetDiscovery")
+        CollectionDiscovery.model_validate(res.json)
 
         # Check response structure
         data = res.json
-        assert "name" in data
-        assert data["name"] == self.private_coll.foreign_id
+        assert "collection_id" in data
+        assert data["collection_id"] == cid
         assert "peopleMentioned" in data
         assert "companiesMentioned" in data
         assert "locationMentioned" in data
@@ -64,15 +63,15 @@ class DiscoveryApiTestCase(TestCase):
         url = f"/api/2/collections/{self.public_coll.id}/discover"
 
         # Clear cache to ensure fresh computation
-        cache_key = _discovery_key(self.public_coll.id)
-        cache.delete(cache_key)
+        cid = str(self.public_coll.id)
+        cache.invalidate(CollectionDiscovery, cid)
 
         res = self.client.get(url)
         assert res.status_code == 200, res
-        assert validate(res.json, "DatasetDiscovery")
+        CollectionDiscovery.model_validate(res.json)
 
         data = res.json
-        assert data["name"] == self.public_coll.foreign_id
+        assert data["collection_id"] == cid
 
     def test_discover_caching(self):
         """Test that discovery endpoint uses caching properly."""
@@ -80,8 +79,8 @@ class DiscoveryApiTestCase(TestCase):
         url = f"/api/2/collections/{self.private_coll.id}/discover"
 
         # Clear cache first
-        cache_key = _discovery_key(self.private_coll.id)
-        cache.delete(cache_key)
+        cid = str(self.private_coll.id)
+        cache.invalidate(CollectionDiscovery, cid)
 
         # First request should compute and cache
         res1 = self.client.get(url, headers=headers)
@@ -102,15 +101,8 @@ class DiscoveryApiTestCase(TestCase):
         url = f"/api/2/collections/{self.private_coll.id}/discover"
 
         # Pre-populate cache with test data to ensure consistent response
-        test_discovery = DatasetDiscovery(
-            name=self.private_coll.foreign_id,
-            peopleMentioned=[],
-            companiesMentioned=[],
-            locationMentioned=[],
-            namesMentioned=[],
-        )
-        cache_key = _discovery_key(self.private_coll.id)
-        cache.set_complex(cache_key, test_discovery.model_dump(), expires=cache.EXPIRE)
+        cid = str(self.private_coll.id)
+        cache.refresh(CollectionDiscovery, cid)
 
         res = self.client.get(url, headers=headers)
         assert res.status_code == 200
@@ -140,15 +132,13 @@ class DiscoveryApiTestCase(TestCase):
         """Test discovery endpoint with actual fixture data computation."""
         _, headers = self.login(is_admin=True)
         url = f"/api/2/collections/{self.private_coll.id}/discover"
+        cid = str(self.private_coll.id)
 
-        # Clear cache to force computation
-        cache_key = _discovery_key(self.private_coll.id)
-        cache.delete(cache_key)
+        # Clear cache to force computation on next refresh
+        cache.invalidate(CollectionDiscovery, cid)
 
         # Use the real discovery computation
-        discovery_result = update_collection_discovery(
-            self.private_coll.id, self.private_coll.foreign_id
-        )
+        discovery_result = compute_collection_discovery(self.private_coll.id)
 
         # Now test the API endpoint
         res = self.client.get(url, headers=headers)
@@ -158,7 +148,7 @@ class DiscoveryApiTestCase(TestCase):
         api_data = res.json
         expected_data = discovery_result.model_dump(mode="json")
 
-        assert api_data["name"] == expected_data["name"]
+        assert api_data["collection_id"] == expected_data["collection_id"]
 
         # Compare structure (content may vary based on Elasticsearch state)
         for category in [
@@ -187,16 +177,16 @@ class DiscoveryApiTestCase(TestCase):
         private_url = f"/api/2/collections/{self.private_coll.id}/discover"
         private_res = self.client.get(private_url, headers=headers)
         assert private_res.status_code == 200
-        assert private_res.json["name"] == self.private_coll.foreign_id
+        assert private_res.json["collection_id"] == str(self.private_coll.id)
 
         # Test public collection
         public_url = f"/api/2/collections/{self.public_coll.id}/discover"
         public_res = self.client.get(public_url, headers=headers)
         assert public_res.status_code == 200
-        assert public_res.json["name"] == self.public_coll.foreign_id
+        assert public_res.json["collection_id"] == str(self.public_coll.id)
 
         # Results should be different (different collections)
-        assert private_res.json["name"] != public_res.json["name"]
+        assert private_res.json["collection_id"] != public_res.json["collection_id"]
 
     def test_discover_empty_collection(self):
         """Test discovery endpoint with empty collection."""
@@ -216,7 +206,7 @@ class DiscoveryApiTestCase(TestCase):
         data = res.json
 
         # Should have empty discovery data
-        assert data["name"] == empty_coll.foreign_id
+        assert data["collection_id"] == str(empty_coll.id)
         assert len(data["peopleMentioned"]) == 0
         assert len(data["companiesMentioned"]) == 0
         assert len(data["locationMentioned"]) == 0

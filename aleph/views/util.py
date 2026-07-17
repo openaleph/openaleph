@@ -2,22 +2,20 @@ import csv
 import io
 import logging
 import string
+from typing import Any, TypeVar
 from urllib.parse import urlparse
 
 import orjson
-from banal import as_bool, ensure_dict, is_listish, is_mapping
+from banal import as_bool
 from flask import Response, render_template, request
-from flask_babel import gettext
 from normality import stringify
-from openaleph_search.index.entities import get_entity as _get_index_entity
+from pydantic import BaseModel, ValidationError
 from servicelayer.jobs import Job
 from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
-from aleph.authz import Authz
-from aleph.index.collections import get_collection as _get_index_collection
-from aleph.model import Collection, EntitySet
 from aleph.util import json_default
-from aleph.validation import get_validator
+
+T = TypeVar("T", bound=BaseModel)
 
 log = logging.getLogger(__name__)
 CALLBACK_VALID = string.ascii_letters + string.digits + "_"
@@ -48,98 +46,54 @@ def get_session_id():
     return "%s:%s" % (role_id, session_id)
 
 
-def parse_request(schema):
-    """Get request form data or body and validate it against a schema."""
-    if request.is_json:
-        data = request.get_json()
-    else:
-        data = request.form.to_dict(flat=True)
-    return validate(data, schema)
-
-
-def validate(data, schema):
-    """Validate the data inside a request against a schema."""
-    validator = get_validator(schema)
-    errors = {}
-    for error in validator.iter_errors(data):
-        path = ".".join((str(c) for c in error.path))
-        if path not in errors:
-            errors[path] = error.message
-        else:
-            errors[path] += "; " + error.message
-        log.info("ERROR [%s]: %s", path, error.message)
-
-    if not len(errors):
-        return data
-
-    resp = jsonify(
-        {
-            "status": "error",
-            "errors": errors,
-            "message": gettext("Error during data validation"),
-        },
-        status=400,
-    )
-    raise BadRequest(response=resp)
-
-
-def clean_object(data):
-    """Remove unset values from the response to save some bandwidth."""
-    if is_mapping(data):
-        out = {}
-        for k, v in data.items():
-            v = clean_object(v)
-            if v is not None:
-                out[k] = v
-        return out if len(out) else None
-    elif is_listish(data):
-        data = [clean_object(d) for d in data]
-        data = [d for d in data if d is not None]
-        return data if len(data) else None
-    elif isinstance(data, str):
-        return data if len(data) else None
-    return data
-
-
-def get_index_entity(entity_id, action=Authz.READ, **kwargs):
-    entity = obj_or_404(_get_index_entity(entity_id, **kwargs))
-    require(request.authz.can(entity["collection_id"], action))
-    return entity
-
-
-def get_db_collection(collection_id, action=Authz.READ):
-    collection = obj_or_404(Collection.by_id(collection_id))
-    require(request.authz.can(collection.id, action))
-    return collection
-
-
-def get_entityset(entityset_id, action=Authz.READ):
-    eset = obj_or_404(EntitySet.by_id(entityset_id))
-    require(request.authz.can(eset.collection_id, action))
-    return eset
-
-
-def get_nested(data, obj_field, id_field):
-    collection = ensure_dict(data.get(obj_field))
-    return data.get(id_field, collection.get("id"))
-
-
-def get_nested_collection(data, action=Authz.READ):
-    collection_id = get_nested(data, "collection", "collection_id")
-    return get_db_collection(collection_id, action)
-
-
-def get_index_collection(collection_id, action=Authz.READ):
-    collection = obj_or_404(_get_index_collection(collection_id))
-    require(request.authz.can(collection["id"], action))
-    return collection
-
-
 def get_url_path(url):
     try:
         return urlparse(url)._replace(netloc="", scheme="").geturl() or "/"
     except Exception:
         return "/"
+
+
+def validate_request(schema_cls: type[T], data: dict | None = None) -> T:
+    """Validate request data against a pydantic schema, raising 400 on failure.
+
+    When *data* is ``None`` the function reads from the current Flask
+    request, transparently handling both JSON and form-encoded bodies.
+    """
+    if data is None:
+        data = (
+            request.get_json() if request.is_json else request.form.to_dict(flat=True)
+        )
+    try:
+        return schema_cls.model_validate(data)
+    except ValidationError as e:
+        errors = {}
+        for err in e.errors():
+            path = ".".join(str(loc) for loc in err["loc"])
+            errors[path] = err["msg"]
+        resp = jsonify(
+            {
+                "status": "error",
+                "errors": errors,
+                "message": "Error during data validation",
+            },
+            status=400,
+        )
+        raise BadRequest(response=resp)
+
+
+def request_data(schema_cls: type[T], data: dict | None = None) -> dict[str, Any]:
+    """Validate the request body and dump only the fields the client sent.
+
+    For request bodies consumed as a *dict* by the legacy update paths:
+    those treat absent keys as "keep the current/default value"
+    (``data.get(key, fallback)``), so a plain ``model_dump()`` – which
+    emits every unset optional field as an explicit ``None`` – defeats
+    the fallbacks and None-wipes state (e.g. the casefile category
+    defaulted on collection create, or a diagram's layout on rename).
+    Use this instead of ``validate_request(...).model_dump()`` whenever
+    the body ends up in a dict.
+    """
+    return validate_request(schema_cls, data).model_dump(exclude_unset=True)
 
 
 def jsonify(obj, status=200, headers=None):

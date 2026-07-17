@@ -1,4 +1,4 @@
-from aleph.index.collections import delete_entities
+from aleph.index.collections import collection_index_doc, delete_entities
 from aleph.logic.collections import delete_collection, reindex_collection
 from aleph.tests.util import TestCase
 
@@ -20,8 +20,8 @@ class IndexTestCase(TestCase):
         # Default taggable should be False
         assert collection.taggable is False
 
-        # Test serialization includes taggable field
-        data = collection.to_dict()
+        # Test the index document includes taggable field
+        data = collection_index_doc(collection)
         assert "taggable" in data
         assert data["taggable"] is False
 

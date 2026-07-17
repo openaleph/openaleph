@@ -25,7 +25,8 @@ class BaseApiTestCase(TestCase):
 
         res = self.client.get("/api/2/statistics")
         assert res.status_code == 200, res
-        assert "things" not in res.json, res.json
+        assert res.json["collections"] == 0, res.json
+        assert res.json["things"] == 0, res.json
 
         self.load_fixtures()
         compute_collections()

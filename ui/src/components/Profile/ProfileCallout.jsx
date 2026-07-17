@@ -8,25 +8,25 @@ import getEntityLink from 'util/getEntityLink';
 
 import './ProfileCallout.scss';
 
-const ProfileCallout = ({ entity, profile, viaEntityId }) => {
-  if (profile) {
+const ProfileCallout = ({ entity, canonical, viaEntityId }) => {
+  if (canonical) {
     return (
       <Callout icon="layers" className="ProfileCallout">
         <p>
           <FormattedMessage
             id="profile.callout.intro"
-            defaultMessage={"You're viewing {entity} as a profile. "}
+            defaultMessage={"You're viewing {entity} as a cluster. "}
             values={{
-              entity: <Entity.Label entity={profile.entity} />,
+              entity: <Entity.Label entity={canonical.entity} />,
             }}
           />
           <FormattedMessage
             id="profile.callout.details"
             defaultMessage={
-              'This profile aggregates attributes and relationships from {count} entities across different datasets.'
+              'This cluster aggregates attributes and relationships from {count} entities across different datasets.'
             }
             values={{
-              count: profile.entities ? profile.entities.length : 0,
+              count: canonical.merged?.referents?.length || 0,
             }}
           />
         </p>
@@ -57,7 +57,7 @@ const ProfileCallout = ({ entity, profile, viaEntityId }) => {
       <FormattedMessage
         id="profile.hint"
         defaultMessage={
-          '{entity} has been combined with entities from other datasets <link>into a profile</link>'
+          '{entity} has been combined with entities from other datasets <link>into a cluster</link>'
         }
         values={{
           entity: <Entity.Label entity={entity} />,

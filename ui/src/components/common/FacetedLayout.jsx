@@ -46,7 +46,7 @@ class FacetedLayout extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      // Caller can opt into a collapsed-by-default sidebar — useful on
+      // Caller can opt into a collapsed-by-default sidebar – useful on
       // narrow surfaces like entity tabs where the sidebar competes
       // with the result table for horizontal space. User can still
       // reveal it via the toggle button.
@@ -102,7 +102,7 @@ class FacetedLayout extends React.Component {
 
   updateQuery(newQuery) {
     const { navigate, location } = this.props;
-    // Close any open preview when the query changes — stale preview id
+    // Close any open preview when the query changes – stale preview id
     // doesn't belong to the new result set.
     const parsedHash = queryString.parse(location.hash);
     parsedHash['preview:id'] = undefined;
@@ -138,7 +138,7 @@ class FacetedLayout extends React.Component {
     const { navigate, location, storageKey = DEFAULT_STORAGE_KEY } = this.props;
     setSearchConfig(storageKey, { facets });
 
-    // Force re-render without polluting history — mapStateToProps needs
+    // Force re-render without polluting history – mapStateToProps needs
     // to re-read the storage to pick up the new facet list.
     navigate(
       {
@@ -191,7 +191,7 @@ class FacetedLayout extends React.Component {
     );
 
     // When there's nothing to facet and the user hasn't applied any
-    // filters themselves, skip the sidebar entirely — the picker would
+    // filters themselves, skip the sidebar entirely – the picker would
     // just show empty counts. Callers opt in via `hideSidebarWhenEmpty`.
     const suppressSidebar =
       hideSidebarWhenEmpty &&
@@ -260,7 +260,7 @@ class FacetedLayout extends React.Component {
 const mapStateToProps = (_state, ownProps) => {
   const { storageKey = DEFAULT_STORAGE_KEY, defaultFacets = [] } = ownProps;
   const searchConfig = getSearchConfig(storageKey);
-  // Filter out unknown group-field names — `getGroupField` returns
+  // Filter out unknown group-field names – `getGroupField` returns
   // undefined for any key not registered in SearchField/util.js, and
   // one `undefined` in the list crashes `Facets` at `.name` access.
   const facets = (

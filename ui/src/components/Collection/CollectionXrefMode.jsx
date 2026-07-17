@@ -78,7 +78,7 @@ export class CollectionXrefMode extends React.Component {
         <div className="pane-layout">
           <div className="pane-layout-side">
             <Facets
-              facets={['match_collection_id', 'schema', 'countries'].map(
+              facets={['collection_id', 'schema', 'countries'].map(
                 getGroupField
               )}
               query={query}

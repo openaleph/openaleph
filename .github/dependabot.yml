@@ -3,34 +3,14 @@ updates:
   - package-ecosystem: pip
     directory: "/"
     schedule:
-      interval: weekly
+      interval: daily
     open-pull-requests-limit: 99
-    target-branch: develop
-    groups:
-      dev-dependencies:
-        patterns:
-          - "bump2version"
-          - "black"
-          - "pytest*"
-          - "ruff"
-
-  - package-ecosystem: pip
-    directory: "/e2e"
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 99
-    target-branch: develop
-    groups:
-      e2e-dependencies:
-        patterns:
-          - "*"
 
   - package-ecosystem: npm
     directory: "/ui"
     schedule:
-      interval: weekly
+      interval: daily
     open-pull-requests-limit: 99
-    target-branch: develop
     groups:
       dev:
         dependency-type: "development"
@@ -49,20 +29,17 @@ updates:
   - package-ecosystem: docker
     directory: "/"
     schedule:
-      interval: weekly
+      interval: daily
     open-pull-requests-limit: 99
-    target-branch: develop
 
   - package-ecosystem: docker
     directory: "/ui"
     schedule:
-      interval: weekly
+      interval: daily
     open-pull-requests-limit: 99
-    target-branch: develop
 
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: weekly
+      interval: daily
     open-pull-requests-limit: 99
-    target-branch: develop

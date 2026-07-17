@@ -15,20 +15,19 @@ import {
   TextLoading,
 } from 'components/common';
 import {
-  profileSimilarQuery,
-  profileReferenceQuery,
-  entitySetItemsQuery,
+  canonicalSimilarQuery,
+  canonicalReferenceQuery,
 } from 'queries';
 import {
-  selectProfileReferences,
-  selectProfileReference,
-  selectProfileTags,
-  selectEntitySetItemsResult,
+  selectCanonicalReferences,
+  selectCanonicalReference,
+  selectCanonicalTags,
   selectSimilarResult,
 } from 'selectors';
 import EntityReferencesMode from 'components/Entity/EntityReferencesMode';
 import ProfileSimilarMode from 'components/Profile/ProfileSimilarMode';
 import ProfileItemsMode from './ProfileItemsMode';
+import ProfileProvenanceMode from './ProfileProvenanceMode';
 
 class ProfileViews extends React.Component {
   constructor(props) {
@@ -50,9 +49,8 @@ class ProfileViews extends React.Component {
   render() {
     const {
       activeMode,
-      profile,
+      canonical,
       references,
-      items,
       similar,
       reference,
       referenceQuery,
@@ -73,17 +71,17 @@ class ProfileViews extends React.Component {
         <Tab
           id="items"
           title={
-            <TextLoading loading={items.total === undefined}>
+            <>
               <Icon icon="layers" className="left-icon" />
               <FormattedMessage
                 id="profile.info.items"
                 defaultMessage="Entity decisions"
               />
-              <ResultCount result={items} />
-            </TextLoading>
+              <Count count={canonical?.entities?.length || 0} />
+            </>
           }
           panel={
-            <ProfileItemsMode profile={profile} viaEntityId={viaEntityId} />
+            <ProfileItemsMode canonical={canonical} viaEntityId={viaEntityId} />
           }
         />
         <Tab
@@ -99,7 +97,20 @@ class ProfileViews extends React.Component {
               <ResultCount result={similar} />
             </TextLoading>
           }
-          panel={<ProfileSimilarMode profile={profile} />}
+          panel={<ProfileSimilarMode canonical={canonical} />}
+        />
+        <Tab
+          id="provenance"
+          title={
+            <>
+              <Icon icon="document-open" className="left-icon" />
+              <FormattedMessage
+                id="profile.info.provenance"
+                defaultMessage="Data Lineage"
+              />
+            </>
+          }
+          panel={<ProfileProvenanceMode canonical={canonical} />}
         />
         {references.results.map((ref) => (
           <Tab
@@ -114,7 +125,7 @@ class ProfileViews extends React.Component {
             }
             panel={
               <EntityReferencesMode
-                entity={profile.entity}
+                entity={canonical.entity}
                 mode={activeMode}
                 reference={reference}
                 query={referenceQuery}
@@ -131,20 +142,16 @@ class ProfileViews extends React.Component {
 }
 
 const mapStateToProps = (state, ownProps) => {
-  const { profile, location, activeMode } = ownProps;
-  const reference = selectProfileReference(state, profile.id, activeMode);
+  const { canonical, location, activeMode } = ownProps;
+  const reference = selectCanonicalReference(state, canonical.id, activeMode);
   return {
     reference,
-    references: selectProfileReferences(state, profile.id),
-    referenceQuery: profileReferenceQuery(location, profile, reference),
-    tags: selectProfileTags(state, profile.id),
+    references: selectCanonicalReferences(state, canonical.id),
+    referenceQuery: canonicalReferenceQuery(location, canonical, reference),
+    tags: selectCanonicalTags(state, canonical.id),
     similar: selectSimilarResult(
       state,
-      profileSimilarQuery(location, profile.id)
-    ),
-    items: selectEntitySetItemsResult(
-      state,
-      entitySetItemsQuery(location, profile.id)
+      canonicalSimilarQuery(location, canonical.id)
     ),
   };
 };

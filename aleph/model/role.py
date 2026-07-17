@@ -1,13 +1,23 @@
 import logging
 from datetime import datetime
+from typing import Literal
 
 from itsdangerous import URLSafeTimedSerializer
 from normality import stringify
-from sqlalchemy import func, not_, or_
+from sqlalchemy import event, func, not_, or_
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from aleph.core import db
-from aleph.model.common import IdModel, SoftDeleteModel, make_token, query_like
+from aleph.logic.resolver import cache
+from aleph.model.common import (
+    APIBaseModel,
+    DatedSchema,
+    IdModel,
+    SDict,
+    SoftDeleteModel,
+    make_token,
+    query_like,
+)
 from aleph.settings import SETTINGS
 from aleph.util import anonymize_email
 
@@ -151,27 +161,6 @@ class Role(db.Model, IdModel, SoftDeleteModel):
         """
         digest = self.password_digest or ""
         return check_password_hash(digest, secret)
-
-    def to_dict(self):
-        data = self.to_dict_dates()
-        data.update(
-            {
-                "id": stringify(self.id),
-                "type": self.type,
-                "name": self.name,
-                "label": self.label,
-                "email": self.email,
-                "locale": self.locale,
-                "api_key": self.api_key,
-                "is_admin": self.is_admin,
-                "is_muted": self.is_muted,
-                "is_tester": self.is_tester,
-                "is_investigator": self.is_investigator,
-                "has_password": self.has_password,
-                # 'notified_at': self.notified_at
-            }
-        )
-        return data
 
     @classmethod
     def by_foreign_id(cls, foreign_id, deleted=False):
@@ -318,3 +307,74 @@ Role.members = db.relationship(
     secondaryjoin=Role.id == membership.c.member_id,
     backref="roles",
 )
+
+
+# === Pydantic schemas ===
+
+RoleType = Literal["user", "group", "system"]
+
+
+class RoleSchema(DatedSchema):
+    """Canonical wire format for a :class:`Role`.
+
+    Required fields are application invariants: every role row has
+    ``foreign_id``, ``name``, ``type`` (all ``nullable=False`` at the
+    DB level) and ``label`` (a computed property on the SQLA class
+    that always returns a non-empty string).
+
+    The sensitive fields (``email``, ``api_key``, ``locale``, the
+    ``is_*`` flags, ``has_password``) stay optional because callers
+    redact them based on whether the requester is allowed to write the
+    role; unset → stripped on dump.
+    """
+
+    type: RoleType
+    name: str
+    foreign_id: str
+    label: str
+
+    # Sensitive – populated only when the requester is allowed to see them.
+    email: str | None = None
+    api_key: str | None = None
+    locale: str | None = None
+    has_password: bool | None = None
+    is_admin: bool | None = None
+    is_muted: bool | None = None
+    is_tester: bool | None = None
+    is_blocked: bool | None = None
+    is_investigator: bool | None = None
+
+    # Deep-view aggregate (``get_deep_role``): alert/entityset/casefile/
+    counts: SDict | None = None
+
+    writeable: bool = False
+    shallow: bool = True
+    links: SDict = {}
+
+    @property
+    def cache_key(self) -> str:
+        return self.id
+
+
+class RoleChannels(APIBaseModel):
+    """Notification channels for a role. Resolver-cached under
+    ``RoleChannels/<role_id>``."""
+
+    role_id: str
+    channels: list[str]
+
+    @property
+    def cache_key(self) -> str:
+        return self.role_id
+
+
+# === Resolver invalidation via SQLA events ===
+
+
+def _invalidate_role(mapper, connection, target: Role):
+    cache.invalidate(RoleSchema, str(target.id))
+    cache.invalidate(RoleChannels, str(target.id))
+
+
+event.listen(Role, "after_update", _invalidate_role)
+event.listen(Role, "after_delete", _invalidate_role)

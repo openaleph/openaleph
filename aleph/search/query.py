@@ -1,4 +1,3 @@
-import logging
 from typing import Any, Iterator
 
 from banal import ensure_list
@@ -14,11 +13,15 @@ from openaleph_search.query.queries import EXCLUDE_DEHYDRATE, expand_include_fie
 
 from aleph.index.collections import collections_index
 from aleph.index.notifications import notifications_index
-from aleph.index.xref import XREF_SOURCE, xref_index
+from aleph.index.xref import (
+    XREF_SOURCE,
+    _collections_filter,
+    auth_filters,
+    entities_filter,
+    xref_index,
+)
 from aleph.logic.notifications import get_role_channels
 from aleph.logic.xref import SCORE_CUTOFF
-
-log = logging.getLogger(__name__)
 
 
 class CollectionsQuery(Query):
@@ -98,7 +101,7 @@ class EntitySetItemsQuery(EntitiesQuery):
 
     def get_filters(self, **kwargs):
         filters = super(EntitySetItemsQuery, self).get_filters(**kwargs)
-        filters.append({"ids": {"values": self.entityset.entities}})
+        filters.append({"ids": {"values": self.entityset.entity_ids}})
         return filters
 
     def get_index(self):
@@ -106,19 +109,19 @@ class EntitySetItemsQuery(EntitiesQuery):
 
 
 class XrefQuery(Query):
+    # Disable default single-field auth: xref edges span two collections, so
+    # we need both source_collection_id AND target_collection_id to be readable.
+    AUTHZ_FIELD = None
     TEXT_FIELDS = ["text"]
     SORT_DEFAULT = [{"score": "desc"}]
-    SORT_FIELDS = {
-        "random": "random",
-        "doubt": "doubt",
-        "score": "_score",
-    }
-    AUTHZ_FIELD = "match_collection_id"
+    SORT_FIELDS = {"score": "score"}
     SCORE_CUTOFF = SCORE_CUTOFF
     SOURCE = XREF_SOURCE
 
-    def __init__(self, parser, collection_id=None):
+    def __init__(self, parser, collection_id=None, entity_id=None, show_decided=False):
         self.collection_id = collection_id
+        self.entity_id = entity_id
+        self.show_decided = show_decided
         parser.highlight = False
         super(XrefQuery, self).__init__(parser)
 
@@ -129,10 +132,23 @@ class XrefQuery(Query):
 
     def get_filters(self, **kwargs):
         filters = super(XrefQuery, self).get_filters(**kwargs)
-        filters.append({"term": {"collection_id": self.collection_id}})
-        sorts = [f for (f, _) in self.parser.sorts]
-        if "random" not in sorts and "doubt" not in sorts:
+        # Auth: require BOTH source and target collections to be readable.
+        # The default AUTHZ_FIELD approach uses the multi-value collection_id
+        # field which only checks that at least ONE collection is accessible.
+        if self.parser.auth and not self.parser.auth.is_admin:
+            filters.extend(auth_filters(self.parser.auth))
+        # Bidirectional collection filter
+        if self.collection_id:
+            filters.append(_collections_filter(self.collection_id))
+        if self.entity_id:
+            filters.append(entities_filter(self.entity_id))
+        # Only active edges (not soft-deleted)
+        filters.append({"bool": {"must_not": {"exists": {"field": "deleted_at"}}}})
+        # Undecided suggestions: apply score cutoff and judgement filter.
+        # Decided edges (from _decide) have score=null, so skip cutoff for those.
+        if not self.show_decided:
             filters.append({"range": {"score": {"gt": self.SCORE_CUTOFF}}})
+            filters.append({"term": {"judgement": "no_judgement"}})
         return filters
 
     def get_index(self):
@@ -175,7 +191,7 @@ class MessageThreadQuery:
     # EntityReferenceMode and similar UI logic in general
     INCLUDES = {"Email": ["sender", "emitters", "recipients"]}
 
-    # Hard backend caps — callers can request a lower limit via the parser
+    # Hard backend caps – callers can request a lower limit via the parser
     # but cannot exceed these.
     MAX_DEPTH = 25
     MAX_RESULTS = 200
@@ -219,12 +235,12 @@ class MessageThreadQuery:
         # in Phase 3, so hits matching the source must not be re-yielded.
         self.yielded_ids: set[str] = {entity.id}
         self.produced: int = 0
-        # Set by walk() when the thread extends past what we returned —
+        # Set by walk() when the thread extends past what we returned –
         # either ES reported more hits at a level than we fetched, or the
         # one-hop tail probe found residual frontier content. Consumed by
         # the caller to set `total_type = "gte"` on the response envelope.
         self.truncated: bool = False
-        # Internal direction — set per walk phase, not by the caller.
+        # Internal direction – set per walk phase, not by the caller.
         self._direction: str = self.DIRECTION_PREVIOUS
 
     def _source_spec(self) -> dict[str, list[str]]:
@@ -232,7 +248,7 @@ class MessageThreadQuery:
 
         When `dehydrate` is set we drop the full `properties` payload
         (bodyHtml/bodyText/indexText/etc., which thread list views don't
-        need) but keep the threading-critical property fields — without
+        need) but keep the threading-critical property fields – without
         them the BFS can't compute the next frontier. Caller-supplied
         include_fields (group names or property paths) are folded in."""
         if not self.dehydrate:
@@ -342,7 +358,7 @@ class MessageThreadQuery:
     def _highlight_spec(self) -> dict[str, Any]:
         """Body preview highlighter for thread entities.
 
-        Thread queries don't carry user text — we just want the first
+        Thread queries don't carry user text – we just want the first
         preview chunks of bodyText per entity to simulate what ES returns
         when the search view asks for highlights with an empty query.
 
@@ -366,7 +382,7 @@ class MessageThreadQuery:
         When highlighting is off we serialize the in-memory proxy
         directly. When it's on we re-fetch through a single-doc search so
         the source gets the same `highlight` block as the other hits.
-        Any failure in the search path falls back to `to_full_dict()` —
+        Any failure in the search path falls back to `to_full_dict()` –
         the source must always appear in the result."""
         if not self.highlight:
             return self.entity.to_full_dict()
@@ -410,7 +426,7 @@ class MessageThreadQuery:
         """Process ES hits from one BFS level: expand the next frontier,
         collect entities, and dedup yields.
 
-        Expansion always runs, even for hits we skip yielding — in Phase 2
+        Expansion always runs, even for hits we skip yielding – in Phase 2
         the source and every ancestor re-surface as hits (they're seeded
         into the FOLLOWING frontier to catch sibling branches), and their
         descendants live one hop past them.
@@ -476,7 +492,7 @@ class MessageThreadQuery:
                 break
             if total_level > len(hits):
                 # We only asked for `remaining` hits but this level has
-                # more matches — definitely more to return.
+                # more matches – definitely more to return.
                 self.truncated = True
 
             ids, message_ids = self._process_hits(hits, collected)
@@ -512,7 +528,7 @@ class MessageThreadQuery:
         # ancestor). Seeding the FOLLOWING frontier with all of them in
         # one go lets ES return sibling branches (replies to intermediate
         # ancestors the source isn't descended from) at the very first
-        # hop — a single-root seed would miss them.
+        # hop – a single-root seed would miss them.
         self._direction = self.DIRECTION_FOLLOWING
         frontier_ids: set[str] = {self.entity.id}
         frontier_mids: set[str] = set(self.entity.get("messageId"))

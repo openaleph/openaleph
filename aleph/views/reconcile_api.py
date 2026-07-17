@@ -6,24 +6,21 @@ from followthemoney import model
 from openaleph_search.index.util import unpack_result
 from werkzeug.exceptions import BadRequest
 
-from aleph.core import talisman, url_for
-from aleph.index.collections import get_collection_things
+from aleph.core import url_for
+from aleph.index.collections import get_things_count
 from aleph.logic.util import entity_url
 from aleph.model import Entity
+from aleph.model.common import model_dump
 from aleph.search import EntitiesQuery, MatchQuery, SearchQueryParser
 from aleph.settings import SETTINGS
 from aleph.util import make_entity_proxy
+from aleph.views import resources
 from aleph.views.context import tag_request
-from aleph.views.util import get_index_collection, jsonify, require
+from aleph.views.util import jsonify, require
 
 # See: https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API
 blueprint = Blueprint("reconcile_api", __name__)
 log = logging.getLogger(__name__)
-CSP = {
-    "default-src": "'*'",
-    "script-src": "'*'",
-    "connect-src": "'*'",
-}
 
 
 def get_freebase_types():
@@ -63,7 +60,7 @@ def reconcile_index(collection=None):
     if collection is not None:
         label = "%s (%s)" % (collection.get("label"), label)
         suggest_query.append(("filter:collection_id", collection.get("id")))
-        things = get_collection_things(collection.get("id"))
+        things = get_things_count(collection.get("id"))
         schemata = [model.get(s) for s in things.keys()]
     return jsonify(
         {
@@ -99,7 +96,6 @@ def reconcile_index(collection=None):
 @blueprint.route(
     "/api/2/collections/<collection_id>/reconcile", methods=["GET", "POST"]
 )
-@talisman(content_security_policy=CSP)
 def reconcile(collection_id=None):
     """Reconciliation API, emulates Google Refine API.
     ---
@@ -133,7 +129,8 @@ def reconcile(collection_id=None):
     require(request.authz.can_browse_anonymous)
     collection = None
     if collection_id is not None:
-        collection = get_index_collection(collection_id)
+        collection = resources.get_collection(collection_id, request.authz.READ)
+        collection = model_dump(collection)
     query = request.values.get("query")
     if query is not None:
         # single
@@ -176,7 +173,6 @@ def reconcile_op(query, collection=None):
 
 
 @blueprint.route("/api/freebase/suggest", methods=["GET", "POST"])
-@talisman(content_security_policy=CSP)
 def suggest_entity():
     """Suggest API, emulates Google Refine API."""
     require(request.authz.can_browse_anonymous)
@@ -203,7 +199,6 @@ def suggest_entity():
 
 
 @blueprint.route("/api/freebase/property", methods=["GET", "POST"])
-@talisman(content_security_policy=CSP)
 def suggest_property():
     require(request.authz.can_browse_anonymous)
     prefix = request.args.get("prefix", "").lower().strip()
@@ -235,7 +230,6 @@ def suggest_property():
 
 
 @blueprint.route("/api/freebase/type", methods=["GET", "POST"])
-@talisman(content_security_policy=CSP)
 def suggest_type():
     require(request.authz.can_browse_anonymous)
     prefix = request.args.get("prefix", "").lower().strip()

@@ -1,26 +1,49 @@
+import functools
 import logging
 from datetime import datetime
-from functools import cache
+from enum import StrEnum
+from typing import Annotated, Any
 
 from banal import ensure_dict, ensure_list
 from flask_babel import lazy_gettext
-from followthemoney.dataset.util import dataset_name_check
+from followthemoney.dataset.coverage import DataCoverage
+from followthemoney.dataset.publisher import DataPublisher
+from followthemoney.dataset.util import dataset_name_check, serialize_dt
 from followthemoney.exc import InvalidData
 from followthemoney.namespace import Namespace
 from followthemoney.types import registry
+from ftmq.model.dataset import Dataset as FtmDataset
 from normality import stringify
+from openaleph_procrastinate.model import DatasetStatus
+from pydantic import (
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    computed_field,
+    model_validator,
+)
+from sqlalchemy import event
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import aliased
 
 from aleph.core import db
-from aleph.model.common import IdModel, SoftDeleteModel, make_textid
+from aleph.logic.resolver import cache
+from aleph.model.common import (
+    APIBaseModel,
+    IdModel,
+    ResolveFrom,
+    SDict,
+    SoftDeleteModel,
+    StripNoneMixin,
+    make_textid,
+)
 from aleph.model.permission import Permission
-from aleph.model.role import Role
+from aleph.model.role import Role, RoleSchema
 
 log = logging.getLogger(__name__)
 
 
-@cache
+@functools.cache
 def cached_dataset_name_check(dataset: str) -> str:
     return dataset_name_check(dataset)
 
@@ -192,47 +215,6 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
             self._ns = Namespace(self.foreign_id)
         return self._ns
 
-    def to_dict(self):
-        data = self.to_dict_dates()
-        data["category"] = self.CASEFILE
-        if self.category in self.CATEGORIES:
-            data["category"] = self.category
-        data["frequency"] = self.DEFAULT_FREQUENCY
-        if self.frequency in self.FREQUENCIES:
-            data["frequency"] = self.frequency
-        countries = ensure_list(self.countries)
-        countries = [registry.country.clean(c) for c in countries]
-        data["countries"] = [c for c in countries if c is not None]
-        languages = ensure_list(self.languages)
-        languages = [registry.language.clean(c) for c in languages]
-        data["languages"] = [c for c in languages if c is not None]
-        data.update(
-            {
-                "id": stringify(self.id),
-                "name": self.name,
-                "collection_id": stringify(self.id),
-                "foreign_id": self.foreign_id,
-                "creator_id": stringify(self.creator_id),
-                "data_updated_at": self.data_updated_at,
-                "team_id": self.team_id,
-                "label": self.label,
-                "summary": self.summary,
-                "publisher": self.publisher,
-                "publisher_url": self.publisher_url,
-                "info_url": self.info_url,
-                "data_url": self.data_url,
-                "casefile": self.casefile,
-                "secret": self.secret,
-                "xref": self.xref,
-                "restricted": self.restricted,
-                "contains_ai": self.contains_ai,
-                "contains_ai_comment": self.contains_ai_comment,
-                "external": self.external,
-                "taggable": self.taggable,
-            }
-        )
-        return data
-
     @classmethod
     def by_foreign_id(cls, foreign_id, deleted=False):
         if foreign_id is None:
@@ -306,3 +288,335 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
 
     def __str__(self):
         return self.foreign_id
+
+
+# === Pydantic schemas ===
+#
+# Collections are FollowTheMoney datasets with a few Aleph-specific
+# extras layered on top: access control (creator/team), feature flags
+# (xref/taggable/restricted/secret/casefile/contains_ai), languages
+# (FTM core only models countries) and the runtime ``links`` block.
+#
+# Field name mapping from the legacy SQLAlchemy shape to the FTM
+# Dataset shape:
+#
+#   foreign_id      → name        (FTM dataset name)
+#   label           → title
+#   info_url        → url
+#   data_updated_at → updated_at
+#   countries       → coverage.countries
+#   frequency       → coverage.frequency  ("annual" → "annually")
+#   publisher (str) → publisher.name      (DataPublisher object)
+#   publisher_url   → publisher.url
+
+
+# Aleph "annual" → FTM "annually". Other values pass through unchanged.
+_FREQUENCY_MAP: dict[str, str] = {"annual": "annually"}
+
+Categories = StrEnum("Categories", {k: k for k in Collection.CATEGORIES})
+
+
+def _fold_legacy_dict(data: SDict) -> SDict:
+    """Map legacy flat dict input (``Collection.to_dict()`` / old index
+    docs) onto the FTM canonical fields expected by CollectionSchema.
+
+    Extracted from ``CollectionSchema._from_collection`` – applied to
+    every mapping input before validation."""
+    if "name" not in data and "foreign_id" in data:
+        data["name"] = data["foreign_id"]
+    if "title" not in data and "label" in data:
+        data["title"] = data["label"]
+    if "url" not in data and "info_url" in data:
+        data["url"] = data["info_url"]
+    # Legacy flat shape: ``publisher`` is a plain string column
+    # (with ``publisher_url`` beside it) – fold both into the FTM
+    # ``DataPublisher`` shape, mirroring the ORM branch of
+    # ``_from_collection``. Proper dict-shaped publishers (cached
+    # schema dumps) pass through untouched.
+    publisher = data.get("publisher")
+    if isinstance(publisher, str) or (publisher is None and data.get("publisher_url")):
+        data["publisher"] = {
+            "name": publisher or "",
+            "url": stringify(data.get("publisher_url")) or None,
+        }
+    # Legacy flat ``frequency`` → ``coverage.frequency``, applying
+    # the same Aleph→FTM value mapping as the ORM branch
+    # ("annual" → "annually"). An existing coverage dict (cached
+    # schema dumps) keeps its own frequency.
+    if "frequency" in data:
+        frequency = _FREQUENCY_MAP.get(data["frequency"] or "", data["frequency"])
+        if frequency:
+            coverage = data.get("coverage")
+            if coverage is None:
+                data["coverage"] = {"frequency": frequency}
+            elif isinstance(coverage, dict):
+                coverage.setdefault("frequency", frequency)
+    return data
+
+
+def _serialize_lax_dt(value: datetime | str | None) -> str | None:
+    """Serialize a ``datetime`` to ISO; pass ISO strings through unchanged.
+
+    ftm's ``DateTimeISO`` serializer (``serialize_dt``) requires a real
+    ``datetime``, but the resolver reloads cached schemas via
+    ``model_construct`` (``model_validate=False``, which skips coercion –
+    trusted data, no revalidation), so these fields can still hold the
+    ISO string they were stored as. Re-serializing that with
+    ``serialize_dt`` would raise ``AttributeError``; pass strings through.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    return serialize_dt(value)
+
+
+# ftm's ``DateTimeISO``, but tolerant of an already-serialized ISO string on
+# dump – needed for resolver-cache round-trip safety (see _serialize_lax_dt).
+LaxDateTimeISO = Annotated[
+    datetime | None, PlainSerializer(_serialize_lax_dt, when_used="always")
+]
+
+
+class CollectionSchema(StripNoneMixin, FtmDataset):
+    """Wire format for an Aleph :class:`Collection`.
+
+    Subclasses :class:`ftmq.model.dataset.Dataset` (which subclasses the
+    FollowTheMoney ``DatasetModel``) so the response shape is the
+    canonical FTM dataset format. Aleph-specific fields are added on
+    top.
+    """
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+    )
+
+    # str(int PK) – carried for the resolver cache key and legacy
+    # serializer compat. Will be dropped when IDs move to foreign_id.
+    id: str
+
+    # Override FTM's ``DateTimeISO`` with a serializer that tolerates an
+    # already-ISO string, so resolver-cache reloads (model_construct, no
+    # coercion) survive re-serialization. Otherwise identical to FTM.
+    updated_at: LaxDateTimeISO = None
+    last_export: LaxDateTimeISO = None
+
+    # FTM core models countries via ``coverage.countries``; languages
+    # are an Aleph extension.
+    languages: list[str] = []
+    countries: list[str] = []
+    # category overwrite
+    category: Categories | None = None
+
+    # Aleph access / visibility flags.
+    restricted: bool = False
+    xref: bool = False
+    taggable: bool = False
+    contains_ai: bool = False
+    contains_ai_comment: str | None = None
+    casefile: bool = False
+    secret: bool = False
+    external: bool = False
+
+    # Aleph access control (creator + read-permitted team).
+    creator_id: str | None = None
+    creator: Annotated[RoleSchema | None, ResolveFrom("creator_id", RoleSchema)] = None
+    team_id: list[str] = []
+    team: list[RoleSchema] = (
+        []
+    )  # resolved by CollectionAssembler (list, not auto-resolved)
+
+    # Request-time computed fields populated by the response builder.
+    writeable: bool = False
+    shallow: bool = True
+    links: SDict = {}
+
+    @computed_field
+    @property
+    def foreign_id(self) -> str:
+        """Backwards compat alias for Aleph Collection model: foreign_id is
+        Dataset.name"""
+        return self.name
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def label(self) -> str:
+        return self.title
+
+    @property
+    def cache_key(self) -> str:
+        return self.id
+
+    @model_validator(mode="before")
+    @classmethod
+    def _from_collection(cls, data: Any) -> Any:
+        # Dict input: map Aleph aliases → FTM canonical fields
+        if isinstance(data, dict):
+            return _fold_legacy_dict(data)
+        if not isinstance(data, Collection):
+            return data
+
+        publisher = None
+        if data.publisher or data.publisher_url:
+            publisher = DataPublisher(
+                name=data.publisher or "",
+                url=data.publisher_url or None,
+            )
+
+        countries = [registry.country.clean(c) for c in (data.countries or []) if c]
+        countries = [c for c in countries if c is not None]
+        frequency = _FREQUENCY_MAP.get(data.frequency or "", data.frequency)
+        coverage = None
+        if countries or frequency:
+            coverage = DataCoverage(
+                countries=countries,
+                frequency=frequency or "unknown",
+            )
+
+        languages = [registry.language.clean(c) for c in (data.languages or []) if c]
+        languages = [c for c in languages if c is not None]
+
+        category = data.category if data.category in Collection.CATEGORIES else None
+
+        data.label = data.label or data.foreign_id
+        if not data.label:
+            raise ValueError(
+                f"Collection {data.foreign_id!r} has no label; "
+                "cannot derive a CollectionSchema title"
+            )
+
+        return {
+            # Aleph internal – str(int PK) for resolver cache key
+            "id": stringify(data.id),
+            # FTM core fields
+            "name": data.foreign_id,
+            "title": data.label,
+            "summary": data.summary,
+            "url": data.info_url,
+            "updated_at": data.data_updated_at or data.updated_at,
+            "category": category,
+            "publisher": publisher,
+            "coverage": coverage,
+            # Aleph extras
+            "languages": languages,
+            "countries": countries,
+            "restricted": bool(data.restricted),
+            "xref": bool(data.xref),
+            "taggable": bool(data.taggable),
+            "contains_ai": bool(data.contains_ai),
+            "contains_ai_comment": data.contains_ai_comment,
+            "casefile": bool(data.casefile),
+            "external": bool(data.external),
+            "secret": bool(data.secret),
+            "creator_id": stringify(data.creator_id),
+            "team_id": list(data.team_id) if hasattr(data, "team_id") else [],
+        }
+
+
+class FacetCounts(APIBaseModel):
+    """One facet aggregate: a term→count map plus a cardinality total."""
+
+    values: dict[str, int] = {}
+    total: int = 0
+
+
+class CollectionStatistics(APIBaseModel):
+    """Per-dataset facet aggregates. Resolver-cached aggregate keyed
+    under ``CollectionStatistics/<foreign_id>/stats``.
+
+    Each facet exposes a :class:`FacetCounts` payload – the term→count
+    map plus a cardinality total. The set of facets matches
+    ``aleph.index.collections.STATS_FACETS``.
+    """
+
+    collection_id: str
+    schema_: FacetCounts = Field(default_factory=FacetCounts, alias="schema")
+    names: FacetCounts = FacetCounts()
+    addresses: FacetCounts = FacetCounts()
+    countries: FacetCounts = FacetCounts()
+    languages: FacetCounts = FacetCounts()
+    phones: FacetCounts = FacetCounts()
+    emails: FacetCounts = FacetCounts()
+
+    @property
+    def cache_key(self) -> str:
+        return self.collection_id
+
+
+class GlobalStatistics(APIBaseModel):
+    """System-wide aggregate statistics returned by
+    ``GET /api/2/statistics``. Singleton – keyed under
+    ``GlobalStatistics/global``.
+    """
+
+    collections: int = 0
+    things: int = 0
+    schemata: dict[str, int] = {}
+    countries: dict[str, int] = {}
+    categories: dict[str, int] = {}
+
+    @property
+    def cache_key(self) -> str:
+        return "global"
+
+
+class CollectionCounts(APIBaseModel):
+    """Mapping and entityset counts for a collection detail view."""
+
+    mappings: int = 0
+    entitysets: dict[str, int] = {}
+
+
+class CollectionStatus(DatasetStatus):
+    """Procrastinate job state enriched with the collection PK."""
+
+    @computed_field
+    @property
+    def collection_id(self) -> str:
+        # collection_1 -> 1
+        return self.name.split("_")[1]
+
+
+class CollectionDetailSchema(CollectionSchema):
+    """Detail-view shape – base CollectionSchema plus the per-dataset
+    aggregates returned by ``GET /api/2/collections/<id>``.
+
+    Keyed under ``CollectionDetailSchema/<collection_id>``.
+    """
+
+    statistics: CollectionStatistics | None = None
+    counts: CollectionCounts | None = None
+    # Procrastinate job status – NOT cached, always patched live.
+    status: CollectionStatus | None = None
+    shallow: bool = False
+
+
+# === Resolver invalidation + ES sync via SQLA events ===
+
+
+def _on_collection_change(mapper, connection, target: Collection):
+    """Invalidate resolver cache and sync to ES on every DB write."""
+    cid = str(target.id)
+    cache.invalidate(CollectionSchema, cid)
+    cache.invalidate(CollectionDetailSchema, cid)
+    # ES is a derived index of the DB – sync atomically so the ES
+    # doc is visible as soon as the commit returns.
+    from aleph.index.collections import index_collection
+
+    index_collection(target, sync=True)
+
+
+def _on_collection_delete(mapper, connection, target: Collection):
+    """Invalidate resolver cache and remove from ES on delete."""
+    cid = str(target.id)
+    cache.invalidate(CollectionSchema, cid)
+    cache.invalidate(CollectionDetailSchema, cid)
+    from aleph.index.collections import delete_collection_index
+
+    delete_collection_index(target.id, sync=True)
+
+
+event.listen(Collection, "after_insert", _on_collection_change)
+event.listen(Collection, "after_update", _on_collection_change)
+event.listen(Collection, "after_delete", _on_collection_delete)

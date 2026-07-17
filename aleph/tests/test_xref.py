@@ -3,7 +3,7 @@ from unittest import skip  # noqa
 
 from aleph.authz import Authz
 from aleph.core import db
-from aleph.index.xref import iter_matches
+from aleph.index.xref import iter_edges
 from aleph.logic.xref import xref_collection
 from aleph.tests.util import JSON, TestCase
 
@@ -79,25 +79,30 @@ class XrefTestCase(TestCase):
         )
 
     def test_xref(self):
-        matches = list(iter_matches(self.coll_a, self.authz))
-        assert 0 == len(matches), len(matches)
         xref_collection(self.coll_a)
-        matches = list(iter_matches(self.coll_a, self.authz))
-        match_collection_ids = set(
-            [match.get("match_collection_id") for match in matches]
-        )
-        assert match_collection_ids == {
-            self.coll_b.id,
-            self.coll_c.id,
-        }, match_collection_ids
-        match_ids = set([match.get("match_id") for match in matches])
-        assert match_ids == {
-            self.entity2.get_json().get("id"),
-            self.entity3.get_json().get("id"),
-            self.entity5.get_json().get("id"),
-        }, match_ids
-        assert 3 == len(matches), len(matches)
-        for match in matches:
-            if match.get("id") == self.entity5.get_json().get("id"):
-                assert match.get("match_collection_id") == self.coll_c.id, match
-                assert match.get("collection_id") == self.coll_a.id, match
+        edges = list(iter_edges(self.coll_a, self.authz.search_auth))
+
+        # Collect all entity IDs referenced in match edges
+        entity_ids = set()
+        collection_ids = set()
+        for edge in edges:
+            assert edge.source != edge.target
+            entity_ids.add(edge.source)
+            entity_ids.add(edge.target)
+            collection_ids.update(edge.source_collection_id)
+            collection_ids.update(edge.target_collection_id)
+            # All should be suggestions
+            assert edge.judgement == "no_judgement", edge
+
+        entity1_id = self.entity1.get_json().get("id")
+        entity2_id = self.entity2.get_json().get("id")
+        entity3_id = self.entity3.get_json().get("id")
+        entity5_id = self.entity5.get_json().get("id")
+
+        # entity1 (coll_a, Carlos Danger) should match entity2, entity3, entity5
+        assert entity1_id in entity_ids, entity_ids
+        assert entity2_id in entity_ids, entity_ids
+        assert entity3_id in entity_ids, entity_ids
+        assert entity5_id in entity_ids, entity_ids
+
+        assert not collection_ids - {self.coll_a.id, self.coll_b.id, self.coll_c.id}

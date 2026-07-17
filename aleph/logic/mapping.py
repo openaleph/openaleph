@@ -110,7 +110,7 @@ def flush_mapping(collection, mapping_id, sync=True):
     aggregator = get_aggregator(collection)
     aggregator.delete(origin=origin)
     delete_entities(collection.id, origin=origin, sync=sync)
-    update_collection(collection, sync=sync)
+    update_collection(collection)
     collection.touch()
     db.session.commit()
 
