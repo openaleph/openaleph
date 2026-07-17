@@ -41,6 +41,7 @@ from aleph.views.util import (
     get_flag,
     get_session_id,
     jsonify,
+    request_data,
     require,
     validate_request,
 )
@@ -127,8 +128,7 @@ def create():
       tags:
       - EntitySet
     """
-    body: EntitySetCreate = validate_request(EntitySetCreate)
-    data: dict = body.model_dump()
+    data: dict = request_data(EntitySetCreate)
     collection = resources.get_db_collection(data["collection_id"], request.authz.WRITE)
     entityset = create_entityset(collection, data, request.authz)
     db.session.commit()
@@ -193,8 +193,7 @@ def update(entityset_id):
       - EntitySet
     """
     entityset = resources.get_db_entityset(entityset_id, request.authz.WRITE)
-    body: EntitySetUpdate = validate_request(EntitySetUpdate)
-    entityset.update(body.model_dump())
+    entityset.update(request_data(EntitySetUpdate))
     db.session.commit()
     refresh_entityset(entityset_id)
     return view(entityset_id)
@@ -463,7 +462,7 @@ def item_update(entityset_id):
     db.session.commit()
     queue_update_entity(collection, entity_id=entity_id)
     if item is None:
-        # NO_JUDGEMENT deletes the item — return a stub
+        # NO_JUDGEMENT deletes the item – return a stub
         item = {
             "id": "$".join((entityset_id, entity_id)),
             "entityset_id": entityset_id,

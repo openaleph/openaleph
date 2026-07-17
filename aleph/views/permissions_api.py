@@ -125,7 +125,9 @@ def update(collection_id):
     adapter: TypeAdapter[list[PermissionUpdate]] = TypeAdapter(list[PermissionUpdate])
     items: list[PermissionUpdate] = adapter.validate_python(request.get_json())
     for item in items:
-        permission: dict = item.model_dump()
+        # exclude_unset: an explicit role_id=None must not defeat the
+        # fallback to the nested role object's id below.
+        permission: dict = item.model_dump(exclude_unset=True)
         role_obj = ensure_dict(permission.get("role"))
         role_id = permission.get("role_id", role_obj.get("id"))
         role = Role.by_id(role_id)

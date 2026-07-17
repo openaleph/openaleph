@@ -2,7 +2,7 @@ import csv
 import io
 import logging
 import string
-from typing import TypeVar
+from typing import Any, TypeVar
 from urllib.parse import urlparse
 
 import orjson
@@ -79,6 +79,21 @@ def validate_request(schema_cls: type[T], data: dict | None = None) -> T:
             status=400,
         )
         raise BadRequest(response=resp)
+
+
+def request_data(schema_cls: type[T], data: dict | None = None) -> dict[str, Any]:
+    """Validate the request body and dump only the fields the client sent.
+
+    For request bodies consumed as a *dict* by the legacy update paths:
+    those treat absent keys as "keep the current/default value"
+    (``data.get(key, fallback)``), so a plain ``model_dump()`` – which
+    emits every unset optional field as an explicit ``None`` – defeats
+    the fallbacks and None-wipes state (e.g. the casefile category
+    defaulted on collection create, or a diagram's layout on rename).
+    Use this instead of ``validate_request(...).model_dump()`` whenever
+    the body ends up in a dict.
+    """
+    return validate_request(schema_cls, data).model_dump(exclude_unset=True)
 
 
 def jsonify(obj, status=200, headers=None):

@@ -28,8 +28,8 @@ from aleph.views.util import (
     get_flag,
     get_session_id,
     jsonify,
+    request_data,
     require,
-    validate_request,
 )
 
 blueprint = Blueprint("collections_api", __name__)
@@ -82,9 +82,9 @@ def create():
                 $ref: '#/components/schemas/Collection'
     """
     require(request.authz.can_create_investigation())
-    body: CollectionCreate = validate_request(CollectionCreate)
+    data = request_data(CollectionCreate)
     try:
-        collection = create_collection(body.model_dump(), request.authz)
+        collection = create_collection(data, request.authz)
     except ValueError:
         raise BadRequest()
     return view(collection.id)
@@ -154,8 +154,7 @@ def update(collection_id):
                 $ref: '#/components/schemas/Collection'
     """
     collection = resources.get_db_collection(collection_id, request.authz.WRITE)
-    body: CollectionUpdate = validate_request(CollectionUpdate)
-    collection.update(body.model_dump(), request.authz)
+    collection.update(request_data(CollectionUpdate), request.authz)
     db.session.commit()  # SQLA event handles ES sync and cache invalidation
     # update_collection(collection)  FIXME _should_ be obsolete because of SQLA event
     return view(collection_id)
