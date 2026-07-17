@@ -25,7 +25,7 @@ from prometheus_client import Counter, Histogram
 from aleph.core import es
 from aleph.logic.aggregator import get_aggregator
 from aleph.logic.xref.compare import compare_entities, make_suggestion
-from aleph.logic.xref.resolver import ElasticsearchResolver, get_resolver
+from aleph.logic.xref.resolver import XrefResolver, get_resolver
 from aleph.model import Collection, Entity
 from aleph.settings import SETTINGS
 from aleph.util import make_entity_proxy
@@ -218,9 +218,7 @@ def _iter_mentions(collection: Collection) -> Generator[EntityProxy, None, None]
         yield proxy
 
 
-def _suggest_match(
-    collection: Collection, xref_resolver: ElasticsearchResolver, match: Match
-):
+def _suggest_match(collection: Collection, xref_resolver: XrefResolver, match: Match):
     """Convert a Match object into a resolver.suggest() call."""
     suggestion = make_suggestion(
         match.entity,
@@ -236,7 +234,7 @@ def _suggest_match(
 MENTION_INDEX_BATCH_SIZE = 10_000
 
 
-def _query_mentions(collection: Collection, xref_resolver: ElasticsearchResolver):
+def _query_mentions(collection: Collection, xref_resolver: XrefResolver):
     aggregator = get_aggregator(collection, origin=ORIGIN)
     aggregator.delete(origin=ORIGIN)
     writer = aggregator.bulk()
@@ -272,7 +270,7 @@ def _query_mentions(collection: Collection, xref_resolver: ElasticsearchResolver
         )
 
 
-def _query_entities(collection: Collection, xref_resolver: ElasticsearchResolver):
+def _query_entities(collection: Collection, xref_resolver: XrefResolver):
     """Generate matches for indexing using batched msearch."""
     log.info("[%s] Generating entity-based xref...", collection)
     matchable = [s.name for s in model if s.matchable]

@@ -22,6 +22,7 @@ services:
     hostname: elasticsearch
     environment:
       - discovery.type=single-node
+      - xpack.security.enabled=false
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
 

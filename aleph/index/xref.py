@@ -6,7 +6,6 @@ from anystore.types import SDict
 from elasticsearch import NotFoundError
 from elasticsearch.helpers import scan
 from followthemoney.types import registry
-from nomenklatura.resolver.identifier import Identifier
 from openaleph_search.core import get_es
 from openaleph_search.index.indexer import Actions, bulk_actions
 from openaleph_search.index.indexes import configure_index
@@ -143,10 +142,13 @@ def soft_delete_edge(source: str, target: str, sync: bool = False):
         pass  # Edge may not exist (e.g., during canonical creation)
 
 
-def remove_node(node: Identifier, sync: bool = False) -> None:
-    """Soft-delete all edges for node"""
+def remove_nodes(node_ids: Iterable[str], sync: bool = False) -> None:
+    """Soft-delete all edges touching any of the given nodes"""
+    ids = sorted(set(node_ids))
+    if not ids:
+        return
     es = get_es()
-    q = _active_edges_query([entities_filter(node.id)])
+    q = _active_edges_query([{"terms": {Field.ENTITIES: ids}}])
     es.update_by_query(
         index=xref_index(),
         body={
@@ -159,6 +161,12 @@ def remove_node(node: Identifier, sync: bool = False) -> None:
         conflicts="proceed",
         refresh=sync,
     )
+
+
+def refresh_xref() -> None:
+    """Force an index refresh so subsequent searches see all prior writes."""
+    es = get_es()
+    es.indices.refresh(index=xref_index())
 
 
 # -- edge read ---

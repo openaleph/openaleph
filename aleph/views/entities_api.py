@@ -347,10 +347,7 @@ def view(entity_id):
     proxy = entity.to_proxy()
     html = proxy.get("bodyHtml", quiet=True)
     source_url = proxy.first("sourceUrl", quiet=True)
-    encoding = proxy.first("encoding", quiet=True)
-    entity.safeHtml = [
-        sanitize_html(value, source_url, encoding=encoding) for value in html
-    ]
+    entity.safeHtml = [sanitize_html(value, source_url) for value in html]
     entity.shallow = False
 
     if request.authz.logged_in:

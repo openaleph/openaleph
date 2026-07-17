@@ -1,7 +1,7 @@
 """
 Test auth-filtered canonical cluster resolution directly against the resolver.
 
-Tests the ElasticsearchResolver's auth filtering when traversing POSITIVE edges
+Tests the XrefResolver's auth filtering when traversing POSITIVE edges
 to build canonical clusters. Specifically tests transitive chains (A=B, B=C)
 where intermediate collections may not be readable by the user.
 
