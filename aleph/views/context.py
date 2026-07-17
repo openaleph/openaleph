@@ -98,6 +98,13 @@ def get_authz(request):
 
 
 def enable_authz(request):
+    if request.endpoint == "base_api.healthz":
+        # healthz manages its own authentication against
+        # SETTINGS.HEALTH_CHECK_API_KEY — its ?api_key= parameter is not a
+        # role credential and must not resolve (or 401) as one here.
+        request.authz = Authz.from_role(role=None)
+        return
+
     authz = get_authz(request)
 
     if authz is None and (
