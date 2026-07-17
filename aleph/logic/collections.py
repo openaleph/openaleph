@@ -114,20 +114,31 @@ def _fetch_collection_stats(cid: str) -> CollectionStatistics | None:
 @register(GlobalStatistics, ttl=TTL_AGGREGATE)
 def compute_global_statistics(key: str) -> GlobalStatistics | None:
     """Compute system-wide statistics. Used as both a resolver fetcher
-    (on demand) and called directly from ``compute_collections``."""
+    (on demand) and called directly from ``compute_collections``.
+
+    Composes from the cached per-collection ``CollectionStatistics``
+    entries (batch resolver read – misses are computed upstream and warm
+    the per-collection cache) instead of running a live ES aggregation
+    per collection.
+    """
     authz = Authz.from_role(None)
     schemata = defaultdict(int)
     countries = defaultdict(int)
     categories = defaultdict(int)
 
-    for collection in Collection.all():
-        if authz.can(collection.id, authz.READ):
-            categories[collection.category] += 1
-            things = index.get_things_count(collection.id)
-            for schema, count in things.items():
-                schemata[schema] += count
-            for country in collection.countries:
-                countries[country] += 1
+    readable = [c for c in Collection.all() if authz.can(c.id, authz.READ)]
+    found = cache.get_many(CollectionStatistics, [str(c.id) for c in readable])
+    stats_by_id = {stats.collection_id: stats for stats in found}
+
+    for collection in readable:
+        categories[collection.category] += 1
+        for country in collection.countries:
+            countries[country] += 1
+        stats = stats_by_id.get(str(collection.id))
+        if stats is None:
+            continue
+        for schema, count in index.things_from_stats(stats).items():
+            schemata[schema] += count
 
     return GlobalStatistics(
         collections=sum(categories.values()),

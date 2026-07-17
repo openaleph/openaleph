@@ -7,9 +7,10 @@ from openaleph_search.index.util import unpack_result
 from werkzeug.exceptions import BadRequest
 
 from aleph.core import url_for
-from aleph.index.collections import get_things_count
+from aleph.index.collections import things_from_stats
+from aleph.logic.resolver import cache
 from aleph.logic.util import entity_url
-from aleph.model import Entity
+from aleph.model import CollectionStatistics, Entity
 from aleph.model.common import model_dump
 from aleph.search import EntitiesQuery, MatchQuery, SearchQueryParser
 from aleph.settings import SETTINGS
@@ -60,7 +61,8 @@ def reconcile_index(collection=None):
     if collection is not None:
         label = "%s (%s)" % (collection.get("label"), label)
         suggest_query.append(("filter:collection_id", collection.get("id")))
-        things = get_things_count(collection.get("id"))
+        stats = cache.get(CollectionStatistics, str(collection.get("id")))
+        things = things_from_stats(stats) if stats is not None else {}
         schemata = [model.get(s) for s in things.keys()]
     return jsonify(
         {

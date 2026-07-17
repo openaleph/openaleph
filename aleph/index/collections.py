@@ -215,13 +215,9 @@ def compute_collection_statistics(
     return CollectionStatistics(collection_id=str(collection_id), **facet_data)
 
 
-def get_things_count(collection_id: int) -> dict[str, int]:
-    """Count of Thing-typed entities per schema for a collection.
-
-    Runs a live ES aggregation via ``compute_collection_statistics``.
-    """
-    stats = compute_collection_statistics(collection_id, ["schema"])
-    things = {}
+def things_from_stats(stats: CollectionStatistics) -> dict[str, int]:
+    """Filter a statistics schema facet down to Thing-typed schemata."""
+    things: dict[str, int] = {}
     for schema_name, count in stats.schema_.values.items():
         schema = model.get(schema_name)
         if schema is not None and schema.is_a(Entity.THING):
