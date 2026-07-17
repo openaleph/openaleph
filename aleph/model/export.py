@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 
-from normality import stringify
+from pydantic import field_validator
 from servicelayer.cache import make_key
 from sqlalchemy import event
 from sqlalchemy.dialects.postgresql import JSONB
@@ -48,27 +48,6 @@ class Export(db.Model, IdModel, DatedModel):
     file_name = db.Column(db.Unicode, nullable=True)
     mime_type = db.Column(db.Unicode)
     meta = db.Column(JSONB, default={})
-
-    def to_dict(self):
-        data = self.to_dict_dates()
-        data.update(
-            {
-                "id": stringify(self.id),
-                "label": self.label,
-                "operation": self.operation,
-                "creator_id": stringify(self.creator_id),
-                "collection_id": self.collection_id,
-                "expires_at": self.expires_at,
-                "deleted": self.deleted,
-                "status": Status.LABEL.get(self.status),
-                "content_hash": self.content_hash,
-                "file_size": self.file_size,
-                "file_name": self.file_name,
-                "mime_type": self.mime_type,
-                "meta": self.meta,
-            }
-        )
-        return data
 
     @classmethod
     def create(
@@ -170,7 +149,7 @@ class ExportSchema(DatedSchema):
 
     The optional fields (``collection_id``, ``content_hash``,
     ``file_name``, ``file_size``) are populated by the export worker
-    only after the run completes successfully — exports that are
+    only after the run completes successfully – exports that are
     pending or scoped to no collection legitimately omit them.
     """
 
@@ -180,15 +159,21 @@ class ExportSchema(DatedSchema):
     expires_at: datetime
     deleted: bool
     status: str
-    mime_type: str
-    meta: SDict
+    meta: SDict = {}
 
     collection_id: str | None = None
     content_hash: str | None = None
     file_name: str | None = None
     file_size: int | None = None
+    mime_type: str | None = None
 
     links: SDict = {}
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def _localize_status(cls, v: str) -> str:
+        """Map raw DB enum to localized label string."""
+        return str(Status.LABEL.get(v, v))
 
 
 # === Resolver invalidation via SQLA events ===

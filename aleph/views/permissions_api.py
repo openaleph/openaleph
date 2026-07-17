@@ -2,7 +2,9 @@ from datetime import datetime
 
 from banal import ensure_dict
 from flask import Blueprint, request
+from pydantic import TypeAdapter
 
+from aleph.api.requests.permission import PermissionUpdate
 from aleph.core import db
 from aleph.logic.collections import update_collection
 from aleph.logic.permissions import update_permission
@@ -10,7 +12,7 @@ from aleph.logic.roles import check_visible
 from aleph.model import Permission, Role
 from aleph.views import resources
 from aleph.views.serializers import PermissionSerializer
-from aleph.views.util import jsonify, parse_request
+from aleph.views.util import jsonify
 
 blueprint = Blueprint("permissions_api", __name__)
 
@@ -70,6 +72,7 @@ def index(collection_id):
             continue
         permissions.append(
             {
+                "id": f"{role.id}-{collection.id}",
                 "collection_id": collection.id,
                 "write": False,
                 "read": False,
@@ -119,7 +122,12 @@ def update(collection_id):
       - Collection
     """
     collection = resources.get_db_collection(collection_id, request.authz.WRITE)
-    for permission in parse_request("PermissionUpdateList"):
+    adapter: TypeAdapter[list[PermissionUpdate]] = TypeAdapter(list[PermissionUpdate])
+    items: list[PermissionUpdate] = adapter.validate_python(request.get_json())
+    for item in items:
+        # exclude_unset: an explicit role_id=None must not defeat the
+        # fallback to the nested role object's id below.
+        permission: dict = item.model_dump(exclude_unset=True)
         role_obj = ensure_dict(permission.get("role"))
         role_id = permission.get("role_id", role_obj.get("id"))
         role = Role.by_id(role_id)

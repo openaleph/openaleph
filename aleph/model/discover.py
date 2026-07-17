@@ -4,7 +4,7 @@ These are computed views over a :class:`Collection` (the
 ``CollectionDiscovery`` aggregate sits in the resolver cache under
 ``CollectionDiscovery/<collection_id>`). The inner ``Term`` /
 ``MentionedTerms`` / ``SignificantTerms`` models are nested-only and
-never cached on their own — they inherit from :class:`APIBaseModel`
+never cached on their own – they inherit from :class:`APIBaseModel`
 just for the consistent ``model_dump`` semantics.
 """
 

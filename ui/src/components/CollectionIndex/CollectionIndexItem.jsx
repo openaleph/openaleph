@@ -91,9 +91,9 @@ class CollectionIndexItem extends PureComponent {
                   date: <Date value={collection.updated_at} />,
                 }}
               />
-              {collection.frequency !== 'never' &&
-                collection.frequency !== 'unknown' && (
-                  <Frequency.Label frequency={collection.frequency} />
+              {collection.coverage?.frequency !== 'never' &&
+                collection.coverage?.frequency !== 'unknown' && (
+                  <Frequency.Label frequency={collection.coverage?.frequency} />
                 )}
             </span>
             {collection.countries && collection.countries.length > 0 && (

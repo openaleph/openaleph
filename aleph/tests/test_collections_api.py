@@ -7,11 +7,10 @@ from aleph.authz import Authz
 from aleph.core import db
 from aleph.logic.aggregator import get_aggregator
 from aleph.logic.collections import compute_collection, update_collection
-from aleph.model import EntitySet
+from aleph.model import Collection, CollectionSchema, CollectionStatus, EntitySet
 from aleph.model.role import Role
 from aleph.settings import SETTINGS
 from aleph.tests.util import JSON, TestCase
-from aleph.views.util import validate
 
 # import os
 
@@ -53,7 +52,7 @@ class CollectionsApiTestCase(TestCase):
         assert res.json["total"] == 1, res.json
         assert res.json["results"][0]["languages"] == ["eng"], res.json
         assert res.json["results"][0]["countries"] == ["us"], res.json
-        assert validate(res.json["results"][0], "Collection")
+        CollectionSchema.model_validate(res.json["results"][0])
 
     def test_index_fuzzy_search(self):
         _, headers = self.login(is_admin=True)
@@ -92,7 +91,7 @@ class CollectionsApiTestCase(TestCase):
         assert casefile["count"] >= 1
         assert casefile["label"]  # should be the human-readable label
 
-        # Countries facet — setUp creates collection with countries=["us"]
+        # Countries facet – setUp creates collection with countries=["us"]
         countries = res.json["facets"]["countries"]["values"]
         country_ids = [v["id"] for v in countries]
         assert "us" in country_ids
@@ -135,7 +134,7 @@ class CollectionsApiTestCase(TestCase):
         assert res.status_code == 200, res
         assert "test_coll" in res.json["foreign_id"], res.json
         assert "Winnie" not in res.json["label"], res.json
-        assert validate(res.json, "Collection")
+        CollectionSchema.model_validate(res.json)
 
     def test_update_valid(self):
         _, headers = self.login(is_admin=True)
@@ -150,7 +149,42 @@ class CollectionsApiTestCase(TestCase):
         )
         assert res.status_code == 200, res.json
         assert "Collected" in res.json["label"], res.json
-        assert validate(res.json, "Collection")
+        CollectionSchema.model_validate(res.json)
+
+    def test_create_investigation_casefile(self):
+        # Regression: the UI creates investigations without an explicit
+        # category; Collection.create() defaults it to casefile. Dumping the
+        # pydantic request body with unset fields as explicit None used to
+        # wipe that default in Collection.update() (admin path), leaving
+        # casefile=False in the response and category=NULL in the database.
+        _, headers = self.login(is_admin=True)
+        url = "/api/2/collections"
+        data = {"label": "Test Investigation"}
+        res = self.client.post(
+            url, data=json.dumps(data), headers=headers, content_type=JSON
+        )
+        assert res.status_code == 200, res.json
+        assert res.json["category"] == "casefile", res.json
+        assert res.json["casefile"] is True, res.json
+        CollectionSchema.model_validate(res.json)
+
+        # persisted, not just serialized
+        collection = Collection.by_id(res.json["id"])
+        assert collection.category == Collection.CASEFILE
+        assert collection.casefile is True
+
+        # a partial update (e.g. renaming) must not None-wipe the category
+        url = "/api/2/collections/%s" % res.json["id"]
+        res = self.client.post(
+            url,
+            data=json.dumps({"label": "Renamed Investigation"}),
+            headers=headers,
+            content_type=JSON,
+        )
+        assert res.status_code == 200, res.json
+        assert res.json["label"] == "Renamed Investigation", res.json
+        assert res.json["casefile"] is True, res.json
+        assert res.json["category"] == "casefile", res.json
 
     def test_create_foreign_id(self):
         role, headers = self.login()
@@ -362,7 +396,7 @@ class CollectionsApiTestCase(TestCase):
         assert res.status_code == 200, res
         # FIXME procrastinate status (see above)
         # assert 1 == res.json["todo"], res.json
-        assert validate(res.json, "CollectionStatus")
+        CollectionStatus.model_validate(res.json)
 
         res = self.client.delete(url)
         assert res.status_code == 403, res

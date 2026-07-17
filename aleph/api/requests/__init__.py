@@ -27,6 +27,7 @@ from aleph.api.requests.role import (
     RoleUpdate,
 )
 from aleph.api.requests.tag import TagCreate
+from aleph.api.requests.xref import Pairwise
 
 __all__ = [
     "AlertCreate",
@@ -42,5 +43,6 @@ __all__ = [
     "RoleCreate",
     "RoleLogin",
     "RoleUpdate",
+    "Pairwise",
     "TagCreate",
 ]

@@ -3,7 +3,7 @@
 Each cached object has a content ETag derived either from a custom
 function (registered via :func:`register_etag`) or from a default
 content hash of the pydantic model's JSON dump. The ETag is used by
-HTTP cache validators on the API side — when an ETag changes the
+HTTP cache validators on the API side – when an ETag changes the
 browser revalidates with ``If-None-Match`` and gets fresh content;
 when it doesn't change the server returns 304.
 
@@ -22,7 +22,7 @@ from pydantic import BaseModel
 
 from aleph.logic.resolver.registry import get_etag_fn
 
-# 8 bytes = 64 bits of collision space — plenty for an ETag whose only
+# 8 bytes = 64 bits of collision space – plenty for an ETag whose only
 # job is to change when the content changes. The url-safe base64
 # encoding (with padding stripped) packs that into 11 characters,
 # vs 16 for hex, so the wire format stays compact.

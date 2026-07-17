@@ -20,7 +20,7 @@ class PercolateApiTestCase(TestCase):
         self.role, self.headers = self.login(is_admin=True)
         self.col = self.create_collection(creator=self.role)
 
-        # A person entity with a distinctive name — this gets a stored
+        # A person entity with a distinctive name – this gets a stored
         # percolator query built from its name variants at index time.
         person_data = {
             "schema": "Person",

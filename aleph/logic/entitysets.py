@@ -1,5 +1,7 @@
 import logging
 
+from normality import stringify
+
 from aleph.logic.entities import upsert_entity
 from aleph.logic.notifications import publish
 from aleph.logic.resolver.registry import register, register_etag
@@ -19,7 +21,20 @@ def _fetch_entityset(entityset_id: str) -> EntitySetSchema | None:
     entityset = EntitySet.by_id(entityset_id)
     if entityset is None:
         return None
-    return EntitySetSchema.model_validate(entityset.to_dict())
+    # Explicit construction – deliberately NOT model_validate(entityset):
+    # from_attributes would trigger the entity_ids property (a DB query)
+    # and cache its result; the assembler resolves entities separately.
+    return EntitySetSchema(
+        id=stringify(entityset.id),
+        type=entityset.type,
+        label=entityset.label,
+        summary=entityset.summary,
+        layout=entityset.layout,
+        role_id=stringify(entityset.role_id),
+        collection_id=stringify(entityset.collection_id),
+        created_at=entityset.created_at,
+        updated_at=entityset.updated_at,
+    )
 
 
 @register_etag(EntitySetSchema)
@@ -42,7 +57,7 @@ def create_entityset(collection, data, authz):
         new_id = upsert_entity(entity, collection, sign=True, sync=True)
         old_to_new_id_map[old_id] = new_id
         entity_ids.append(new_id)
-    layout = data.get("layout", {})
+    layout = data.get("layout") or {}
     data["layout"] = replace_layout_ids(layout, old_to_new_id_map)
     entityset = EntitySet.create(data, collection, authz)
     for entity_id in entity_ids:

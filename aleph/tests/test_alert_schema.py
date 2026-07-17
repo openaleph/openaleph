@@ -45,6 +45,11 @@ def test_alert_schema_with_dates_and_links():
     assert dumped["links"] == {"self": "/api/2/alerts/7"}
 
 
+def test_alert_int_id_coercion():
+    alert = AlertSchema(id="7", query="putin", role_id=42)
+    assert alert.role_id == "42"
+
+
 def test_alert_create_query_min_max_length():
     AlertCreate.model_validate({"query": "putin"})
     with pytest.raises(ValidationError):

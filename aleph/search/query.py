@@ -101,7 +101,7 @@ class EntitySetItemsQuery(EntitiesQuery):
 
     def get_filters(self, **kwargs):
         filters = super(EntitySetItemsQuery, self).get_filters(**kwargs)
-        filters.append({"ids": {"values": self.entityset.entities}})
+        filters.append({"ids": {"values": self.entityset.entity_ids}})
         return filters
 
     def get_index(self):
@@ -191,7 +191,7 @@ class MessageThreadQuery:
     # EntityReferenceMode and similar UI logic in general
     INCLUDES = {"Email": ["sender", "emitters", "recipients"]}
 
-    # Hard backend caps — callers can request a lower limit via the parser
+    # Hard backend caps – callers can request a lower limit via the parser
     # but cannot exceed these.
     MAX_DEPTH = 25
     MAX_RESULTS = 200
@@ -235,12 +235,12 @@ class MessageThreadQuery:
         # in Phase 3, so hits matching the source must not be re-yielded.
         self.yielded_ids: set[str] = {entity.id}
         self.produced: int = 0
-        # Set by walk() when the thread extends past what we returned —
+        # Set by walk() when the thread extends past what we returned –
         # either ES reported more hits at a level than we fetched, or the
         # one-hop tail probe found residual frontier content. Consumed by
         # the caller to set `total_type = "gte"` on the response envelope.
         self.truncated: bool = False
-        # Internal direction — set per walk phase, not by the caller.
+        # Internal direction – set per walk phase, not by the caller.
         self._direction: str = self.DIRECTION_PREVIOUS
 
     def _source_spec(self) -> dict[str, list[str]]:
@@ -248,7 +248,7 @@ class MessageThreadQuery:
 
         When `dehydrate` is set we drop the full `properties` payload
         (bodyHtml/bodyText/indexText/etc., which thread list views don't
-        need) but keep the threading-critical property fields — without
+        need) but keep the threading-critical property fields – without
         them the BFS can't compute the next frontier. Caller-supplied
         include_fields (group names or property paths) are folded in."""
         if not self.dehydrate:
@@ -358,7 +358,7 @@ class MessageThreadQuery:
     def _highlight_spec(self) -> dict[str, Any]:
         """Body preview highlighter for thread entities.
 
-        Thread queries don't carry user text — we just want the first
+        Thread queries don't carry user text – we just want the first
         preview chunks of bodyText per entity to simulate what ES returns
         when the search view asks for highlights with an empty query.
 
@@ -382,7 +382,7 @@ class MessageThreadQuery:
         When highlighting is off we serialize the in-memory proxy
         directly. When it's on we re-fetch through a single-doc search so
         the source gets the same `highlight` block as the other hits.
-        Any failure in the search path falls back to `to_full_dict()` —
+        Any failure in the search path falls back to `to_full_dict()` –
         the source must always appear in the result."""
         if not self.highlight:
             return self.entity.to_full_dict()
@@ -426,7 +426,7 @@ class MessageThreadQuery:
         """Process ES hits from one BFS level: expand the next frontier,
         collect entities, and dedup yields.
 
-        Expansion always runs, even for hits we skip yielding — in Phase 2
+        Expansion always runs, even for hits we skip yielding – in Phase 2
         the source and every ancestor re-surface as hits (they're seeded
         into the FOLLOWING frontier to catch sibling branches), and their
         descendants live one hop past them.
@@ -492,7 +492,7 @@ class MessageThreadQuery:
                 break
             if total_level > len(hits):
                 # We only asked for `remaining` hits but this level has
-                # more matches — definitely more to return.
+                # more matches – definitely more to return.
                 self.truncated = True
 
             ids, message_ids = self._process_hits(hits, collected)
@@ -528,7 +528,7 @@ class MessageThreadQuery:
         # ancestor). Seeding the FOLLOWING frontier with all of them in
         # one go lets ES return sibling branches (replies to intermediate
         # ancestors the source isn't descended from) at the very first
-        # hop — a single-root seed would miss them.
+        # hop – a single-root seed would miss them.
         self._direction = self.DIRECTION_FOLLOWING
         frontier_ids: set[str] = {self.entity.id}
         frontier_mids: set[str] = set(self.entity.get("messageId"))

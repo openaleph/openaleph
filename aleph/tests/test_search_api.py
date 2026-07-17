@@ -25,6 +25,17 @@ class SearchApiTestCase(TestCase):
         assert len(res.json["results"]) == 3, res.json
         assert b"Banana" in res.data, res.json
 
+    def test_search_highlight(self):
+        _, headers = self.login(is_admin=True)
+        res = self.client.get(
+            self.url + "&q=Martin McDonald&highlight=true", headers=headers
+        )
+        assert res.status_code == 200, res
+        assert res.json["total"] == 1, res.json
+        hl = res.json["results"][0]["highlight"]
+        assert "content" in hl
+        assert "<em>Martin</em>" in hl["content"][0]
+
     def test_post_search(self):
         query = {"q": "kwazulu", "filter:schemata": "Thing", "facet": "collection_id"}
         res = self.client.post("/api/2/search", data=query)

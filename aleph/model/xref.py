@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Self
+from typing import Annotated, Self
 
 from anystore.types import SDict
 from anystore.util.data import model_dump
@@ -12,7 +12,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
 from aleph.core import db
 from aleph.model.collection import CollectionSchema
-from aleph.model.common import APIBaseModel
+from aleph.model.common import APIBaseModel, ResolveFrom
 from aleph.model.entity import EntitySchema
 from aleph.settings import SETTINGS
 
@@ -29,7 +29,7 @@ def edge_id(source: StrIdent, target: StrIdent) -> str:
 # === SQL system of record (see xref-resolver-sql.md) ===
 #
 # The judgement graph lives in Postgres: `xref_edge` holds decided edges
-# (positive/negative/unsure — suggestions stay in ES), `xref_cluster` is
+# (positive/negative/unsure – suggestions stay in ES), `xref_cluster` is
 # the cluster membership materialized in the same transaction as the
 # edges. ESEdge above remains the wire/projection format for the ES index.
 
@@ -101,8 +101,8 @@ class XrefEdge(db.Model):
 class XrefCluster(db.Model):
     """Materialized cluster membership, maintained transactionally.
 
-    One row per node of every positive cluster — entities, all NK-* ids
-    (including intermediate ones), legacy profile ids — each pointing to
+    One row per node of every positive cluster – entities, all NK-* ids
+    (including intermediate ones), legacy profile ids – each pointing to
     the cluster's current canonical, which also has a self-row. Singletons
     have no rows. The primary key on entity_id IS the union-find invariant:
     a node belongs to exactly one cluster, enforced by the database.
@@ -168,22 +168,29 @@ class ESEdge(BaseModel):
 
 
 class XrefSchema(APIBaseModel):
-    """Wire format for a cross-reference match — one ranked pair of
+    """Wire format for a cross-reference match – one ranked pair of
     similar entities, perspective-aware so the requested collection's
     entity is always served as ``entity`` (left).
 
     Both ``entity`` and ``match`` are required: ``XrefSerializer``
     drops the row entirely if either side fails to resolve, so a
     half-populated XrefSchema would be a bug. ``score`` is also
-    required — every edge produced by the nomenklatura resolver
+    required – every edge produced by the nomenklatura resolver
     carries one.
     """
 
-    entity: EntitySchema
-    match: EntitySchema
+    source: str
+    target: str
+    entity: Annotated[EntitySchema | None, ResolveFrom("source", EntitySchema)] = None
+    match: Annotated[EntitySchema | None, ResolveFrom("target", EntitySchema)] = None
     score: float
     collections: list[CollectionSchema] = []
     writeable: bool = False
+
+    # ES edge metadata – needed for orientation and collection resolution
+    source_collection_id: list[int] = []
+    target_collection_id: list[int] = []
+    collection_id: list[int] = []
 
     method: str | None = None
     judgement: Judgement | None = None
@@ -194,3 +201,9 @@ class XrefSchema(APIBaseModel):
         # Both entity and match are required so neither id can be empty.
         a, b = sorted([self.entity.id, self.match.id])
         return f"{a}/{b}"
+
+    @computed_field
+    @property
+    def id(self) -> str:
+        # for the UI, but no required logic to have an id on an edge
+        return hash_data(self.cache_key)

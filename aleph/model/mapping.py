@@ -1,7 +1,8 @@
 import logging
 from datetime import datetime
+from typing import Annotated
 
-from normality import stringify
+from pydantic import field_validator
 from sqlalchemy.dialects.postgresql import JSONB
 
 from aleph.core import db
@@ -10,6 +11,7 @@ from aleph.model.common import (
     ENTITY_ID_LEN,
     DatedModel,
     DatedSchema,
+    ResolveFrom,
     SDict,
     Status,
     iso_text,
@@ -74,22 +76,6 @@ class Mapping(db.Model, DatedModel):
         self.updated_at = datetime.utcnow()
         db.session.add(self)
 
-    def to_dict(self):
-        data = self.to_dict_dates()
-        data.update(
-            {
-                "id": stringify(self.id),
-                "query": dict(self.query),
-                "role_id": stringify(self.role_id),
-                "collection_id": stringify(self.collection_id),
-                "entityset_id": stringify(self.entityset_id),
-                "table_id": self.table_id,
-                "last_run_status": Status.LABEL.get(self.last_run_status),
-                "last_run_err_msg": self.last_run_err_msg,
-            }
-        )
-        return data
-
     @classmethod
     def by_collection(cls, collection_id, table_id=None):
         q = cls.all().filter(cls.collection_id == collection_id)
@@ -130,11 +116,11 @@ class MappingSchema(DatedSchema):
     A mapping rewrites a tabular entity (CSV-like) into a stream of
     FollowTheMoney entities. ``query`` (the mapping DSL),
     ``collection_id``, ``role_id`` and ``table_id`` are application
-    invariants — every mapping is created with all four. The DB
+    invariants – every mapping is created with all four. The DB
     columns are technically nullable but ``Mapping.create`` populates
     them on every write.
 
-    ``entityset_id`` is genuinely optional — a mapping that produces
+    ``entityset_id`` is genuinely optional – a mapping that produces
     free-floating entities (not part of any entityset) is allowed.
     """
 
@@ -148,8 +134,18 @@ class MappingSchema(DatedSchema):
     last_run_status: str | None = None
     last_run_err_msg: str | None = None
 
-    entityset: EntitySetSchema | None = None
-    table: EntitySchema | None = None
+    @field_validator("last_run_status", mode="before")
+    @classmethod
+    def _localize_status(cls, v: str | None) -> str | None:
+        """Map raw DB enum to localized label string."""
+        if v is None:
+            return None
+        return str(Status.LABEL.get(v, v))
+
+    entityset: Annotated[
+        EntitySetSchema | None, ResolveFrom("entityset_id", EntitySetSchema)
+    ] = None
+    table: Annotated[EntitySchema | None, ResolveFrom("table_id", EntitySchema)] = None
 
     writeable: bool = False
     links: SDict = {}

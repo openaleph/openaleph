@@ -34,7 +34,7 @@ def test_bookmark_schema_minimal():
 
 
 def test_bookmark_schema_required_fields_raise_on_missing():
-    # All five fields are app invariants — none can be omitted.
+    # All five fields are app invariants – none can be omitted.
     with pytest.raises(ValidationError):
         BookmarkSchema(id="11", entity_id="abc-123")
     with pytest.raises(ValidationError):
@@ -44,6 +44,12 @@ def test_bookmark_schema_required_fields_raise_on_missing():
             role_id="42",
             collection_id="7",
         )  # missing created_at
+
+
+def test_bookmark_int_id_coercion():
+    bm = _bookmark(role_id=42, collection_id=7)
+    assert bm.role_id == "42"
+    assert bm.collection_id == "7"
 
 
 def test_bookmark_create_requires_entity_id():

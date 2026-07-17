@@ -145,7 +145,7 @@ class XrefApiTestCase(TestCase):
                 result["match"]["collection"]["id"] != residents_id
             ), "match should belong to the other collection"
 
-        # Query from dabo's perspective — orientation should flip
+        # Query from dabo's perspective – orientation should flip
         dabo_id = str(self.dabo.id)
         url = "/api/2/collections/%s/xref" % self.dabo.id
         res = self.client.get(url, headers=headers)

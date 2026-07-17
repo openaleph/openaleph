@@ -7,14 +7,15 @@ from flask_babel import gettext
 from prometheus_client import Counter
 from werkzeug.exceptions import BadRequest, Unauthorized
 
+from aleph.api.requests.role import RoleLogin
 from aleph.authz import Authz
 from aleph.core import cache, db, url_for
 from aleph.logic.roles import update_role
 from aleph.logic.util import ui_url
-from aleph.model import Role
+from aleph.model.role import Role
 from aleph.oauth import handle_oauth, oauth
 from aleph.settings import SETTINGS
-from aleph.views.util import get_url_path, jsonify, parse_request, require
+from aleph.views.util import get_url_path, jsonify, require, validate_request
 
 log = logging.getLogger(__name__)
 blueprint = Blueprint("sessions_api", __name__)
@@ -62,8 +63,8 @@ def password_login():
       - Role
     """
     require(SETTINGS.PASSWORD_LOGIN)
-    data = parse_request("Login")
-    role = Role.login(data.get("email"), data.get("password"))
+    body: RoleLogin = validate_request(RoleLogin)
+    role = Role.login(body.email, body.password)
     if role is None:
         AUTH_ATTEMPTS.labels(method="password", result="failed").inc()
         raise BadRequest(gettext("Invalid user or password."))

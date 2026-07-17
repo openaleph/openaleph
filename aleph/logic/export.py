@@ -7,7 +7,7 @@ from zipfile import ZipFile
 from flask import render_template
 from followthemoney.export.excel import ExcelExporter
 from followthemoney.helpers import entity_filename
-from normality import safe_filename
+from normality import safe_filename, stringify
 from openaleph_procrastinate import defer
 from openaleph_procrastinate.app import make_app
 from openaleph_search.index.entities import checksums_count, iter_proxies
@@ -49,25 +49,30 @@ EXPORT_XREF = "exportxref"
 EXPORT_SEARCH = "exportsearch"
 
 
-def get_export(export_id):
-    if export_id is None:
-        return
-    export = Export.by_id(export_id, deleted=True)
-    if export is not None:
-        return export.to_dict()
-
-
 @register(ExportSchema, ttl=TTL_RESOURCE)
 def _fetch_export(export_id: str) -> ExportSchema | None:
     export = Export.by_id(int(export_id), deleted=True)
     if export is None:
         return None
-    data = export.to_dict()
-    # Status values are lazy_gettext strings — pydantic strict mode
+    # Status values are lazy_gettext strings – pydantic strict mode
     # rejects them as non-str. Force to plain str.
-    if "status" in data:
-        data["status"] = str(data["status"])
-    return ExportSchema.model_validate(data)
+    return ExportSchema(
+        id=stringify(export.id),
+        label=export.label,
+        operation=export.operation,
+        creator_id=stringify(export.creator_id),
+        collection_id=export.collection_id,
+        expires_at=export.expires_at,
+        deleted=export.deleted,
+        status=str(Status.LABEL.get(export.status)),
+        content_hash=export.content_hash,
+        file_size=export.file_size,
+        file_name=export.file_name,
+        mime_type=export.mime_type,
+        meta=export.meta,
+        created_at=export.created_at,
+        updated_at=export.updated_at,
+    )
 
 
 @register_etag(ExportSchema)

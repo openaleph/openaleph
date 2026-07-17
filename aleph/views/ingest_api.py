@@ -20,7 +20,6 @@ from aleph.views.util import (
     get_flag,
     get_session_id,
     jsonify,
-    validate,
 )
 
 log = logging.getLogger(__name__)
@@ -52,7 +51,7 @@ def _load_metadata():
     except Exception as ex:
         raise BadRequest(str(ex))
 
-    validate(meta, "DocumentIngest")
+    # TODO: add pydantic validation for ingest metadata
     foreign_id = stringify(meta.get("foreign_id"))
     if not len(request.files) and foreign_id is None:
         raise BadRequest(

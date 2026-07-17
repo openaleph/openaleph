@@ -8,7 +8,7 @@ from aleph.model.common import APIBaseModel, SDict
 
 
 class EntityUpdate(APIBaseModel):
-    """``PUT /api/2/entities/<id>`` body — partial update.
+    """``PUT /api/2/entities/<id>`` body – partial update.
 
     ``schema`` is required; ``properties`` is the FTM property bag.
     The python attribute is named ``schema_`` because pydantic reserves
@@ -23,7 +23,7 @@ class EntityUpdate(APIBaseModel):
 
 
 class EntityCreate(EntityUpdate):
-    """``POST /api/2/entities`` body — extends ``EntityUpdate`` with the
+    """``POST /api/2/entities`` body – extends ``EntityUpdate`` with the
     create-only ``foreign_id`` and the option to pass the parent
     collection inline rather than by id."""
 

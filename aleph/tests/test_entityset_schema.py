@@ -115,6 +115,18 @@ def test_entityset_item_required_fields_raise_on_missing():
         # missing collection_id, entityset_collection_id
 
 
+def test_entityset_int_id_coercion():
+    es = _entityset(role_id=7, collection_id=42)
+    assert es.role_id == "7"
+    assert es.collection_id == "42"
+
+
+def test_entityset_item_int_id_coercion():
+    item = _entityset_item(collection_id=7, entityset_collection_id=42)
+    assert item.collection_id == "7"
+    assert item.entityset_collection_id == "42"
+
+
 def test_entityset_item_dump_omits_dropped_legacy_fields():
     item = _entityset_item()
     dumped = model_dump(item)

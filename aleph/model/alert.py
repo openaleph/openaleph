@@ -27,18 +27,6 @@ class Alert(db.Model, DatedModel):
         db.session.add(self)
         db.session.flush()
 
-    def to_dict(self):
-        data = self.to_dict_dates()
-        data.update(
-            {
-                "id": stringify(self.id),
-                "query": self.query,
-                "role_id": stringify(self.role_id),
-                "notified_at": self.notified_at,
-            }
-        )
-        return data
-
     @classmethod
     def by_id(cls, id, role_id=None):
         q = cls.all().filter_by(id=id)
@@ -72,7 +60,7 @@ class Alert(db.Model, DatedModel):
 class AlertSchema(DatedSchema):
     """Canonical wire format for an :class:`Alert`.
 
-    ``query`` and ``role_id`` are application invariants — every alert
+    ``query`` and ``role_id`` are application invariants – every alert
     is created with both. The DB columns are technically nullable but
     the application never persists an alert without them.
     """

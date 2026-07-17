@@ -32,7 +32,7 @@ T = TypeVar("T", bound=APIBaseModel)
 
 
 def get_resource(schema_cls: Type[T], identifier: str) -> T:
-    """Resolver lookup + 404. No authz — callers handle their own
+    """Resolver lookup + 404. No authz – callers handle their own
     permission check when the pattern differs per resource."""
     return cache.get_or_404(schema_cls, str(identifier))
 
@@ -65,11 +65,11 @@ def get_detail_collection(
     """Resolver lookup + 404 + authz for a Collection detail view.
 
     Returns the cached ``CollectionDetailSchema`` with live procrastinate
-    job status patched in (status is never cached — it's live data).
+    job status patched in (status is never cached – it's live data).
     """
     detail = cache.get_or_404(CollectionDetailSchema, str(collection_id))
     require(request.authz.can(detail.id, action))
-    # Patch live job status — not cached because it changes continuously.
+    # Patch live job status – not cached because it changes continuously.
     dataset_name = f"collection_{collection_id}"
     ds = get_dataset_status(dataset_name)
     if ds is not None:
@@ -91,7 +91,7 @@ def get_entityset(entityset_id: str, action: str = Authz.READ) -> EntitySetSchem
 
 
 def get_index_entity(entity_id: str, action: str = Authz.READ) -> SDict:
-    """Legacy helper — returns a dict. Prefer ``get_entity`` for new code."""
+    """Legacy helper – returns a dict. Prefer ``get_entity`` for new code."""
     return model_dump(get_entity(entity_id, action))
 
 

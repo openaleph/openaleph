@@ -4,34 +4,43 @@ Canonical clusters are the merged view of deduplicated entities
 resolved by the nomenklatura resolver. Statements are the individual
 FTM (entity, schema, prop, value) tuples that make up a merged entity.
 
-Decoupled from xref internals — these are API-facing resources with
+Decoupled from xref internals – these are API-facing resources with
 their own endpoint (``views/canonical_api.py``).
 """
 
 from datetime import datetime
+from typing import Any
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from aleph.model.collection import CollectionSchema
 from aleph.model.common import APIBaseModel
 from aleph.model.entity import EntitySchema
 
 
+class CanonicalEntitySchema(EntitySchema):
+    """Canonicals don't live in 1 Collection anymore"""
+
+    collection_id: str | None = None
+
+
 class CanonicalSchema(APIBaseModel):
-    """Wire format for a canonical (clustered) entity — replaces the
+    """Wire format for a canonical (clustered) entity – replaces the
     legacy Profile shape.
+
 
     A canonical cluster is the merged view of N constituent entities
     that the resolver has judged the same. ``merged`` is the FTM
     proxy of the merged result; ``entities`` are the constituent
     entities (typically served shallow). The cluster only exists
-    *because* there's a merged proxy — ``merged`` is required, and
+    *because* there's a merged proxy – ``merged`` is required, and
     the legacy ``CanonicalSerializer._serialize`` raises ``KeyError``
     on the same invariant.
     """
 
     id: str
-    merged: EntitySchema
+    label: str
+    merged: CanonicalEntitySchema
     entities: list[EntitySchema] = []
     collection_ids: list[str] = []
     writeable: bool = False
@@ -41,13 +50,18 @@ class CanonicalSchema(APIBaseModel):
     def cache_key(self) -> str:
         return self.id
 
+    @field_validator("collection_ids", mode="before")
+    @classmethod
+    def _stringify_collection_ids(cls, v: Any, info) -> Any:
+        return [str(i) for i in v]
+
 
 class StatementSchema(APIBaseModel):
     """Wire format for a single FollowTheMoney statement
     (``GET /api/2/statements`` and embedded in canonical lineage views).
 
     A statement is one (entity, schema, prop, value) tuple sourced from
-    one dataset — all five parts are required. ``id`` is also required
+    one dataset – all five parts are required. ``id`` is also required
     because :class:`followthemoney.statement.Statement` always has one
     (the ``Statement.__init__`` derives it via ``generate_key()`` if no
     explicit id was passed). When ``prop`` is an entity-typed property
@@ -63,7 +77,7 @@ class StatementSchema(APIBaseModel):
     dataset: CollectionSchema | str
 
     canonical_id: str
-    prop_type: str
+    prop_type: str | None = None
     first_seen: datetime | None = None
     last_seen: datetime | None = None
 

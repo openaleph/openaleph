@@ -10,21 +10,25 @@ from aleph.model.common import model_dump
 from aleph.model.entity import EntitySchema
 
 
-def _entity(entity_id: str, name: str) -> EntitySchema:
-    return EntitySchema(
-        id=entity_id,
-        schema="Person",
-        properties={"name": [name]},
-        schemata=["Person", "LegalEntity", "Thing"],
-        collection_id=1,
-        latinized={},
-    )
+def _entity_dict(entity_id: str, name: str) -> dict:
+    """Raw dict matching what get_canonical_cluster returns for entities."""
+    return {
+        "id": entity_id,
+        "schema": "Person",
+        "properties": {"name": [name]},
+        "schemata": ["Person", "LegalEntity", "Thing"],
+        "collection_id": 1,
+    }
 
 
 def test_canonical_schema_minimal():
-    c = CanonicalSchema(
-        id="NK-abc",
-        merged=_entity("NK-abc", "Alice Smith"),
+    # Real callers pass a dict (from get_canonical_cluster), not kwargs
+    c = CanonicalSchema.model_validate(
+        {
+            "id": "NK-abc",
+            "label": "Alice Smith",
+            "merged": _entity_dict("NK-abc", "Alice Smith"),
+        }
     )
     assert c.cache_key == "NK-abc"
     dumped = model_dump(c)
@@ -34,16 +38,19 @@ def test_canonical_schema_minimal():
 
 def test_canonical_schema_required_fields_raise_on_missing():
     with pytest.raises(ValidationError):
-        CanonicalSchema(id="NK-abc")  # missing merged
+        CanonicalSchema.model_validate({"id": "NK-abc"})  # missing merged, label
 
 
 def test_canonical_schema_with_constituents():
-    c = CanonicalSchema(
-        id="NK-abc",
-        merged=_entity("NK-abc", "Alice Smith"),
-        entities=[_entity("a", "Alice"), _entity("b", "Alicia")],
-        collection_ids=["leaks", "opensanctions"],
-        writeable=True,
+    c = CanonicalSchema.model_validate(
+        {
+            "id": "NK-abc",
+            "label": "Alice Smith",
+            "merged": _entity_dict("NK-abc", "Alice Smith"),
+            "entities": [_entity_dict("a", "Alice"), _entity_dict("b", "Alicia")],
+            "collection_ids": ["leaks", "opensanctions"],
+            "writeable": True,
+        }
     )
     dumped = model_dump(c)
     assert dumped["merged"]["properties"]["name"] == ["Alice Smith"]
@@ -96,7 +103,7 @@ def test_statement_schema_entity_value():
         schema="Person",
         prop="ownership",
         prop_type="entity",
-        value=_entity("b", "Bob"),
+        value=EntitySchema.model_validate(_entity_dict("b", "Bob")),
         dataset=CollectionSchema(id="1", name="leaks", title="Leaks"),
     )
     dumped = model_dump(s)

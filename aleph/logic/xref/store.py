@@ -2,11 +2,11 @@
 SQL store for the xref judgement graph (see xref-resolver-sql.md).
 
 Postgres is the system of record: `xref_edge` holds decided edges
-(positive/negative/unsure — suggestions stay in ES), `xref_cluster` the
+(positive/negative/unsure – suggestions stay in ES), `xref_cluster` the
 materialized membership, both written in the same transaction under one
 global advisory lock. Reads resolve an entity's cluster via a membership
 point lookup and apply the per-edge auth contract (both collections
-readable) over the cluster's edges — never over the whole graph.
+readable) over the cluster's edges – never over the whole graph.
 
 This module is deliberately resolver-agnostic: it deals in rows, ids and
 Judgements. ES projection and metadata semantics live in
@@ -361,7 +361,7 @@ def ensure_positive_edge(
     """Register a POSITIVE edge unless an identical live one exists.
 
     Keeping the existing row preserves the original decision's provenance
-    (user, timestamp) and its NK-side collection metadata — the documented
+    (user, timestamp) and its NK-side collection metadata – the documented
     auth semantics bind an entity→NK-* edge to the entity it was paired
     with in the *original* decision. It also makes re-imports idempotent.
     Returns the new row, or None when the existing edge was kept (nothing
@@ -401,7 +401,7 @@ def soft_delete_node_edges(session: Session, node_ids: set[str]) -> list[XrefEdg
 
 
 def set_membership(session: Session, node_ids: set[str], canonical_id: str) -> None:
-    """Point all nodes — and the canonical itself — at canonical_id."""
+    """Point all nodes – and the canonical itself – at canonical_id."""
     ids = sorted(set(node_ids) | {canonical_id})
     stmt = pg_insert(XrefCluster).values(
         [{"entity_id": n, "canonical_id": canonical_id} for n in ids]
@@ -607,7 +607,7 @@ def purge_xref(
     sync: bool = False,
 ) -> None:
     """Purge the judgement graph (SQL) and the xref index (ES) for a
-    collection or entity — or everything, when called without filters."""
+    collection or entity – or everything, when called without filters."""
     with xref_session() as session:
         collection_id = collection.id if collection is not None else None
         purge(session, collection_id=collection_id, entity_id=entity_id)
@@ -621,7 +621,7 @@ def iter_latest_pair_rows(session: Session) -> Iterator[XrefEdge]:
     """The most recent row per pair, live or soft-deleted.
 
     Soft-deleted latest rows must be projected too, so a missed tombstone
-    in ES gets repaired — the per-pair document id makes this idempotent.
+    in ES gets repaired – the per-pair document id makes this idempotent.
     """
     stmt = (
         select(XrefEdge)
@@ -649,7 +649,7 @@ def reproject(sync: bool = False) -> int:
 def rebuild_clusters() -> int:
     """Recompute the membership table from live positive edges.
 
-    Offline verify/repair — the only full-graph union-find anywhere.
+    Offline verify/repair – the only full-graph union-find anywhere.
     """
     with xref_session() as session:
         acquire_graph_lock(session)

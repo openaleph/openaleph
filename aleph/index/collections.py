@@ -1,14 +1,16 @@
 """Elasticsearch index operations for collections.
 
-Pure ES layer — no resolver registrations, no pydantic schemas,
+Pure ES layer – no resolver registrations, no pydantic schemas,
 no caching logic. The resolver registrations live in
 ``aleph/logic/collections.py``.
 """
 
 import logging
 
+from banal import ensure_list
 from followthemoney import model
-from normality import normalize
+from followthemoney.types import registry
+from normality import normalize, stringify
 from openaleph_search.index.indexer import (
     configure_index,
     delete_safe,
@@ -106,12 +108,65 @@ def configure_collections():
     return configure_index(index, mapping, settings)
 
 
+def collection_index_doc(collection: Collection) -> dict:
+    """Flat legacy-shaped index document for a collection.
+
+    Relocated verbatim from the deleted ``Collection.to_dict()`` – the
+    collections index keeps the legacy flat dict shape (the input mapper
+    on ``CollectionSchema`` maps it back).
+    """
+    data = {
+        "created_at": collection.created_at,
+        "updated_at": collection.updated_at,
+    }
+    if collection.deleted_at:
+        data["deleted_at"] = collection.deleted_at
+    data["category"] = collection.CASEFILE
+    if collection.category in collection.CATEGORIES:
+        data["category"] = collection.category
+    data["frequency"] = collection.DEFAULT_FREQUENCY
+    if collection.frequency in collection.FREQUENCIES:
+        data["frequency"] = collection.frequency
+    countries = ensure_list(collection.countries)
+    countries = [registry.country.clean(c) for c in countries]
+    data["countries"] = [c for c in countries if c is not None]
+    languages = ensure_list(collection.languages)
+    languages = [registry.language.clean(c) for c in languages]
+    data["languages"] = [c for c in languages if c is not None]
+    data.update(
+        {
+            "id": stringify(collection.id),
+            "name": collection.name,
+            "collection_id": stringify(collection.id),
+            "foreign_id": collection.foreign_id,
+            "creator_id": stringify(collection.creator_id),
+            "data_updated_at": collection.data_updated_at,
+            "team_id": collection.team_id,
+            "label": collection.label,
+            "summary": collection.summary,
+            "publisher": collection.publisher,
+            "publisher_url": collection.publisher_url,
+            "info_url": collection.info_url,
+            "data_url": collection.data_url,
+            "casefile": collection.casefile,
+            "secret": collection.secret,
+            "xref": collection.xref,
+            "restricted": collection.restricted,
+            "contains_ai": collection.contains_ai,
+            "contains_ai_comment": collection.contains_ai_comment,
+            "external": collection.external,
+            "taggable": collection.taggable,
+        }
+    )
+    return data
+
+
 def index_collection(collection: Collection, sync: bool = False):
     """Index a collection document into ES."""
     if collection.deleted_at is not None:
         return delete_collection_index(collection.id)
 
-    data = collection.to_dict()
+    data = collection_index_doc(collection)
 
     # Count things for the ES document.
     index = entities_read_index(schema=Entity.THING)

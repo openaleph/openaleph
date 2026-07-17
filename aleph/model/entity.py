@@ -1,7 +1,8 @@
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
 
+from banal import is_listish
 from flask_babel import gettext
 from followthemoney import EntityProxy, model
 from followthemoney.exc import InvalidData
@@ -17,6 +18,7 @@ from aleph.model.common import (
     ENTITY_ID_LEN,
     APIBaseModel,
     DatedModel,
+    ResolveFrom,
     SDict,
     iso_text,
     make_textid,
@@ -127,18 +129,20 @@ class Entity(db.Model, DatedModel):
 # the runtime ``links`` block.
 #
 # The ``properties`` field is inherited from ``EntityModel`` and remains
-# a ``Mapping[str, Sequence[str | EntityModel]]`` — nested entities
+# a ``Mapping[str, Sequence[str | EntityModel]]`` – nested entities
 # inside properties are served in the FTM-canonical "shallow" form
 # without Aleph extras (matching the existing ``shallow=True`` behaviour
 # of the legacy serializer).
 
 
-class EntitySchema(EntityModel):
+class EntitySchema(EntityModel, APIBaseModel):
     """Wire format for an OpenAleph entity.
 
     Subclasses :class:`ftmq.model.entity.EntityModel` for the canonical
     FollowTheMoney shape (``id``, ``caption``, ``schema``, ``properties``,
-    ``datasets``, ``referents``) and adds Aleph-specific fields on top.
+    ``datasets``, ``referents``) and :class:`APIBaseModel` for the
+    ``_stringify_ids`` / ``_coerce_id_fields`` validators and
+    ``cache_key`` property.
     """
 
     model_config = ConfigDict(
@@ -146,7 +150,10 @@ class EntitySchema(EntityModel):
         populate_by_name=True,
     )
 
-    # Populated by the ES indexer — the schema ancestor chain.
+    # Reference to Canonical cluster if any
+    canonical_id: str | None = None
+
+    # Populated by the ES indexer – the schema ancestor chain.
     # Defaults to empty so entities from older indexes or minimal
     # test fixtures still validate.
     schemata: list[str] = []
@@ -155,10 +162,12 @@ class EntitySchema(EntityModel):
     # ES document. Used by authz checks and xref cluster resolution.
     collection_id: int
 
-    # Resolved nested resources, populated by the response builder.
-    collection: CollectionSchema | None = None
+    # Resolved nested resources, populated by the assembler.
+    collection: Annotated[
+        CollectionSchema | None, ResolveFrom("collection_id", CollectionSchema)
+    ] = None
     role_id: str | None = None
-    role: RoleSchema | None = None
+    role: Annotated[RoleSchema | None, ResolveFrom("role_id", RoleSchema)] = None
 
     # FTM property aggregates surfaced as flat fields for facet display.
     countries: list[str] = []
@@ -167,7 +176,7 @@ class EntitySchema(EntityModel):
 
     # Search-time fields.
     score: float | None = None
-    highlight: list[str] = []
+    highlight: SDict = {}
 
     # Per-user state.
     bookmarked: bool | None = None
@@ -177,7 +186,7 @@ class EntitySchema(EntityModel):
     safeHtml: list[str] | None = None
     processing_status: SDict | None = None
 
-    # Transliterated property values — computed by the response builder,
+    # Transliterated property values – computed by the response builder,
     # not part of the cached entity. Defaults to empty so the resolver
     # can cache the raw ES payload without needing to compute it.
     latinized: SDict = {}
@@ -198,7 +207,10 @@ class EntitySchema(EntityModel):
     @classmethod
     def _extract_collection_id(cls, data: Any) -> Any:
         """Pull ``collection_id`` from a nested ``collection`` dict/model
-        when ``collection_id`` is not provided directly."""
+        when ``collection_id`` is not provided directly. As well transform
+        literal ``EntityProxy`` input data."""
+        if isinstance(data, EntityProxy):
+            return data.to_dict()
         if isinstance(data, dict) and "collection_id" not in data:
             collection = data.get("collection")
             if isinstance(collection, dict) and "id" in collection:
@@ -209,11 +221,17 @@ class EntitySchema(EntityModel):
     def cache_key(self) -> str:
         return self.id
 
-    @field_validator("role_id", mode="before")
+    @field_validator("role_id", "mutable", mode="before")
     @classmethod
-    def clean_role_id(cls, v: Any) -> str | None:
+    def listish_to_single(cls, v: Any) -> str | None:
         if isinstance(v, int):
             return str(v)
+        # FIXME next major version: reindex needed, then this is fixed:
+        if is_listish(v):
+            for val in v:
+                if isinstance(val, int):
+                    val = str(val)
+                return val
 
 
 class EntityTagSchema(APIBaseModel):
@@ -239,6 +257,7 @@ class SimilarSchema(APIBaseModel):
     """One result of a similar-entity query
     (``GET /api/2/entities/<id>/similar``)."""
 
-    score: float | None = None
-    entity: EntitySchema | None = None
-    judgement: Judgement | None = None
+    score: float = 0
+    entity: EntitySchema
+    judgement: Judgement = Judgement.NO_JUDGEMENT
+    writeable: bool = False

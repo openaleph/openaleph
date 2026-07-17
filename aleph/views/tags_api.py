@@ -4,6 +4,7 @@ from flask import Blueprint, request
 from sqlalchemy import func
 from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
+from aleph.api.requests.tag import TagCreate
 from aleph.authz import Authz
 from aleph.core import db
 from aleph.logic import collections
@@ -13,7 +14,7 @@ from aleph.model.tag import Tag
 from aleph.search import DatabaseQueryResult
 from aleph.views import resources
 from aleph.views.serializers import TagSerializer
-from aleph.views.util import jsonify, parse_request, require
+from aleph.views.util import jsonify, require, validate_request
 
 log = logging.getLogger(__name__)
 blueprint = Blueprint("tags_api", __name__)
@@ -98,13 +99,18 @@ def index():
         # If filtering by entity, order by creation date
         query = query.order_by(Tag.created_at.desc())
     else:
-        # Group by tag value and order by occurrence count
+        # Group by tag value and order by occurrence count.
+        # Returns (tag, count) rows – not full Tag objects, so we
+        # bypass the TagSerializer and return plain dicts.
         query = (
             db.session.query(Tag.tag, func.count(Tag.entity_id).label("count"))
             .filter(Tag.collection_id == collection_id)
             .group_by(Tag.tag)
             .order_by(func.count(Tag.entity_id).desc(), Tag.tag)
         )
+        result = DatabaseQueryResult(request, query)
+        result.results = [{"tag": tag, "count": count} for tag, count in result.results]
+        return jsonify(result.to_dict())
 
     result = DatabaseQueryResult(request, query)
     return TagSerializer.jsonify_result(result)
@@ -133,14 +139,9 @@ def create():
           description: Bad request
     """
     require(request.authz.session_write)
-    data = parse_request("TagCreate")
-    entity_id = data.get("entity_id")
-    tag_text = data.get("tag")
-
-    if not tag_text:
-        raise BadRequest("Tag text is required")
-    if not entity_id:
-        raise BadRequest("Entity ID is required")
+    body: TagCreate = validate_request(TagCreate)
+    entity_id = body.entity_id
+    tag_text = body.tag
 
     entity = require_entity_taggable(entity_id, request.authz)
 

@@ -39,7 +39,7 @@ class XrefTable extends Component {
         <th className="numeric narrow" />
         <th className="entity bordered">
           <span className="value">
-            <FormattedMessage id="xref.entity" defaultMessage="Reference" />
+            <FormattedMessage id="xref.entity" defaultMessage="Source Entity" />
           </span>
         </th>
         <th className="entity">

@@ -15,7 +15,7 @@ const ProfileCallout = ({ entity, canonical, viaEntityId }) => {
         <p>
           <FormattedMessage
             id="profile.callout.intro"
-            defaultMessage={"You're viewing {entity} as a profile. "}
+            defaultMessage={"You're viewing {entity} as a cluster. "}
             values={{
               entity: <Entity.Label entity={canonical.entity} />,
             }}
@@ -23,7 +23,7 @@ const ProfileCallout = ({ entity, canonical, viaEntityId }) => {
           <FormattedMessage
             id="profile.callout.details"
             defaultMessage={
-              'This profile aggregates attributes and relationships from {count} entities across different datasets.'
+              'This cluster aggregates attributes and relationships from {count} entities across different datasets.'
             }
             values={{
               count: canonical.merged?.referents?.length || 0,
@@ -57,7 +57,7 @@ const ProfileCallout = ({ entity, canonical, viaEntityId }) => {
       <FormattedMessage
         id="profile.hint"
         defaultMessage={
-          '{entity} has been combined with entities from other datasets <link>into a profile</link>'
+          '{entity} has been combined with entities from other datasets <link>into a cluster</link>'
         }
         values={{
           entity: <Entity.Label entity={entity} />,

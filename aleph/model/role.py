@@ -162,27 +162,6 @@ class Role(db.Model, IdModel, SoftDeleteModel):
         digest = self.password_digest or ""
         return check_password_hash(digest, secret)
 
-    def to_dict(self):
-        data = self.to_dict_dates()
-        data.update(
-            {
-                "id": stringify(self.id),
-                "type": self.type,
-                "name": self.name,
-                "label": self.label,
-                "email": self.email,
-                "locale": self.locale,
-                "api_key": self.api_key,
-                "is_admin": self.is_admin,
-                "is_muted": self.is_muted,
-                "is_tester": self.is_tester,
-                "is_investigator": self.is_investigator,
-                "has_password": self.has_password,
-                # 'notified_at': self.notified_at
-            }
-        )
-        return data
-
     @classmethod
     def by_foreign_id(cls, foreign_id, deleted=False):
         if foreign_id is not None:
@@ -354,7 +333,7 @@ class RoleSchema(DatedSchema):
     foreign_id: str
     label: str
 
-    # Sensitive — populated only when the requester is allowed to see them.
+    # Sensitive – populated only when the requester is allowed to see them.
     email: str | None = None
     api_key: str | None = None
     locale: str | None = None
@@ -365,21 +344,16 @@ class RoleSchema(DatedSchema):
     is_blocked: bool | None = None
     is_investigator: bool | None = None
 
+    # Deep-view aggregate (``get_deep_role``): alert/entityset/casefile/
+    counts: SDict | None = None
+
     writeable: bool = False
     shallow: bool = True
     links: SDict = {}
 
     @property
     def cache_key(self) -> str:
-        """Roles are referenced by int PK everywhere (Permission.role_id,
-        Alert.role_id, notification ``actor_id``, …) — not by
-        ``foreign_id``. Override the inherited default so the resolver
-        keys roles under their integer id, matching every call site
-        that asks for a role.
-        """
-        if self.id:
-            return self.id
-        raise ValueError("RoleSchema has no id; cannot derive a cache_key")
+        return self.id
 
 
 class RoleChannels(APIBaseModel):

@@ -241,12 +241,12 @@ export function selectCollection(state, collectionId) {
   return collection;
 }
 
-// FTM's `Entity` constructor only preserves `schema`, `id`, and `properties` —
+// FTM's `Entity` constructor only preserves `schema`, `id`, and `properties` –
 // the backend-computed `caption` field is dropped on hydration, and the same
 // goes for every nested entity snippet inside an entity-typed property (walked
 // recursively by `setProperty`).  Without this post-hydration pass,
 // `EntityLabel` on a nested chip falls through to `entity.getCaption()`, which
-// picks the first value of `schema.caption[0]` — UTF-ordered, so a mixed-script
+// picks the first value of `schema.caption[0]` – UTF-ordered, so a mixed-script
 // `name` array (`["هانا نیومن", "Hannah Neumann"]`) renders the Arabic variant
 // even when the backend's caption has a "more readable" (as in the perspective
 // from minority world) variant "Hannah Neumann". Walk the hydrated proxy

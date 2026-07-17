@@ -1,9 +1,8 @@
 import json
 
 from aleph.core import db
-from aleph.model import Alert
-from aleph.views.util import validate
-from aleph.tests.util import TestCase, JSON
+from aleph.model import Alert, AlertSchema
+from aleph.tests.util import JSON, TestCase
 
 
 class AlertsApiTestCase(TestCase):
@@ -17,7 +16,7 @@ class AlertsApiTestCase(TestCase):
         res = self.client.get("/api/2/alerts", headers=headers)
         assert res.status_code == 200, res
         assert res.json.get("total") == 0, res.json
-        validate(res.json, "QueryResponse")
+        assert "results" in res.json
 
     def test_create(self):
         data = {"query": "banana pumpkin"}
@@ -32,7 +31,7 @@ class AlertsApiTestCase(TestCase):
             content_type=JSON,
         )
         assert res.status_code == 200, res.json
-        validate(res.json, "Alert")
+        AlertSchema.model_validate(res.json)
         assert "banana pumpkin" in res.json["query"], res.json
         for wrong_data in [{"query": 2}, {"quarry": "stone"}]:
             wdata = json.dumps(wrong_data)
@@ -55,7 +54,7 @@ class AlertsApiTestCase(TestCase):
             content_type=JSON,
         )
         assert res.status_code == 200, res.json
-        validate(res.json, "Alert")
+        AlertSchema.model_validate(res.json)
         assert res.json["query"] == "putin", res.json
 
     def test_view(self):
@@ -71,7 +70,7 @@ class AlertsApiTestCase(TestCase):
         url = "/api/2/alerts/%s" % res.json["id"]
         res2 = self.client.get(url, headers=headers)
         assert res2.json["id"] == res.json["id"], res2.json
-        validate(res.json, "Alert")
+        AlertSchema.model_validate(res.json)
 
         res3 = self.client.get("/api/2/alerts/100000", headers=headers)
         assert res3.status_code == 404, res3

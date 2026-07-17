@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Type
 
 from flask_babel import lazy_gettext
-from pydantic import BaseModel, Field, computed_field, field_serializer
+from pydantic import BaseModel, Field, computed_field, field_serializer, field_validator
 
 from aleph.model.alert import AlertSchema
 from aleph.model.collection import CollectionSchema
@@ -33,7 +33,7 @@ class EventSchema(APIBaseModel):
     title: Any  # lazy_gettext proxy
     template: Any  # lazy_gettext proxy
     link_to: str | None = None
-    # Runtime type map for resolver dispatch — excluded from serialization
+    # Runtime type map for resolver dispatch – excluded from serialization
     # because class objects can't be JSON-serialized. The wire-format
     # ``params`` computed field produces the string version.
     param_types: dict[str, Type[BaseModel]] = Field(default={}, exclude=True)
@@ -178,6 +178,17 @@ class NotificationSchema(APIBaseModel):
     params: SDict
     channels: list[str]
     created_at: datetime
+
+    @field_validator("event", mode="before")
+    @classmethod
+    def _resolve_event(cls, v: Any) -> EventSchema:
+        """ES stores the event name as a string; look it up in the registry."""
+        if isinstance(v, str):
+            resolved = Events.get(v)
+            if resolved is None:
+                raise ValueError(f"Unknown event: {v!r}")
+            return resolved
+        return v
 
     @property
     def cache_key(self) -> str:

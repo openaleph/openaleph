@@ -77,6 +77,17 @@ def test_mapping_schema_with_run_status():
     assert "last_run_err_msg" not in dumped  # None → stripped
 
 
+def test_mapping_int_id_coercion():
+    m = _mapping(collection_id=42, role_id=7)
+    assert m.collection_id == "42"
+    assert m.role_id == "7"
+
+
+def test_mapping_status_localized():
+    m = _mapping(last_run_status="success")
+    assert m.last_run_status == "successful"
+
+
 def test_mapping_create_requires_table_id_and_query():
     MappingCreate.model_validate(
         {"table_id": "table-abc", "mapping_query": {"persons": {}}}

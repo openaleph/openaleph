@@ -61,6 +61,96 @@ def test_collection_schema_aleph_extras_default_false():
     assert dumped["taggable"] is False
 
 
+def test_collection_schema_none_bools_fall_back_to_default():
+    # StripNoneMixin: explicit ``None`` values are dropped from mapping
+    # input before validation (legacy dicts / nullable SQLA columns), so
+    # pydantic applies the field default instead of raising bool_type
+    # errors – e.g. ``contains_ai``.
+    c = CollectionSchema.model_validate(
+        {
+            "id": "42",
+            "name": "x",
+            "title": "X",
+            "contains_ai": None,
+            "external": None,
+            "secret": None,
+            "languages": None,
+        }
+    )
+    assert c.contains_ai is False
+    assert c.external is False
+    assert c.secret is False
+    assert c.languages == []
+
+
+def test_collection_schema_legacy_flat_publisher():
+    # Legacy dicts (``Collection.to_dict()`` / old index docs) carry
+    # ``publisher`` as a plain string with ``publisher_url`` beside it –
+    # the dict branch of ``_from_collection`` folds both into the FTM
+    # ``DataPublisher`` shape and maps ``info_url`` → ``url``.
+    c = CollectionSchema.model_validate(
+        {
+            "id": "7",
+            "foreign_id": "cpr",
+            "label": "CPR",
+            "publisher": "Corporate Prosecution Registry",
+            "publisher_url": "https://example.org",
+            "info_url": "https://example.org/about",
+        }
+    )
+    assert c.publisher is not None
+    assert c.publisher.name == "Corporate Prosecution Registry"
+    assert str(c.publisher.url).startswith("https://example.org")
+    assert str(c.url) == "https://example.org/about"
+    # dict-shaped publishers (cached schema dumps) pass through untouched
+    c2 = CollectionSchema.model_validate(
+        {"id": "9", "name": "y", "title": "Y", "publisher": {"name": "P"}}
+    )
+    assert c2.publisher is not None
+    assert c2.publisher.name == "P"
+
+
+def test_collection_schema_legacy_flat_frequency():
+    # Legacy flat ``frequency`` folds into ``coverage.frequency`` with the
+    # Aleph→FTM value mapping ("annual" → "annually") applied.
+    c = CollectionSchema.model_validate(
+        {"id": "7", "foreign_id": "cpr", "label": "CPR", "frequency": "annual"}
+    )
+    assert c.coverage is not None
+    assert c.coverage.frequency == "annually"
+    # an existing coverage dict (cached schema dumps) keeps its own value
+    c2 = CollectionSchema.model_validate(
+        {
+            "id": "9",
+            "name": "y",
+            "title": "Y",
+            "frequency": "annual",
+            "coverage": {"frequency": "daily"},
+        }
+    )
+    assert c2.coverage is not None
+    assert c2.coverage.frequency == "daily"
+    # absent / None frequency conjures no coverage
+    c3 = CollectionSchema.model_validate(
+        {"id": "10", "name": "z", "title": "Z", "frequency": None}
+    )
+    assert c3.coverage is None
+
+
+def test_collection_schema_none_optional_and_required():
+    # Optional fields keep their ``None`` default; required fields
+    # without a fallback still fail – as "missing" instead of a type
+    # error, since the ``None`` is stripped before validation.
+    c = CollectionSchema.model_validate(
+        {"id": "42", "name": "x", "title": "X", "summary": None}
+    )
+    assert c.summary is None
+    with pytest.raises(ValidationError) as exc:
+        CollectionSchema.model_validate({"name": "x", "title": "X", "id": None})
+    assert exc.value.errors()[0]["type"] == "missing"
+    assert exc.value.errors()[0]["loc"] == ("id",)
+
+
 def test_facet_counts_default_empty():
     f = FacetCounts()
     dumped = model_dump(f)

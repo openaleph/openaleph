@@ -4,6 +4,7 @@ from typing import Annotated
 
 from pydantic import Field
 
+from aleph.model.collection import Categories
 from aleph.model.common import APIBaseModel
 from aleph.model.role import RoleSchema
 
@@ -20,13 +21,14 @@ class CollectionCreate(APIBaseModel):
     info_url: str | None = None
     publisher: str | None = None
     publisher_url: str | None = None
-    category: str | None = None
+    category: Categories | None = None
     frequency: str | None = None
     restricted: bool | None = None
     xref: bool | None = None
     contains_ai: bool | None = None
     contains_ai_comment: str | None = None
     taggable: bool | None = None
+    external: bool | None = None
 
 
 class CollectionUpdate(CollectionCreate):

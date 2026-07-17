@@ -2,9 +2,9 @@
 
 Two cache layers:
 
-- :class:`Cache` — process-level singleton (``cache``). No per-request
+- :class:`Cache` – process-level singleton (``cache``). No per-request
   local dict. Used by SQLA events, logic functions, CLI commands.
-- :class:`RequestResolver` — per-request, adds a ``_local`` dict for
+- :class:`RequestResolver` – per-request, adds a ``_local`` dict for
   request-scoped deduplication. Used by serializers and view functions.
 
 The module-level :data:`cache` singleton is the canonical interface

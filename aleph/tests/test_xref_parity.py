@@ -3,10 +3,10 @@ API-parity guard: XrefResolver stays signature-compatible with
 nomenklatura's Resolver.
 
 XrefResolver deliberately does not subclass nomenklatura's Resolver (since
-4.11 upstream inlines SQL into every method — no storage seam, and its
+4.11 upstream inlines SQL into every method – no storage seam, and its
 in-memory linker is auth-blind). This test is the binding to the shared
 concept instead: for every shared method, our signature must accept
-upstream's calling convention — same leading parameter names, extras
+upstream's calling convention – same leading parameter names, extras
 optional. It fails loudly when upstream moves the concept. No database or
 ES needed.
 """
@@ -40,7 +40,7 @@ SHARED_METHODS = (
 # (commit/close/bulk/import_decisions are aleph-only extensions: upstream
 # 4.11 dropped commit/close with its session rewrite.)
 DELIBERATE_DIVERGENCES = {
-    "prune": "cleanup_after dropped — aleph prune only clears ES suggestions",
+    "prune": "cleanup_after dropped – aleph prune only clears ES suggestions",
     "dump": "takes an anystore Uri instead of a PathLike path",
     "load": "takes an anystore Uri instead of a PathLike path",
 }

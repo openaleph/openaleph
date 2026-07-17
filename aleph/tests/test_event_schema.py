@@ -21,7 +21,7 @@ def test_event_schema_params_strips_schema_suffix():
 
 
 def test_event_schema_param_types_excluded_from_dump():
-    """param_types holds class objects — must not appear in serialized output."""
+    """param_types holds class objects – must not appear in serialized output."""
     e = Events.INGEST_DOCUMENT
     dumped = model_dump(e)
     assert "param_types" not in dumped

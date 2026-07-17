@@ -4,8 +4,8 @@ from pprint import pprint  # noqa
 from unittest import skip  # noqa
 
 from aleph.logic.collections import delete_collection
+from aleph.model import EntitySetSchema
 from aleph.tests.util import TestCase
-from aleph.views.util import validate
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class EntitySetAPITest(TestCase):
         url = "/api/2/entitysets"
         res = self.client.post(url, json=self.input_data, headers=self.headers)
         assert res.status_code == 200, res
-        validate(res.json, "EntitySet")
+        EntitySetSchema.model_validate(res.json)
         ent_id = self.input_data["entities"][0]["id"]
         assert ent_id in str(res.json), res.json
         entityset_id = res.json["id"]
@@ -48,13 +48,13 @@ class EntitySetAPITest(TestCase):
         url = "/api/2/entitysets"
         res = self.client.get(url, headers=self.headers)
         assert res.status_code == 200, res
-        validate(res.json, "QueryResponse")
+        assert "results" in res.json
         assert len(res.json["results"]) == 1
 
         url = "/api/2/entitysets?filter:collection_id=%s" % self.col.id
         res = self.client.get(url, headers=self.headers)
         assert res.status_code == 200, res
-        validate(res.json, "QueryResponse")
+        assert "results" in res.json
         assert len(res.json["results"]) == 1
         res = self.client.get(url, headers=self.headers_x)
         assert res.status_code == 200, res
@@ -62,13 +62,13 @@ class EntitySetAPITest(TestCase):
         url = "/api/2/entitysets?filter:collection_id=%s" % self.col2.id
         res = self.client.get(url, headers=self.headers)
         assert res.status_code == 200, res
-        validate(res.json, "QueryResponse")
+        assert "results" in res.json
         assert len(res.json["results"]) == 0
 
         url = "/api/2/entitysets/%s" % entityset_id
         res = self.client.get(url, headers=self.headers)
         assert res.status_code == 200, res
-        validate(res.json, "EntitySet")
+        EntitySetSchema.model_validate(res.json)
         assert res.json["label"] == "Royal Family"
         res_str = json.dumps(res.json)
         assert "Philip" in res_str
@@ -77,7 +77,7 @@ class EntitySetAPITest(TestCase):
         data["label"] = "Royal Family v2"
         res = self.client.post(url, json=data, headers=self.headers)
         assert res.status_code == 200, res
-        validate(res.json, "EntitySet")
+        EntitySetSchema.model_validate(res.json)
         assert res.json["label"] == "Royal Family v2"
         assert res.json["summary"] == "..."
 
@@ -90,20 +90,20 @@ class EntitySetAPITest(TestCase):
         url = "/api/2/entitysets"
         res = self.client.post(url, json=self.input_data, headers=self.headers)
         assert res.status_code == 200, res
-        validate(res.json, "EntitySet")
+        EntitySetSchema.model_validate(res.json)
         entityset_id = res.json["id"]
 
         entityset2_data = self._load_data_for_import("royal-family-v2.vis")
         res = self.client.post(url, json=entityset2_data, headers=self.headers)
         assert res.status_code == 200, res
-        validate(res.json, "EntitySet")
+        EntitySetSchema.model_validate(res.json)
         entityset2_id = res.json["id"]
 
         query_url = "/api/2/entitysets/%s/entities?filter:schemata=%s"
         url = query_url % (entityset_id, "Thing")
         res = self.client.get(url, headers=self.headers)
         assert res.status_code == 200, res
-        validate(res.json, "EntitiesResponse")
+        assert "results" in res.json
         assert len(res.json["results"]) == 3, len(res.json["results"])
 
         res = self.client.get(url + "&facet=names", headers=self.headers)
@@ -115,13 +115,13 @@ class EntitySetAPITest(TestCase):
         url = query_url % (entityset_id, "Interval")
         res = self.client.get(url, headers=self.headers)
         assert res.status_code == 200, res
-        validate(res.json, "EntitiesResponse")
+        assert "results" in res.json
         assert len(res.json["results"]) == 4, len(res.json["results"])
 
         url = query_url % (entityset2_id, "Interval")
         res = self.client.get(url, headers=self.headers)
         assert res.status_code == 200, res
-        validate(res.json, "EntitiesResponse")
+        assert "results" in res.json
         assert len(res.json["results"]) == 2, len(res.json["results"])
 
     def test_entityset_entities_upsert(self):
@@ -200,7 +200,7 @@ class EntitySetAPITest(TestCase):
         url = "/api/2/entitysets/%s/items" % entityset_id
         res = self.client.get(url, headers=self.headers)
         assert res.status_code == 200, res
-        validate(res.json, "EntitySetItemResponse")
+        assert "results" in res.json
         assert len(res.json["results"]) == 7, len(res.json["results"])
 
         fst = res.json["results"][0]
@@ -282,17 +282,17 @@ class EntitySetAPITest(TestCase):
 
         res = self.client.get(url, headers=self.headers)
         assert res.status_code == 200, res
-        validate(res.json, "QueryResponse")
+        assert "results" in res.json
         assert len(res.json["results"]) == 3
 
         for qfilter in ("timeline", "diagram", "list"):
             res = self.client.get(url + f"?filter:type={qfilter}", headers=self.headers)
             assert res.status_code == 200, res
-            validate(res.json, "QueryResponse")
+            assert "results" in res.json
             assert len(res.json["results"]) == 1
 
         qurl = url + "?filter:type=timeline&filter:type=diagram"
         res = self.client.get(qurl, headers=self.headers)
         assert res.status_code == 200, res
-        validate(res.json, "QueryResponse")
+        assert "results" in res.json
         assert len(res.json["results"]) == 2

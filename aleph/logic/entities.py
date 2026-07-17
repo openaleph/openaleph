@@ -56,7 +56,7 @@ def _entity_from_es(data: SDict) -> EntitySchema:
 def _entities_batch_from_es(ids) -> Iterator[EntitySchema]:
     """Batch fetch from ES, yielding EntitySchema instances.
 
-    ``entities_by_ids`` yields raw dicts — each one needs the
+    ``entities_by_ids`` yields raw dicts – each one needs the
     ``_entity_from_es`` conversion so the resolver gets pydantic
     models with ``cache_key`` and pre-computed ``latinized``.
     """
@@ -84,7 +84,7 @@ def _fetch_entity(entity_id: str) -> EntitySchema | None:
 
 @register_etag(EntitySchema)
 def _entity_etag(entity: EntitySchema) -> str:
-    """ETag seed from ES _seq_no / _primary_term when available —
+    """ETag seed from ES _seq_no / _primary_term when available –
     much cheaper than content-hashing the full entity."""
     version = index.get_entity_version(entity.id)
     if version is not None:

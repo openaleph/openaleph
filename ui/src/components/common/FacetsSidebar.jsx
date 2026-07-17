@@ -37,7 +37,7 @@ function FacetsSidebar(props) {
     intl,
   } = props;
 
-  // Dedupe by name — `additionalFields` may overlap with user-picked
+  // Dedupe by name – `additionalFields` may overlap with user-picked
   // facets (e.g. both lists include `collection_id`). Two items with
   // the same name would render as two <li> siblings with the same
   // React key inside `<Facets>`.

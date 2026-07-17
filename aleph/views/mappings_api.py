@@ -5,16 +5,14 @@ from flask import Blueprint, request
 from followthemoney import model
 from werkzeug.exceptions import BadRequest, NotFound
 
+from aleph.api.requests.mapping import MappingCreate
 from aleph.core import db
 from aleph.model import Mapping, Status
 from aleph.procrastinate.queues import queue_flush_mapping, queue_load_mapping
 from aleph.search import DatabaseQueryResult, QueryParser
 from aleph.views import resources
 from aleph.views.serializers import MappingSerializer
-from aleph.views.util import (
-    parse_request,
-    require,
-)
+from aleph.views.util import request_data, require
 
 blueprint = Blueprint("mappings_api", __name__)
 log = logging.getLogger(__name__)
@@ -140,7 +138,7 @@ def create(collection_id):
       - Mapping
     """
     collection = resources.get_db_collection(collection_id, request.authz.WRITE)
-    data = parse_request("MappingCreate")
+    data: dict = request_data(MappingCreate)
     mapping = Mapping.create(
         load_query(),
         get_table_id(data, collection),
@@ -235,7 +233,7 @@ def update(collection_id, mapping_id):
     """
     collection = resources.get_db_collection(collection_id, request.authz.WRITE)
     mapping = get_mapping(mapping_id, collection)
-    data = parse_request("MappingCreate")
+    data: dict = request_data(MappingCreate)
     mapping.update(
         query=load_query(),
         table_id=get_table_id(data, collection),

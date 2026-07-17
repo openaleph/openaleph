@@ -8,7 +8,7 @@ Architecture:
   transaction under a global advisory lock (aleph.logic.xref.store).
 - Graph reads resolve an entity's cluster via a membership point lookup;
   the per-edge auth contract (both collections readable) is applied over
-  the cluster's edges in SQL — O(cluster), independent of graph size.
+  the cluster's edges in SQL – O(cluster), independent of graph size.
 - Suggestions (NO_JUDGEMENT) never touch SQL: they live in the ES xref
   index exactly as before, powering the XrefQuery results UI.
 - Decided edges are *projected* to the same ES index after commit (same
@@ -259,7 +259,7 @@ class XrefResolver:
             target = max(Identifier.get(n) for n in members)
             # When one side of the edge is already the cluster canonical
             # (or two canonicals merge), register the edge directly.
-            # Otherwise, redirect both sides through a canonical — either
+            # Otherwise, redirect both sides through a canonical – either
             # a new NK-* or an existing one.
             if target in (pair_source, pair_target) and target.canonical:
                 row = store.ensure_positive_edge(
@@ -306,7 +306,7 @@ class XrefResolver:
                 redirected = True
         if redirected:
             # The direct pair edge may exist as an ES-only suggestion doc,
-            # which SQL superseding cannot see — tombstone it explicitly.
+            # which SQL superseding cannot see – tombstone it explicitly.
             soft_delete_edge(pair_source.id, pair_target.id, sync=self._sync)
         self._project(rows)
         return result
@@ -354,7 +354,7 @@ class XrefResolver:
                 store.split_recompute(session, seeds)
         self._project(rows)
         if judgement == Judgement.NO_JUDGEMENT:
-            # The pair reverts to a suggestion — ES-only, keeping the score.
+            # The pair reverts to a suggestion – ES-only, keeping the score.
             edge = Edge(
                 pair_source,
                 pair_target,
@@ -493,7 +493,7 @@ class XrefResolver:
                 return Judgement.NEGATIVE
             other_view = store.load_cluster(session, other, auth=self._auth)
             # Any blocking (negative/unsure) edge spanning the two clusters
-            # decides the pair. A positive edge can't span them — it would
+            # decides the pair. A positive edge can't span them – it would
             # have merged the clusters above.
             row = store.edge_between(
                 session,
@@ -591,7 +591,7 @@ class XrefResolver:
         batch_size: int = 5000,
     ) -> dict[str, int]:
         """Bulk-apply decided edges. Imports supersede existing judgements
-        (identical live POSITIVE edges are kept — idempotent re-import).
+        (identical live POSITIVE edges are kept – idempotent re-import).
 
         POSITIVE edges that would grow a cluster past max_cluster_size
         (None: SETTINGS.XREF_MAX_CLUSTER_SIZE; 0: uncapped, e.g. for

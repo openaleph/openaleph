@@ -1,10 +1,11 @@
 import logging
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Any, Literal
 
 from banal import ensure_list
 from nomenklatura.judgement import Judgement  # noqa: F401
 from normality import stringify
+from pydantic import Field, model_validator
 from sqlalchemy import event, func
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -15,6 +16,7 @@ from aleph.model.common import (
     ENTITY_ID_LEN,
     APIBaseModel,
     DatedSchema,
+    ResolveFrom,
     SDict,
     SoftDeleteModel,
     make_textid,
@@ -54,7 +56,7 @@ class EntitySet(db.Model, SoftDeleteModel):
     parent = db.relationship("EntitySet", backref="children", remote_side=[id])
 
     @property
-    def entities(self):
+    def entity_ids(self) -> list[str]:
         q = db.session.query(EntitySetItem.entity_id)
         q = q.filter(EntitySetItem.entityset_id == self.id)
         q = q.filter(EntitySetItem.judgement == Judgement.POSITIVE)
@@ -256,21 +258,6 @@ class EntitySet(db.Model, SoftDeleteModel):
         self.deleted_at = deleted_at or datetime.utcnow()
         db.session.add(self)
 
-    def to_dict(self):
-        data = self.to_dict_dates()
-        data.update(
-            {
-                "id": stringify(self.id),
-                "type": self.type,
-                "label": self.label,
-                "summary": self.summary,
-                "layout": self.layout,
-                "role_id": stringify(self.role_id),
-                "collection_id": stringify(self.collection_id),
-            }
-        )
-        return data
-
     def __repr__(self):
         return "<EntitySet(%r, %r)>" % (self.id, self.collection_id)
 
@@ -362,21 +349,6 @@ class EntitySetItem(db.Model, SoftDeleteModel):
         pq = pq.filter(cls.entity_id == entity_id)
         pq.delete(synchronize_session=False)
 
-    def to_dict(self, entityset=None):
-        data = {
-            "id": "$".join((self.entityset_id, self.entity_id)),
-            "entity_id": self.entity_id,
-            "collection_id": self.collection_id,
-            "added_by_id": self.added_by_id,
-            "judgement": self.judgement,
-            "compared_to_entity_id": self.compared_to_entity_id,
-        }
-        entityset = entityset or self.entityset
-        data["entityset_collection_id"] = entityset.collection_id
-        data["entityset_id"] = entityset.id
-        data.update(self.to_dict_dates())
-        return data
-
     def __repr__(self):
         return "<EntitySetItem(%r, %r)>" % (self.entityset_id, self.entity_id)
 
@@ -384,12 +356,12 @@ class EntitySetItem(db.Model, SoftDeleteModel):
 # === Pydantic schemas ===
 #
 # EntitySets come in three variants (list, diagram, timeline). Profiles
-# were removed when xref moved to the nomenklatura resolver — canonical
+# were removed when xref moved to the nomenklatura resolver – canonical
 # clusters live in :mod:`aleph.model.xref` now. The ``layout`` field
 # carries a DiagramLayout when the type is ``diagram``, otherwise it
 # stays None. EntitySetItem links a single entity to an EntitySet.
 # Judgement / ``compared_to_entity_id`` were profile-only leakage and
-# are dropped from the wire format — the SQLA columns survive as dead
+# are dropped from the wire format – the SQLA columns survive as dead
 # weight until a follow-up cleanup.
 
 
@@ -453,10 +425,16 @@ class EntitySetSchema(DatedSchema):
 
     summary: str | None = None
     layout: DiagramLayout | None = None
+
+    # SQLA EntitySet.entity_ids returns list[str] (IDs);
+    # the assembler resolves them into `entities` for the wire.
+    entity_ids: list[str] = Field(default=[], exclude=True)
     entities: list[EntitySchema] = []
 
-    role: RoleSchema | None = None
-    collection: CollectionSchema | None = None
+    role: Annotated[RoleSchema | None, ResolveFrom("role_id", RoleSchema)] = None
+    collection: Annotated[
+        CollectionSchema | None, ResolveFrom("collection_id", CollectionSchema)
+    ] = None
 
     writeable: bool = False
     shallow: bool = True
@@ -466,18 +444,12 @@ class EntitySetSchema(DatedSchema):
 class EntitySetItemSchema(DatedSchema):
     """Canonical wire format for an :class:`EntitySetItem`.
 
-    The wire ``id`` is the composite ``"<entityset_id>$<entity_id>"`` —
-    matching the legacy ``EntitySetItem.to_dict()`` shape. All four
-    identifier fields are application invariants: every item links a
-    specific entity to a specific entityset, the entity belongs to a
-    collection, and the parent entityset's collection is always
-    derivable. The DB columns are technically nullable but every write
-    site populates them.
+    The wire ``id`` is the composite ``"<entityset_id>$<entity_id>"`` –
+    matching the legacy ``EntitySetItem.to_dict()`` shape.
 
     The nested ``entity`` field is populated by the response builder
     via the resolver. It is typed as :class:`SDict` here to avoid an
-    import cycle with :mod:`aleph.model.entity`; the assembler layer
-    constructs an ``EntitySchema`` from this slot.
+    import cycle with :mod:`aleph.model.entity`.
     """
 
     entityset_id: str
@@ -485,12 +457,43 @@ class EntitySetItemSchema(DatedSchema):
     collection_id: str
     entityset_collection_id: str
     added_by_id: str | None = None
+    # legacy profile logic, will delete
+    judgement: Judgement | None = None
 
-    entity: SDict | None = None
-    collection: CollectionSchema | None = None
+    entity: Annotated[SDict | None, ResolveFrom("entity_id", EntitySchema)] = None
+    collection: Annotated[
+        CollectionSchema | None, ResolveFrom("collection_id", CollectionSchema)
+    ] = None
 
     writeable: bool = False
     links: SDict = {}
+
+    @model_validator(mode="before")
+    @classmethod
+    def _from_entityset_item(cls, data: Any) -> Any:
+        """Handle SQLA EntitySetItem objects: compute composite id and
+        extract entityset_collection_id from the relationship."""
+        if isinstance(data, dict):
+            return data
+        # SQLA object – extract fields that aren't direct columns
+        entityset = getattr(data, "entityset", None)
+        entityset_id = str(getattr(data, "entityset_id", ""))
+        entity_id = str(getattr(data, "entity_id", ""))
+        return {
+            "id": f"{entityset_id}${entity_id}",
+            "entityset_id": entityset_id,
+            "entity_id": entity_id,
+            "collection_id": str(getattr(data, "collection_id", "")),
+            "entityset_collection_id": (
+                str(entityset.collection_id) if entityset else ""
+            ),
+            "added_by_id": stringify(getattr(data, "added_by_id", None)),
+            "judgement": getattr(data, "judgement", None),
+            "compared_to_entity_id": getattr(data, "compared_to_entity_id", None),
+            "created_at": getattr(data, "created_at", None),
+            "updated_at": getattr(data, "updated_at", None),
+            "deleted_at": getattr(data, "deleted_at", None),
+        }
 
     @property
     def cache_key(self) -> str:

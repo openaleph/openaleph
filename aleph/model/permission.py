@@ -1,9 +1,8 @@
 from datetime import datetime
-
-from normality import stringify
+from typing import Annotated
 
 from aleph.core import db
-from aleph.model.common import DatedModel, DatedSchema, IdModel
+from aleph.model.common import DatedModel, DatedSchema, IdModel, ResolveFrom
 from aleph.model.role import RoleSchema
 
 
@@ -17,19 +16,6 @@ class Permission(db.Model, IdModel, DatedModel):
     read = db.Column(db.Boolean, default=False)
     write = db.Column(db.Boolean, default=False)
     collection_id = db.Column(db.Integer, nullable=False)
-
-    def to_dict(self):
-        data = self.to_dict_dates()
-        data.update(
-            {
-                "id": stringify(self.id),
-                "role_id": stringify(self.role_id),
-                "collection_id": stringify(self.collection_id),
-                "read": self.read,
-                "write": self.write,
-            }
-        )
-        return data
 
     @classmethod
     def grant(cls, collection, role, read, write):
@@ -81,6 +67,6 @@ class PermissionSchema(DatedSchema):
     read: bool
     write: bool
 
-    role: RoleSchema | None = None
+    role: Annotated[RoleSchema | None, ResolveFrom("role_id", RoleSchema)] = None
 
     writeable: bool = False

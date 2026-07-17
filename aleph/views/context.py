@@ -8,6 +8,7 @@ from banal import hash_data
 from flask import Blueprint, Response, request
 from flask_babel import get_locale
 from structlog.contextvars import bind_contextvars, clear_contextvars
+from werkzeug.exceptions import Unauthorized
 
 from aleph import __version__
 from aleph.authz import Authz
@@ -87,7 +88,27 @@ def get_authz(request):
 
 
 def enable_authz(request):
+    if request.endpoint == "base_api.healthz":
+        # healthz manages its own authentication against
+        # SETTINGS.HEALTH_CHECK_API_KEY – its ?api_key= parameter is not a
+        # role credential and must not resolve (or 401) as one here.
+        request.authz = Authz.from_role(role=None)
+        return
+
     authz = get_authz(request)
+
+    if authz is None and (
+        "Authorization" in request.headers or "api_key" in request.args
+    ):
+        # Credentials were presented but could not be resolved (revoked or
+        # unknown API key, unsupported auth scheme). That must yield 401 –
+        # not silently degrade to an anonymous session whose protected
+        # requests then 403: clients re-authenticate on 401 (the UI's
+        # axios interceptor resets the session), while a 403 leaves a
+        # logged-in-looking session making forbidden requests forever.
+        # Session tokens already behave this way: ``Authz.from_token``
+        # raises ``Unauthorized`` on expired/unknown tokens.
+        raise Unauthorized("Invalid or expired credentials.")
 
     authz = authz or Authz.from_role(role=None)
     request.authz = authz

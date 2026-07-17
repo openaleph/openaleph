@@ -2,6 +2,7 @@ from banal import ensure_list
 from flask import Blueprint, request
 from werkzeug.exceptions import BadRequest
 
+from aleph.api.requests.collection import CollectionCreate, CollectionUpdate
 from aleph.core import db
 from aleph.logic.collections import (
     create_collection,
@@ -27,7 +28,7 @@ from aleph.views.util import (
     get_flag,
     get_session_id,
     jsonify,
-    parse_request,
+    request_data,
     require,
 )
 
@@ -81,7 +82,7 @@ def create():
                 $ref: '#/components/schemas/Collection'
     """
     require(request.authz.can_create_investigation())
-    data = parse_request("CollectionCreate")
+    data = request_data(CollectionCreate)
     try:
         collection = create_collection(data, request.authz)
     except ValueError:
@@ -118,7 +119,7 @@ def view(collection_id):
     if get_flag("refresh", False):
         refresh_collection(collection_id)
     collection = resources.get_detail_collection(collection_id, request.authz.READ)
-    return CollectionSerializer.jsonify(collection)
+    return CollectionSerializer.jsonify(collection, detail_view=True)
 
 
 @blueprint.route("/<int:collection_id>", methods=["POST", "PUT"])
@@ -153,8 +154,7 @@ def update(collection_id):
                 $ref: '#/components/schemas/Collection'
     """
     collection = resources.get_db_collection(collection_id, request.authz.WRITE)
-    data = parse_request("CollectionUpdate")
-    collection.update(data, request.authz)
+    collection.update(request_data(CollectionUpdate), request.authz)
     db.session.commit()  # SQLA event handles ES sync and cache invalidation
     # update_collection(collection)  FIXME _should_ be obsolete because of SQLA event
     return view(collection_id)
@@ -344,7 +344,7 @@ def status(collection_id):
     collection = resources.get_collection(collection_id, request.authz.READ)
     status = get_collection_status(collection.id)
     return jsonify(model_dump(status))
-  
+
 
 @blueprint.route("/<int:collection_id>/status", methods=["DELETE"])
 def cancel(collection_id):
