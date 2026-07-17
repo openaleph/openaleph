@@ -162,27 +162,6 @@ class Role(db.Model, IdModel, SoftDeleteModel):
         digest = self.password_digest or ""
         return check_password_hash(digest, secret)
 
-    def to_dict(self):
-        data = self.to_dict_dates()
-        data.update(
-            {
-                "id": stringify(self.id),
-                "type": self.type,
-                "name": self.name,
-                "label": self.label,
-                "email": self.email,
-                "locale": self.locale,
-                "api_key": self.api_key,
-                "is_admin": self.is_admin,
-                "is_muted": self.is_muted,
-                "is_tester": self.is_tester,
-                "is_investigator": self.is_investigator,
-                "has_password": self.has_password,
-                # 'notified_at': self.notified_at
-            }
-        )
-        return data
-
     @classmethod
     def by_foreign_id(cls, foreign_id, deleted=False):
         if foreign_id is not None:

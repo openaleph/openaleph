@@ -42,7 +42,7 @@ def status():
     # Embed the serialized collection on each result – the status UI renders
     # collection.label and gates its cancel button on collection.writeable.
     schemas = cache.get_many(CollectionSchema, [str(s.collection_id) for s in statuses])
-    serializer = CollectionSerializer(nested=True)
+    serializer = CollectionSerializer()
     collections = {str(data["id"]): data for data in serializer.serialize_many(schemas)}
 
     results = []

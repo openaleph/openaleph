@@ -258,21 +258,6 @@ class EntitySet(db.Model, SoftDeleteModel):
         self.deleted_at = deleted_at or datetime.utcnow()
         db.session.add(self)
 
-    def to_dict(self):
-        data = self.to_dict_dates()
-        data.update(
-            {
-                "id": stringify(self.id),
-                "type": self.type,
-                "label": self.label,
-                "summary": self.summary,
-                "layout": self.layout,
-                "role_id": stringify(self.role_id),
-                "collection_id": stringify(self.collection_id),
-            }
-        )
-        return data
-
     def __repr__(self):
         return "<EntitySet(%r, %r)>" % (self.id, self.collection_id)
 
@@ -363,21 +348,6 @@ class EntitySetItem(db.Model, SoftDeleteModel):
         pq = db.session.query(cls)
         pq = pq.filter(cls.entity_id == entity_id)
         pq.delete(synchronize_session=False)
-
-    def to_dict(self, entityset=None):
-        data = {
-            "id": "$".join((self.entityset_id, self.entity_id)),
-            "entity_id": self.entity_id,
-            "collection_id": self.collection_id,
-            "added_by_id": self.added_by_id,
-            "judgement": self.judgement,
-            "compared_to_entity_id": self.compared_to_entity_id,
-        }
-        entityset = entityset or self.entityset
-        data["entityset_collection_id"] = entityset.collection_id
-        data["entityset_id"] = entityset.id
-        data.update(self.to_dict_dates())
-        return data
 
     def __repr__(self):
         return "<EntitySetItem(%r, %r)>" % (self.entityset_id, self.entity_id)

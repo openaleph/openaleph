@@ -64,10 +64,6 @@ def json_default(obj):
     raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 
-class Stub(object):
-    pass
-
-
 def _get_logging_context():
     """Get the current logging context"""
     return structlog.contextvars.merge_contextvars(None, None, {})

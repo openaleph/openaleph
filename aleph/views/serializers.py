@@ -59,8 +59,7 @@ class Serializer:
     SCHEMA: type[BaseModel] | None = None
     ASSEMBLER: type[Assembler] = Assembler
 
-    def __init__(self, nested: bool = False, detail_view: bool = False) -> None:
-        self.nested = nested
+    def __init__(self, detail_view: bool = False) -> None:
         self.detail_view = detail_view
 
     def _to_schema(self, obj: Any) -> BaseModel | None:

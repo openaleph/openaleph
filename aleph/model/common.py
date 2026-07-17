@@ -82,9 +82,6 @@ class DatedModel(object):
         # hard delete
         db.session.delete(self)
 
-    def to_dict_dates(self):
-        return {"created_at": self.created_at, "updated_at": self.updated_at}
-
 
 class SoftDeleteModel(DatedModel):
     deleted_at = db.Column(db.DateTime, default=None, nullable=True)
@@ -92,12 +89,6 @@ class SoftDeleteModel(DatedModel):
     def delete(self, deleted_at=None):
         self.deleted_at = deleted_at or datetime.utcnow()
         db.session.add(self)
-
-    def to_dict_dates(self):
-        data = super(SoftDeleteModel, self).to_dict_dates()
-        if self.deleted_at:
-            data["deleted_at"] = self.deleted_at
-        return data
 
     @classmethod
     def all(cls, deleted=False):
@@ -260,8 +251,8 @@ def model_dump(model: BaseModel) -> SDict:
     and empty containers recursively.
 
     Wraps ``anystore.util.model_dump(obj, clean=True)`` (which drops ``None``,
-    empty strings and empty mappings). Replaces
-    ``aleph.views.util.clean_object()`` and is the canonical way to serialize an
+    empty strings and empty mappings). Replaces the removed legacy
+    ``clean_object()`` helper and is the canonical way to serialize an
     API response. The frontend uses defensive accessors
     (``entity?.collection?.foreign_id``), so dropping empty values is safe.
     ``cache_key`` is a regular ``@property`` on :class:`APIBaseModel` so it

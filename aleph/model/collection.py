@@ -215,47 +215,6 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
             self._ns = Namespace(self.foreign_id)
         return self._ns
 
-    def to_dict(self):
-        data = self.to_dict_dates()
-        data["category"] = self.CASEFILE
-        if self.category in self.CATEGORIES:
-            data["category"] = self.category
-        data["frequency"] = self.DEFAULT_FREQUENCY
-        if self.frequency in self.FREQUENCIES:
-            data["frequency"] = self.frequency
-        countries = ensure_list(self.countries)
-        countries = [registry.country.clean(c) for c in countries]
-        data["countries"] = [c for c in countries if c is not None]
-        languages = ensure_list(self.languages)
-        languages = [registry.language.clean(c) for c in languages]
-        data["languages"] = [c for c in languages if c is not None]
-        data.update(
-            {
-                "id": stringify(self.id),
-                "name": self.name,
-                "collection_id": stringify(self.id),
-                "foreign_id": self.foreign_id,
-                "creator_id": stringify(self.creator_id),
-                "data_updated_at": self.data_updated_at,
-                "team_id": self.team_id,
-                "label": self.label,
-                "summary": self.summary,
-                "publisher": self.publisher,
-                "publisher_url": self.publisher_url,
-                "info_url": self.info_url,
-                "data_url": self.data_url,
-                "casefile": self.casefile,
-                "secret": self.secret,
-                "xref": self.xref,
-                "restricted": self.restricted,
-                "contains_ai": self.contains_ai,
-                "contains_ai_comment": self.contains_ai_comment,
-                "external": self.external,
-                "taggable": self.taggable,
-            }
-        )
-        return data
-
     @classmethod
     def by_foreign_id(cls, foreign_id, deleted=False):
         if foreign_id is None:

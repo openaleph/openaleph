@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime, timedelta
 
-from normality import stringify
 from pydantic import field_validator
 from servicelayer.cache import make_key
 from sqlalchemy import event
@@ -49,27 +48,6 @@ class Export(db.Model, IdModel, DatedModel):
     file_name = db.Column(db.Unicode, nullable=True)
     mime_type = db.Column(db.Unicode)
     meta = db.Column(JSONB, default={})
-
-    def to_dict(self):
-        data = self.to_dict_dates()
-        data.update(
-            {
-                "id": stringify(self.id),
-                "label": self.label,
-                "operation": self.operation,
-                "creator_id": stringify(self.creator_id),
-                "collection_id": self.collection_id,
-                "expires_at": self.expires_at,
-                "deleted": self.deleted,
-                "status": Status.LABEL.get(self.status),
-                "content_hash": self.content_hash,
-                "file_size": self.file_size,
-                "file_name": self.file_name,
-                "mime_type": self.mime_type,
-                "meta": self.meta,
-            }
-        )
-        return data
 
     @classmethod
     def create(
