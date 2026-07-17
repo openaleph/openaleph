@@ -28,7 +28,6 @@ def status():
       - System
     """
     require(request.authz.logged_in)
-    request.rate_limit = None
 
     results = []
     for collection_status in get_active_collections_status():

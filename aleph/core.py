@@ -6,11 +6,9 @@ from anystore.logging import configure_logging
 from flask import Flask, request
 from flask import url_for as flask_url_for
 from flask_babel import Babel
-from flask_cors import CORS
 from flask_mail import Mail
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-from flask_talisman import Talisman
 from followthemoney import set_model_locale
 from openaleph_search.core import get_es
 from sentry_sdk.integrations.flask import FlaskIntegration
@@ -26,14 +24,12 @@ from aleph.metrics.flask import PrometheusExtension
 from aleph.oauth import configure_oauth
 from aleph.settings import SETTINGS
 
-NONE = "'none'"
 log = logging.getLogger(__name__)
 
 db = SQLAlchemy()
 migrate = Migrate()
 mail = Mail()
 babel = Babel()
-talisman = Talisman()
 prometheus = PrometheusExtension()
 
 
@@ -110,29 +106,6 @@ def create_app(config=None):
     db.init_app(app)
     babel.init_app(app, locale_selector=determine_locale)
     prometheus.init_app(app)
-    CORS(
-        app,
-        resources=r"/api/*",
-        origins=SETTINGS.CORS_ORIGINS,
-        supports_credentials=True,
-    )
-    feature_policy = {
-        "accelerometer": NONE,
-        "camera": NONE,
-        "geolocation": NONE,
-        "gyroscope": NONE,
-        "magnetometer": NONE,
-        "microphone": NONE,
-        "payment": NONE,
-        "usb": NONE,
-    }
-    talisman.init_app(
-        app,
-        force_https=SETTINGS.FORCE_HTTPS,
-        strict_transport_security=SETTINGS.FORCE_HTTPS,
-        feature_policy=feature_policy,
-        content_security_policy=SETTINGS.CONTENT_POLICY,
-    )
 
     from aleph.views import mount_app_blueprints
 
