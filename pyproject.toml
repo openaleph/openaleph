@@ -1,6 +1,6 @@
 [project]
 name = "aleph"
-version = "5.3.1-rc2"
+version = "5.3.1-rc3"
 description = "Search and browse documents and data; find the people and companies you look for."
 authors = [
     { name = "Friedrich Lindenberg", email = "friedrich@pudo.org" },
@@ -24,9 +24,7 @@ dependencies = [
     "flask-sqlalchemy (>=3.1.1,<4.0.0)",
     "flask-mail (>=0.10.0,<0.11.0)",
     "flask-migrate (>=4.1.0,<5.0.0)",
-    "flask-cors (>=6.0.5,<7.0.0)",
     "flask-babel (>=4.0.0,<5.0.0)",
-    "flask-talisman (>=1.1.0,<2.0.0)",
     "sqlalchemy (>=2.0.51,<3.0.0)",
     "alembic (>=1.18.5,<2.0.0)",
     "authlib (<1)",

@@ -1,5 +1,6 @@
 import React from 'react';
 import fetchCsvData from 'util/fetchCsvData';
+import { resolveArchiveUrl } from 'util/archiveUrl';
 
 const csvContextLoader = (Viewer) =>
   class extends React.Component {
@@ -34,8 +35,16 @@ const csvContextLoader = (Viewer) =>
       const { document } = this.props;
       const url = document.links?.csv || document.links?.file;
       if (url && this.state.url !== url) {
-        fetchCsvData(url, this.processCsvResults);
         this.setState({ url });
+        // resolve the archive link to a fresh signed URL first, as papaparse
+        // fetches it without the session's Authorization header
+        resolveArchiveUrl(url)
+          .then((csvUrl) => {
+            if (csvUrl && this.state.url === url) {
+              fetchCsvData(csvUrl, this.processCsvResults);
+            }
+          })
+          .catch(() => {});
       }
     }
 

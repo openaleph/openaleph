@@ -11,6 +11,7 @@ import { PagingButtons } from 'components/Toolbar';
 import { SectionLoading, Skeleton } from 'components/common';
 import { queryEntities } from 'actions';
 import { selectEntitiesResult } from 'selectors';
+import { resolveArchiveUrl } from 'util/archiveUrl';
 import normalizeDegreeValue from 'util/normalizeDegreeValue';
 import EntityActionBar from 'components/Entity/EntityActionBar';
 import PdfViewerSearch from 'viewers/PdfViewerSearch';
@@ -31,6 +32,7 @@ export class PdfViewer extends Component {
     super(props);
     this.state = {
       width: null,
+      resolvedPdfUrl: null,
       components: {
         Document: SectionLoading,
         Page: SectionLoading,
@@ -46,6 +48,7 @@ export class PdfViewer extends Component {
     this.fetchPage();
     this.onResize();
     this.fetchComponents();
+    this.resolvePdfUrl();
     window.addEventListener('resize', throttle(this.onResize, 500));
   }
 
@@ -64,6 +67,9 @@ export class PdfViewer extends Component {
         this.onResize();
       }, 350);
     }
+    if (this.props.pdfUrl !== prevProps.pdfUrl) {
+      this.resolvePdfUrl();
+    }
     if (prevProps.rotate !== this.props.rotate) {
       this.setRotation();
     }
@@ -74,8 +80,23 @@ export class PdfViewer extends Component {
   }
 
   componentWillUnmount() {
+    this.unmounted = true;
     clearTimeout(this.resizeTimeout);
     window.removeEventListener('resize', throttle(this.onResize, 500));
+  }
+
+  // The pdfUrl prop points at the archive resolve endpoint; exchange it for
+  // a fresh signed URL that pdf.js can fetch without an Authorization header.
+  resolvePdfUrl() {
+    const { pdfUrl } = this.props;
+    this.setState({ resolvedPdfUrl: null });
+    resolveArchiveUrl(pdfUrl)
+      .then((url) => {
+        if (!this.unmounted && this.props.pdfUrl === pdfUrl) {
+          this.setState({ resolvedPdfUrl: url });
+        }
+      })
+      .catch(() => {});
   }
 
   onDocumentLoad(pdf) {
@@ -177,10 +198,14 @@ export class PdfViewer extends Component {
 
   renderPdf() {
     const { document, page, rotate, numPages, pdfUrl } = this.props;
-    const { effectiveRotation, width } = this.state;
+    const { effectiveRotation, resolvedPdfUrl, width } = this.state;
     const { Document, Page } = this.state.components;
 
     const loading = <Skeleton.Text type="div" length={4000} />;
+
+    if (!resolvedPdfUrl) {
+      return loading;
+    }
 
     return (
       <>
@@ -195,7 +220,7 @@ export class PdfViewer extends Component {
         )}
         <div key={pdfUrl}>
           <Document
-            file={pdfUrl}
+            file={resolvedPdfUrl}
             loading={loading}
             onLoadSuccess={this.onDocumentLoad}
           >

@@ -70,15 +70,6 @@ class Settings:
         )
         self.APP_UI_URL = self.APP_PARSED_UI_URL.geturl()
 
-        # Content security policy:
-        self.CONTENT_POLICY = env.get(
-            "ALEPH_CONTENT_POLICY",
-            "default-src: 'self' 'unsafe-inline' 'unsafe-eval' data: *",
-        )
-
-        # Cross-origin resource sharing
-        self.CORS_ORIGINS = env.to_list("ALEPH_CORS_ORIGINS", ["*"], separator="|")
-
         ##############################################################################
         # Security and authentication.
 
@@ -151,10 +142,6 @@ class Settings:
 
         # Maximum number of entities to return per property when expanding entities
         self.MAX_EXPAND_ENTITIES = env.to_int("ALEPH_MAX_EXPAND_ENTITIES", 200)
-
-        # API rate limiting (req/min for anonymous users)
-        self.API_RATE_LIMIT = env.to_int("ALEPH_API_RATE_LIMIT", 30)
-        self.API_RATE_WINDOW = 15  # minutes
 
         # Health check API key (required for /api/2/healthz)
         self.HEALTH_CHECK_API_KEY = env.get("ALEPH_HEALTH_CHECK_API_KEY")
