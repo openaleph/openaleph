@@ -8,6 +8,7 @@ This module handles:
 """
 
 import logging
+from typing import Generator
 
 from elasticsearch.helpers import scan
 from nomenklatura.judgement import Judgement
@@ -15,8 +16,9 @@ from openaleph_search.index.util import index_name, unpack_result
 
 from aleph.core import es
 from aleph.index.xref import configure_xref, xref_index
-from aleph.logic.xref.resolver import ElasticsearchResolver, get_resolver
+from aleph.logic.xref.resolver import XrefResolver, get_resolver
 from aleph.model import EntitySet
+from aleph.model.xref import ESEdge
 
 log = logging.getLogger(__name__)
 
@@ -26,25 +28,21 @@ def _old_xref_index():
     return index_name("xref", "v1")
 
 
-def _migrate_profiles(resolver: ElasticsearchResolver) -> int:
-    """Replay Profile judgements into resolver edges.
+def _profile_decisions(counts: dict[str, int]) -> Generator[ESEdge, None, None]:
+    """Yield decided edges replaying Profile judgements.
 
     For each Profile EntitySet:
-    - POSITIVE items -> resolver.decide() for pairwise combinations
-    - NEGATIVE/UNSURE items with compared_to_entity_id -> resolver.decide()
-    - After the cluster is formed, attach the legacy entity_set.id as a
-      POSITIVE referent of the new canonical NK-* so old profile IDs
-      resolve transparently via resolver.get_canonical().
-
-    Returns the number of profiles whose legacy ID was linked to a canonical.
+    - POSITIVE items connect as a star over the first item — import
+      canonicalization merges the component under one NK-* either way.
+    - NEGATIVE/UNSURE items with compared_to_entity_id become blockers.
+    - Pin the legacy profile_id as a referent of the new canonical so
+      old references (URLs, notifications, DB rows) still resolve to
+      the merged cluster via resolver.get_canonical(): the entity_set.id
+      joins the positive component, and its membership row IS the
+      profileId→NK-* mapping.
     """
-    migrated = 0
-    profiles_count = 0
-    profiles_linked = 0
-
-    entity_sets = EntitySet.by_type([EntitySet.PROFILE])
-    for entity_set in entity_sets:
-        profiles_count += 1
+    for entity_set in EntitySet.by_type([EntitySet.PROFILE]):
+        counts["profiles"] += 1
         items = list(entity_set.items())
         if not items:
             continue
@@ -52,76 +50,81 @@ def _migrate_profiles(resolver: ElasticsearchResolver) -> int:
         positive_items = [i for i in items if i.judgement == Judgement.POSITIVE]
         other_items = [i for i in items if i.judgement != Judgement.POSITIVE]
 
-        # For positive items, create pairwise POSITIVE edges
-        canonical_id = None
-        for i, item in enumerate(positive_items):
-            for j in range(i + 1, len(positive_items)):
-                other = positive_items[j]
-                canonical = resolver.decide(
-                    item.entity_id,
-                    other.entity_id,
-                    Judgement.POSITIVE,
-                    user=str(item.added_by_id or "profiles-migration"),
-                    source_collection_id={item.collection_id},
-                    target_collection_id={other.collection_id},
-                )
-                canonical_id = (
-                    canonical.id if hasattr(canonical, "id") else str(canonical)
-                )
-                migrated += 1
+        hub = positive_items[0] if positive_items else None
+        for item in positive_items[1:]:
+            if item.entity_id == hub.entity_id:
+                continue  # legacy data may duplicate the same entity
+            yield ESEdge(
+                source=hub.entity_id,
+                target=item.entity_id,
+                judgement=Judgement.POSITIVE.value,
+                user=str(item.added_by_id or "profiles-migration"),
+                source_collection_id={hub.collection_id},
+                target_collection_id={item.collection_id},
+            )
 
         # For negative/unsure items with compared_to_entity_id
         for item in other_items:
+            if item.compared_to_entity_id == item.entity_id:
+                continue  # self-referencing legacy rows
             if item.compared_to_entity_id and item.judgement in (
                 Judgement.NEGATIVE,
                 Judgement.UNSURE,
             ):
-                resolver.decide(
-                    item.entity_id,
-                    item.compared_to_entity_id,
-                    item.judgement,
+                yield ESEdge(
+                    source=item.entity_id,
+                    target=item.compared_to_entity_id,
+                    judgement=item.judgement.value,
                     user=str(item.added_by_id or "migration"),
                     source_collection_id={item.collection_id},
                     target_collection_id={entity_set.collection_id},
                 )
-                migrated += 1
 
-        # Pin the legacy profile_id as a referent of the new canonical so
-        # old references (URLs, notifications, DB rows) still resolve to
-        # the merged cluster via resolver.get_canonical().
-        if canonical_id:
-            resolver.decide(
-                str(entity_set.id),
-                canonical_id,
-                Judgement.POSITIVE,
+        # A cluster only forms from at least one positive pair; only then
+        # is there a canonical to pin the legacy profile_id to.
+        if len(positive_items) >= 2:
+            counts["linked"] += 1
+            yield ESEdge(
+                source=str(entity_set.id),
+                target=hub.entity_id,
+                judgement=Judgement.POSITIVE.value,
                 user="migration",
                 source_collection_id={entity_set.collection_id},
                 target_collection_id={entity_set.collection_id},
             )
-            migrated += 1
-            profiles_linked += 1
 
-        if profiles_count % 100 == 0:
+        if counts["profiles"] % 100 == 0:
             log.info(
-                "Profile migration progress: profiles=%d, linked=%d, edges=%d",
-                profiles_count,
-                profiles_linked,
-                migrated,
+                "Profile migration progress: profiles=%d, linked=%d",
+                counts["profiles"],
+                counts["linked"],
             )
 
+
+def _migrate_profiles(resolver: XrefResolver) -> dict[str, int]:
+    """Replay Profile judgements through the batch import.
+
+    One transaction + one graph lock per batch instead of per decide.
+    Uncapped (max_cluster_size=0): profiles are human decisions being
+    replayed, not auto-merge output.
+    """
+    counts = {"profiles": 0, "linked": 0}
+    stats = resolver.import_decisions(_profile_decisions(counts), max_cluster_size=0)
     log.info(
         "Profile migration complete: profiles=%d, linked=%d, edges=%d",
-        profiles_count,
-        profiles_linked,
-        migrated,
+        counts["profiles"],
+        counts["linked"],
+        stats["applied"],
     )
-    return profiles_linked
+    return {**counts, **stats}
 
 
-def _migrate_xref_v1(resolver):
+def _migrate_xref_v1(resolver: XrefResolver) -> int:
     """Migrate xref-v1 suggestions into resolver edges.
 
-    suggest() won't overwrite existing human judgements from profile migration.
+    suggest() won't overwrite existing human judgements from profile
+    migration. Suggestions are pure ES documents, buffered by the
+    caller's bulk() context.
     """
     old_index = _old_xref_index()
     if not es.indices.exists(index=old_index):
@@ -161,11 +164,15 @@ def migrate_xref_index() -> None:
 
     Steps:
     1. Create xref-v2 index with new mapping
-    2. Replay Profile judgements as resolver edges, linking legacy
-       entity_set.id values to their new canonical NK-* IDs via POSITIVE
-       judgements (so old profile references resolve transparently).
+    2. Replay Profile judgements as resolver edges via the batch import,
+       linking legacy entity_set.id values to their new canonical NK-*
+       IDs via POSITIVE judgements (so old profile references resolve
+       transparently).
     3. Migrate xref-v1 suggestions as resolver edges
     4. Log results
+
+    bulk() buffers the ES side (suggestions + decided-edge projections);
+    the SQL graph writes batch through import_decisions.
     """
     log.info("Starting xref migration...")
 
@@ -176,22 +183,19 @@ def migrate_xref_index() -> None:
     # Step 2: Get resolver
     resolver = get_resolver()
 
-    # Step 3: Migrate profiles
-    log.info("Migrating profiles to resolver edges...")
-    profiles_linked = _migrate_profiles(resolver)
-    log.info(
-        "Profile migration: %d legacy profile IDs linked to canonical",
-        profiles_linked,
-    )
+    with resolver.bulk():
+        # Step 3: Migrate profiles
+        log.info("Migrating profiles to resolver edges...")
+        profile_stats = _migrate_profiles(resolver)
 
-    # Step 4: Migrate xref-v1
-    log.info("Migrating xref-v1 suggestions...")
-    v1_count = _migrate_xref_v1(resolver)
+        # Step 4: Migrate xref-v1
+        log.info("Migrating xref-v1 suggestions...")
+        v1_count = _migrate_xref_v1(resolver)
 
     # Step 5: Summary
     log.info(
         "Migration complete: profiles_linked=%d, v1_suggestions=%d, new_index=%s",
-        profiles_linked,
+        profile_stats["linked"],
         v1_count,
         xref_index(),
     )

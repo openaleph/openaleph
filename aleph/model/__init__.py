@@ -79,6 +79,8 @@ from aleph.model.xref import (
     CanonicalSchema,
     ESEdge,
     StatementSchema,
+    XrefCluster,
+    XrefEdge,
     XrefSchema,
 )
 
@@ -145,5 +147,7 @@ __all__ = [
     "StatusCounts",
     "TagSchema",
     "Term",
+    "XrefCluster",
+    "XrefEdge",
     "XrefSchema",
 ]

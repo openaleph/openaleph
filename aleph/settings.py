@@ -193,6 +193,9 @@ class Settings:
         self.SQLALCHEMY_POOL_TIMEOUT = env.to_int("ALEPH_SQLALCHEMY_POOL_TIMEOUT", 30)
         self.XREF_SCROLL = env.get("ALEPH_XREF_SCROLL", "5m")
         self.XREF_SCROLL_SIZE = env.get("ALEPH_XREF_SCROLL_SIZE", "1000")
+        # Imported/auto-merged POSITIVE edges that would grow a cluster past
+        # this size are queued as suggestions instead of applied.
+        self.XREF_MAX_CLUSTER_SIZE = env.to_int("ALEPH_XREF_MAX_CLUSTER_SIZE", 1000)
 
         # Number of replicas to maintain. '2' means 3 overall copies.
         self.INDEX_REPLICAS = env.to_int("ALEPH_INDEX_REPLICAS", 0)
