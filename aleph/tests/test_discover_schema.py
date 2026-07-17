@@ -15,9 +15,14 @@ def test_term_computed_label_is_in_dump():
     assert dumped == {"name": "angela merkel", "count": 12, "label": "Angela Merkel"}
 
 
-def test_mentioned_terms_empty_lists_stripped():
+def test_mentioned_terms_empty_lists_remain():
     mt = MentionedTerms()
-    assert model_dump(mt) is None or model_dump(mt) == {}
+    assert model_dump(mt) == {
+        "companiesMentioned": [],
+        "locationMentioned": [],
+        "namesMentioned": [],
+        "peopleMentioned": [],
+    }
 
 
 def test_significant_terms_nests_term():
