@@ -440,30 +440,31 @@ def similar(entity_id):
     proxy = entity.to_proxy()
     result = get_query_result(MatchQuery, request, entity=proxy)
     entities = list(result.results)
-    xref_resolver = get_resolver(request.authz.search_auth, sync=True)
     result.results = []
     source_collection_id = {entity.collection_id}
-    for obj in entities:
-        target_collection_id = {obj["collection_id"]}
-        match_proxy = make_entity_proxy(obj)
-        judgement = xref_resolver.get_judgement(entity_id, obj["id"])
-        suggestion = make_suggestion(
-            proxy,
-            match_proxy,
-            source_collection_id=source_collection_id,
-            target_collection_id=target_collection_id,
-            user=str(request.authz.role.foreign_id),
-        )
-        # while we're on it, upsert a xref edge:
-        if judgement == Judgement.NO_JUDGEMENT:
-            xref_resolver.suggest(**suggestion)
-        item = {
-            "score": suggestion["score"],
-            "judgement": judgement,
-            "collection_id": obj["collection_id"],
-            "entity": obj,
-        }
-        result.results.append(item)
+    xref_resolver = get_resolver(request.authz.search_auth, sync=True)
+    with xref_resolver.bulk():
+        for obj in entities:
+            target_collection_id = {obj["collection_id"]}
+            match_proxy = make_entity_proxy(obj)
+            judgement = xref_resolver.get_judgement(entity_id, obj["id"])
+            suggestion = make_suggestion(
+                proxy,
+                match_proxy,
+                source_collection_id=source_collection_id,
+                target_collection_id=target_collection_id,
+                user=str(request.authz.role.foreign_id),
+            )
+            # while we're on it, upsert a xref edge:
+            if judgement == Judgement.NO_JUDGEMENT:
+                xref_resolver.suggest(**suggestion)
+            item = {
+                "score": suggestion["score"],
+                "judgement": judgement,
+                "collection_id": obj["collection_id"],
+                "entity": obj,
+            }
+            result.results.append(item)
     return SimilarSerializer.jsonify_result(result)
 
 

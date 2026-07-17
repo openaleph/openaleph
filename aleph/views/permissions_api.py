@@ -72,6 +72,7 @@ def index(collection_id):
             continue
         permissions.append(
             {
+                "id": f"{role.id}-{collection.id}",
                 "collection_id": collection.id,
                 "write": False,
                 "read": False,

@@ -254,19 +254,6 @@ class DatedSchema(APIBaseModel):
     updated_at: datetime | None = None
     deleted_at: datetime | None = None
 
-    @field_validator("id", mode="before")
-    @classmethod
-    def _stringify_id(cls, v: Any) -> Any:
-        """Coerce SQLA integer primary keys into the string the API
-        boundary expects. Runs before field validation so the schema
-        can validate directly off a SQLA row instance via
-        ``RoleSchema.model_validate(role)`` (using ``from_attributes``)
-        without needing each fetcher to call ``role.to_dict()`` first.
-        """
-        if v is None:
-            return v
-        return str(v)
-
 
 def model_dump(model: BaseModel) -> SDict:
     """Dump a pydantic model to a dict, dropping ``None``, empty strings

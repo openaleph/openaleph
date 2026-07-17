@@ -119,7 +119,7 @@ def view(collection_id):
     if get_flag("refresh", False):
         refresh_collection(collection_id)
     collection = resources.get_detail_collection(collection_id, request.authz.READ)
-    return CollectionSerializer.jsonify(collection)
+    return CollectionSerializer.jsonify(collection, detail_view=True)
 
 
 @blueprint.route("/<int:collection_id>", methods=["POST", "PUT"])

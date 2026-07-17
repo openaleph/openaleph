@@ -19,7 +19,7 @@ from aleph.api.assemblers.collection import CollectionAssembler
 from aleph.api.assemblers.entity import EntityAssembler
 from aleph.authz import Authz
 from aleph.core import url_for
-from aleph.logic.entities import transliterate_values
+from aleph.logic.entities import check_write_entity, transliterate_values
 from aleph.logic.resolver import RequestResolver
 from aleph.logic.util import archive_url
 from aleph.model import (
@@ -243,7 +243,11 @@ class XrefAssembler(Assembler):
         obj.collections = self.resolver.get_many(CollectionSchema, coll_ids)
 
         if obj.entity and obj.match:
-            obj.writeable = obj.entity.writeable or obj.match.writeable
+            # check if request can write judgement if any of the edge entities
+            # are writeable to the user
+            obj.writeable = check_write_entity(
+                obj.entity, self.authz
+            ) or check_write_entity(obj.match, self.authz)
             return obj
         log.warning(
             "Dropping xref result: entity=%s match=%s",
@@ -254,7 +258,15 @@ class XrefAssembler(Assembler):
 
 
 class SimilarAssembler(Assembler):
-    pass
+    def assemble_entity(self, e: EntitySchema) -> EntitySchema:
+        assembler = EntityAssembler(self.resolver, self.authz, self.detail)
+        return assembler.assemble(e) or e
+
+    def assemble(self, obj: SimilarSchema) -> Any:
+        obj = super().assemble(obj)
+        obj.entity = self.assemble_entity(obj.entity)
+        obj.writeable = check_write_entity(obj.entity, self.authz)
+        return obj
 
 
 class MappingAssembler(Assembler):
@@ -312,6 +324,12 @@ class StatementAssembler(Assembler):
 
 
 class CanonicalAssembler(Assembler):
+    def assemble_entities(self, obj: CanonicalSchema) -> list[EntitySchema]:
+        # EntityAssembler.assemble returns None for entities the requester
+        # may not read — drop those from the cluster listing.
+        a = EntityAssembler(self.resolver, self.authz, self.detail)
+        return [ent for e in obj.entities if (ent := a.assemble(e)) is not None]
+
     def assemble(self, obj: CanonicalSchema) -> CanonicalSchema:
         obj = super().assemble(obj)
         obj.writeable = any(
@@ -320,6 +338,7 @@ class CanonicalAssembler(Assembler):
         obj.shallow = False
         if obj.merged:
             obj.merged.latinized = transliterate_values(obj.merged.to_proxy())
+        obj.entities = self.assemble_entities(obj)
         return obj
 
 

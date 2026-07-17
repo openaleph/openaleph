@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from typing import Annotated, Any
 
+from banal import is_listish
 from flask_babel import gettext
 from followthemoney import EntityProxy, model
 from followthemoney.exc import InvalidData
@@ -220,11 +221,17 @@ class EntitySchema(EntityModel, APIBaseModel):
     def cache_key(self) -> str:
         return self.id
 
-    @field_validator("role_id", mode="before")
+    @field_validator("role_id", "mutable", mode="before")
     @classmethod
-    def clean_role_id(cls, v: Any) -> str | None:
+    def listish_to_single(cls, v: Any) -> str | None:
         if isinstance(v, int):
             return str(v)
+        # FIXME next major version: reindex needed, then this is fixed:
+        if is_listish(v):
+            for val in v:
+                if isinstance(val, int):
+                    val = str(val)
+                return val
 
 
 class EntityTagSchema(APIBaseModel):
@@ -250,6 +257,7 @@ class SimilarSchema(APIBaseModel):
     """One result of a similar-entity query
     (``GET /api/2/entities/<id>/similar``)."""
 
-    score: float | None = None
-    entity: EntitySchema | None = None
-    judgement: Judgement | None = None
+    score: float = 0
+    entity: EntitySchema
+    judgement: Judgement = Judgement.NO_JUDGEMENT
+    writeable: bool = False

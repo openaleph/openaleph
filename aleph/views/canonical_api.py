@@ -110,7 +110,6 @@ def similar(canonical_id):
         item = {
             "score": compare_entities(entity, make_entity_proxy(obj))[0],
             "judgement": Judgement.NO_JUDGEMENT,
-            "collection_id": None,
             "entity": obj,
         }
         result.results.append(item)

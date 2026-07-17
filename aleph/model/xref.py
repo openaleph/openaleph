@@ -106,3 +106,9 @@ class XrefSchema(APIBaseModel):
         # Both entity and match are required so neither id can be empty.
         a, b = sorted([self.entity.id, self.match.id])
         return f"{a}/{b}"
+
+    @computed_field
+    @property
+    def id(self) -> str:
+        # for the UI, but no required logic to have an id on an edge
+        return hash_data(self.cache_key)
