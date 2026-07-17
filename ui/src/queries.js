@@ -211,7 +211,11 @@ export function entityPercolateQuery(location, entityId) {
 
 export function entityThreadQuery(location, entityId) {
   const path = entityId ? `entities/${entityId}/thread` : undefined;
-  return Query.fromLocation(path, location, { highlight: true }, 'thread');
+  // Request up to the backend's MAX_RESULTS (200) instead of the default
+  // page size: chat-style Message threads routinely exceed 30 entries.
+  return Query.fromLocation(path, location, { highlight: true }, 'thread').limit(
+    200
+  );
 }
 
 export function entityNearbyQuery(location, entityId) {

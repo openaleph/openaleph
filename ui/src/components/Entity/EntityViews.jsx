@@ -296,13 +296,16 @@ class EntityViews extends React.Component {
           {!references.total && references.isPending && (
             <Tab id="loading" title={<TextLoading loading={true} />} />
           )}
-          {entity.schema.isA("Email") && (
+          {(entity.schema.isA("Email") || entity.schema.isA("Message")) && (
             <Tab
               id="thread"
               disabled={thread.total === 0}
               title={
                 <TextLoading loading={thread.isPending}>
-                  <Schema.Icon schema="Email" className="left-icon" />
+                  <Schema.Icon
+                    schema={entity.schema.name}
+                    className="left-icon"
+                  />
                   <FormattedMessage
                     id="entity.info.thread"
                     defaultMessage="Thread"
