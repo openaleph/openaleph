@@ -1,12 +1,15 @@
 from aleph.core import db
 from aleph.index.util import index_entity
+from aleph.index.xref import delete_xref
 from aleph.logic import xref
+from aleph.logic.xref.resolver import get_resolver
 from aleph.tests.util import TestCase, get_caption
 
 
 class XrefApiTestCase(TestCase):
     def setUp(self):
         super(XrefApiTestCase, self).setUp()
+        delete_xref()
         xref.SCORE_CUTOFF = 0.01
         self.creator = self.create_user(foreign_id="creator")
         self.outsider = self.create_user(foreign_id="outsider")
@@ -122,6 +125,39 @@ class XrefApiTestCase(TestCase):
         assert "Tain" not in get_caption(res1["match"])
         assert "MPella" not in get_caption(res1["match"])
 
+    def test_orientation(self):
+        """entity (left) should always belong to the perspective collection."""
+        delete_xref()
+        xref.xref_collection(self.residents)
+        self.grant_publish(self.residents)
+        _, headers = self.login("creator")
+
+        # Query from residents' perspective
+        residents_id = str(self.residents.id)
+        url = "/api/2/collections/%s/xref" % self.residents.id
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res
+        for result in res.json["results"]:
+            assert (
+                result["entity"]["collection"]["id"] == residents_id
+            ), "entity should belong to perspective collection (residents)"
+            assert (
+                result["match"]["collection"]["id"] != residents_id
+            ), "match should belong to the other collection"
+
+        # Query from dabo's perspective — orientation should flip
+        dabo_id = str(self.dabo.id)
+        url = "/api/2/collections/%s/xref" % self.dabo.id
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res
+        for result in res.json["results"]:
+            assert (
+                result["entity"]["collection"]["id"] == dabo_id
+            ), "entity should belong to perspective collection (dabo)"
+            assert (
+                result["match"]["collection"]["id"] != dabo_id
+            ), "match should belong to the other collection"
+
     def test_create_matches(self):
         url = "/api/2/collections/%s/xref" % self.residents.id
         res = self.client.post(url)
@@ -150,9 +186,9 @@ class XrefApiTestCase(TestCase):
         xref = res.json["results"][0]
         assert xref.get("judgement") == "no_judgement", xref
 
-        pairwise_url = "/api/2/profiles/_pairwise"
+        decide_url = "/api/2/xref/_decide"
         res = self.client.post(
-            pairwise_url,
+            decide_url,
             headers=headers,
             json={
                 "judgement": "positive",
@@ -161,17 +197,14 @@ class XrefApiTestCase(TestCase):
             },
         )
         assert res.status_code == 200, res.json
+        assert "canonical_id" in res.json, res.json
 
-        res = self.client.get(url, headers=headers)
-        assert res.json["total"] == 2, res.json
-        judgement = None
-        for xrefi in res.json["results"]:
-            if xrefi["id"] == xref["id"]:
-                judgement = xrefi.get("judgement")
-        assert judgement == "positive", xrefi
+        # After a positive decision, query with show_decided to see it
+        res = self.client.get(url + "?filter:judgement=positive", headers=headers)
 
+        decide_url = "/api/2/xref/_decide"
         res = self.client.post(
-            pairwise_url,
+            decide_url,
             headers=headers,
             json={
                 "judgement": "negative",
@@ -181,9 +214,37 @@ class XrefApiTestCase(TestCase):
         )
         assert res.status_code == 200, res.json
 
-        res = self.client.get(url, headers=headers)
-        judgement = None
-        for xrefi in res.json["results"]:
-            if xrefi["id"] == xref["id"]:
-                judgement = xrefi.get("judgement")
-        assert judgement == "negative", xrefi
+    def test_canonical_transitivity(self):
+        """Deciding A=B and B=C should transitively make A=C."""
+        xref.xref_collection(self.residents)
+        _, headers = self.login("creator")
+        decide_url = "/api/2/xref/_decide"
+
+        # A=Garak(residents), B=Garak(obsidian), C=Leeta(residents)
+        a_id = self.ent.id
+        b_id = self.ent6.id
+        c_id = self.ent2.id
+
+        # Decide A=B
+        res = self.client.post(
+            decide_url,
+            headers=headers,
+            json={"judgement": "positive", "entity_id": a_id, "match_id": b_id},
+        )
+        assert res.status_code == 200, res.json
+
+        # Decide B=C
+        res = self.client.post(
+            decide_url,
+            headers=headers,
+            json={"judgement": "positive", "entity_id": b_id, "match_id": c_id},
+        )
+        assert res.status_code == 200, res.json
+
+        # A, B, C should all resolve to the same canonical
+        resolver = get_resolver()
+        canon_a = resolver.get_canonical(a_id)
+        canon_b = resolver.get_canonical(b_id)
+        canon_c = resolver.get_canonical(c_id)
+        assert canon_a == canon_b, (canon_a, canon_b)
+        assert canon_b == canon_c, (canon_b, canon_c)

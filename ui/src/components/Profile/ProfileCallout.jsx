@@ -8,8 +8,8 @@ import getEntityLink from 'util/getEntityLink';
 
 import './ProfileCallout.scss';
 
-const ProfileCallout = ({ entity, profile, viaEntityId }) => {
-  if (profile) {
+const ProfileCallout = ({ entity, canonical, viaEntityId }) => {
+  if (canonical) {
     return (
       <Callout icon="layers" className="ProfileCallout">
         <p>
@@ -17,7 +17,7 @@ const ProfileCallout = ({ entity, profile, viaEntityId }) => {
             id="profile.callout.intro"
             defaultMessage={"You're viewing {entity} as a profile. "}
             values={{
-              entity: <Entity.Label entity={profile.entity} />,
+              entity: <Entity.Label entity={canonical.entity} />,
             }}
           />
           <FormattedMessage
@@ -26,7 +26,7 @@ const ProfileCallout = ({ entity, profile, viaEntityId }) => {
               'This profile aggregates attributes and relationships from {count} entities across different datasets.'
             }
             values={{
-              count: profile.entities ? profile.entities.length : 0,
+              count: canonical.merged?.referents?.length || 0,
             }}
           />
         </p>

@@ -8,7 +8,7 @@ from openaleph_search.index.admin import (
 from aleph.core import es
 from aleph.index.collections import collections_index, configure_collections
 from aleph.index.notifications import configure_notifications, notifications_index
-from aleph.index.xref import configure_xref, xref_index
+from aleph.index.xref import configure_xref, xref_index  # xref-v2
 
 log = logging.getLogger(__name__)
 

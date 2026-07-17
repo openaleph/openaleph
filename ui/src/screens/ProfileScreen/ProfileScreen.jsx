@@ -3,8 +3,7 @@ import { compose } from 'redux';
 import { connect } from 'react-redux';
 import { Navigate } from 'react-router-dom';
 import queryString from 'query-string';
-import { defineMessages, injectIntl } from 'react-intl';
-import { ButtonGroup, ControlGroup } from '@blueprintjs/core';
+import { injectIntl } from 'react-intl';
 
 import withRouter from 'app/withRouter';
 import Screen from 'components/Screen/Screen';
@@ -13,40 +12,28 @@ import EntityProperties from 'components/Entity/EntityProperties';
 import ProfileViews from 'components/Profile/ProfileViews';
 import LoadingScreen from 'components/Screen/LoadingScreen';
 import ErrorScreen from 'components/Screen/ErrorScreen';
-import CollectionWrapper from 'components/Collection/CollectionWrapper';
-import EntitySetDeleteDialog from 'dialogs/EntitySetDeleteDialog/EntitySetDeleteDialog';
 import ProfileCallout from 'components/Profile/ProfileCallout';
-import { DialogToggleButton } from 'components/Toolbar';
 import { Breadcrumbs, DualPane, Schema } from 'components/common';
 import getEntityLink from 'util/getEntityLink';
 import {
-  fetchProfile,
-  fetchProfileTags,
-  queryEntities,
+  fetchCanonical,
+  fetchCanonicalTags,
+  fetchCanonicalStatements,
   querySimilar,
-  queryProfileExpand,
-  queryEntitySetItems,
+  queryCanonicalExpand,
 } from 'actions';
 import {
-  selectProfile,
-  selectProfileView,
-  selectProfileTags,
+  selectCanonical,
+  selectCanonicalView,
+  selectCanonicalTags,
+  selectCanonicalStatements,
   selectSimilarResult,
-  selectProfileExpandResult,
-  selectEntitySetItemsResult,
+  selectCanonicalExpandResult,
 } from 'selectors';
 import {
-  profileSimilarQuery,
-  profileReferencesQuery,
-  entitySetItemsQuery,
+  canonicalSimilarQuery,
+  canonicalReferencesQuery,
 } from 'queries';
-
-const messages = defineMessages({
-  delete: {
-    id: 'entityset.info.delete',
-    defaultMessage: 'Delete',
-  },
-});
 
 class ProfileScreen extends Component {
   componentDidMount() {
@@ -58,22 +45,22 @@ class ProfileScreen extends Component {
   }
 
   fetchIfNeeded() {
-    const { profileId, profile, tagsResult } = this.props;
-    if (!profileId) {
+    const { canonicalId, canonical, tagsResult } = this.props;
+    if (!canonicalId) {
       return;
     }
 
-    if (profile.shouldLoadDeep) {
-      this.props.fetchProfile({ id: profileId });
+    if (canonical.shouldLoadDeep) {
+      this.props.fetchCanonical({ id: canonicalId });
     }
 
     if (tagsResult.shouldLoad) {
-      this.props.fetchProfileTags({ id: profileId });
+      this.props.fetchCanonicalTags({ id: canonicalId });
     }
 
     const { expandQuery, expandResult } = this.props;
     if (expandResult.shouldLoad) {
-      this.props.queryProfileExpand({ query: expandQuery });
+      this.props.queryCanonicalExpand({ query: expandQuery });
     }
 
     const { similarQuery, similarResult } = this.props;
@@ -81,84 +68,63 @@ class ProfileScreen extends Component {
       this.props.querySimilar({ query: similarQuery });
     }
 
-    const { itemsQuery, itemsResult } = this.props;
-    if (itemsResult.shouldLoad) {
-      this.props.queryEntitySetItems({ query: itemsQuery });
+    const { statementsResult } = this.props;
+    if (statementsResult.shouldLoad) {
+      this.props.fetchCanonicalStatements({ id: canonicalId });
     }
-  }
-
-  renderOperations() {
-    const { intl, profile } = this.props;
-    return (
-      <ControlGroup className="EntitySetManageMenu">
-        {profile.writeable && (
-          <ButtonGroup>
-            <DialogToggleButton
-              buttonProps={{
-                text: intl.formatMessage(messages.delete),
-                icon: 'trash',
-              }}
-              Dialog={EntitySetDeleteDialog}
-              dialogProps={{ entitySet: profile }}
-            />
-          </ButtonGroup>
-        )}
-      </ControlGroup>
-    );
   }
 
   render() {
-    const { profile, itemsResult, viaEntityId, activeMode } = this.props;
+    const { canonical, canonicalId, viaEntityId, activeMode } = this.props;
 
-    if (profile.isError || (!itemsResult.isPending && !itemsResult.total)) {
+    if (canonical.isError) {
       if (viaEntityId) {
         return <Navigate to={getEntityLink(viaEntityId, false)} replace />;
       }
-      return <ErrorScreen error={profile.error} />;
+      return <ErrorScreen error={canonical.error} />;
     }
-    if (!profile?.id || !profile?.entity) {
+    if (!canonical?.id || !canonical?.entity) {
       return <LoadingScreen />;
     }
 
-    const baseEntity = profile.entity;
+    // Backend resolves stale canonical IDs to the current one
+    if (canonical.id !== canonicalId) {
+      return <Navigate to={`/profiles/${canonical.id}`} replace />;
+    }
+
+    const baseEntity = canonical.entity;
     const breadcrumbs = (
-      <Breadcrumbs operation={this.renderOperations()}>
+      <Breadcrumbs>
         <Breadcrumbs.Text>
-          <Schema.Link
-            schema={baseEntity.schema}
-            collection={profile.collection}
-            plural
-          />
+          <Schema.Link schema={baseEntity.schema} plural />
         </Breadcrumbs.Text>
-        <Breadcrumbs.EntitySet key="profile" entitySet={profile} icon />
+        <Breadcrumbs.Text text={canonical.label} icon="layers" />
       </Breadcrumbs>
     );
 
     return (
-      <Screen title={profile.label}>
-        <CollectionWrapper collection={profile.collection}>
-          {breadcrumbs}
-          <DualPane>
-            <DualPane.SidePane className="ItemOverview profile">
-              <div className="ItemOverview__heading">
-                <EntityHeading entity={baseEntity} isProfile={true} />
-              </div>
-              <div className="ItemOverview__callout">
-                <ProfileCallout profile={profile} viaEntityId={viaEntityId} />
-              </div>
-              <div className="ItemOverview__content">
-                <EntityProperties entity={baseEntity} showMetadata={false} />
-              </div>
-            </DualPane.SidePane>
-            <DualPane.ContentPane>
-              <ProfileViews
-                profile={profile}
-                activeMode={activeMode}
-                viaEntityId={viaEntityId}
-              />
-            </DualPane.ContentPane>
-          </DualPane>
-        </CollectionWrapper>
+      <Screen title={canonical.label}>
+        {breadcrumbs}
+        <DualPane>
+          <DualPane.SidePane className="ItemOverview profile">
+            <div className="ItemOverview__heading">
+              <EntityHeading entity={baseEntity} isProfile={true} />
+            </div>
+            <div className="ItemOverview__callout">
+              <ProfileCallout canonical={canonical} viaEntityId={viaEntityId} />
+            </div>
+            <div className="ItemOverview__content">
+              <EntityProperties entity={baseEntity} showMetadata={false} />
+            </div>
+          </DualPane.SidePane>
+          <DualPane.ContentPane>
+            <ProfileViews
+              canonical={canonical}
+              activeMode={activeMode}
+              viaEntityId={viaEntityId}
+            />
+          </DualPane.ContentPane>
+        </DualPane>
       </Screen>
     );
   }
@@ -166,33 +132,31 @@ class ProfileScreen extends Component {
 
 const mapStateToProps = (state, ownProps) => {
   const { profileId } = ownProps.params;
+  const canonicalId = profileId;
   const { location } = ownProps;
   const parsedHash = queryString.parse(location.hash);
-  const similarQuery = profileSimilarQuery(location, profileId);
-  const expandQuery = profileReferencesQuery(profileId);
-  const itemsQuery = entitySetItemsQuery(location, profileId);
+  const similarQuery = canonicalSimilarQuery(location, canonicalId);
+  const expandQuery = canonicalReferencesQuery(canonicalId);
   return {
-    profile: selectProfile(state, profileId),
-    profileId,
+    canonical: selectCanonical(state, canonicalId),
+    canonicalId,
     viaEntityId: parsedHash.via,
-    activeMode: selectProfileView(state, profileId, parsedHash.mode),
-    tagsResult: selectProfileTags(state, profileId),
+    activeMode: selectCanonicalView(state, canonicalId, parsedHash.mode),
+    tagsResult: selectCanonicalTags(state, canonicalId),
     similarQuery,
     similarResult: selectSimilarResult(state, similarQuery),
     expandQuery,
-    expandResult: selectProfileExpandResult(state, expandQuery),
-    itemsQuery,
-    itemsResult: selectEntitySetItemsResult(state, itemsQuery),
+    expandResult: selectCanonicalExpandResult(state, expandQuery),
+    statementsResult: selectCanonicalStatements(state, canonicalId),
   };
 };
 
 const mapDispatchToProps = {
-  queryEntities,
   querySimilar,
-  queryProfileExpand,
-  queryEntitySetItems,
-  fetchProfile,
-  fetchProfileTags,
+  queryCanonicalExpand,
+  fetchCanonical,
+  fetchCanonicalTags,
+  fetchCanonicalStatements,
 };
 
 export default compose(

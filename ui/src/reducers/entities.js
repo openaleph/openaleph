@@ -46,12 +46,12 @@ function nestedEntityObjects(state, result) {
   return state;
 }
 
-function updateEntityProfile(state, entityId, profileId) {
+function updateEntityCanonical(state, entityId, canonicalId) {
   return {
     ...state,
     [entityId]: {
       ...state[entityId],
-      profile_id: profileId,
+      canonical_id: canonicalId,
     },
   };
 }
@@ -63,8 +63,10 @@ export default createReducer(
     [fetchEntity.ERROR]: (state, { error, args: { id } }) =>
       objectLoadError(state, id, error),
 
-    [fetchEntity.COMPLETE]: (state, { id, data }) =>
-      objectLoadComplete(state, id, data),
+    [fetchEntity.COMPLETE]: (state, { id, data }) => ({
+      ...state,
+      [id]: loadComplete(data),
+    }),
 
     [createEntity.START]: (state, { id }) => objectLoadStart(state, id),
 
@@ -111,8 +113,8 @@ export default createReducer(
 
     [deleteEntity.COMPLETE]: (state, { id }) => objectDelete(state, id),
 
-    [pairwiseJudgement.COMPLETE]: (state, { entityId, profileId }) =>
-      updateEntityProfile(state, entityId, profileId),
+    [pairwiseJudgement.COMPLETE]: (state, { entityId, canonicalId }) =>
+      updateEntityCanonical(state, entityId, canonicalId),
 
     [createBookmark.START]: (state, entity) => ({
       ...state,

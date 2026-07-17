@@ -122,9 +122,9 @@ $aleph-border-color: $darc-gray-200;
 
 $aleph-greyed-text: $darc-gray-500;
 $aleph-theme-intent: $aleph-link-color;
-$aleph-profile-dark: $darc-orange-900;
-$aleph-profile-light: $darc-orange-300;
-$aleph-profile-dark-visited: $darc-orange-800;
+$aleph-profile-dark: $aleph-accent-color;
+$aleph-profile-light: lighten($aleph-accent-color, 30%);
+$aleph-profile-dark-visited: darken($aleph-accent-color, 5%);
 
 $aleph-investigation-sidebar-width: $aleph-grid-size * 30;
 $aleph-investigation-theme: $aleph-accent-color;

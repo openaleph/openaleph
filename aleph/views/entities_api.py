@@ -3,7 +3,8 @@ import logging
 from elasticsearch import ApiError as ElasticsearchApiError
 from flask import Blueprint, request
 from flask_babel import gettext
-from followthemoney.compare import compare
+from followthemoney import StatementEntity
+from ftmq.util import make_entity
 from openaleph_procrastinate.defer import tasks
 from openaleph_search.query.mentions import MentionsQuery, MultiMentionsQuery
 from openaleph_search.query.queries import PercolatorQuery
@@ -23,10 +24,11 @@ from aleph.logic.entities import (
     upsert_entity,
     validate_entity,
 )
-from aleph.logic.expand import entity_tags, expand_proxies
+from aleph.logic.expand import entity_tags, expand_proxy
 from aleph.logic.export import create_export
 from aleph.logic.html import sanitize_html
-from aleph.logic.profiles import pairwise_judgements
+from aleph.logic.xref.compare import make_suggestion
+from aleph.logic.xref.resolver import get_resolver
 from aleph.model.bookmark import Bookmark
 from aleph.model.entityset import EntitySet, Judgement
 from aleph.procrastinate.queues import (
@@ -434,19 +436,31 @@ def similar(entity_id):
     """
     # enable_cache()
     entity = get_index_entity(entity_id, request.authz.READ)
-    tag_request(collection_id=entity.get("collection_id"))
+    tag_request(collection_id=entity["collection_id"])
     proxy = make_entity_proxy(entity)
     result = get_query_result(MatchQuery, request, entity=proxy)
     entities = list(result.results)
-    pairs = [(entity_id, s.get("id")) for s in entities]
-    judgements = pairwise_judgements(pairs, int(entity.get("collection_id")))
+    xref_resolver = get_resolver(request.authz.search_auth, sync=True)
     result.results = []
+    source_collection_id = {entity["collection_id"]}
     for obj in entities:
-        score = compare(proxy, make_entity_proxy(obj))
+        target_collection_id = {obj["collection_id"]}
+        match_proxy = make_entity_proxy(obj)
+        judgement = xref_resolver.get_judgement(entity_id, obj.get("id"))
+        suggestion = make_suggestion(
+            proxy,
+            match_proxy,
+            source_collection_id=source_collection_id,
+            target_collection_id=target_collection_id,
+            user=str(request.authz.role.foreign_id),
+        )
+        # while we're on it, upsert a xref edge:
+        if judgement == Judgement.NO_JUDGEMENT:
+            xref_resolver.suggest(**suggestion)
         item = {
-            "score": score,
-            "judgement": judgements.get((entity_id, obj.get("id"))),
-            "collection_id": entity.get("collection_id"),
+            "score": suggestion["score"],
+            "judgement": judgement,
+            "collection_id": obj["collection_id"],
             "entity": obj,
         }
         result.results.append(item)
@@ -1038,15 +1052,15 @@ def expand(entity_id):
       - Entity
     """
     entity = get_index_entity(entity_id, request.authz.READ)
-    proxy = make_entity_proxy(entity)
+    proxy = make_entity(entity, StatementEntity, entity["dataset"])
     collection_id = entity.get("collection_id")
     tag_request(collection_id=collection_id)
     parser = QueryParser(
         request.args, request.authz.search_auth, max_limit=SETTINGS.MAX_EXPAND_ENTITIES
     )
     properties = parser.filters.get("property")
-    results = expand_proxies(
-        [proxy],
+    results = expand_proxy(
+        proxy,
         properties=properties,
         authz=request.authz,
         limit=parser.limit,

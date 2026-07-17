@@ -6,6 +6,7 @@ from flask import request
 from flask_babel import gettext
 from followthemoney import model
 from followthemoney.helpers import entity_filename
+from followthemoney.statement.util import get_prop_type
 from followthemoney.types import registry
 from rigour.mime.types import CSV, PDF
 from servicelayer import env
@@ -19,6 +20,7 @@ from aleph.logic.entities import (
     transliterate_values,
 )
 from aleph.logic.util import archive_url, collection_url, entity_url
+from aleph.logic.xref.canonical import get_canonical_cluster
 from aleph.model import (
     Alert,
     Collection,
@@ -295,6 +297,14 @@ class EntitySerializer(Serializer):
         obj["created_at"] = min(ensure_list(obj.get("created_at")), default=None)
         obj["updated_at"] = max(ensure_list(obj.get("updated_at")), default=None)
 
+        if self.detail_view:
+            try:
+                cluster = get_canonical_cluster(proxy.id, request.authz.search_auth)
+                if cluster is not None:
+                    obj["canonical_id"] = cluster["id"]
+            except Exception:
+                pass
+
         # Adding processing triggers and status for documents only (detail view)
         if self.detail_view and proxy.schema.is_a(Document.SCHEMA):
             if should_transcribe(proxy):
@@ -315,27 +325,49 @@ class EntitySerializer(Serializer):
 
 
 class XrefSerializer(Serializer):
+    @classmethod
+    def _collection_ids(cls, obj) -> set[int]:
+        return set(map(int, ensure_list(obj.get("collection_id"))))
+
     def collect(self, obj):
         matchable = tuple([s for s in model if s.matchable])
-        self.queue(Entity, obj.get("entity_id"), matchable)
-        self.queue(Entity, obj.get("match_id"), matchable)
-        self.queue(Collection, obj.get("collection_id"))
-        self.queue(Collection, obj.pop("match_collection_id"))
+        self.queue(Entity, obj.get("source"), matchable)
+        self.queue(Entity, obj.get("target"), matchable)
+        for coll_id in self._collection_ids(obj):
+            self.queue(Collection, coll_id)
 
     def _serialize(self, obj):
-        entity_id = obj.pop("entity_id")
-        obj["entity"] = self.resolve(Entity, entity_id, EntitySerializer)
-        match_id = obj.pop("match_id")
-        obj["match"] = self.resolve(Entity, match_id, EntitySerializer)
-        collection_id = obj.get("collection_id")
-        obj["writeable"] = request.authz.can(collection_id, request.authz.WRITE)
+        source_id = obj.pop("source", None)
+        target_id = obj.pop("target", None)
+
+        # Orient: ensure the perspective collection's entity is "entity" (left).
+        # The edge's source/target is determined by Identifier.pair ordering,
+        # not by which collection the entity belongs to. Swap when the
+        # perspective collection's entity ended up as target.
+        perspective_cid = (request.view_args or {}).get("collection_id")
+        if perspective_cid is not None:
+            perspective_cid = int(perspective_cid)
+            source_cids = set(map(int, ensure_list(obj.get("source_collection_id"))))
+            target_cids = set(map(int, ensure_list(obj.get("target_collection_id"))))
+            if perspective_cid not in source_cids and perspective_cid in target_cids:
+                source_id, target_id = target_id, source_id
+
+        obj["entity"] = self.resolve(Entity, source_id, EntitySerializer)
+        obj["match"] = self.resolve(Entity, target_id, EntitySerializer)
+        coll_ids = self._collection_ids(obj)
+        obj["collections"] = [
+            self.resolve(Collection, cid, CollectionSerializer) for cid in coll_ids
+        ]
         if obj["entity"] and obj["match"]:
+            obj["writeable"] = obj["entity"].get("writeable") or obj["match"].get(
+                "writeable"
+            )
             return obj
         log.warning(
-            "Dropping xref result: entity=%s (resolved=%s) match=%s (resolved=%s)",
-            entity_id,
+            "Dropping xref result: source=%s (resolved=%s) target=%s (resolved=%s)",
+            source_id,
             bool(obj["entity"]),
-            match_id,
+            target_id,
             bool(obj["match"]),
         )
 
@@ -400,25 +432,58 @@ class EntitySetItemSerializer(Serializer):
         return obj
 
 
-class ProfileSerializer(Serializer):
+class CanonicalSerializer(Serializer):
+    """Serializer for canonical clusters (replaces ProfileSerializer)."""
+
     def collect(self, obj):
-        self.queue(Collection, obj.get("collection_id"))
+        for coll_id in obj.get("collection_ids", set()):
+            self.queue(Collection, coll_id)
+        entity_serializer = EntitySerializer(nested=True)
+        for entity in obj.get("entities", []):
+            entity_serializer.collect(entity)
 
     def _serialize(self, obj):
-        collection_id = obj.pop("collection_id", None)
-        obj["writeable"] = request.authz.can(collection_id, request.authz.WRITE)
-        obj["shallow"] = obj.get("shallow", True)
-        obj["collection"] = self.resolve(
-            Collection, collection_id, CollectionSerializer
-        )
+        cids = obj.pop("collection_ids", set())
+        obj["writeable"] = any(request.authz.can(c, request.authz.WRITE) for c in cids)
+        obj["shallow"] = False
+        # merged.to_dict() already includes `referents` (constituent entity IDs)
         proxy = obj.pop("merged")
         data = proxy.to_dict()
         data["latinized"] = transliterate_values(proxy)
         obj["merged"] = data
-        items = obj.pop("items", [])
-        entities = [i.get("entity") for i in items]
-        obj["entities"] = [e.get("id") for e in entities if e is not None]
-        obj.pop("proxies", None)
+        # Serialize constituent entities (nested/shallow)
+        entity_serializer = EntitySerializer(nested=True)
+        obj["entities"] = [
+            entity_serializer._serialize_common(entity)
+            for entity in obj.get("entities", [])
+        ]
+        return obj
+
+
+class StatementSerializer(Serializer):
+    """Serializer for FtM statements — resolves dataset and entity references."""
+
+    def collect(self, obj):
+        from aleph.logic.resolver import CollectionByForeignId
+
+        self.queue(CollectionByForeignId, obj.get("dataset"))
+        prop_type = get_prop_type(obj.get("schema"), obj.get("prop"))
+        if prop_type == "entity":
+            self.queue(Entity, obj.get("value"))
+
+    def _serialize(self, obj):
+        from aleph.logic.resolver import CollectionByForeignId
+
+        dataset_fid = obj.pop("dataset", None)
+        obj["dataset"] = self.resolve(
+            CollectionByForeignId, dataset_fid, CollectionSerializer
+        )
+        prop_type = get_prop_type(obj.get("schema"), obj.get("prop"))
+        if prop_type == "entity":
+            entity = self.resolve(Entity, obj.get("value"), EntitySerializer)
+            if entity is not None:
+                entity["shallow"] = True
+                obj["value"] = entity
         return obj
 
 

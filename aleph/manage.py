@@ -54,7 +54,9 @@ from aleph.logic.roles import (
     user_add,
     user_del,
 )
+from aleph.logic.xref import store as xref_store
 from aleph.logic.xref import xref_collection
+from aleph.logic.xref.migrate import migrate_xref_index
 from aleph.migration import cleanup_deleted, destroy_db, upgrade_system
 from aleph.model import Collection, EntitySet, Role
 from aleph.model.document import Document
@@ -250,7 +252,6 @@ def _reindex_collection(
     diff_only=False,
     model=True,
     mappings=True,
-    profiles=True,
     queue_batches=False,
     batch_size=10_000,
     schema=None,
@@ -266,7 +267,6 @@ def _reindex_collection(
             diff_only=diff_only,
             model=model,
             mappings=mappings,
-            profiles=profiles,
             queue_batches=queue_batches,
             batch_size=batch_size,
             schema=schema,
@@ -283,7 +283,6 @@ def _reindex_collection(
 @click.option("--flush", is_flag=True, default=False)
 @click.option("--model/--no-model", is_flag=True, default=True)
 @click.option("--mappings/--no-mappings", is_flag=True, default=True)
-@click.option("--profiles/--no-profiles", is_flag=True, default=True)
 @click.option(
     "--diff-only",
     is_flag=True,
@@ -339,7 +338,6 @@ def reindex(
     diff_only=False,
     model=True,
     mappings=True,
-    profiles=True,
     queue_batches=False,
     batch_size=10_000,
     schema=None,
@@ -355,7 +353,6 @@ def reindex(
         diff_only=diff_only,
         model=model,
         mappings=mappings,
-        profiles=profiles,
         queue_batches=queue_batches,
         batch_size=batch_size,
         schema=schema,
@@ -1345,9 +1342,31 @@ def cleanuparchive(prefix):
     cleanup_archive(prefix=prefix)
 
 
+@cli.command("migrate-xref")
+def migrate_xref():
+    """Migrate xref-v1 and profiles to xref-v2 resolver edges."""
+    migrate_xref_index()
+
+
+@cli.command("xref-reproject")
+@click.option("--sync", is_flag=True, default=False, help="Refresh the index.")
+def xref_reproject(sync=False):
+    """Rebuild the ES projection of decided xref edges from the SQL graph."""
+    count = xref_store.reproject(sync=sync)
+    log.info("Reprojected %d xref edge documents.", count)
+
+
+@cli.command("xref-rebuild-clusters")
+def xref_rebuild_clusters():
+    """Recompute xref cluster membership from positive edges (repair)."""
+    count = xref_store.rebuild_clusters()
+    log.info("Rebuilt membership for %d cluster nodes.", count)
+
+
 @cli.command()
 def evilshit():
     """EVIL: Delete all data and recreate the database."""
     delete_index()
     destroy_db()
-    upgrade()
+    cache.flush()
+    upgrade_system()

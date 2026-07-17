@@ -14,7 +14,6 @@ from servicelayer.jobs import Job
 from aleph.authz import Authz
 from aleph.core import cache, db
 from aleph.index import collections as index
-from aleph.index import xref as xref_index
 from aleph.logic.aggregator import get_aggregator, get_aggregator_name
 from aleph.logic.discover import update_collection_discovery
 from aleph.logic.documents import (
@@ -380,7 +379,6 @@ def reindex_collection(
     diff_only=False,
     model=True,
     mappings=True,
-    profiles=True,
     queue_batches=False,
     batch_size=10_000,
     schema=None,
@@ -398,15 +396,12 @@ def reindex_collection(
         diff_only: Only reindex entities that are in aggregator but not in index
         model: Aggregate model from database (Entities, Documents) before indexing
         mappings: Process collection mappings and aggregate to the aggregator
-        profiles: Process profile fragments and aggregate to the aggregator
         queue_batches: Queue batches for parallelization
         schema: Filter entities by schema (e.g., Person, Company)
         since: Optional timestamp filter for aggregator (ISO format or timestamp)
         until: Optional timestamp filter for aggregator (ISO format or timestamp)
         origin: Filter entities by aggregator origin (e.g., 'xref', 'aleph')
     """
-    from aleph.logic.profiles import profile_fragments
-
     # Parse timestamp strings to datetime objects for ftmq
     since_dt = _parse_timestamp(since)
     until_dt = _parse_timestamp(until)
@@ -416,8 +411,6 @@ def reindex_collection(
         _process_mappings(collection, aggregator)
     if model:
         aggregate_model(collection, aggregator)
-    if profiles:
-        profile_fragments(collection, aggregator)
 
     if flush:
         log.debug(f"[{collection}] Flushing...", dataset=collection.name)
@@ -467,7 +460,10 @@ def delete_collection(collection, keep_metadata=False, sync=False):
     aggregator.delete()
     flush_notifications(collection, sync=sync)
     index.delete_entities(collection.id, sync=sync)
-    xref_index.delete_xref(collection, sync=sync)
+    # Circular import: aleph.logic.xref -> process -> ... -> this module
+    from aleph.logic.xref.store import purge_xref
+
+    purge_xref(collection, sync=sync)
     Mapping.delete_by_collection(collection.id)
     EntitySet.delete_by_collection(collection.id, deleted_at)
     Entity.delete_by_collection(collection.id)

@@ -12,3 +12,4 @@ from aleph.model.mapping import Mapping  # noqa: F401
 from aleph.model.permission import Permission  # noqa: F401
 from aleph.model.role import Role  # noqa: F401
 from aleph.model.tag import Tag  # noqa: F401
+from aleph.model.xref import XrefCluster, XrefEdge  # noqa: F401

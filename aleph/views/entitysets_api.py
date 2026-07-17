@@ -1,11 +1,11 @@
 import logging
 
 from banal import ensure_list
-from flask import Blueprint, redirect, request
+from flask import Blueprint, request
 from flask_babel import gettext
 from werkzeug.exceptions import BadRequest, NotFound
 
-from aleph.core import db, url_for
+from aleph.core import db
 from aleph.logic.diagrams import publish_diagram
 from aleph.logic.entities import check_write_entity, upsert_entity, validate_entity
 from aleph.logic.entitysets import (
@@ -156,8 +156,6 @@ def view(entityset_id):
       - EntitySet
     """
     entityset = get_entityset(entityset_id, request.authz.READ)
-    if entityset.type == EntitySet.PROFILE:
-        return redirect(url_for("profiles_api.view", profile_id=entityset_id))
     data = entityset.to_dict()
     data["shallow"] = False
     return EntitySetSerializer.jsonify(data)
