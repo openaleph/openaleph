@@ -594,10 +594,15 @@ class XrefResolver:
         (identical live POSITIVE edges are kept — idempotent re-import).
 
         POSITIVE edges that would grow a cluster past max_cluster_size
-        (default: SETTINGS.XREF_MAX_CLUSTER_SIZE) are queued as ES
-        suggestions for human review instead of applied.
+        (None: SETTINGS.XREF_MAX_CLUSTER_SIZE; 0: uncapped, e.g. for
+        replaying human decisions) are queued as ES suggestions for human
+        review instead of applied.
         """
-        cap = max_cluster_size or SETTINGS.XREF_MAX_CLUSTER_SIZE
+        cap = (
+            SETTINGS.XREF_MAX_CLUSTER_SIZE
+            if max_cluster_size is None
+            else max_cluster_size or None
+        )
         stats = {"applied": 0, "diverted": 0, "skipped": 0}
         batch: list[ESEdge] = []
         for doc in decisions:
@@ -613,7 +618,7 @@ class XrefResolver:
         return stats
 
     def _import_batch(
-        self, batch: list[ESEdge], cap: int, stats: dict[str, int]
+        self, batch: list[ESEdge], cap: int | None, stats: dict[str, int]
     ) -> None:
         with store.xref_session() as session:
             result = store.import_batch(session, batch, max_cluster_size=cap)
