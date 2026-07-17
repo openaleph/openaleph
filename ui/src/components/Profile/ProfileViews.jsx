@@ -85,19 +85,6 @@ class ProfileViews extends React.Component {
           }
         />
         <Tab
-          id="provenance"
-          title={
-            <>
-              <Icon icon="document-open" className="left-icon" />
-              <FormattedMessage
-                id="profile.info.provenance"
-                defaultMessage="Data Lineage"
-              />
-            </>
-          }
-          panel={<ProfileProvenanceMode canonical={canonical} />}
-        />
-        <Tab
           id="similar"
           disabled={similar.total === 0}
           title={
@@ -111,6 +98,19 @@ class ProfileViews extends React.Component {
             </TextLoading>
           }
           panel={<ProfileSimilarMode canonical={canonical} />}
+        />
+        <Tab
+          id="provenance"
+          title={
+            <>
+              <Icon icon="document-open" className="left-icon" />
+              <FormattedMessage
+                id="profile.info.provenance"
+                defaultMessage="Data Lineage"
+              />
+            </>
+          }
+          panel={<ProfileProvenanceMode canonical={canonical} />}
         />
         {references.results.map((ref) => (
           <Tab
