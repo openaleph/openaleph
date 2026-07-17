@@ -5,11 +5,22 @@ from flask_babel import gettext
 from followthemoney import EntityProxy, model
 from followthemoney.exc import InvalidData
 from followthemoney.types import registry
+from ftmq.model.entity import EntityModel
+from nomenklatura.judgement import Judgement
+from pydantic import ConfigDict
 from sqlalchemy.dialects.postgresql import JSONB
 
 from aleph.core import db
-from aleph.model.collection import Collection
-from aleph.model.common import ENTITY_ID_LEN, DatedModel, iso_text, make_textid
+from aleph.model.collection import Collection, CollectionSchema
+from aleph.model.common import (
+    ENTITY_ID_LEN,
+    APIBaseModel,
+    DatedModel,
+    SDict,
+    iso_text,
+    make_textid,
+)
+from aleph.model.role import RoleSchema
 from aleph.util import make_entity_proxy
 
 log = logging.getLogger(__name__)
@@ -102,3 +113,106 @@ class Entity(db.Model, DatedModel):
 
     def __repr__(self):
         return "<Entity(%r, %r)>" % (self.id, self.schema)
+
+
+# === Pydantic schemas ===
+#
+# Entities are FollowTheMoney entities served via OpenAleph. The wire
+# format extends the canonical ``ftmq.model.entity.EntityModel`` (which
+# itself wraps the FTM ``EntityModel``) with Aleph-specific extras:
+# nested collection / role, search-time fields (``score``, ``highlight``),
+# document-detail fields (``safeHtml``, ``processing_status``,
+# ``links.file``/``pdf``/``csv``), per-user state (``bookmarked``) and
+# the runtime ``links`` block.
+#
+# The ``properties`` field is inherited from ``EntityModel`` and remains
+# a ``Mapping[str, Sequence[str | EntityModel]]`` — nested entities
+# inside properties are served in the FTM-canonical "shallow" form
+# without Aleph extras (matching the existing ``shallow=True`` behaviour
+# of the legacy serializer).
+
+
+class EntitySchema(EntityModel):
+    """Wire format for an OpenAleph entity.
+
+    Subclasses :class:`ftmq.model.entity.EntityModel` for the canonical
+    FollowTheMoney shape (``id``, ``caption``, ``schema``, ``properties``,
+    ``datasets``, ``referents``) and adds Aleph-specific fields on top.
+    """
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+    )
+
+    # Always populated by the ES indexer — every entity carries its
+    # schema ancestor chain. Tightened from optional → required.
+    schemata: list[str]
+
+    # Resolved nested resources, populated by the response builder.
+    collection: CollectionSchema | None = None
+    role_id: str | None = None
+    role: RoleSchema | None = None
+
+    # FTM property aggregates surfaced as flat fields for facet display.
+    countries: list[str] = []
+    languages: list[str] = []
+    dates: list[str] = []
+
+    # Search-time fields.
+    score: float | None = None
+    highlight: list[str] = []
+
+    # Per-user state.
+    bookmarked: bool | None = None
+
+    # Document detail fields (only populated for Document-derived schemata
+    # in detail views).
+    safeHtml: list[str] | None = None
+    processing_status: SDict | None = None
+
+    # Transliterated property values — always computed by the response
+    # builder (may be an empty dict for entities with no transliterable
+    # property values).
+    latinized: SDict
+
+    # Request-time computed fields populated by the response builder.
+    writeable: bool = False
+    shallow: bool = True
+    links: SDict = {}
+
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    deleted_at: datetime | None = None
+
+    @property
+    def cache_key(self) -> str:
+        return self.id
+
+
+class EntityTagSchema(APIBaseModel):
+    """One row of an entity tag aggregation
+    (``GET /api/2/entities/<id>/tags``)."""
+
+    id: str
+    field: str
+    value: str
+    count: int = 0
+
+
+class EntityExpandSchema(APIBaseModel):
+    """One bucket of an entity expansion
+    (``GET /api/2/entities/<id>/expand``)."""
+
+    property: str
+    count: int = 0
+    entities: list[EntitySchema] = []
+
+
+class SimilarSchema(APIBaseModel):
+    """One result of a similar-entity query
+    (``GET /api/2/entities/<id>/similar``)."""
+
+    score: float | None = None
+    entity: EntitySchema | None = None
+    judgement: Judgement | None = None

@@ -7,7 +7,13 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 from aleph.core import db
 from aleph.model.collection import Collection
-from aleph.model.common import DatedModel, IdModel, Status
+from aleph.model.common import (
+    DatedModel,
+    DatedSchema,
+    IdModel,
+    SDict,
+    Status,
+)
 from aleph.model.role import Role
 
 log = logging.getLogger(__name__)
@@ -145,3 +151,39 @@ class Export(db.Model, IdModel, DatedModel):
 
     def __repr__(self):
         return "<Export(%r, %r, %r)>" % (self.id, self.creator_id, self.label)
+
+
+# === Pydantic schemas ===
+
+
+class ExportSchema(DatedSchema):
+    """Canonical wire format for an :class:`Export`.
+
+    Every export row has a ``label``, ``operation``, ``creator_id``,
+    ``status``, ``mime_type``, ``expires_at`` (set to ``now +
+    DEFAULT_EXPIRATION`` on create) and ``meta`` (defaulted to ``{}``).
+    The ``deleted`` flag also always has a value (defaulting to
+    ``False``). The DB columns are technically nullable but
+    ``Export.create`` populates all of them.
+
+    The optional fields (``collection_id``, ``content_hash``,
+    ``file_name``, ``file_size``) are populated by the export worker
+    only after the run completes successfully — exports that are
+    pending or scoped to no collection legitimately omit them.
+    """
+
+    label: str
+    operation: str
+    creator_id: str
+    expires_at: datetime
+    deleted: bool
+    status: str
+    mime_type: str
+    meta: SDict
+
+    collection_id: str | None = None
+    content_hash: str | None = None
+    file_name: str | None = None
+    file_size: int | None = None
+
+    links: SDict = {}

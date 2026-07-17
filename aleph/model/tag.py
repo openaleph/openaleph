@@ -1,7 +1,15 @@
 from normality import stringify
 
 from aleph.core import db
-from aleph.model.common import ENTITY_ID_LEN, DatedModel, IdModel
+from aleph.model.common import (
+    ENTITY_ID_LEN,
+    DatedModel,
+    DatedSchema,
+    IdModel,
+    SDict,
+)
+from aleph.model.entity import EntitySchema
+from aleph.model.role import RoleSchema
 
 
 class Tag(db.Model, IdModel, DatedModel):
@@ -27,3 +35,31 @@ class Tag(db.Model, IdModel, DatedModel):
         query = db.session.query(Tag)
         query = query.filter(Tag.entity_id == entity_id)
         query.delete(synchronize_session=False)
+
+
+# === Pydantic schemas ===
+
+
+class TagSchema(DatedSchema):
+    """Canonical wire format for a :class:`Tag`.
+
+    Every tag row has a ``tag`` value, an ``entity_id``, a
+    ``collection_id`` (the entity's parent) and a ``role_id`` (who
+    created it). The DB columns are technically nullable but every
+    write site populates them.
+    """
+
+    tag: str
+    entity_id: str
+    collection_id: str
+    role_id: str
+
+    # Resolved nested resources, populated by the response builder.
+    entity: EntitySchema | None = None
+    role: RoleSchema | None = None
+
+    # Set on aggregated tag responses (count of times this tag appears).
+    count: int | None = None
+
+    writeable: bool = False
+    links: SDict = {}

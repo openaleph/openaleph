@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from typing import Literal
 
 from banal import ensure_list
 from nomenklatura.judgement import Judgement  # noqa: F401
@@ -8,10 +9,18 @@ from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import JSONB
 
 from aleph.core import db
-from aleph.model.collection import Collection
-from aleph.model.common import ENTITY_ID_LEN, SoftDeleteModel, make_textid, query_like
+from aleph.model.collection import Collection, CollectionSchema
+from aleph.model.common import (
+    ENTITY_ID_LEN,
+    APIBaseModel,
+    DatedSchema,
+    SDict,
+    SoftDeleteModel,
+    make_textid,
+    query_like,
+)
 from aleph.model.permission import Permission
-from aleph.model.role import Role
+from aleph.model.role import Role, RoleSchema
 
 log = logging.getLogger(__name__)
 
@@ -368,3 +377,119 @@ class EntitySetItem(db.Model, SoftDeleteModel):
 
     def __repr__(self):
         return "<EntitySetItem(%r, %r)>" % (self.entityset_id, self.entity_id)
+
+
+# === Pydantic schemas ===
+#
+# EntitySets come in three variants (list, diagram, timeline). Profiles
+# were removed when xref moved to the nomenklatura resolver — canonical
+# clusters live in :mod:`aleph.model.xref` now. The ``layout`` field
+# carries a DiagramLayout when the type is ``diagram``, otherwise it
+# stays None. EntitySetItem links a single entity to an EntitySet.
+# Judgement / ``compared_to_entity_id`` were profile-only leakage and
+# are dropped from the wire format — the SQLA columns survive as dead
+# weight until a follow-up cleanup.
+
+
+EntitySetType = Literal["list", "diagram", "timeline"]
+
+
+class DiagramVertex(APIBaseModel):
+    id: str
+    type: str | None = None
+    label: str | None = None
+    fixed: bool | None = None
+    hidden: bool | None = None
+    color: str | None = None
+    position: SDict | None = None
+    entityId: str | None = None
+
+
+class DiagramEdge(APIBaseModel):
+    id: str
+    type: str | None = None
+    label: str | None = None
+    sourceId: str | None = None
+    targetId: str | None = None
+    entityId: str | None = None
+    propertyQName: str | None = None
+    labelPosition: SDict | None = None
+
+
+class DiagramGrouping(APIBaseModel):
+    id: str
+    label: str | None = None
+    color: str | None = None
+    vertices: list[str] = []
+
+
+class DiagramLayoutSettings(APIBaseModel):
+    pivotTypes: list[str] = []
+
+
+class DiagramLayout(APIBaseModel):
+    """Layout payload stored on EntitySets of type ``diagram``."""
+
+    vertices: list[DiagramVertex] = []
+    edges: list[DiagramEdge] = []
+    groupings: list[DiagramGrouping] = []
+    settings: DiagramLayoutSettings | None = None
+
+
+class EntitySetSchema(DatedSchema):
+    """Canonical wire format for an :class:`EntitySet`.
+
+    ``label``, ``role_id`` and ``collection_id`` are application
+    invariants. The DB columns are technically nullable but
+    ``EntitySet.create`` populates all three on every write.
+    """
+
+    type: EntitySetType
+    label: str
+    role_id: str
+    collection_id: str
+
+    summary: str | None = None
+    layout: DiagramLayout | None = None
+
+    role: RoleSchema | None = None
+    collection: CollectionSchema | None = None
+
+    writeable: bool = False
+    shallow: bool = True
+    links: SDict = {}
+
+
+class EntitySetItemSchema(DatedSchema):
+    """Canonical wire format for an :class:`EntitySetItem`.
+
+    The wire ``id`` is the composite ``"<entityset_id>$<entity_id>"`` —
+    matching the legacy ``EntitySetItem.to_dict()`` shape. All four
+    identifier fields are application invariants: every item links a
+    specific entity to a specific entityset, the entity belongs to a
+    collection, and the parent entityset's collection is always
+    derivable. The DB columns are technically nullable but every write
+    site populates them.
+
+    The nested ``entity`` field is populated by the response builder
+    via the resolver. It is typed as :class:`SDict` here to avoid an
+    import cycle with :mod:`aleph.model.entity`; the assembler layer
+    constructs an ``EntitySchema`` from this slot.
+    """
+
+    entityset_id: str
+    entity_id: str
+    collection_id: str
+    entityset_collection_id: str
+    added_by_id: str | None = None
+
+    entity: SDict | None = None
+    collection: CollectionSchema | None = None
+
+    writeable: bool = False
+    links: SDict = {}
+
+    @property
+    def cache_key(self) -> str:
+        # Composite key matching the legacy wire id.
+        return f"{self.entityset_id}/{self.entity_id}"

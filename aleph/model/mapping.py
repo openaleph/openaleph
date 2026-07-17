@@ -6,8 +6,16 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 from aleph.core import db
 from aleph.model.collection import Collection
-from aleph.model.common import ENTITY_ID_LEN, DatedModel, Status, iso_text
-from aleph.model.entityset import EntitySet
+from aleph.model.common import (
+    ENTITY_ID_LEN,
+    DatedModel,
+    DatedSchema,
+    SDict,
+    Status,
+    iso_text,
+)
+from aleph.model.entity import EntitySchema
+from aleph.model.entityset import EntitySet, EntitySetSchema
 from aleph.model.role import Role
 
 log = logging.getLogger(__name__)
@@ -111,3 +119,37 @@ class Mapping(db.Model, DatedModel):
 
     def __repr__(self):
         return "<Mapping(%r, %r)>" % (self.id, self.table_id)
+
+
+# === Pydantic schemas ===
+
+
+class MappingSchema(DatedSchema):
+    """Canonical wire format for a :class:`Mapping`.
+
+    A mapping rewrites a tabular entity (CSV-like) into a stream of
+    FollowTheMoney entities. ``query`` (the mapping DSL),
+    ``collection_id``, ``role_id`` and ``table_id`` are application
+    invariants — every mapping is created with all four. The DB
+    columns are technically nullable but ``Mapping.create`` populates
+    them on every write.
+
+    ``entityset_id`` is genuinely optional — a mapping that produces
+    free-floating entities (not part of any entityset) is allowed.
+    """
+
+    collection_id: str
+    role_id: str
+    table_id: str
+    query: SDict
+
+    entityset_id: str | None = None
+
+    last_run_status: str | None = None
+    last_run_err_msg: str | None = None
+
+    entityset: EntitySetSchema | None = None
+    table: EntitySchema | None = None
+
+    writeable: bool = False
+    links: SDict = {}

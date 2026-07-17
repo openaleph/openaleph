@@ -1,11 +1,14 @@
+from datetime import datetime
+
 from flask_babel import lazy_gettext
 
-from aleph.model.role import Role
 from aleph.model.alert import Alert
+from aleph.model.collection import Collection
+from aleph.model.common import APIBaseModel, SDict
 from aleph.model.entity import Entity
 from aleph.model.entityset import EntitySet
-from aleph.model.collection import Collection
 from aleph.model.export import Export
+from aleph.model.role import Role
 
 
 class Event(object):
@@ -91,7 +94,7 @@ class Events(object, metaclass=EventsRegistry):
     # ALERT MATCH
     MATCH_ALERT = Event(
         title=lazy_gettext("Alert notifications"),
-        template=lazy_gettext("{{entity}} matches your alert for {{alert}}"),  # noqa
+        template=lazy_gettext("{{entity}} matches your alert for {{alert}}"),
         params={"entity": Entity, "alert": Alert, "role": Role},
         link_to="entity",
     )
@@ -99,9 +102,7 @@ class Events(object, metaclass=EventsRegistry):
     # GRANT COLLECTION
     GRANT_COLLECTION = Event(
         title=lazy_gettext("Dataset access change"),
-        template=lazy_gettext(
-            "{{actor}} gave {{role}} access to {{collection}}"
-        ),  # noqa
+        template=lazy_gettext("{{actor}} gave {{role}} access to {{collection}}"),
         params={"collection": Collection, "role": Role},
         link_to="collection",
     )
@@ -121,3 +122,54 @@ class Events(object, metaclass=EventsRegistry):
         params={"export": Export},
         link_to="export",
     )
+
+
+# === Pydantic schemas ===
+
+
+class EventSchema(APIBaseModel):
+    """Event metadata included on each notification.
+
+    Mirrors :meth:`Event.to_dict`. ``params`` here is a slot map from
+    param name to the lower-cased class name of the resolved object
+    (e.g. ``{"document": "entity", "collection": "collection"}``) — it
+    describes the *shape*, not the resolved values.
+    """
+
+    name: str
+    title: str
+    template: str
+    params: SDict = {}
+
+
+class NotificationSchema(APIBaseModel):
+    """Canonical wire format for a notification entry.
+
+    Notifications live in the Elasticsearch ``notifications`` index;
+    there is no SQLAlchemy model. The cache key is the ES document id
+    that ``index_notification`` derives from the (actor, event,
+    channels, params) tuple.
+
+    Every field on the ES doc is populated by ``index_notification``:
+    ``actor_id``, ``event``, ``params``, ``channels`` and
+    ``created_at``. The ``event`` is resolved into an :class:`EventSchema`
+    by the response builder.
+
+    The ``params`` field is a slot map from param name (defined by the
+    matching :class:`Event`) to the *resolved* nested object. The
+    resolution is polymorphic — value types depend on the event — so
+    the wire format keeps it as :class:`SDict`. The response builder
+    looks up the right ``EventSchema.params`` mapping and resolves
+    each value via the resolver before serialising.
+    """
+
+    id: str
+    event: EventSchema
+    actor_id: str
+    params: SDict
+    channels: list[str]
+    created_at: datetime
+
+    @property
+    def cache_key(self) -> str:
+        return self.id

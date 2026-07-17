@@ -1,21 +1,32 @@
 import logging
 from datetime import datetime
 from functools import cache
+from typing import Any
 
 from banal import ensure_dict, ensure_list
 from flask_babel import lazy_gettext
+from followthemoney.dataset.coverage import DataCoverage
+from followthemoney.dataset.publisher import DataPublisher
 from followthemoney.dataset.util import dataset_name_check
 from followthemoney.exc import InvalidData
 from followthemoney.namespace import Namespace
 from followthemoney.types import registry
+from ftmq.model.dataset import Dataset as FtmDataset
 from normality import stringify
+from pydantic import ConfigDict, Field, model_validator
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import aliased
 
 from aleph.core import db
-from aleph.model.common import IdModel, SoftDeleteModel, make_textid
+from aleph.model.common import (
+    APIBaseModel,
+    IdModel,
+    SDict,
+    SoftDeleteModel,
+    make_textid,
+)
 from aleph.model.permission import Permission
-from aleph.model.role import Role
+from aleph.model.role import Role, RoleSchema
 
 log = logging.getLogger(__name__)
 
@@ -306,3 +317,197 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
 
     def __str__(self):
         return self.foreign_id
+
+
+# === Pydantic schemas ===
+#
+# Collections are FollowTheMoney datasets with a few Aleph-specific
+# extras layered on top: access control (creator/team), feature flags
+# (xref/taggable/restricted/secret/casefile/contains_ai), languages
+# (FTM core only models countries) and the runtime ``links`` block.
+#
+# Field name mapping from the legacy SQLAlchemy shape to the FTM
+# Dataset shape:
+#
+#   foreign_id      → name        (FTM dataset name)
+#   label           → title
+#   info_url        → url
+#   data_updated_at → updated_at
+#   countries       → coverage.countries
+#   frequency       → coverage.frequency  ("annual" → "annually")
+#   publisher (str) → publisher.name      (DataPublisher object)
+#   publisher_url   → publisher.url
+
+
+# Aleph "annual" → FTM "annually". Other values pass through unchanged.
+_FREQUENCY_MAP: dict[str, str] = {"annual": "annually"}
+
+
+class CollectionSchema(FtmDataset):
+    """Wire format for an Aleph :class:`Collection`.
+
+    Subclasses :class:`ftmq.model.dataset.Dataset` (which subclasses the
+    FollowTheMoney ``DatasetModel``) so the response shape is the
+    canonical FTM dataset format. Aleph-specific fields are added on
+    top.
+    """
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+    )
+
+    # FTM core models countries via ``coverage.countries``; languages
+    # are an Aleph extension.
+    languages: list[str] = []
+
+    # Aleph access / visibility flags.
+    restricted: bool = False
+    xref: bool = False
+    taggable: bool = False
+    contains_ai: bool = False
+    contains_ai_comment: str | None = None
+    casefile: bool = False
+    secret: bool = False
+    external: bool = False
+
+    # Aleph access control (creator + read-permitted team).
+    creator_id: str | None = None
+    creator: RoleSchema | None = None
+    team_id: list[str] = []
+    team: list[RoleSchema] = []
+
+    # Request-time computed fields populated by the response builder.
+    writeable: bool = False
+    shallow: bool = True
+    links: SDict = {}
+
+    @property
+    def cache_key(self) -> str:
+        # FTM dataset name == Aleph foreign_id.
+        return self.name
+
+    @model_validator(mode="before")
+    @classmethod
+    def _from_collection(cls, data: Any) -> Any:
+        if not isinstance(data, Collection):
+            return data
+
+        publisher = None
+        if data.publisher or data.publisher_url:
+            publisher = DataPublisher(
+                name=data.publisher or "",
+                url=data.publisher_url or None,
+            )
+
+        countries = [registry.country.clean(c) for c in (data.countries or []) if c]
+        countries = [c for c in countries if c is not None]
+        frequency = _FREQUENCY_MAP.get(data.frequency or "", data.frequency)
+        coverage = None
+        if countries or frequency:
+            coverage = DataCoverage(
+                countries=countries,
+                frequency=frequency or "unknown",
+            )
+
+        languages = [registry.language.clean(c) for c in (data.languages or []) if c]
+        languages = [c for c in languages if c is not None]
+
+        category = data.category if data.category in Collection.CATEGORIES else None
+
+        if not data.label:
+            raise ValueError(
+                f"Collection {data.foreign_id!r} has no label; "
+                "cannot derive a CollectionSchema title"
+            )
+
+        return {
+            # FTM core fields
+            "name": data.foreign_id,
+            "title": data.label,
+            "summary": data.summary,
+            "url": data.info_url,
+            "updated_at": data.data_updated_at or data.updated_at,
+            "category": category,
+            "publisher": publisher,
+            "coverage": coverage,
+            # Aleph extras
+            "languages": languages,
+            "restricted": bool(data.restricted),
+            "xref": bool(data.xref),
+            "taggable": bool(data.taggable),
+            "contains_ai": bool(data.contains_ai),
+            "contains_ai_comment": data.contains_ai_comment,
+            "casefile": data.casefile,
+            "external": data.external,
+            "secret": data.secret,
+            "creator_id": stringify(data.creator_id),
+            "team_id": list(data.team_id) if hasattr(data, "team_id") else [],
+        }
+
+
+class FacetCounts(APIBaseModel):
+    """One facet aggregate: a term→count map plus a cardinality total."""
+
+    values: dict[str, int] = {}
+    total: int = 0
+
+
+class CollectionStatistics(APIBaseModel):
+    """Per-dataset facet aggregates. Resolver-cached aggregate keyed
+    under ``CollectionStatistics/<foreign_id>/stats``.
+
+    Each facet exposes a :class:`FacetCounts` payload — the term→count
+    map plus a cardinality total. The set of facets matches
+    ``aleph.index.collections.STATS_FACETS``.
+    """
+
+    foreign_id: str
+    schema_: FacetCounts = Field(default_factory=FacetCounts, alias="schema")
+    names: FacetCounts = FacetCounts()
+    addresses: FacetCounts = FacetCounts()
+    countries: FacetCounts = FacetCounts()
+    languages: FacetCounts = FacetCounts()
+    phones: FacetCounts = FacetCounts()
+    emails: FacetCounts = FacetCounts()
+
+    @property
+    def cache_key(self) -> str:
+        return f"{self.foreign_id}/stats"
+
+
+class StatusCounts(APIBaseModel):
+    """Counts for an in-flight or completed processing batch."""
+
+    finished: int = 0
+    pending: int = 0
+    running: int = 0
+
+
+class CollectionStageStatus(StatusCounts):
+    job_id: str | None = None
+    stage: str | None = None
+
+
+class CollectionJobStatus(StatusCounts):
+    stages: list[CollectionStageStatus] = []
+
+
+class CollectionStatus(StatusCounts):
+    """Resolver-cached aggregate keyed under
+    ``CollectionStatus/<foreign_id>/status``."""
+
+    foreign_id: str | None = None
+    jobs: list[CollectionJobStatus] = []
+
+    @property
+    def cache_key(self) -> str:
+        return f"{self.foreign_id}/status"
+
+
+class CollectionDeepSchema(CollectionSchema):
+    """Detail-view shape — base CollectionSchema plus the per-dataset
+    aggregates returned by ``GET /api/2/collections/<id>``."""
+
+    status: CollectionStatus | None = None
+    statistics: CollectionStatistics | None = None
