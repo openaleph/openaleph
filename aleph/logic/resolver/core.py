@@ -73,10 +73,10 @@ def get_resolver_store() -> Store:
     resolver's cache logic depends on ``Store.get`` returning ``None``
     for misses so it can fall through to the upstream fetcher.
     """
+    # Namespace via the URI path
     return get_store(
-        uri=SETTINGS.RESOLVER_STORE_URI,
+        uri=f"{SETTINGS.RESOLVER_STORE_URI}/{SETTINGS.APP_NAME}/resolver",
         raise_on_nonexist=False,
-        backend_config={"redis_prefix": f"{SETTINGS.APP_NAME}/resolver"},
         default_ttl=STORE_TTL,
     )
 

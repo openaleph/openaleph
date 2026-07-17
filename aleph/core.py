@@ -19,7 +19,6 @@ from werkzeug.local import LocalProxy
 from werkzeug.middleware.profiler import ProfilerMiddleware
 
 from aleph import __version__ as aleph_version
-from aleph.cache import Cache
 from aleph.metrics.flask import PrometheusExtension
 from aleph.oauth import configure_oauth
 from aleph.settings import SETTINGS
@@ -101,7 +100,7 @@ def create_app(config=None):
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
 
     migrate.init_app(app, db, directory=SETTINGS.ALEMBIC_DIR)
-    configure_oauth(app, cache=get_cache())
+    configure_oauth(app)
     mail.init_app(app)
     db.init_app(app)
     babel.init_app(app, locale_selector=determine_locale)
@@ -136,15 +135,8 @@ def get_archive():
     return SETTINGS._archive
 
 
-def get_cache():
-    if not hasattr(SETTINGS, "_cache") or SETTINGS._cache is None:
-        SETTINGS._cache = Cache(get_redis(), prefix=SETTINGS.APP_NAME)
-    return SETTINGS._cache
-
-
 es = LocalProxy(get_es)
 kv = LocalProxy(get_redis)
-cache = LocalProxy(get_cache)
 archive = LocalProxy(get_archive)
 
 

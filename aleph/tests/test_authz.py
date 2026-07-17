@@ -94,3 +94,27 @@ class AuthzTestCase(TestCase):
             Authz.from_token("banana")
         sauthz = Authz.from_token(token)
         assert sauthz.id == authz.id
+
+    def test_flush_role_revokes_tokens(self):
+        # flush_role: blocked/deleted roles lose all their session tokens
+        # via prefix iteration over the authz store ("<role_id>/<random>").
+        token = Authz.from_role(self.user).to_token()
+        other_token = Authz.from_role(self.user).to_token()
+        admin_token = Authz.from_role(self.admin).to_token()
+        assert Authz.from_token(token).id == self.user.id
+
+        # not blocked: only the ACL cache is cleared, tokens survive
+        Authz.flush_role(self.user)
+        assert Authz.from_token(token).id == self.user.id
+
+        # blocked: every token of the role is revoked ...
+        self.user.is_blocked = True
+        db.session.add(self.user)
+        db.session.commit()
+        Authz.flush_role(self.user)
+        with self.assertRaises(Unauthorized):
+            Authz.from_token(token)
+        with self.assertRaises(Unauthorized):
+            Authz.from_token(other_token)
+        # ... while other roles' tokens are untouched (prefix boundary)
+        assert Authz.from_token(admin_token).id == self.admin.id
