@@ -6,7 +6,6 @@ import re
 from banal import ensure_list
 from followthemoney import EntityProxy, model
 from followthemoney.types import registry
-from servicelayer import env
 
 from aleph.api.assemblers.base import Assembler
 from aleph.api.assemblers.collection import CollectionAssembler
@@ -22,9 +21,10 @@ from aleph.logic.xref.canonical import get_canonical_cluster
 from aleph.model import CollectionSchema, Document, EntitySchema, RoleSchema
 from aleph.model.common import SDict
 from aleph.procrastinate.queues import defer
+from aleph.settings import SETTINGS
 
 log = logging.getLogger(__name__)
-TRACER_URI = env.get("REDIS_URL")
+TRACER_URI = SETTINGS.REDIS_URL
 BASE64_ENCODED_PATTERN = re.compile(r"=\?{1}(.+)\?{1}([B|Q])\?{1}(.+)\?{1}=.*")
 
 

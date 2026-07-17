@@ -2,6 +2,7 @@ import csv
 import io
 import logging
 import string
+import uuid
 from typing import Any, TypeVar
 from urllib.parse import urlparse
 
@@ -10,7 +11,6 @@ from banal import as_bool
 from flask import Response, render_template, request
 from normality import stringify
 from pydantic import BaseModel, ValidationError
-from servicelayer.jobs import Job
 from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
 from aleph.util import json_default
@@ -42,7 +42,7 @@ def get_flag(name, default=False):
 def get_session_id():
     role_id = stringify(request.authz.id) or "anonymous"
     session_id = stringify(request._session_id)
-    session_id = session_id or Job.random_id()
+    session_id = session_id or uuid.uuid4().hex
     return "%s:%s" % (role_id, session_id)
 
 

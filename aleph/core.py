@@ -14,7 +14,6 @@ from openaleph_search.core import get_es
 from sentry_sdk.integrations.flask import FlaskIntegration
 from servicelayer.archive import init_archive
 from servicelayer.cache import get_redis
-from servicelayer.extensions import get_extensions
 from werkzeug.local import LocalProxy
 from werkzeug.middleware.profiler import ProfilerMiddleware
 
@@ -112,11 +111,6 @@ def create_app(config=None):
 
     register_all()
     mount_app_blueprints(app)
-
-    # This executes all registered init-time plugins so that other
-    # applications can register their behaviour.
-    for plugin in get_extensions("aleph.init"):
-        plugin(app=app)
 
     # ensure db session is removed after each request
     app.teardown_appcontext_funcs = [_remove_session]
