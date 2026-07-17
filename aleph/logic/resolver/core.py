@@ -136,7 +136,6 @@ class Cache:
         obj = self._store.get(
             self._key(cls, identifier),
             model=cls,
-            model_validate=False,
         )
         if obj is None:
             obj = fetch_one(cls, identifier)
@@ -192,11 +191,10 @@ class Cache:
     def _mget(self, cls: Type[M], keys: Iterable[str]) -> list[M | None]:
         """Batch read from the underlying store.
 
-        For Redis backends, issues a single ``MGET`` and deserializes
-        each value with ``model_validate=False``. For other backends,
-        falls back to N ``Store.get`` calls. Either way returns a list
-        of pydantic instances (or None for misses) in the same order
-        as the input keys.
+        For Redis backends, issues a single ``MGET``; for other
+        backends, falls back to N ``Store.get`` calls. Either way
+        returns a list of pydantic instances (or None for misses) in
+        the same order as the input keys.
 
         The Redis fast path peeks at the underlying fsspec backend
         (``store._fs``) and the redis client it owns. If the shape
@@ -211,12 +209,9 @@ class Cache:
         if client is not None and hasattr(client, "mget"):
             fs_keys = [self._store._keys.to_fs_key(k) for k in keys]
             raw_values = client.mget(fs_keys)
-            return [
-                from_store(v, model=cls, model_validate=False) if v else None
-                for v in raw_values
-            ]
+            return [from_store(v, model=cls) if v else None for v in raw_values]
         # Generic per-key fallback. Correct for every backend.
-        return [self._store.get(k, model=cls, model_validate=False) for k in keys]
+        return [self._store.get(k, model=cls) for k in keys]
 
     # --- mutation hook -----------------------------------------------------
 
