@@ -1,4 +1,3 @@
-import json
 import logging
 from functools import cached_property
 
@@ -6,7 +5,8 @@ from banal import ensure_list
 from openaleph_search.model import SearchAuth
 from werkzeug.exceptions import Unauthorized
 
-from aleph.core import cache, db
+from aleph.authz_store import authz_store
+from aleph.core import db
 from aleph.model import Collection, Permission, Role
 from aleph.model.common import make_token
 from aleph.settings import SETTINGS
@@ -23,8 +23,6 @@ class Authz(object):
 
     READ = "read"
     WRITE = "write"
-    ACCESS = "authzca"
-    TOKENS = "authztk"
 
     def __init__(
         self,
@@ -53,9 +51,9 @@ class Authz(object):
         if action in self._collections:
             return self._collections.get(action, [])
         key = self.id or "anonymous"
-        collections = cache.kv.hget(self.ACCESS, key)
+        collections = authz_store.get_acl(key)
         if collections:
-            self._collections = json.loads(collections)
+            self._collections = collections
         else:
             reads = set()
             writes = set()
@@ -68,7 +66,7 @@ class Authz(object):
                     writes.add(perm.collection_id)
             self._collections = {self.READ: list(reads), self.WRITE: list(writes)}
             log.debug("Authz: %s: %r", self, self._collections)
-            cache.kv.hset(self.ACCESS, key, json.dumps(self._collections))
+            authz_store.set_acl(key, self._collections)
         return self._collections.get(action, [])
 
     def can(self, collection, action):
@@ -153,7 +151,7 @@ class Authz(object):
         if self.role is not None:
             self.flush_role(self.role)
         if self.token_id is not None:
-            cache.delete(cache.key(self.TOKENS, self.token_id))
+            authz_store.delete_token(self.token_id)
 
     @property
     def role(self):
@@ -169,15 +167,16 @@ class Authz(object):
 
     def to_token(self):
         if self.token_id is None:
-            self.token_id = "%s.%s" % (self.id, make_token())
-            key = cache.key(self.TOKENS, self.token_id)
+            # "<role_id>/<random>": the slash makes a role's tokens a
+            # path prefix in the authz store (see flush_role).
+            self.token_id = "%s/%s" % (self.id, make_token())
             state = {
                 "id": self.id,
                 "roles": list(self.roles),
                 "is_admin": self.is_admin,
                 "is_investigator": self.is_investigator,
             }
-            cache.set_complex(key, state, expires=self.expire)
+            authz_store.put_token(self.token_id, state, ttl=self.expire)
         return self.token_id
 
     def __repr__(self):
@@ -198,8 +197,7 @@ class Authz(object):
 
     @classmethod
     def from_token(cls, token_id):
-        state_key = cache.key(cls.TOKENS, token_id)
-        state = cache.get_complex(state_key)
+        state = authz_store.get_token(token_id)
         if state is None:
             raise Unauthorized()
         return cls(
@@ -212,16 +210,15 @@ class Authz(object):
 
     @classmethod
     def flush(cls):
-        cache.kv.delete(cls.ACCESS)
+        authz_store.flush_acl()
 
     @classmethod
     def flush_role(cls, role):
         # Clear collections ACL cache.
-        cache.kv.hdel(cls.ACCESS, role.id)
+        authz_store.delete_acl(role.id)
         if role.is_blocked or role.deleted_at is not None:
             # End all user sessions.
-            prefix = cache.key(cls.TOKENS, "%s." % role.id)
-            cache.flush(prefix=prefix)
+            authz_store.revoke_tokens(role.id)
 
     @cached_property
     def search_auth(self) -> SearchAuth:
