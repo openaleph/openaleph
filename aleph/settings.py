@@ -191,8 +191,6 @@ class Settings:
         self.SQLALCHEMY_MAX_POOL_SIZE = env.to_int("ALEPH_SQLALCHEMY_POOL_SIZE", 5)
         self.SQLALCHEMY_POOL_RECYCLE = env.to_int("ALEPH_SQLALCHEMY_POOL_RECYCLE", 3600)
         self.SQLALCHEMY_POOL_TIMEOUT = env.to_int("ALEPH_SQLALCHEMY_POOL_TIMEOUT", 30)
-        self.XREF_SCROLL = env.get("ALEPH_XREF_SCROLL", "5m")
-        self.XREF_SCROLL_SIZE = env.get("ALEPH_XREF_SCROLL_SIZE", "1000")
 
         # Number of replicas to maintain. '2' means 3 overall copies.
         self.INDEX_REPLICAS = env.to_int("ALEPH_INDEX_REPLICAS", 0)
@@ -210,6 +208,11 @@ class Settings:
         # XREF Model Selection
         self.XREF_MODEL = env.get("FTM_COMPARE_MODEL", None)
         self.XREF_ALGORITHM = env.get("NOMENKLATURA_XREF_ALGORITHM", "regression-v1")
+
+        # XREF tuning and behaviour
+        self.XREF_SCROLL = env.get("ALEPH_XREF_SCROLL", "5m")
+        self.XREF_SCROLL_SIZE = env.get("ALEPH_XREF_SCROLL_SIZE", "1000")
+        self.XREF_REIFY_MENTIONS = env.as_bool("ALEPH_XREF_REIFY_MENTIONS", True)
 
         ###############################################################################
         # Feature flags
