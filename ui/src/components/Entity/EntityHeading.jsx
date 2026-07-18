@@ -27,7 +27,7 @@ class EntityHeading extends React.PureComponent {
   }
 
   render() {
-    const { entity, isProfile = false, metadata } = this.props;
+    const { entity, metadata } = this.props;
     const lastViewedDate = entity.lastViewed
       ? new Date(parseInt(entity.lastViewed, 10))
       : Date.now();
@@ -41,15 +41,6 @@ class EntityHeading extends React.PureComponent {
           className={c(Classes.TEXT_MUTED, 'ItemOverview__heading__subtitle')}
         >
           <Schema.Label schema={entity.schema} icon />
-          {isProfile && (
-            <>
-              {' · '}
-              <FormattedMessage
-                id="profile.info.header"
-                defaultMessage="Profile"
-              />
-            </>
-          )}
         </span>
         <h1 className="ItemOverview__heading__title">
           {entity.schema.isThing() && <Entity.Label entity={entity} addClass />}

@@ -12,27 +12,35 @@ from openaleph_search.index import entities as entities_index
 from servicelayer.jobs import Job
 
 from aleph.authz import Authz
-from aleph.core import cache, db
+from aleph.core import db
 from aleph.index import collections as index
-from aleph.index import xref as xref_index
 from aleph.logic.aggregator import get_aggregator, get_aggregator_name
-from aleph.logic.discover import update_collection_discovery
 from aleph.logic.documents import (
     MODEL_ORIGIN,
 )
 from aleph.logic.documents import index_flush as _index_flush
 from aleph.logic.documents import ingest_flush as _ingest_flush
 from aleph.logic.notifications import flush_notifications, publish
+from aleph.logic.resolver import cache
+from aleph.logic.resolver.registry import register, register_etag
+from aleph.logic.resolver.ttl import TTL_AGGREGATE, TTL_RESOURCE
 from aleph.model import (
     Collection,
+    CollectionCounts,
+    CollectionDetailSchema,
+    CollectionDiscovery,
+    CollectionSchema,
+    CollectionStatistics,
     Document,
     Entity,
     EntitySet,
     Events,
+    GlobalStatistics,
     Mapping,
     Permission,
     Tag,
 )
+from aleph.model.common import iso_text
 from aleph.procrastinate.queues import (
     queue_cancel_collection,
     queue_index_batch,
@@ -64,7 +72,7 @@ def _parse_timestamp(timestamp_str: str | None) -> datetime | None:
     return parsed
 
 
-def create_collection(data, authz, sync=False):
+def create_collection(data, authz):
     now = datetime.utcnow()
     collection = Collection.create(data, authz, created_at=now)
     if collection.created_at == now:
@@ -74,85 +82,144 @@ def create_collection(data, authz, sync=False):
             channels=[collection, authz.role],
             actor_id=authz.id,
         )
-    db.session.commit()
-    return update_collection(collection, sync=sync)
+    db.session.commit()  # SQLA event handles ES sync
+    update_collection(collection)
+    return collection
 
 
-def update_collection(collection, sync=False):
-    """Update a collection and re-index."""
-    Authz.flush()
-    refresh_collection(collection.id)
-    return index.index_collection(collection, sync=sync)
+# === Resolver registrations ================================================
 
 
-def refresh_collection(collection_id):
-    """Operations to execute after updating a collection-related
-    domain object. This will refresh stats and flush cache."""
-    cache.kv.delete(
-        cache.object_key(Collection, collection_id),
-        cache.object_key(Collection, collection_id, "stats"),
-        cache.object_key(Collection, collection_id, "discovery"),
-    )
+@register(CollectionSchema, ttl=TTL_RESOURCE)
+def _fetch_collection(collection_id: str) -> CollectionSchema | None:
+    collection = Collection.by_id(int(collection_id))
+    if collection is None:
+        return None
+    return CollectionSchema.model_validate(collection)
 
 
-def get_deep_collection(collection):
-    mappings = Mapping.by_collection(collection.id).count()
-    entitysets = EntitySet.type_counts(collection_id=collection.id)
-    status = get_collection_status(collection)
-    if status is not None:
-        status = status.model_dump(mode="json")
-    return {
-        "statistics": index.get_collection_stats(collection.id),
-        "counts": {"mappings": mappings, "entitysets": entitysets},
-        "status": status,
-        "shallow": False,
-    }
+@register_etag(CollectionSchema)
+def _collection_etag(coll: CollectionSchema) -> str:
+    return f"{coll.id}:{iso_text(coll.updated_at) or 0}"
 
 
-def compute_collections():
-    """Update collection caches, including the global stats cache."""
+@register(CollectionStatistics, ttl=TTL_AGGREGATE)
+def _fetch_collection_stats(cid: str) -> CollectionStatistics | None:
+    collection = Collection.by_id(int(cid))
+    if collection is None:
+        return None
+    return index.compute_collection_statistics(collection.id)
+
+
+@register(GlobalStatistics, ttl=TTL_AGGREGATE)
+def compute_global_statistics(key: str) -> GlobalStatistics | None:
+    """Compute system-wide statistics. Used as both a resolver fetcher
+    (on demand) and called directly from ``compute_collections``.
+
+    Composes from the cached per-collection ``CollectionStatistics``
+    entries (batch resolver read – misses are computed upstream and warm
+    the per-collection cache) instead of running a live ES aggregation
+    per collection.
+    """
     authz = Authz.from_role(None)
     schemata = defaultdict(int)
     countries = defaultdict(int)
     categories = defaultdict(int)
 
+    readable = [c for c in Collection.all() if authz.can(c.id, authz.READ)]
+    found = cache.get_many(CollectionStatistics, [str(c.id) for c in readable])
+    stats_by_id = {stats.collection_id: stats for stats in found}
+
+    for collection in readable:
+        categories[collection.category] += 1
+        for country in collection.countries:
+            countries[country] += 1
+        stats = stats_by_id.get(str(collection.id))
+        if stats is None:
+            continue
+        for schema, count in index.things_from_stats(stats).items():
+            schemata[schema] += count
+
+    return GlobalStatistics(
+        collections=sum(categories.values()),
+        schemata=dict(schemata),
+        countries=dict(countries),
+        categories=dict(categories),
+        things=sum(schemata.values()),
+    )
+
+
+# === Business logic ========================================================
+
+
+def update_collection(collection: Collection) -> None:
+    """Flush authz and invalidate aggregates after collection metadata
+    changes. ES sync happens automatically via the SQLA event on commit."""
+    Authz.flush()
+    refresh_collection(collection.id)
+
+
+def refresh_collection(collection_id: int) -> None:
+    """Invalidate collection aggregates (statistics, discovery, deep).
+
+    ``CollectionSchema`` invalidation is handled by the SQLA event
+    on the ``Collection`` model. This function handles the aggregates
+    which change when the *entity index* changes (ingestion, reindex,
+    entity upsert/delete).
+    """
+    cid = str(collection_id)
+    cache.invalidate(CollectionStatistics, cid)
+    cache.invalidate(CollectionDiscovery, cid)
+    cache.invalidate(CollectionDetailSchema, cid)
+
+
+@register(CollectionDetailSchema, ttl=TTL_AGGREGATE)
+def _fetch_detail_collection(cid: str) -> CollectionDetailSchema | None:
+    collection = Collection.by_id(int(cid))
+    if collection is None:
+        return None
+    base = CollectionSchema.model_validate(collection)
+    stats = cache.get(CollectionStatistics, cid)
+    counts = CollectionCounts(
+        mappings=Mapping.by_collection(collection.id).count(),
+        entitysets=EntitySet.type_counts(collection_id=collection.id),
+    )
+    data = base.model_dump()
+    data["shallow"] = False
+    return CollectionDetailSchema(
+        **data,
+        statistics=stats,
+        counts=counts,
+    )
+
+
+def compute_collections() -> None:
+    """Recompute all per-collection stats and the global stats cache."""
     for collection in Collection.all():
         compute_collection(collection)
 
-        if authz.can(collection.id, authz.READ):
-            categories[collection.category] += 1
-            things = index.get_collection_things(collection.id)
-            for schema, count in things.items():
-                schemata[schema] += count
-            for country in collection.countries:
-                countries[country] += 1
-
     log.info("Updating global statistics cache...")
-    data = {
-        "collections": sum(categories.values()),
-        "schemata": dict(schemata),
-        "countries": dict(countries),
-        "categories": dict(categories),
-        "things": sum(schemata.values()),
-    }
-    key = cache.key(cache.STATISTICS)
-    cache.set_complex(key, data, expires=cache.EXPIRE)
+    cache.refresh(GlobalStatistics, "global")
 
 
-def compute_collection(collection: Collection, force=False, sync=False):
-    key = cache.object_key(Collection, collection.id, "stats")
-    if cache.get(key) is not None and not force:
-        return
-    refresh_collection(collection.id)
+def compute_collection(collection: Collection, force: bool = False) -> None:
+    """Recompute statistics and discovery for a collection.
+
+    Collection metadata sync to ES is handled by the SQLA event –
+    this function only deals with the derived aggregates.
+    """
+    cid = str(collection.id)
+    if not force:
+        if cache.get(CollectionStatistics, cid) is not None:
+            return
     log.info(
         f"[{collection.foreign_id}] Computing statistics...",
         dataset=collection.name,
     )
-    index.update_collection_stats(collection.id)
-    update_collection_discovery(collection.id, collection.name)
-
-    cache.set(key, datetime.utcnow().isoformat())
-    index.index_collection(collection, sync=sync)
+    # Re-compute cached data
+    cache.refresh(CollectionStatistics, cid)
+    cache.refresh(CollectionDiscovery, cid)
+    cache.refresh(CollectionDetailSchema, cid)
 
 
 def aggregate_model(collection: Collection, aggregator):
@@ -380,7 +447,6 @@ def reindex_collection(
     diff_only=False,
     model=True,
     mappings=True,
-    profiles=True,
     queue_batches=False,
     batch_size=10_000,
     schema=None,
@@ -398,15 +464,12 @@ def reindex_collection(
         diff_only: Only reindex entities that are in aggregator but not in index
         model: Aggregate model from database (Entities, Documents) before indexing
         mappings: Process collection mappings and aggregate to the aggregator
-        profiles: Process profile fragments and aggregate to the aggregator
         queue_batches: Queue batches for parallelization
         schema: Filter entities by schema (e.g., Person, Company)
         since: Optional timestamp filter for aggregator (ISO format or timestamp)
         until: Optional timestamp filter for aggregator (ISO format or timestamp)
         origin: Filter entities by aggregator origin (e.g., 'xref', 'aleph')
     """
-    from aleph.logic.profiles import profile_fragments
-
     # Parse timestamp strings to datetime objects for ftmq
     since_dt = _parse_timestamp(since)
     until_dt = _parse_timestamp(until)
@@ -416,8 +479,6 @@ def reindex_collection(
         _process_mappings(collection, aggregator)
     if model:
         aggregate_model(collection, aggregator)
-    if profiles:
-        profile_fragments(collection, aggregator)
 
     if flush:
         log.debug(f"[{collection}] Flushing...", dataset=collection.name)
@@ -467,7 +528,10 @@ def delete_collection(collection, keep_metadata=False, sync=False):
     aggregator.delete()
     flush_notifications(collection, sync=sync)
     index.delete_entities(collection.id, sync=sync)
-    xref_index.delete_xref(collection, sync=sync)
+    # Circular import: aleph.logic.xref -> process -> ... -> this module
+    from aleph.logic.xref.store import purge_xref
+
+    purge_xref(collection, sync=sync)
     Mapping.delete_by_collection(collection.id)
     EntitySet.delete_by_collection(collection.id, deleted_at)
     Entity.delete_by_collection(collection.id)
@@ -475,9 +539,8 @@ def delete_collection(collection, keep_metadata=False, sync=False):
     if not keep_metadata:
         Permission.delete_by_collection(collection.id)
         collection.delete(deleted_at=deleted_at)
-    db.session.commit()
+    db.session.commit()  # SQLA event handles ES sync/deletion
     if not keep_metadata:
-        index.delete_collection(collection.id, sync=True)
         aggregator.drop()
     refresh_collection(collection.id)
     Authz.flush()
@@ -498,7 +561,7 @@ def upgrade_collections(cleanup_external: bool = False):
 
 
 def collection_is_active(collection: Collection) -> bool:
-    status = get_collection_status(collection, include_collection_data=False)
+    status = get_collection_status(collection)
     if status is None:
         return False
     for batch in status.batches:

@@ -5,7 +5,7 @@ import { Callout } from '@blueprintjs/core';
 import queryString from 'query-string';
 
 import withRouter from 'app/withRouter';
-import { querySimilar } from 'actions';
+import { querySimilar, fetchEntity } from 'actions';
 import { selectSimilarResult } from 'selectors';
 import {
   ErrorSection,
@@ -36,12 +36,14 @@ class EntitySimilarMode extends Component {
   }
 
   async onDecide(obj) {
+    const { entity } = this.props;
     try {
       await this.props.pairwiseJudgement({
         judgement: obj.judgement,
-        entity: this.props.entity,
+        entity: { id: entity.canonicalId || entity.id },
         match: obj.entity,
       });
+      this.props.fetchEntity({ id: entity.id });
     } catch (e) {
       showWarningToast(e.message);
     }
@@ -201,6 +203,7 @@ const mapStateToProps = (state, ownProps) => {
 EntitySimilarMode = connect(mapStateToProps, {
   querySimilar,
   pairwiseJudgement,
+  fetchEntity,
 })(EntitySimilarMode);
 EntitySimilarMode = withRouter(EntitySimilarMode);
 EntitySimilarMode = injectIntl(EntitySimilarMode);

@@ -1,7 +1,8 @@
 import logging
-from typing import Generator
+from typing import Generator, Iterator
 
-from banal import ensure_dict, is_mapping
+from anystore.types import SDict
+from banal import is_mapping
 from flask_babel import gettext
 from followthemoney import EntityProxy, model
 from followthemoney.exc import InvalidData
@@ -11,13 +12,17 @@ from followthemoney.util import make_entity_id
 from openaleph_procrastinate.defer import tasks
 from openaleph_search.index import entities as index
 
-from aleph.core import cache, db
-from aleph.index import xref as xref_index
+from aleph.authz import Authz
+from aleph.core import db
 from aleph.logic.aggregator import get_aggregator
 from aleph.logic.collections import MODEL_ORIGIN, refresh_collection
 from aleph.logic.notifications import flush_notifications
+from aleph.logic.resolver import cache
+from aleph.logic.resolver.registry import register, register_etag
+from aleph.logic.resolver.ttl import TTL_RESOURCE
 from aleph.logic.util import latin_alt
-from aleph.model import Bookmark, Document, Entity, EntitySetItem, Mapping
+from aleph.model import Bookmark, Document, Entity, EntitySchema, EntitySetItem, Mapping
+from aleph.model.collection import Collection
 from aleph.procrastinate.queues import (
     queue_analyze,
     queue_prune_entity,
@@ -27,6 +32,64 @@ from aleph.settings import SETTINGS
 from aleph.util import make_entity_proxy
 
 log = logging.getLogger(__name__)
+
+
+def _compute_latinized(properties: SDict) -> SDict:
+    """Pre-compute transliterated property values so the serializer
+    doesn't have to redo it on every request."""
+    latinized: dict[str, list[str]] = {}
+    for prop, values in properties.items():
+        for v in values:
+            la = latin_alt(v)
+            if la:
+                latinized.setdefault(prop, []).append(la)
+    return latinized
+
+
+def _entity_from_es(data: SDict) -> EntitySchema:
+    """Turn a raw ES dict into an EntitySchema, pre-computing
+    ``latinized`` so it's cached alongside the entity."""
+    data["latinized"] = _compute_latinized(data.get("properties", {}))
+    return EntitySchema.model_validate(data)
+
+
+def _entities_batch_from_es(ids) -> Iterator[EntitySchema]:
+    """Batch fetch from ES, yielding EntitySchema instances.
+
+    ``entities_by_ids`` yields raw dicts – each one needs the
+    ``_entity_from_es`` conversion so the resolver gets pydantic
+    models with ``cache_key`` and pre-computed ``latinized``.
+    """
+    for data in index.entities_by_ids(ids):
+        yield _entity_from_es(data)
+
+
+def _ensure_entity(data: EntitySchema | SDict) -> EntitySchema:
+    """During transition to pydantic serializer: Entity payload flows through
+    the application in both shapes, ensure the pydantic obj here or fail
+    loudly"""
+    if isinstance(data, dict):
+        data = EntitySchema(**data)
+    return data
+
+
+# Entities are ES-sourced and rarely mutated; long TTL.
+@register(EntitySchema, fetch_many=_entities_batch_from_es, ttl=TTL_RESOURCE)
+def _fetch_entity(entity_id: str) -> EntitySchema | None:
+    data = index.get_entity(entity_id)
+    if data is None:
+        return None
+    return _entity_from_es(data)
+
+
+@register_etag(EntitySchema)
+def _entity_etag(entity: EntitySchema) -> str:
+    """ETag seed from ES _seq_no / _primary_term when available –
+    much cheaper than content-hashing the full entity."""
+    version = index.get_entity_version(entity.id)
+    if version is not None:
+        return f"{version.seq_no}:{version.primary_term}"
+    raise ValueError(f"Entity not found in index: `{entity.id}`")
 
 
 def _deduce_page_ids(
@@ -48,8 +111,6 @@ def upsert_entity(data, collection, authz=None, sync=False, sign=False, job_id=N
     entities created via the _bulk API or a mapper to a database entity in the event
     that it gets edited by the user.
     """
-    from aleph.logic.profiles import profile_fragments
-
     entity = None
     entity_id = collection.ns.sign(data.get("id"))
     if entity_id is not None:
@@ -65,7 +126,6 @@ def upsert_entity(data, collection, authz=None, sync=False, sign=False, job_id=N
     aggregator = get_aggregator(collection)
     aggregator.delete(entity_id=proxy.id)
     aggregator.put(proxy, origin=MODEL_ORIGIN)
-    profile_fragments(collection, aggregator, entity_id=proxy.id)
 
     index.index_proxy(collection.name, proxy, sync=sync, collection_id=collection.id)
     refresh_entity(collection, proxy.id)
@@ -79,7 +139,6 @@ def update_entity(collection, entity_id=None, job_id=None):
     inside the request cycle.
 
     Update xref and aggregator, trigger NER and re-index."""
-    from aleph.logic.profiles import profile_fragments
     from aleph.logic.xref import xref_entity
 
     log.info("[%s] Update entity: %s", collection, entity_id)
@@ -89,7 +148,6 @@ def update_entity(collection, entity_id=None, job_id=None):
         xref_entity(collection, proxy)
 
     aggregator = get_aggregator(collection, origin=MODEL_ORIGIN)
-    profile_fragments(collection, aggregator, entity_id=entity_id)
     inline_names(aggregator, proxy)
     queue_analyze(collection, [proxy], batch=job_id)
 
@@ -210,16 +268,15 @@ def should_translate(collection_id: int, foreign_id: str, proxy: EntityProxy) ->
     return False
 
 
-def check_write_entity(entity, authz):
+def check_write_entity(entity: EntitySchema | SDict, authz: Authz):
     """Implement the cross-effects of mutable flag and the authz
     system for serialisers and API."""
     if authz.is_admin:
         return True
-    if not entity.get("mutable"):
+    entity = _ensure_entity(entity)
+    if not entity.mutable:
         return False
-    collection_id = ensure_dict(entity.get("collection")).get("id")
-    collection_id = entity.get("collection_id", collection_id)
-    return authz.can(collection_id, authz.WRITE)
+    return authz.can(entity.collection_id, authz.WRITE)
 
 
 def transliterate_values(entity):
@@ -232,14 +289,14 @@ def transliterate_values(entity):
     return transliterated
 
 
-def refresh_entity(collection, entity_id):
-    cache.kv.delete(cache.object_key(Entity, entity_id))
+def refresh_entity(collection: Collection, entity_id: str):
+    cache.invalidate(EntitySchema, entity_id)
     refresh_collection(collection.id)
 
 
-def delete_entity(collection, entity, sync=False, job_id=None):
+def delete_entity(collection: Collection, entity_id: str, sync=False, job_id=None):
     """Delete entity from index and redis, queue full prune."""
-    entity_id = collection.ns.sign(entity.get("id"))
+    entity_id = collection.ns.sign(entity_id)
     index.delete_entity(entity_id, sync=sync)
     refresh_entity(collection, entity_id)
     queue_prune_entity(collection, entity_id=entity_id, batch=job_id)
@@ -256,7 +313,7 @@ def prune_entity(collection, entity_id=None, job_id=None):
     log.info("[%s] Prune entity: %s", collection, entity_id)
     for adjacent in index.iter_adjacent(collection.name, entity_id):
         log.warning("Recursive delete: %s", adjacent.get("id"))
-        delete_entity(collection, adjacent, job_id=job_id)
+        delete_entity(collection, adjacent["id"], job_id=job_id)
     flush_notifications(entity_id, clazz=Entity)
     obj = Entity.by_id(entity_id, collection=collection)
     if obj is not None:
@@ -267,7 +324,10 @@ def prune_entity(collection, entity_id=None, job_id=None):
     EntitySetItem.delete_by_entity(entity_id)
     Bookmark.delete_by_entity(entity_id)
     Mapping.delete_by_table(entity_id)
-    xref_index.delete_xref(collection, entity_id=entity_id)
+    # Circular import: aleph.logic.xref -> process -> ... -> aleph.logic.entities
+    from aleph.logic.xref.store import purge_xref
+
+    purge_xref(collection, entity_id=entity_id)
     aggregator = get_aggregator(collection)
     aggregator.delete(entity_id=entity_id)
     refresh_entity(collection, entity_id)

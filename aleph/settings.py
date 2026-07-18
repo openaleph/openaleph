@@ -27,6 +27,14 @@ class Settings:
         self.PROFILE = env.to_bool("ALEPH_PROFILE", False)
         # Propose HTTP caching to the user agents.
         self.CACHE = env.to_bool("ALEPH_CACHE", not self.DEBUG)
+        # Redis url
+        self.REDIS_URL = env.get("REDIS_URL")
+        # Persistent store URI for the object resolver
+        # (``aleph.logic.resolver``). Defaults to the same Redis the
+        # legacy ``aleph.cache`` uses; tests override to ``memory://``
+        # via ``[tool.pytest_env]``. Any anystore-supported scheme
+        # works (``redis://``, ``memory://``, ``file://``, ``s3://``).
+        self.RESOLVER_STORE_URI = env.get("ALEPH_RESOLVER_STORE_URI") or self.REDIS_URL
         # Puts the system into read-only mode and displays a warning.
         self.MAINTENANCE = env.to_bool("ALEPH_MAINTENANCE", False)
         # Unit test context.
@@ -62,15 +70,6 @@ class Settings:
             scheme=self.PREFERRED_URL_SCHEME
         )
         self.APP_UI_URL = self.APP_PARSED_UI_URL.geturl()
-
-        # Content security policy:
-        self.CONTENT_POLICY = env.get(
-            "ALEPH_CONTENT_POLICY",
-            "default-src: 'self' 'unsafe-inline' 'unsafe-eval' data: *",
-        )
-
-        # Cross-origin resource sharing
-        self.CORS_ORIGINS = env.to_list("ALEPH_CORS_ORIGINS", ["*"], separator="|")
 
         ##############################################################################
         # Security and authentication.
@@ -145,10 +144,6 @@ class Settings:
         # Maximum number of entities to return per property when expanding entities
         self.MAX_EXPAND_ENTITIES = env.to_int("ALEPH_MAX_EXPAND_ENTITIES", 200)
 
-        # API rate limiting (req/min for anonymous users)
-        self.API_RATE_LIMIT = env.to_int("ALEPH_API_RATE_LIMIT", 30)
-        self.API_RATE_WINDOW = 15  # minutes
-
         # Health check API key (required for /api/2/healthz)
         self.HEALTH_CHECK_API_KEY = env.get("ALEPH_HEALTH_CHECK_API_KEY")
 
@@ -193,6 +188,9 @@ class Settings:
         self.SQLALCHEMY_POOL_TIMEOUT = env.to_int("ALEPH_SQLALCHEMY_POOL_TIMEOUT", 30)
         self.XREF_SCROLL = env.get("ALEPH_XREF_SCROLL", "5m")
         self.XREF_SCROLL_SIZE = env.get("ALEPH_XREF_SCROLL_SIZE", "1000")
+        # Imported/auto-merged POSITIVE edges that would grow a cluster past
+        # this size are queued as suggestions instead of applied.
+        self.XREF_MAX_CLUSTER_SIZE = env.to_int("ALEPH_XREF_MAX_CLUSTER_SIZE", 1000)
 
         # Number of replicas to maintain. '2' means 3 overall copies.
         self.INDEX_REPLICAS = env.to_int("ALEPH_INDEX_REPLICAS", 0)

@@ -32,7 +32,7 @@ function decodeWord(charset: string, encoding: string, payload: string): string 
   try {
     return new TextDecoder(charset).decode(bytes);
   } catch {
-    // Unknown charset — fall back to utf-8 rather than crashing the render.
+    // Unknown charset – fall back to utf-8 rather than crashing the render.
     return new TextDecoder().decode(bytes);
   }
 }

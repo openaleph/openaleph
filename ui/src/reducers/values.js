@@ -1,6 +1,6 @@
 import { createReducer } from 'redux-act';
 
-import { fetchEntityTags, fetchProfileTags } from 'actions';
+import { fetchEntityTags, fetchCanonicalTags } from 'actions';
 
 const initialState = {};
 
@@ -18,7 +18,7 @@ function updateState(state, { data }) {
 export default createReducer(
   {
     [fetchEntityTags.COMPLETE]: updateState,
-    [fetchProfileTags.COMPLETE]: updateState,
+    [fetchCanonicalTags.COMPLETE]: updateState,
   },
   initialState
 );

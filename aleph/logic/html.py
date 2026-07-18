@@ -42,7 +42,7 @@ ALLOWED_TAGS = nh3.ALLOWED_TAGS - KILL_TAGS
 
 # nh3's per-tag defaults, minus killed tags (ammonia rejects a tag appearing
 # in both `clean_content_tags` and `attributes`), plus presentational
-# attributes allowed on all tags — lxml's Cleaner used to keep these via its
+# attributes allowed on all tags – lxml's Cleaner used to keep these via its
 # `safe_attrs` list, and dropping them breaks e.g. table-based email layouts.
 ALLOWED_ATTRIBUTES = {
     tag: attrs for tag, attrs in nh3.ALLOWED_ATTRIBUTES.items() if tag not in KILL_TAGS

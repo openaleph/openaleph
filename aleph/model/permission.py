@@ -1,8 +1,9 @@
 from datetime import datetime
-from normality import stringify
+from typing import Annotated
 
 from aleph.core import db
-from aleph.model.common import DatedModel, IdModel
+from aleph.model.common import DatedModel, DatedSchema, IdModel, ResolveFrom
+from aleph.model.role import RoleSchema
 
 
 class Permission(db.Model, IdModel, DatedModel):
@@ -15,19 +16,6 @@ class Permission(db.Model, IdModel, DatedModel):
     read = db.Column(db.Boolean, default=False)
     write = db.Column(db.Boolean, default=False)
     collection_id = db.Column(db.Integer, nullable=False)
-
-    def to_dict(self):
-        data = self.to_dict_dates()
-        data.update(
-            {
-                "id": stringify(self.id),
-                "role_id": stringify(self.role_id),
-                "collection_id": stringify(self.collection_id),
-                "read": self.read,
-                "write": self.write,
-            }
-        )
-        return data
 
     @classmethod
     def grant(cls, collection, role, read, write):
@@ -60,3 +48,25 @@ class Permission(db.Model, IdModel, DatedModel):
         q = db.session.query(cls)
         q = q.filter(cls.collection_id == collection_id)
         q.delete(synchronize_session=False)
+
+
+# === Pydantic schemas ===
+
+
+class PermissionSchema(DatedSchema):
+    """Canonical wire format for a :class:`Permission`.
+
+    Every permission row identifies a role, a collection and the
+    read/write grants. ``collection_id`` is ``nullable=False`` at the
+    DB level; ``role_id`` and the bool grants are app invariants
+    enforced at every write site even though the DB allows NULL.
+    """
+
+    role_id: str
+    collection_id: str
+    read: bool
+    write: bool
+
+    role: Annotated[RoleSchema | None, ResolveFrom("role_id", RoleSchema)] = None
+
+    writeable: bool = False
