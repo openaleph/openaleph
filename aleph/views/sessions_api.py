@@ -9,7 +9,8 @@ from werkzeug.exceptions import BadRequest, Unauthorized
 
 from aleph.api.requests.role import RoleLogin
 from aleph.authz import Authz
-from aleph.core import cache, db, url_for
+from aleph.authz_store import authz_store
+from aleph.core import db, url_for
 from aleph.logic.roles import update_role
 from aleph.logic.util import ui_url
 from aleph.model.role import Role
@@ -25,14 +26,6 @@ AUTH_ATTEMPTS = Counter(
     "Total number of successful/failed authentication attempts",
     ["method", "result"],
 )
-
-
-def _oauth_session(token):
-    return cache.key("oauth-sess", token)
-
-
-def _token_session(token):
-    return cache.key("oauth-id-tok", token)
 
 
 @blueprint.route("/api/2/sessions/login", methods=["POST"])
@@ -95,7 +88,7 @@ def oauth_init():
     state = oauth.provider.create_authorization_url(url)
     state["next_url"] = request.args.get("next", request.referrer)
     state["redirect_uri"] = url
-    cache.set_complex(_oauth_session(state.get("state")), state, expires=3600)
+    authz_store.put_oauth_state(state.get("state"), state)
     return redirect(state["url"])
 
 
@@ -103,7 +96,7 @@ def oauth_init():
 def oauth_callback():
     require(SETTINGS.OAUTH)
     err = Unauthorized(gettext("Authentication has failed."))
-    state = cache.get_complex(_oauth_session(request.args.get("state")))
+    state = authz_store.get_oauth_state(request.args.get("state"))
     if state is None:
         AUTH_ATTEMPTS.labels(method="oauth", result="failed").inc()
         raise err
@@ -136,7 +129,7 @@ def oauth_callback():
     # Store id_token to generate logout URL later
     id_token = oauth_token.get("id_token")
     if id_token is not None:
-        cache.set(_token_session(token), id_token, expires=SETTINGS.SESSION_EXPIRE)
+        authz_store.put_id_token(token, id_token)
 
     next_path = get_url_path(state.get("next_url"))
     next_url = ui_url("oauth", next=next_path)
@@ -164,7 +157,7 @@ def logout():
         if logout_endpoint is not None:
             query = {
                 "post_logout_redirect_uri": redirect_url,
-                "id_token_hint": cache.get(_token_session(request.authz.token_id)),
+                "id_token_hint": authz_store.get_id_token(request.authz.token_id),
             }
             redirect_url = logout_endpoint + "?" + urlencode(query)
     request.authz.destroy()

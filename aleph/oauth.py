@@ -1,7 +1,10 @@
 import logging
-from authlib.jose import JsonWebToken, JsonWebKey
-from authlib.integrations.flask_client import OAuth
+from typing import Any
 
+from authlib.integrations.flask_client import OAuth
+from authlib.jose import JsonWebKey, JsonWebToken
+
+from aleph.authz_store import authz_store
 from aleph.settings import SETTINGS
 from aleph.util import is_auto_admin
 
@@ -9,7 +12,22 @@ oauth = OAuth()
 log = logging.getLogger(__name__)
 
 
-def configure_oauth(app, cache):
+class _AuthlibCache:
+    """Minimal authlib cache interface (get/set/delete) over the session
+    store. authlib uses it for server-metadata caching and OAuth1
+    temporary credentials."""
+
+    def get(self, key: str) -> Any:
+        return authz_store.get(f"authlib/{key}")
+
+    def set(self, key: str, value: Any, expires: int | None = None) -> None:
+        authz_store.put(f"authlib/{key}", value, ttl=expires)
+
+    def delete(self, key: str) -> None:
+        authz_store.delete(f"authlib/{key}", ignore_errors=True)
+
+
+def configure_oauth(app):
     if SETTINGS.OAUTH:
         authorize_params = {}
         if SETTINGS.OAUTH_AUDIENCE:
@@ -22,7 +40,7 @@ def configure_oauth(app, cache):
             server_metadata_url=SETTINGS.OAUTH_METADATA_URL,
             authorize_params=authorize_params,
         )
-    oauth.init_app(app, cache=cache)
+    oauth.init_app(app, cache=_AuthlibCache())
     return oauth
 
 

@@ -1,5 +1,5 @@
-from aleph.core import cache
 from aleph.logic.collections import compute_collections
+from aleph.logic.resolver import cache
 from aleph.tests.util import TestCase
 
 
@@ -21,7 +21,7 @@ class BaseApiTestCase(TestCase):
         assert "leak" in categories, categories
 
     def test_statistics(self):
-        cache.flush()
+        cache.flushall()
 
         res = self.client.get("/api/2/statistics")
         assert res.status_code == 200, res

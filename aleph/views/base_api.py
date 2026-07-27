@@ -16,7 +16,7 @@ from werkzeug.exceptions import Unauthorized
 
 from aleph import __version__
 from aleph.authz import Authz
-from aleph.core import archive, get_cache, url_for
+from aleph.core import archive, kv, url_for
 from aleph.logic.pages import load_pages
 from aleph.logic.resolver import cache
 from aleph.logic.util import collection_url
@@ -241,8 +241,7 @@ def _check_elasticsearch():
 
 def _check_redis():
     try:
-        redis = get_cache()
-        redis.kv.ping()
+        kv.ping()
     except Exception as exc:
         raise RuntimeError(f"Redis health check failed: {exc}")
 
