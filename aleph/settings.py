@@ -149,7 +149,7 @@ class Settings:
         self.API_RATE_LIMIT = env.to_int("ALEPH_API_RATE_LIMIT", 30)
         self.API_RATE_WINDOW = 15  # minutes
 
-        # Max size (characters) of caller-supplied text for POST /api/2/percolate.
+        # Max size (characters) of caller-supplied text for POST /api/2/beta/percolate.
         # The abuse budget analogous to screening's MAX_SOURCE_NAMES: a percolate
         # document is matched against every stored query, so an unbounded body is
         # a cheap way to load the cluster. 100k chars is comfortably longer than
