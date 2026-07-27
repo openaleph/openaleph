@@ -95,12 +95,6 @@ const configs = {
     label: messages.facet_collection_id,
     icon: 'database',
   },
-  match_collection_id: {
-    name: 'match_collection_id',
-    label: messages.facet_collection_id,
-    icon: 'database',
-    defaultSize: 10,
-  },
   dates: {
     name: 'dates',
     label: messages.facet_dates,

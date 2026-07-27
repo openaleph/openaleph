@@ -1,0 +1,18 @@
+.ProfileProvenanceMode {
+  .prop code {
+    font-size: 12px;
+    .text-muted {
+      opacity: 0.6;
+    }
+  }
+
+  .lang {
+    width: 50px;
+    text-align: center;
+  }
+
+  .first-seen {
+    white-space: nowrap;
+    width: 110px;
+  }
+}

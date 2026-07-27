@@ -21,8 +21,7 @@ from openaleph_search.index.entities import iter_proxies
 from tabulate import tabulate
 
 from aleph.authz import Authz
-from aleph.core import cache, create_app, db
-from aleph.index.collections import get_collection as _get_index_collection
+from aleph.core import create_app, db, kv
 from aleph.logic.aggregator import get_aggregator, get_aggregator_name
 from aleph.logic.archive import cleanup_archive
 from aleph.logic.collections import (
@@ -45,6 +44,7 @@ from aleph.logic.export import retry_exports
 from aleph.logic.mapping import cleanup_mappings
 from aleph.logic.permissions import update_permission
 from aleph.logic.processing import bulk_write
+from aleph.logic.resolver import cache
 from aleph.logic.roles import (
     create_group,
     create_user,
@@ -54,9 +54,12 @@ from aleph.logic.roles import (
     user_add,
     user_del,
 )
+from aleph.logic.xref import store as xref_store
 from aleph.logic.xref import xref_collection
+from aleph.logic.xref.migrate import migrate_xref_index
 from aleph.migration import cleanup_deleted, destroy_db, upgrade_system
-from aleph.model import Collection, EntitySet, Role
+from aleph.model import Collection, CollectionSchema, EntitySet, Role
+from aleph.model.common import model_dump
 from aleph.model.document import Document
 from aleph.procrastinate.queues import (
     OP_INGEST,
@@ -88,7 +91,8 @@ def get_expanded_entity(entity_id):
     if entity is None:
         return None
     entity.pop("_index", None)
-    entity["collection"] = _get_index_collection(entity["collection_id"])
+    coll = cache.get(CollectionSchema, str(entity["collection_id"]))
+    entity["collection"] = model_dump(coll) if coll else None
     return entity
 
 
@@ -215,7 +219,7 @@ def touch(foreign_id, sync=True):
     collection = get_collection(foreign_id)
     collection.touch()
     db.session.commit()
-    compute_collection(collection, force=True, sync=True)
+    compute_collection(collection, force=True)
 
 
 @cli.command()
@@ -250,7 +254,6 @@ def _reindex_collection(
     diff_only=False,
     model=True,
     mappings=True,
-    profiles=True,
     queue_batches=False,
     batch_size=10_000,
     schema=None,
@@ -266,7 +269,6 @@ def _reindex_collection(
             diff_only=diff_only,
             model=model,
             mappings=mappings,
-            profiles=profiles,
             queue_batches=queue_batches,
             batch_size=batch_size,
             schema=schema,
@@ -283,7 +285,6 @@ def _reindex_collection(
 @click.option("--flush", is_flag=True, default=False)
 @click.option("--model/--no-model", is_flag=True, default=True)
 @click.option("--mappings/--no-mappings", is_flag=True, default=True)
-@click.option("--profiles/--no-profiles", is_flag=True, default=True)
 @click.option(
     "--diff-only",
     is_flag=True,
@@ -339,7 +340,6 @@ def reindex(
     diff_only=False,
     model=True,
     mappings=True,
-    profiles=True,
     queue_batches=False,
     batch_size=10_000,
     schema=None,
@@ -355,7 +355,6 @@ def reindex(
         diff_only=diff_only,
         model=model,
         mappings=mappings,
-        profiles=profiles,
         queue_batches=queue_batches,
         batch_size=batch_size,
         schema=schema,
@@ -1336,7 +1335,8 @@ def resetindex():
 @cli.command()
 def resetcache():
     """Clear the redis cache."""
-    cache.flush()
+    kv.flushall()
+    cache.flushall()
 
 
 @cli.command("cleanup-archive")
@@ -1345,9 +1345,32 @@ def cleanuparchive(prefix):
     cleanup_archive(prefix=prefix)
 
 
+@cli.command("migrate-xref")
+def migrate_xref():
+    """Migrate xref-v1 and profiles to xref-v2 resolver edges."""
+    migrate_xref_index()
+
+
+@cli.command("xref-reproject")
+@click.option("--sync", is_flag=True, default=False, help="Refresh the index.")
+def xref_reproject(sync=False):
+    """Rebuild the ES projection of decided xref edges from the SQL graph."""
+    count = xref_store.reproject(sync=sync)
+    log.info("Reprojected %d xref edge documents.", count)
+
+
+@cli.command("xref-rebuild-clusters")
+def xref_rebuild_clusters():
+    """Recompute xref cluster membership from positive edges (repair)."""
+    count = xref_store.rebuild_clusters()
+    log.info("Rebuilt membership for %d cluster nodes.", count)
+
+
 @cli.command()
 def evilshit():
     """EVIL: Delete all data and recreate the database."""
     delete_index()
     destroy_db()
-    upgrade()
+    kv.flushall()
+    cache.flushall()
+    upgrade_system()

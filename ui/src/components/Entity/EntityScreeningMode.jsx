@@ -17,7 +17,7 @@ import ensureArray from 'util/ensureArray';
 
 import './EntityScreeningMode.scss';
 
-// Danger: sanctions, enforcement, crime — highest risk signals
+// Danger: sanctions, enforcement, crime – highest risk signals
 const DANGER_TOPICS = new Set([
   'sanction', 'sanction.linked', 'sanction.counter',
   'debarment', 'wanted', 'asset.frozen',

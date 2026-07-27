@@ -6,16 +6,18 @@ from flask_babel import gettext
 from itsdangerous import BadSignature
 from werkzeug.exceptions import BadRequest
 
+from aleph.api.requests.role import RoleCodeCreate, RoleCreate, RoleUpdate
 from aleph.authz import Authz
 from aleph.core import db
 from aleph.logic.roles import challenge_role, create_user, get_deep_role, update_role
-from aleph.model import Role
+from aleph.model import Role, RoleSchema, model_dump
 from aleph.search import DatabaseQueryResult, QueryParser
 from aleph.settings import SETTINGS
 from aleph.util import is_auto_admin
+from aleph.views import resources
 from aleph.views.context import tag_request
 from aleph.views.serializers import RoleSerializer
-from aleph.views.util import jsonify, obj_or_404, parse_request, require
+from aleph.views.util import jsonify, obj_or_404, require, validate_request
 
 blueprint = Blueprint("roles_api", __name__)
 log = logging.getLogger(__name__)
@@ -104,8 +106,8 @@ def create_code():
       - Role
     """
     require(request.authz.can_register())
-    data = parse_request("RoleCodeCreate")
-    challenge_role(data)
+    body: RoleCodeCreate = validate_request(RoleCodeCreate)
+    challenge_role(body.model_dump())
     return jsonify(
         {"status": "ok", "message": gettext("To proceed, please check your email.")}
     )
@@ -135,9 +137,9 @@ def create():
       - Role
     """
     require(request.authz.can_register())
-    data = parse_request("RoleCreate")
+    body: RoleCreate = validate_request(RoleCreate)
     try:
-        email = Role.SIGNATURE.loads(data.get("code"), max_age=Role.SIGNATURE_MAX_AGE)
+        email = Role.SIGNATURE.loads(body.code, max_age=Role.SIGNATURE_MAX_AGE)
     except BadSignature:
         return jsonify(
             {"status": "error", "message": gettext("Invalid code")}, status=400
@@ -150,13 +152,13 @@ def create():
             status=409,
         )
 
-    role = create_user(
-        email, data.get("name"), data.get("password"), is_admin=is_auto_admin(email)
-    )
+    role = create_user(email, body.name, body.password, is_admin=is_auto_admin(email))
     # Let the serializer return more info about this user
+    # FIXME this is hacky (but has been like this since forever) to use the
+    # authz object to notify the serializer to include more data.
     request.authz = Authz.from_role(role)
     tag_request(role_id=role.id)
-    return RoleSerializer.jsonify(role, status=201)
+    return RoleSerializer.jsonify(role, detail_view=True, status=201)
 
 
 @blueprint.route("/api/2/roles/<int:id>", methods=["GET"])
@@ -186,18 +188,22 @@ def view(id):
       tags:
       - Role
     """
-    role = obj_or_404(Role.by_id(id))
+    role = resources.get_resource(RoleSchema, str(id))
     require(request.authz.can_read_role(role.id))
-    data = role.to_dict()
+    data = model_dump(role)
     if request.authz.can_write_role(role.id):
-        data.update(get_deep_role(role))
+        role_ = Role.by_id(role.id)
+        data.update(get_deep_role(role_))
     if SETTINGS.MAINTENANCE:
         # Prevent continuous fetching of profile information in maintenance mode.
         # This is a workaround for the improper permission system (see "write" access).
         # This results in the email address not being shown on the profile page in
         # maintenance mode, but there is no other way to prevent constant re-fetching.
         data.update({"shallow": False})
-    return RoleSerializer.jsonify(data)
+    # detail_view=True: the assembler sets ``shallow = not detail`` – the UI
+    # keeps deep-fetching (AuthButtons ``shouldLoadDeep``) until the detail
+    # response reports ``shallow: false``.
+    return RoleSerializer.jsonify(data, detail_view=True)
 
 
 @blueprint.route("/api/2/roles/<int:id>", methods=["POST", "PUT"])
@@ -234,13 +240,13 @@ def update(id):
     """
     role = obj_or_404(Role.by_id(id))
     require(request.authz.can_write_role(role.id))
-    data = parse_request("RoleUpdate")
+    body: RoleUpdate = validate_request(RoleUpdate)
+    data: dict = body.model_dump(exclude_unset=True)
 
     # When changing passwords, check the old password first.
     # cf. https://github.com/alephdata/aleph/issues/718
-    if data.get("password"):
-        current_password = data.get("current_password")
-        if not role.check_password(current_password):
+    if body.password:
+        if not role.check_password(body.current_password):
             raise BadRequest(gettext("Incorrect password."))
 
     role.update(data)

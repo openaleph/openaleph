@@ -5,7 +5,7 @@ from functools import lru_cache
 from babel import Locale
 from banal import as_bool
 from elasticsearch import TransportError
-from flask import Blueprint, current_app, request
+from flask import Blueprint, request
 from flask_babel import get_locale, gettext
 from followthemoney import __version__ as ftm_version
 from followthemoney import model
@@ -16,12 +16,13 @@ from werkzeug.exceptions import Unauthorized
 
 from aleph import __version__
 from aleph.authz import Authz
-from aleph.core import archive, cache, get_cache, url_for
+from aleph.core import archive, get_cache, url_for
 from aleph.logic.pages import load_pages
+from aleph.logic.resolver import cache
 from aleph.logic.util import collection_url
-from aleph.model import Collection, Role
+from aleph.model import Collection, GlobalStatistics, Role
+from aleph.model.common import model_dump
 from aleph.settings import SETTINGS
-from aleph.validation import get_openapi_spec
 from aleph.views.context import NotModified, enable_cache
 from aleph.views.util import jsonify, render_xml
 
@@ -108,7 +109,6 @@ def metadata():
       tags:
       - System
     """
-    request.rate_limit = None
     locale = get_locale()
     data = _metadata_locale(locale)
     if SETTINGS.SINGLE_USER:
@@ -116,24 +116,6 @@ def metadata():
         authz = Authz.from_role(role)
         data["token"] = authz.to_token()
     return jsonify(data)
-
-
-@blueprint.route("/api/openapi.json")
-def openapi():
-    """Generate an OpenAPI 3.0 documentation JSON file for the API."""
-    enable_cache(vary_user=False)
-    spec = get_openapi_spec(current_app)
-    for name, view in current_app.view_functions.items():
-        if name in (
-            "static",
-            "base_api.openapi",
-            "base_api.api_v1_message",
-            "sessions_api.oauth_callback",
-        ):
-            continue
-        log.info("%s - %s", name, view.__qualname__)
-        spec.path(view=view)
-    return jsonify(spec.to_dict())
 
 
 @blueprint.route("/api/2/statistics")
@@ -157,10 +139,8 @@ def statistics():
       - System
     """
     enable_cache(vary_user=False)
-    key = cache.key(cache.STATISTICS)
-    data = {"countries": [], "schemata": [], "categories": []}
-    data = cache.get_complex(key) or data
-    return jsonify(data)
+    stats = cache.get(GlobalStatistics, "global") or GlobalStatistics()
+    return jsonify(model_dump(stats))
 
 
 @blueprint.route("/api/2/sitemap.xml")
@@ -183,7 +163,6 @@ def sitemap():
       - System
     """
     enable_cache(vary_user=False)
-    request.rate_limit = None
     collections = []
     for collection in Collection.all_authz(Authz.from_role(None)):
         updated_at = collection.updated_at.date().isoformat()

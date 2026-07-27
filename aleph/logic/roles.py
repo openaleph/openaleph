@@ -4,9 +4,11 @@ from flask import render_template
 from flask_babel import gettext
 
 from aleph.authz import Authz
-from aleph.core import cache, db
+from aleph.core import db
 from aleph.logic.mail import email_role
 from aleph.logic.notifications import get_role_channels
+from aleph.logic.resolver.registry import register, register_etag
+from aleph.logic.resolver.ttl import TTL_RESOURCE
 from aleph.model import (
     Alert,
     Collection,
@@ -18,25 +20,26 @@ from aleph.model import (
     Mapping,
     Permission,
     Role,
+    RoleSchema,
 )
+from aleph.model.common import iso_text
 from aleph.model.role import membership
 from aleph.settings import SETTINGS
 
 log = logging.getLogger(__name__)
 
 
-def get_role(role_id):
-    if role_id is None:
-        return
-    key = cache.object_key(Role, role_id)
-    data = cache.get_complex(key)
-    if data is None:
-        role = Role.by_id(role_id)
-        if role is None:
-            return
-        data = role.to_dict()
-        cache.set_complex(key, data, expires=cache.EXPIRE)
-    return data
+@register(RoleSchema, ttl=TTL_RESOURCE)
+def get_role(role_id: str) -> RoleSchema | None:
+    role = Role.by_id(int(role_id))
+    if role is None:
+        return None
+    return RoleSchema.model_validate(role)
+
+
+@register_etag(RoleSchema)
+def _role_etag(role: RoleSchema) -> str:
+    return f"{role.id}:{iso_text(role.updated_at) or 0}"
 
 
 def get_deep_role(role):
@@ -143,7 +146,7 @@ def update_role(role):
     """Synchronize denormalised role configuration."""
     refresh_role(role)
     get_role(role.id)
-    get_role_channels(role)
+    get_role_channels(str(role.id))
 
 
 def update_roles():
@@ -182,11 +185,8 @@ def delete_role(role):
 
 
 def refresh_role(role, sync=False):
+    # SQLA events handle RoleSchema + RoleChannels invalidation.
     Authz.flush_role(role)
-    cache.kv.delete(
-        cache.object_key(Role, role.id),
-        cache.object_key(Role, role.id, "channels"),
-    )
 
 
 def check_visible(role, authz):

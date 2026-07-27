@@ -1,11 +1,13 @@
 import logging
 
-from aleph.core import cache
-from aleph.model import EntitySet, EntitySetItem, Events
-from aleph.logic.entities import upsert_entity, refresh_entity
-from aleph.logic.collections import index_aggregator
-from aleph.logic.aggregator import get_aggregator
+from normality import stringify
+
+from aleph.logic.entities import upsert_entity
 from aleph.logic.notifications import publish
+from aleph.logic.resolver.registry import register, register_etag
+from aleph.logic.resolver.ttl import TTL_RESOURCE
+from aleph.model import EntitySet, EntitySetItem, EntitySetSchema, Events
+from aleph.model.common import iso_text
 
 log = logging.getLogger(__name__)
 
@@ -14,8 +16,34 @@ def get_entityset(entityset_id):
     return EntitySet.by_id(entityset_id)
 
 
+@register(EntitySetSchema, ttl=TTL_RESOURCE)
+def _fetch_entityset(entityset_id: str) -> EntitySetSchema | None:
+    entityset = EntitySet.by_id(entityset_id)
+    if entityset is None:
+        return None
+    # Explicit construction – deliberately NOT model_validate(entityset):
+    # from_attributes would trigger the entity_ids property (a DB query)
+    # and cache its result; the assembler resolves entities separately.
+    return EntitySetSchema(
+        id=stringify(entityset.id),
+        type=entityset.type,
+        label=entityset.label,
+        summary=entityset.summary,
+        layout=entityset.layout,
+        role_id=stringify(entityset.role_id),
+        collection_id=stringify(entityset.collection_id),
+        created_at=entityset.created_at,
+        updated_at=entityset.updated_at,
+    )
+
+
+@register_etag(EntitySetSchema)
+def _entityset_etag(entityset: EntitySetSchema) -> str:
+    return f"{entityset.id}:{iso_text(entityset.updated_at) or 0}"
+
+
 def refresh_entityset(entityset_id):
-    cache.kv.delete(cache.object_key(EntitySet, entityset_id))
+    pass  # SQLA event handles resolver invalidation
 
 
 def create_entityset(collection, data, authz):
@@ -29,7 +57,7 @@ def create_entityset(collection, data, authz):
         new_id = upsert_entity(entity, collection, sign=True, sync=True)
         old_to_new_id_map[old_id] = new_id
         entity_ids.append(new_id)
-    layout = data.get("layout", {})
+    layout = data.get("layout") or {}
     data["layout"] = replace_layout_ids(layout, old_to_new_id_map)
     entityset = EntitySet.create(data, collection, authz)
     for entity_id in entity_ids:
@@ -44,18 +72,8 @@ def create_entityset(collection, data, authz):
 
 
 def save_entityset_item(entityset, collection, entity_id, **data):
-    """Change the association between an entity and an entityset. In the case of
-    a profile, this may require re-indexing of the entity to update the associated
-    profile_id.
-    """
+    """Change the association between an entity and an entityset."""
     item = EntitySetItem.save(entityset, entity_id, collection_id=collection.id, **data)
-    if entityset.type == EntitySet.PROFILE and entityset.collection_id == collection.id:
-        from aleph.logic.profiles import profile_fragments
-
-        aggregator = get_aggregator(collection)
-        profile_fragments(collection, aggregator, entity_id=entity_id)
-        index_aggregator(collection, aggregator, entity_ids=[entity_id])
-        refresh_entity(collection, entity_id)
     collection.touch()
     refresh_entityset(entityset.id)
     return item

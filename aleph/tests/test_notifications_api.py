@@ -1,10 +1,9 @@
 from pprint import pprint  # noqa
 
 from aleph.core import db
-from aleph.model import Events, Role
+from aleph.logic.notifications import GLOBAL, publish
 from aleph.logic.roles import update_role
-from aleph.logic.notifications import publish, GLOBAL
-from aleph.views.util import validate
+from aleph.model import Events, NotificationSchema, Role
 from aleph.tests.util import TestCase
 
 
@@ -45,7 +44,7 @@ class NotificationsApiTestCase(TestCase):
         assert res.status_code == 200, res
         assert res.json["total"] == 2, res.json
         not0 = res.json["results"][0]
-        validate(not0, "Notification")
+        NotificationSchema.model_validate(not0)
 
         role = not0["params"]["role"]
         assert isinstance(role, dict), not0

@@ -34,7 +34,7 @@ import {
 } from 'components/Toolbar';
 import { deleteEntity } from 'actions';
 import { selectEntity, selectEntityView, selectServiceUrl } from 'selectors';
-import getProfileLink from 'util/getProfileLink';
+import getCanonicalLink from 'util/getCanonicalLink';
 import { setRecentlyViewedItem } from 'app/storage';
 import withRouter from 'app/withRouter';
 
@@ -76,7 +76,7 @@ class EntityScreen extends Component {
     const { entity, navigate, location, parsedHash } = this.props;
 
     // if an entity does not have an associated profile, ensure profile=false is removed from hash
-    if (!!entity.id && !entity.profileId && !!parsedHash.profile) {
+    if (!!entity.id && !entity.canonicalId && !!parsedHash.profile) {
       delete parsedHash.profile;
 
       navigate(
@@ -92,10 +92,10 @@ class EntityScreen extends Component {
 
   render() {
     const { entity, entityId, intl, parsedHash, ftmAssetsApi } = this.props;
-    if (entity.profileId && parsedHash.profile === undefined) {
+    if (entity.canonicalId && parsedHash.profile === undefined) {
       parsedHash.via = entity.id;
       return (
-        <Navigate to={getProfileLink(entity.profileId, parsedHash)} replace />
+        <Navigate to={getCanonicalLink(entity.canonicalId, parsedHash)} replace />
       );
     }
 
@@ -172,7 +172,7 @@ class EntityScreen extends Component {
                 <div className="ItemOverview__heading">
                   <EntityHeading entity={entity} isPreview={false} />
                 </div>
-                {entity.profileId && (
+                {entity.canonicalId && (
                   <div className="ItemOverview__callout">
                     <ProfileCallout entity={entity} />
                   </div>

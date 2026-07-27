@@ -7,9 +7,8 @@ from aleph.core import archive, db
 from aleph.index.collections import delete_entities
 from aleph.logic.aggregator import get_aggregator
 from aleph.logic.collections import index_aggregator
-from aleph.model import Mapping
+from aleph.model import Mapping, MappingSchema
 from aleph.tests.util import TestCase
-from aleph.views.util import validate
 
 log = logging.getLogger(__name__)
 
@@ -101,7 +100,7 @@ class MappingAPITest(TestCase):
         res = self.client.get(url, headers=self.headers)
         assert res.status_code == 200
 
-        validate(res.json, "QueryResponse")
+        assert "results" in res.json
         assert res.json["total"] == 1
         assert len(res.json["results"]) == 1
         assert res.json["results"][0]["id"] == str(mapping.id)
@@ -141,7 +140,7 @@ class MappingAPITest(TestCase):
         query_string = {"filter:table": table_1.id}
         res = self.client.get(url, headers=self.headers, query_string=query_string)
         assert res.status_code == 200
-        validate(res.json, "QueryResponse")
+        assert "results" in res.json
         assert res.json["total"] == 1
         assert len(res.json["results"]) == 1
         assert res.json["results"][0]["id"] == str(mapping_1.id)
@@ -171,7 +170,7 @@ class MappingAPITest(TestCase):
         res = self.client.get(url, headers=self.headers)
         assert res.status_code == 200
 
-        validate(res.json, "Mapping")
+        MappingSchema.model_validate(res.json)
         assert res.json["id"] == str(mapping.id)
         assert res.json["collection_id"] == str(self.col.id)
         assert res.json["table_id"] == table.id
@@ -213,7 +212,7 @@ class MappingAPITest(TestCase):
         res = self.client.post(url, json=data, headers=self.headers)
         assert res.status_code == 200
 
-        validate(res.json, "Mapping")
+        MappingSchema.model_validate(res.json)
         mapping_id = res.json["id"]
 
         res = self.client.get(url, headers=self.headers)
@@ -405,7 +404,7 @@ class MappingAPITest(TestCase):
         res = self.client.post(url, json=data, headers=self.headers)
         assert res.status_code == 200
 
-        validate(res.json, "Mapping")
+        MappingSchema.model_validate(res.json)
         assert res.json["table_id"] == table.id
         assert res.json["collection_id"] == str(self.col.id)
         assert res.json["query"]["person"]["properties"]["gender"] == {

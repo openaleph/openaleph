@@ -1,9 +1,12 @@
 import logging
+from collections.abc import Collection
 
-from banal import ensure_list
-from followthemoney import model
+from anystore.types import SDict
+from followthemoney import EntityProxy, StatementEntity, ValueEntity, model
 from followthemoney.graph import Node
+from followthemoney.property import Property
 from followthemoney.types import registry
+from followthemoney.types.common import PropertyType
 from openaleph_search.index.entities import ENTITY_SOURCE
 from openaleph_search.index.indexes import entities_read_index
 from openaleph_search.index.util import unpack_result
@@ -22,26 +25,28 @@ DEFAULT_TAGS.remove(registry.entity)
 FILTERS_COUNT_LIMIT = SETTINGS.INDEX_EXPAND_CLAUSE_LIMIT
 
 
-def _expand_properties(proxies, properties):
-    properties = ensure_list(properties)
-    props = set()
-    for proxy in ensure_list(proxies):
-        for prop in proxy.schema.properties.values():
-            if prop.type != registry.entity:
-                continue
-            if len(properties) and prop.name not in properties:
-                continue
-            props.add(prop)
+def _expand_properties(
+    proxy: EntityProxy, properties: Collection[str] | None
+) -> set[Property]:
+    props: set[Property] = set()
+    for prop in proxy.schema.properties.values():
+        if prop.type != registry.entity:
+            continue
+        if properties and prop.name not in properties:
+            continue
+        props.add(prop)
     return props
 
 
-def _expand_adjacent(graph, proxy, prop):
+def _expand_adjacent(
+    graph: Graph, proxy: EntityProxy, prop: Property
+) -> set[EntityProxy]:
     """Return all proxies related to the given proxy/prop combo as an array.
     This creates the very awkward return format for the API, which simply
     gives you a list of entities and lets the UI put them in some meaningful
     relation. Gotta revise this some day...."""
     # Too much effort to do this right. This works, too:
-    adjacent = set()
+    adjacent: set[EntityProxy] = set()
     node = Node.from_proxy(proxy)
     for edge in graph.get_adjacent(node, prop=prop):
         for part in (edge.proxy, edge.source.proxy, edge.target.proxy):
@@ -50,7 +55,12 @@ def _expand_adjacent(graph, proxy, prop):
     return adjacent
 
 
-def expand_proxies(proxies, authz, properties=None, limit=0):
+def expand_proxy(
+    proxy: ValueEntity | StatementEntity,
+    authz: Authz,
+    properties: Collection[str] | None = None,
+    limit: int = 0,
+) -> list[SDict]:
     """Expand an entity's graph to find adjacent entities that are connected
     by a property (eg: Passport entity linked to a Person) or an Entity type
     edge (eg: Person connected to Company through Directorship).
@@ -59,16 +69,15 @@ def expand_proxies(proxies, authz, properties=None, limit=0):
     limit: max number of entities to return
     """
     graph = Graph(edge_types=(registry.entity,))
-    for proxy in proxies:
-        graph.add(proxy)
+    graph.add(proxy)
 
-    queries = {}
-    entity_ids = [proxy.id for proxy in proxies]
+    queries: dict[tuple, SDict] = {}
+    entity_ids = list(proxy.referents) or [proxy.id]
     # First, find all the entities pointing to the current one via a stub
     # property. This will return the intermediate edge entities in some
     # cases - then we'll use graph.resolve() to get the far end of the
     # edge.
-    for prop in _expand_properties(proxies, properties):
+    for prop in _expand_properties(proxy, properties):
         if not prop.stub:
             continue
         field = "properties.%s" % prop.reverse.name
@@ -83,8 +92,8 @@ def expand_proxies(proxies, authz, properties=None, limit=0):
     if limit > 0:
         graph.resolve()
 
-    results = []
-    for prop in _expand_properties(proxies, properties):
+    results: list[SDict] = []
+    for prop in _expand_properties(proxy, properties):
         # For stub properties, we need to sum counts across all schemas for this property
         count = 0
         if prop.stub:
@@ -93,30 +102,33 @@ def expand_proxies(proxies, authz, properties=None, limit=0):
                 if schema_key == prop.qname:
                     count += schema_count
         else:
-            count = sum(len(p.get(prop)) for p in proxies)
+            count = len(proxy.get(prop))
 
-        entities = set()
-        for proxy in proxies:
-            entities.update(_expand_adjacent(graph, proxy, prop))
+        adjacent = _expand_adjacent(graph, proxy, prop)
 
         if count > 0:
-            item = {
-                "property": prop.name,
-                "count": count,
-                "entities": entities,
-            }
-            results.append(item)
+            results.append(
+                {
+                    "property": prop.name,
+                    "count": count,
+                    "entities": adjacent,
+                }
+            )
 
     # pprint(results)
     return results
 
 
-def entity_tags(proxy, authz: Authz, prop_types=DEFAULT_TAGS):
+def entity_tags(
+    proxy: EntityProxy,
+    authz: Authz,
+    prop_types: set[PropertyType] = DEFAULT_TAGS,
+) -> list[SDict]:
     """For a given proxy, determine how many other mentions exist for each
     property value associated, if it is one of a set of types."""
-    queries = {}
-    lookup = {}
-    values = set()
+    queries: dict[tuple, SDict] = {}
+    lookup: dict[str, tuple[PropertyType, str]] = {}
+    values: set[tuple[PropertyType, str]] = set()
     for prop, value in proxy.itervalues():
         if prop.type not in prop_types:
             continue
@@ -137,7 +149,7 @@ def entity_tags(proxy, authz: Authz, prop_types=DEFAULT_TAGS):
             queries[(schema, key)] = field_filter_query(type_.group, value)
 
     _, counts = _counted_msearch(queries, authz)
-    results = []
+    results: list[SDict] = []
     for key, count in counts.items():
         if count > 1:
             type_, value = lookup[key]
@@ -154,13 +166,17 @@ def entity_tags(proxy, authz: Authz, prop_types=DEFAULT_TAGS):
     return results
 
 
-def _counted_msearch(queries, authz: Authz, limit=0):
+def _counted_msearch(
+    queries: dict[tuple, SDict],
+    authz: Authz,
+    limit: int = 0,
+) -> tuple[list[SDict], dict[str, int]]:
     """Run batched queries to count or retrieve entities with certain property values.
     Groups queries by Elasticsearch index to optimize performance."""
     search_auth = authz.search_auth
 
     # Group queries by index since multiple schemas share the same index
-    grouped = {}
+    grouped: dict[tuple, SDict] = {}
     for (schema, key), query in sorted(queries.items()):
         index = entities_read_index(schema)
         group_key = (index, key)
@@ -179,7 +195,7 @@ def _counted_msearch(queries, authz: Authz, limit=0):
 
     log.debug("Counts: %s queries, %s groups", len(queries), len(grouped))
 
-    body = []
+    body: list[SDict] = []
     for group in grouped.values():
         index = {"index": group.get("index")}
         schemas = group.get("schemas")
@@ -231,10 +247,10 @@ def _counted_msearch(queries, authz: Authz, limit=0):
     response = es.msearch(body=body)
 
     # Note: We don't track which query each entity came from. This is fine for current
-    # usage since expand_proxies uses graph traversal to find relationships, and
+    # usage since expand_proxy uses graph traversal to find relationships, and
     # entity_tags only needs the aggregation counts.
-    counts = {}
-    entities = []
+    counts: dict[str, int] = {}
+    entities: list[SDict] = []
     for resp in response.get("responses", []):
         for result in resp.get("hits", {}).get("hits", []):
             entities.append(unpack_result(result))

@@ -16,28 +16,28 @@ import {
   EntityDecisionRow,
 } from 'components/common';
 import EntityCompare from 'components/Entity/EntityCompare';
-import { profileSimilarQuery } from 'queries';
-import { querySimilar, updateEntitySetItemMutate } from 'actions';
+import { canonicalSimilarQuery } from 'queries';
+import { querySimilar, pairwiseJudgement } from 'actions';
 import { showWarningToast } from 'app/toast';
 
-class ProfileItemsMode extends Component {
+class ProfileSimilarMode extends Component {
   constructor(props) {
     super(props);
     this.onDecide = this.onDecide.bind(this);
   }
 
   async onDecide(obj) {
-    const { profile, location, navigate } = this.props;
+    const { canonical, location, navigate } = this.props;
     try {
-      const item = await this.props.updateEntitySetItemMutate({
+      const result = await this.props.pairwiseJudgement({
+        entity: obj.entity,
+        match: canonical.entity,
         judgement: obj.judgement,
-        entitySetId: profile.id,
-        entityId: obj.entity.id,
       });
-      if (item.data.entityset_id && profile.id !== item.data.entityset_id) {
+      if (result.canonicalId && result.canonicalId !== canonical.id) {
         navigate(
           {
-            pathname: `/profiles/${item.data.entityset_id}`,
+            pathname: `/profiles/${result.canonicalId}`,
             search: location.search,
             hash: location.hash,
           },
@@ -62,7 +62,7 @@ class ProfileItemsMode extends Component {
         <td className="entity bordered">
           <EntityCompare
             entity={item.entity}
-            other={this.props.profile.entity}
+            other={this.props.canonical.entity}
           />
         </td>
         <td className="numeric narrow">
@@ -133,8 +133,8 @@ class ProfileItemsMode extends Component {
 }
 
 const mapStateToProps = (state, ownProps) => {
-  const { profile, location } = ownProps;
-  const query = profileSimilarQuery(location, profile.id);
+  const { canonical, location } = ownProps;
+  const query = canonicalSimilarQuery(location, canonical.id);
   const parsedHash = queryString.parse(location.hash);
 
   return {
@@ -144,9 +144,9 @@ const mapStateToProps = (state, ownProps) => {
   };
 };
 
-ProfileItemsMode = connect(mapStateToProps, {
+ProfileSimilarMode = connect(mapStateToProps, {
   querySimilar,
-  updateEntitySetItemMutate,
-})(ProfileItemsMode);
-ProfileItemsMode = withRouter(ProfileItemsMode);
-export default ProfileItemsMode;
+  pairwiseJudgement,
+})(ProfileSimilarMode);
+ProfileSimilarMode = withRouter(ProfileSimilarMode);
+export default ProfileSimilarMode;

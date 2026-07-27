@@ -20,7 +20,7 @@ import {
   queryPercolate,
   queryMentions,
   queryEntityExpand,
-  queryProfileExpand,
+  queryCanonicalExpand,
   queryNotifications,
   queryCollectionXref,
   queryEntitySetItems,
@@ -80,11 +80,11 @@ export default createReducer(
       resultLoadError(state, query, error),
     [queryEntityExpand.COMPLETE]: updateResultsFull,
 
-    [queryProfileExpand.START]: (state, { query }) =>
+    [queryCanonicalExpand.START]: (state, { query }) =>
       resultLoadStart(state, query),
-    [queryProfileExpand.ERROR]: (state, { error, args: { query } }) =>
+    [queryCanonicalExpand.ERROR]: (state, { error, args: { query } }) =>
       resultLoadError(state, query, error),
-    [queryProfileExpand.COMPLETE]: updateResultsFull,
+    [queryCanonicalExpand.COMPLETE]: updateResultsFull,
 
     [queryNotifications.START]: (state, { query }) =>
       resultLoadStart(state, query),

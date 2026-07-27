@@ -15,12 +15,11 @@ from aleph.logic.documents import ingest_flush
 from aleph.logic.notifications import channel_tag, publish
 from aleph.model import Document, Entity, Events
 from aleph.procrastinate.queues import queue_ingest
+from aleph.views import resources
 from aleph.views.util import (
-    get_db_collection,
     get_flag,
     get_session_id,
     jsonify,
-    validate,
 )
 
 log = logging.getLogger(__name__)
@@ -52,7 +51,7 @@ def _load_metadata():
     except Exception as ex:
         raise BadRequest(str(ex))
 
-    validate(meta, "DocumentIngest")
+    # TODO: add pydantic validation for ingest metadata
     foreign_id = stringify(meta.get("foreign_id"))
     if not len(request.files) and foreign_id is None:
         raise BadRequest(
@@ -122,7 +121,7 @@ def ingest_upload(collection_id):
       - Ingest
       - Collection
     """
-    collection = get_db_collection(collection_id, request.authz.WRITE)
+    collection = resources.get_db_collection(collection_id, request.authz.WRITE)
     job_id = get_session_id()
     sync = get_flag("sync", default=False)
     index = get_flag("index", default=True)

@@ -19,7 +19,7 @@
     flex-shrink: 0;
   }
 
-  // Person — DARC orange
+  // Person – DARC orange
   &--person {
     background-color: $darc-orange-50;
     color: $darc-orange-900;
@@ -29,7 +29,7 @@
     }
   }
 
-  // LegalEntity — DARC yellow
+  // LegalEntity – DARC yellow
   &--legalentity {
     background-color: $darc-yellow-50;
     color: $darc-yellow-900;
@@ -39,7 +39,7 @@
     }
   }
 
-  // Document — DARC purple
+  // Document – DARC purple
   &--document {
     background-color: $darc-purple-50;
     color: $darc-purple-900;
@@ -49,7 +49,7 @@
     }
   }
 
-  // Default — gray
+  // Default – gray
   &--default {
     background-color: #F2F2F2;
     color: #595959;
@@ -59,7 +59,7 @@
     }
   }
 
-  // Neutral — no background, fully inherits from parent
+  // Neutral – no background, fully inherits from parent
   &--neutral {
     display: inline;
     background-color: transparent;

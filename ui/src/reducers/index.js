@@ -14,6 +14,7 @@ import collectionPermissions from './collectionPermissions';
 import collectionDiscovery from './collectionDiscovery';
 import entityMappings from './entityMappings';
 import results from './results';
+import canonicals from './canonicals';
 import entitySets from './entitySets';
 import entitySetItems from './entitySetItems';
 import roles from './roles';
@@ -37,6 +38,7 @@ const rootReducer = combineReducers({
   collections,
   collectionPermissions,
   collectionDiscovery,
+  canonicals,
   entitySets,
   entitySetItems,
   entityMappings,

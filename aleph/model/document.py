@@ -10,7 +10,8 @@ from normality import slugify
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm.attributes import flag_modified
 
-from aleph.core import cache, db
+from aleph.core import db
+from aleph.logic.resolver.core import get_resolver_store
 from aleph.model.collection import Collection
 from aleph.model.common import DatedModel, iso_text
 from aleph.util import make_entity_proxy
@@ -50,20 +51,21 @@ class Document(db.Model, DatedModel):
     def ancestors(self):
         if self.parent_id is None:
             return []
-        key = cache.key("ancestors", self.id)
-        ancestors = cache.get_list(key)
-        if len(ancestors):
+        store = get_resolver_store()
+        key = f"ancestors/{self.id}"
+        ancestors = store.get(key)
+        if ancestors is not None:
             return ancestors
-        parent_key = cache.key("ancestors", self.parent_id)
-        ancestors = cache.get_list(parent_key)
-        if not len(ancestors):
+        parent_key = f"ancestors/{self.parent_id}"
+        ancestors = store.get(parent_key)
+        if ancestors is None:
             ancestors = []
             parent = Document.by_id(self.parent_id)
             if parent is not None:
                 ancestors = parent.ancestors
         ancestors.append(self.parent_id)
         if self.model.is_a(model.get(self.SCHEMA_FOLDER)):
-            cache.set_list(key, ancestors, expires=cache.EXPIRE)
+            store.put(key, ancestors)
         return ancestors
 
     def update(self, data):

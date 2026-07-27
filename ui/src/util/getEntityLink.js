@@ -1,8 +1,8 @@
-import getProfileLink from './getProfileLink';
+import getCanonicalLink from './getCanonicalLink';
 
 export default function getEntityLink(entity, profile = true) {
-  if (profile && entity?.profileId) {
-    return getProfileLink(entity.profileId, { via: entity.id });
+  if (profile && entity?.canonicalId) {
+    return getCanonicalLink(entity.canonicalId, { via: entity.id });
   }
   const entityId = typeof entity === 'string' ? entity : entity?.id;
   const fragment = !profile ? '#profile=false' : '';

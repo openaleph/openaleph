@@ -3,7 +3,6 @@ import { createReducer } from 'redux-act';
 import {
   queryEntitySets,
   fetchEntitySet,
-  fetchProfile,
   updateEntitySet,
   createEntitySetMutate,
   createEntitySetNoMutate,
@@ -30,14 +29,6 @@ export default createReducer(
       objectLoadError(state, id, error),
 
     [fetchEntitySet.COMPLETE]: (state, { id, data }) =>
-      objectLoadComplete(state, id, data),
-
-    [fetchProfile.START]: (state, { id }) => objectLoadStart(state, id),
-
-    [fetchProfile.ERROR]: (state, { error, args: { id } }) =>
-      objectLoadError(state, id, error),
-
-    [fetchProfile.COMPLETE]: (state, { id, data }) =>
       objectLoadComplete(state, id, data),
 
     [createEntitySetMutate.COMPLETE]: (state, { entitySetId, data }) =>

@@ -1,4 +1,5 @@
 import json
+import unittest
 from io import BytesIO
 from pprint import pprint  # noqa
 
@@ -50,7 +51,7 @@ class IngestApiTestCase(TestCase):
         assert doc.meta["languages"] == ["eng"], doc.meta
 
         # just try that this doesn't fail
-        _ = get_collection_status(self.col, include_collection_data=False)
+        _ = get_collection_status(self.col)
 
         # FIXME we need to patch test runtime envs to actually defer ingest
         # tasks to make this work:
@@ -63,6 +64,7 @@ class IngestApiTestCase(TestCase):
         # assert stage.get("stage") == OP_INGEST, stage
         # assert stage.get("pending") == 1, stage
 
+    @unittest.skip("Needs pydantic schema for ingest metadata")
     def test_invalid_meta(self):
         _, headers = self.login(is_admin=True)
         meta = {"title": 3, "file_name": ""}

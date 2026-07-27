@@ -13,7 +13,7 @@ class CollectionInfo extends PureComponent {
 
     return (
       <div className="CollectionInfo">
-        {(collection.publisher || collection.publisher_url) && (
+        {collection.publisher && (
           <div className="CollectionInfo__item">
             <div className="key text-muted">
               <FormattedMessage
@@ -22,17 +22,19 @@ class CollectionInfo extends PureComponent {
               />
             </div>
             <div className="value">
-              {!collection.publisher && (
-                <URL value={collection.publisher_url} />
+              {!collection.publisher.name && (
+                <URL value={collection.publisher.url} />
               )}
-              {!collection.publisher_url && <span>{collection.publisher}</span>}
-              {collection.publisher && collection.publisher_url && (
+              {!collection.publisher.url && (
+                <span>{collection.publisher.name}</span>
+              )}
+              {collection.publisher.name && collection.publisher.url && (
                 <a
-                  href={collection.publisher_url}
+                  href={collection.publisher.url}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  {collection.publisher}
+                  {collection.publisher.name}
                 </a>
               )}
             </div>
@@ -103,7 +105,7 @@ class CollectionInfo extends PureComponent {
             </div>
           </div>
         )}
-        {!collection.casefile && !!collection.frequency && (
+        {!collection.casefile && !!collection.coverage?.frequency && (
           <div className="CollectionInfo__item">
             <div className="key text-muted">
               <FormattedMessage
@@ -112,7 +114,7 @@ class CollectionInfo extends PureComponent {
               />
             </div>
             <div className="value">
-              <Frequency.Label frequency={collection.frequency} />
+              <Frequency.Label frequency={collection.coverage?.frequency} />
             </div>
           </div>
         )}

@@ -11,8 +11,9 @@ from werkzeug.wrappers import Response as WerkzeugResponse
 from aleph.core import archive
 from aleph.logic.util import archive_token, archive_url
 from aleph.util import make_entity_proxy
+from aleph.views import resources
 from aleph.views.context import tag_request
-from aleph.views.util import get_flag, get_index_entity, jsonify
+from aleph.views.util import get_flag, jsonify
 
 log = logging.getLogger(__name__)
 blueprint = Blueprint("archive_api", __name__)
@@ -92,7 +93,7 @@ def resolve() -> WerkzeugResponse:
     prop = request.args.get("prop", "contentHash")
     if prop not in RESOLVE_PROPS:
         raise BadRequest("Invalid `prop` query parameter.")
-    entity = get_index_entity(entity_id, request.authz.READ)
+    entity = resources.get_index_entity(entity_id, request.authz.READ)
     proxy = make_entity_proxy(entity)
     content_hash = proxy.first(prop, quiet=True)
     if content_hash is None:

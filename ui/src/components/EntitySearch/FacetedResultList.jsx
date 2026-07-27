@@ -53,7 +53,7 @@ function FacetedResultList(props) {
 
     // Skip the facet sidebar entirely. Set this when the surface is
     // itself inside a preview panel (e.g. EntityReferencesMode under
-    // isPreview) — there's no room for a sidebar and the table still
+    // isPreview) – there's no room for a sidebar and the table still
     // renders fine without one.
     showFacets = true,
 

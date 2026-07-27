@@ -4,7 +4,7 @@ import { Model } from '@alephdata/followthemoney';
 import queryString from 'query-string';
 
 import { loadState } from 'reducers/util';
-import { entityReferencesQuery, profileReferencesQuery } from 'queries';
+import { entityReferencesQuery, canonicalReferencesQuery } from 'queries';
 import { getRecentlyViewedItem } from 'app/storage';
 
 function selectTimestamp(state, key = 'global') {
@@ -241,12 +241,12 @@ export function selectCollection(state, collectionId) {
   return collection;
 }
 
-// FTM's `Entity` constructor only preserves `schema`, `id`, and `properties` —
+// FTM's `Entity` constructor only preserves `schema`, `id`, and `properties` –
 // the backend-computed `caption` field is dropped on hydration, and the same
 // goes for every nested entity snippet inside an entity-typed property (walked
 // recursively by `setProperty`).  Without this post-hydration pass,
 // `EntityLabel` on a nested chip falls through to `entity.getCaption()`, which
-// picks the first value of `schema.caption[0]` — UTF-ordered, so a mixed-script
+// picks the first value of `schema.caption[0]` – UTF-ordered, so a mixed-script
 // `name` array (`["هانا نیومن", "Hannah Neumann"]`) renders the Arabic variant
 // even when the backend's caption has a "more readable" (as in the perspective
 // from minority world) variant "Hannah Neumann". Walk the hydrated proxy
@@ -311,7 +311,7 @@ export function selectEntity(state, entityId) {
   result.shallow = !!entity.shallow;
   result.error = entity.error;
   result.links = entity.links;
-  result.profileId = entity.profile_id;
+  result.canonicalId = entity.canonical_id;
   result.lastViewed = lastViewed;
   result.writeable = entity.writeable;
   result.bookmarked = entity.bookmarked;
@@ -341,14 +341,14 @@ export function selectMappingsResult(state, query) {
   return selectResult(state, query, selectEntityMapping);
 }
 
-export function selectProfile(state, entitySetId) {
-  const profile = selectObject(state, state.entitySets, entitySetId);
-  if (profile?.merged?.schema && !profile?.entity?.id) {
+export function selectCanonical(state, canonicalId) {
+  const canonical = selectObject(state, state.canonicals, canonicalId);
+  if (canonical?.merged?.schema && !canonical?.entity?.id) {
     const model = selectModel(state);
-    profile.entity = model.getEntity(profile.merged);
-    profile.entity.latinized = profile.merged.latinized;
+    canonical.entity = model.getEntity(canonical.merged);
+    canonical.entity.latinized = canonical.merged.latinized;
   }
-  return profile;
+  return canonical;
 }
 
 export function selectDocumentContent(state, documentId) {
@@ -408,19 +408,19 @@ export function selectEntityReference(state, entityId, qname) {
   return references.results.find((ref) => ref.property.qname === qname);
 }
 
-export function selectProfileExpandResult(state, query) {
+export function selectCanonicalExpandResult(state, query) {
   return selectObject(state, state.results, query.toKey());
 }
 
-export function selectProfileReferences(state, profileId) {
-  const profile = selectProfile(state, profileId);
-  const query = profileReferencesQuery(profileId);
-  const references = selectProfileExpandResult(state, query);
-  return buildReferences(references, profile?.entity?.schema);
+export function selectCanonicalReferences(state, canonicalId) {
+  const canonical = selectCanonical(state, canonicalId);
+  const query = canonicalReferencesQuery(canonicalId);
+  const references = selectCanonicalExpandResult(state, query);
+  return buildReferences(references, canonical?.entity?.schema);
 }
 
-export function selectProfileReference(state, profileId, qname) {
-  const references = selectProfileReferences(state, profileId);
+export function selectCanonicalReference(state, canonicalId, qname) {
+  const references = selectCanonicalReferences(state, canonicalId);
   return references.results.find((ref) => ref.property.qname === qname);
 }
 
@@ -453,8 +453,8 @@ export function selectEntityTags(state, entityId) {
   return selectObject(state, state.entityTags, entityId);
 }
 
-export function selectProfileTags(state, profileId) {
-  return selectEntityTags(state, profileId);
+export function selectCanonicalTags(state, canonicalId) {
+  return selectEntityTags(state, canonicalId);
 }
 
 export function selectExports(state) {
@@ -511,8 +511,12 @@ export function selectEntityView(state, entityId, mode, isPreview, location) {
   return 'similar';
 }
 
-export function selectProfileView(state, profileId, mode) {
+export function selectCanonicalView(state, canonicalId, mode) {
   return mode ? mode : 'items';
+}
+
+export function selectCanonicalStatements(state, canonicalId) {
+  return selectObject(state, state.canonicals, `${canonicalId}/statements`);
 }
 
 export function selectCollectionPermissions(state, collectionId) {

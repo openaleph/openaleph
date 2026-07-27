@@ -5,10 +5,10 @@ from followthemoney import Property, model
 from openaleph_search import EntitiesQuery, SearchQueryParser
 from openaleph_search.model import SearchAuth
 
-from aleph.core import cache
-from aleph.model import Collection
+from aleph.logic.resolver.registry import register
+from aleph.logic.resolver.ttl import TTL_AGGREGATE
 from aleph.model.discover import (
-    DatasetDiscovery,
+    CollectionDiscovery,
     MentionedTerms,
     SignificantTerms,
     Term,
@@ -56,21 +56,8 @@ def _unpack_buckets(agg: dict[str, Any], ignore_term: str) -> MentionedTerms:
     return MentionedTerms(**dict(data))
 
 
-def _discovery_key(collection_id: int) -> str:
-    return cache.object_key(Collection, collection_id, "discovery")
-
-
-def get_collection_discovery(collection_id: int, dataset: str) -> DatasetDiscovery:
-    """Retrieve cached discovery analysis for a collection."""
-    key = _discovery_key(collection_id)
-    data = cache.get_complex(key)
-    if data is not None:
-        return DatasetDiscovery(**data)
-    # regenerate and update cache
-    return update_collection_discovery(collection_id, dataset)
-
-
-def update_collection_discovery(collection_id: int, dataset: str) -> DatasetDiscovery:
+@register(CollectionDiscovery, ttl=TTL_AGGREGATE)
+def compute_collection_discovery(collection_id: str) -> CollectionDiscovery:
     """Compute and cache discovery analysis for a collection."""
     q_terms = [("facet_significant", f"properties.{p.name}") for p in PROPS] + [
         (f"facet_significant_size:properties.{p.name}", MAX_TERMS) for p in PROPS
@@ -116,8 +103,4 @@ def update_collection_discovery(collection_id: int, dataset: str) -> DatasetDisc
                 )
                 data[prop.name].append(terms)
 
-    discovery = DatasetDiscovery(name=dataset, **data)
-    cache.set_complex(
-        _discovery_key(collection_id), discovery.model_dump(), expires=cache.EXPIRE
-    )
-    return discovery
+    return CollectionDiscovery(collection_id=str(collection_id), **data)

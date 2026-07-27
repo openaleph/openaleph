@@ -7,7 +7,7 @@ from followthemoney.util import get_entity_id
 from openaleph_search.index.util import unpack_result
 
 from aleph.authz import Authz
-from aleph.core import cache, es
+from aleph.core import es
 from aleph.index.notifications import (
     delete_notifications,
     index_notification,
@@ -15,6 +15,9 @@ from aleph.index.notifications import (
 )
 from aleph.logic.html import html_link
 from aleph.logic.mail import email_role
+from aleph.logic.resolver import cache
+from aleph.logic.resolver.registry import register
+from aleph.logic.resolver.ttl import TTL_RESOURCE
 from aleph.logic.util import (
     archive_url,
     collection_url,
@@ -23,17 +26,19 @@ from aleph.logic.util import (
     ui_url,
 )
 from aleph.model import (
-    Alert,
+    AlertSchema,
     Collection,
-    Entity,
-    EntitySet,
-    Event,
+    CollectionSchema,
+    EntitySchema,
+    EntitySetSchema,
     Events,
-    Export,
+    EventSchema,
+    ExportSchema,
     Role,
+    RoleSchema,
 )
+from aleph.model.role import RoleChannels
 from aleph.settings import SETTINGS
-from aleph.util import make_entity_proxy
 
 log = logging.getLogger(__name__)
 GLOBAL = "Global"
@@ -49,10 +54,9 @@ def channel_tag(obj, clazz=None):
         return "%s:%s" % (clazz.__name__, obj)
 
 
-def publish(event, actor_id=None, params=None, channels=None):
+def publish(event: EventSchema, actor_id=None, params=None, channels=None):
     """Publish a notification to the given channels, while storing
     the parameters and initiating actor for the event."""
-    assert isinstance(event, Event), event
     channels = [channel_tag(c) for c in ensure_list(channels)]
     index_notification(event, actor_id, params, channels)
 
@@ -71,38 +75,38 @@ def flush_notifications(obj, clazz=None, sync=False):
     delete_notifications(filter_, sync=sync)
 
 
-def get_role_channels(role):
-    """Generate the set of notification channels that the current
-    user should listen to."""
-    if role is None:
+def get_role_channels(role_id: str | None) -> list[str]:
+    """Get notification channels for a role via the resolver.
+
+    Accepts a role_id string (or None for anonymous).
+    """
+    if role_id is None:
         return [GLOBAL]
+    role_channels = cache.get(RoleChannels, str(role_id))
+    if role_channels is not None:
+        return role_channels.channels
+    return [GLOBAL]
 
-    # Handle both Role objects and role ID strings
-    if isinstance(role, str):
-        role_id = role
-        role_obj = Role.by_id(role_id)
-    else:
-        role_obj = role
-        role_id = role.id
 
-    key = cache.object_key(Role, role_id, "channels")
-    channels = cache.get_list(key)
-    if len(channels):
-        return channels
+@register(RoleChannels, ttl=TTL_RESOURCE)
+def _fetch_role_channels(role_id: str) -> RoleChannels | None:
+    """Compute notification channels for a role."""
+    role = Role.by_id(int(role_id))
+    if role is None:
+        return None
     channels = [GLOBAL]
-    if role_obj is not None and role_obj.is_actor:
-        authz = Authz.from_role(role_obj)
+    if role.is_actor:
+        authz = Authz.from_role(role)
         for auth_role_id in authz.roles:
             channels.append(channel_tag(auth_role_id, Role))
         for coll_id in authz.collections(authz.READ):
             channels.append(channel_tag(coll_id, Collection))
-        cache.set_list(key, channels)
-    return channels
+    return RoleChannels(role_id=str(role_id), channels=channels)
 
 
 def get_notifications(role: Role, since=None):
     """Fetch a stream of notifications for the given role."""
-    channels = get_role_channels(role)
+    channels = get_role_channels(str(role.id))
     filters = [{"terms": {"channels": channels}}]
     if since is not None:
         filters.append({"range": {"created_at": {"gt": since}}})
@@ -117,49 +121,50 @@ def get_notifications(role: Role, since=None):
 
 def _iter_params(data, event):
     if data.get("actor_id") is not None:
-        yield "actor", Role, data.get("actor_id")
+        yield "actor", RoleSchema, data.get("actor_id")
     params = data.get("params", {})
-    for name, clazz in event.params.items():
+    for name, schema_cls in event.param_types.items():
         value = params.get(name)
         if value is not None:
-            yield name, clazz, value
+            yield name, schema_cls, value
 
 
 def render_notification(stub, notification):
     """Generate a text version of the notification, suitable for use
     in an email or text message."""
-    from aleph.logic import resolver
+    from aleph.model.common import model_dump
 
     notification = unpack_result(notification)
     event = Events.get(notification.get("event"))
     if event is None:
         return
 
-    for _, clazz, value in _iter_params(notification, event):
-        resolver.queue(stub, clazz, value)
-    resolver.resolve(stub)
+    # Batch pre-fetch all params via the resolver.
+    for _, schema_cls, value in _iter_params(notification, event):
+        cache.get(schema_cls, str(value))
+
     plain = str(event.template)
     html = str(event.template)
-    for name, clazz, value in _iter_params(notification, event):
-        data = resolver.get(stub, clazz, value)
-        if data is None:
+    for name, schema_cls, value in _iter_params(notification, event):
+        obj = cache.get(schema_cls, str(value))
+        if obj is None:
             return
+        data = model_dump(obj) or {}
         link, title = None, None
-        if clazz == Role:
+        if schema_cls == RoleSchema:
             title = data.get("label")
-        elif clazz == Alert:
+        elif schema_cls == AlertSchema:
             title = data.get("query")
-        elif clazz == Collection:
-            title = data.get("label")
+        elif schema_cls == CollectionSchema:
+            title = data.get("title") or data.get("label")
             link = collection_url(value)
-        elif clazz == Entity:
-            proxy = make_entity_proxy(data)
-            title = proxy.caption
+        elif schema_cls == EntitySchema:
+            title = obj.caption
             link = entity_url(value)
-        elif clazz == EntitySet:
-            title = data.label
-            link = entityset_url(data.id)
-        elif clazz == Export:
+        elif schema_cls == EntitySetSchema:
+            title = data.get("label")
+            link = entityset_url(data.get("id"))
+        elif schema_cls == ExportSchema:
             title = data.get("label")
             link = archive_url(
                 data.get("content_hash"),

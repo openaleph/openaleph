@@ -10,6 +10,10 @@ import CollectionView from 'components/Collection/CollectionView';
 import collectionViewIds from 'components/Collection/collectionViewIds';
 
 function SchemaLink({ collection, location, schema, ...rest }) {
+  if (!collection) {
+    return <VLSchema.Label schema={schema} icon={true} neutral {...rest} />;
+  }
+
   const viewProps = { collection };
 
   if (schema.isDocument()) {

@@ -1,6 +1,7 @@
 import logging
 
 from elasticsearch import RequestError
+from normality import stringify
 from openaleph_search.index.indexes import entities_read_index
 from openaleph_search.index.mapping import FULLTEXTS
 from openaleph_search.index.util import unpack_result
@@ -8,15 +9,32 @@ from openaleph_search.index.util import unpack_result
 from aleph.authz import Authz
 from aleph.core import db, es
 from aleph.logic.notifications import publish
-from aleph.model import Alert, Entity, Events
+from aleph.logic.resolver.registry import register, register_etag
+from aleph.logic.resolver.ttl import TTL_RESOURCE
+from aleph.model import Alert, AlertSchema, Entity, Events
+from aleph.model.common import iso_text
 
 log = logging.getLogger(__name__)
 
 
-def get_alert(alert_id):
-    alert = Alert.by_id(alert_id)
-    if alert is not None:
-        return alert.to_dict()
+@register(AlertSchema, ttl=TTL_RESOURCE)
+def _fetch_alert(alert_id: str) -> AlertSchema | None:
+    alert = Alert.by_id(int(alert_id))
+    if alert is None:
+        return None
+    return AlertSchema(
+        id=stringify(alert.id),
+        query=alert.query,
+        role_id=stringify(alert.role_id),
+        notified_at=alert.notified_at,
+        created_at=alert.created_at,
+        updated_at=alert.updated_at,
+    )
+
+
+@register_etag(AlertSchema)
+def _alert_etag(alert: AlertSchema) -> str:
+    return f"{alert.id}:{iso_text(alert.updated_at) or 0}"
 
 
 def check_alerts():

@@ -100,7 +100,7 @@ class EntityReferencesMode extends React.Component {
     const isCaption = isThing && schema.caption.indexOf(prop.name) !== -1;
 
     // For the caption column render the entity's *single* display
-    // caption — `entity.caption` from the backend takes precedence,
+    // caption – `entity.caption` from the backend takes precedence,
     // falling through to `entity.getCaption()`. Passing children to
     // `Entity.Link` with `<Property.Values>` would instead render the
     // full `name` array, which is ES-ordered and can surface a

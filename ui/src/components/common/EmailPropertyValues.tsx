@@ -32,7 +32,7 @@ export default function EmailPropertyValues({
 
   const values = entity.getProperty(prop).filter((value) => {
     // Drop raw MIME-encoded header strings (e.g. `=?utf-8?B?…?=`) that
-    // never got decoded upstream — rendering them verbatim is noise.
+    // never got decoded upstream – rendering them verbatim is noise.
     // Entity values pass through untouched.
     return typeof value !== 'string' || !RE_ENCODED_HEADER.test(value);
   });
