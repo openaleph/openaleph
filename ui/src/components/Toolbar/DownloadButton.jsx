@@ -14,6 +14,8 @@ import {
 import { Tooltip2 as Tooltip } from '@blueprintjs/popover2';
 import { injectIntl, defineMessages, FormattedMessage } from 'react-intl';
 import { dispatchSetConfigValue } from 'actions/configActions';
+import { showErrorToast } from 'app/toast';
+import { resolveArchiveUrl } from 'util/archiveUrl';
 
 import './DownloadButton.scss';
 
@@ -25,6 +27,10 @@ const messages = defineMessages({
   mode_download: {
     id: 'document.download.tooltip',
     defaultMessage: 'Download the original document',
+  },
+  download_failed: {
+    id: 'document.download.failed',
+    defaultMessage: 'Downloading the document failed',
   },
   button_cancel: {
     id: 'document.download.cancel',
@@ -49,6 +55,39 @@ class DownloadButton extends React.PureComponent {
 
     this.toggleCheckbox = this.toggleCheckbox.bind(this);
     this.toggleDialog = this.toggleDialog.bind(this);
+    this.onDownload = this.onDownload.bind(this);
+    this.onConfirmDownload = this.onConfirmDownload.bind(this);
+  }
+
+  // The link points at the archive resolve endpoint, which requires the
+  // session's Authorization header for non-public collections. A plain
+  // anchor navigation sends no headers, so resolve the link to a fresh
+  // signed URL through the API client and trigger the download with that.
+  onDownload(event) {
+    const { intl } = this.props;
+    event.preventDefault();
+    const fileUri = event.currentTarget.href;
+    resolveArchiveUrl(fileUri)
+      .then((url) => {
+        if (!url) {
+          throw new Error('Could not resolve download URL');
+        }
+        const anchor = window.document.createElement('a');
+        anchor.href = url;
+        anchor.download = '';
+        anchor.rel = 'nofollow noopener noreferrer';
+        window.document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      })
+      .catch(() => {
+        showErrorToast(intl.formatMessage(messages.download_failed));
+      });
+  }
+
+  onConfirmDownload(event) {
+    this.onDownload(event);
+    this.toggleDialog();
   }
 
   toggleDialog() {
@@ -88,6 +127,7 @@ class DownloadButton extends React.PureComponent {
         <Tooltip content={intl.formatMessage(messages.mode_download)}>
           <AnchorButton
             href={fileUri}
+            onClick={this.onDownload}
             icon="download"
             download
             target="_blank"
@@ -147,7 +187,7 @@ class DownloadButton extends React.PureComponent {
               rel="nofollow noopener noreferrer"
               text={intl.formatMessage(messages.button_confirm)}
               intent={Intent.DANGER}
-              onClick={this.toggleDialog}
+              onClick={this.onConfirmDownload}
             />
             <Button
               onClick={this.toggleDialog}

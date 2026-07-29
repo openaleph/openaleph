@@ -1,4 +1,8 @@
+from unittest.mock import MagicMock, patch
 from urllib.parse import parse_qs, urlparse
+
+from followthemoney.proxy import EntityProxy
+from openaleph_search.index.entities import index_proxy
 
 from aleph.core import archive
 from aleph.logic.util import archive_token, archive_url
@@ -12,6 +16,26 @@ class ArchiveApiTestCase(TestCase):
         self.content_hash = archive.archive_file(self.fixture)
         self.fixture2 = self.get_fixture_path("samples/taggable.txt")
         self.content_hash2 = archive.archive_file(self.fixture2)
+        self.role, self.headers = self.login(foreign_id="archive_admin", is_admin=True)
+        self.col = self.create_collection(creator=self.role)
+        # Index the document proxy directly: going through the Entity model
+        # would strip checksum-type properties like contentHash, which users
+        # must not set themselves.
+        doc = EntityProxy.from_dict(
+            {
+                "id": "document",
+                "schema": "PlainText",
+                "properties": {
+                    "fileName": "website.html",
+                    "mimeType": "text/html",
+                    "contentHash": self.content_hash,
+                },
+            },
+            cleaned=False,
+        )
+        doc.id = self.col.ns.sign(doc.id)
+        index_proxy(dataset=self.col.name, collection_id=self.col.id, proxy=doc)
+        self.doc_id = doc.id
 
     def test_no_token(self):
         res = self.client.get("/api/2/archive")
@@ -43,3 +67,71 @@ class ArchiveApiTestCase(TestCase):
         assert token is not None
         role_id = archive_token(token)[-1]
         assert role_id == 1
+
+    def test_resolve_missing_params(self):
+        res = self.client.get("/api/2/archive/resolve", headers=self.headers)
+        assert res.status_code == 400, res
+
+        url = "/api/2/archive/resolve?entity=%s&prop=banana" % self.doc_id
+        res = self.client.get(url, headers=self.headers)
+        assert res.status_code == 400, res
+
+    def test_resolve_anonymous(self):
+        url = "/api/2/archive/resolve?entity=%s&prop=contentHash" % self.doc_id
+        res = self.client.get(url)
+        assert res.status_code == 403, res
+
+    def test_resolve_missing_hash(self):
+        url = "/api/2/archive/resolve?entity=%s&prop=pdfHash" % self.doc_id
+        res = self.client.get(url, headers=self.headers)
+        assert res.status_code == 404, res
+
+    def test_resolve_redirect(self):
+        url = "/api/2/archive/resolve?entity=%s&prop=contentHash" % self.doc_id
+        res = self.client.get(url, headers=self.headers)
+        assert res.status_code == 302, res
+        location = res.headers.get("Location")
+        assert "/api/2/archive?token=" in location, location
+
+        # the signed token carries the requesting role
+        parsed_url = urlparse(location)
+        token = parse_qs(parsed_url.query).get("token", [None])[0]
+        assert token is not None
+        role_id = archive_token(token)[-1]
+        assert role_id == self.role.id
+
+        # the redirect target serves the actual blob
+        res = self.client.get(location)
+        assert res.status_code == 200, res.status_code
+        disposition = res.headers.get("Content-Disposition")
+        assert "website.html" in disposition, disposition
+
+    def test_resolve_json(self):
+        url = "/api/2/archive/resolve?entity=%s&redirect=false" % self.doc_id
+        res = self.client.get(url, headers=self.headers)
+        assert res.status_code == 200, res
+        claim_url = res.json.get("url")
+        assert "/api/2/archive?token=" in claim_url, res.json
+
+        res = self.client.get(claim_url)
+        assert res.status_code == 200, res.status_code
+        disposition = res.headers.get("Content-Disposition")
+        assert "website.html" in disposition, disposition
+
+    def test_resolve_signing_backend(self):
+        # storage backends that support signing (S3, GCS) hand out the
+        # signed storage URL directly, skipping the retrieve endpoint.
+        # Pass an explicit MagicMock: patch's automatic replacement picks
+        # AsyncMock for the archive object here, which returns coroutines.
+        signed_url = "https://storage.example.org/signed-blob-url"
+        url = "/api/2/archive/resolve?entity=%s" % self.doc_id
+        mock_archive = MagicMock()
+        mock_archive.generate_url.return_value = signed_url
+        with patch("aleph.views.archive_api.archive", new=mock_archive):
+            res = self.client.get(url, headers=self.headers)
+            assert res.status_code == 302, res
+            assert res.headers.get("Location") == signed_url, res.headers
+
+            res = self.client.get(url + "&redirect=false", headers=self.headers)
+            assert res.status_code == 200, res
+            assert res.json.get("url") == signed_url, res.json
