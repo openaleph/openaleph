@@ -173,7 +173,10 @@ class MessageThreadQuery:
     SCHEMATA = ("Email", "Message")
     # FIXME this needs a bit rethink about the ?dehydrate=True param for
     # EntityReferenceMode and similar UI logic in general
-    INCLUDES = {"Email": ["sender", "emitters", "recipients"]}
+    INCLUDES = {
+        "Email": ["sender", "emitters", "recipients"],
+        "Message": ["sender", "recipients"],
+    }
 
     # Hard backend caps — callers can request a lower limit via the parser
     # but cannot exceed these.

@@ -149,6 +149,14 @@ class Settings:
         self.API_RATE_LIMIT = env.to_int("ALEPH_API_RATE_LIMIT", 30)
         self.API_RATE_WINDOW = 15  # minutes
 
+        # Max size (characters) of caller-supplied text for POST /api/2/beta/percolate.
+        # The abuse budget analogous to screening's MAX_SOURCE_NAMES: a percolate
+        # document is matched against every stored query, so an unbounded body is
+        # a cheap way to load the cluster. 100k chars is comfortably longer than
+        # any realistic screening input (an article, a bundle of related-party
+        # names) while capping worst-case cost.
+        self.PERCOLATE_MAX_TEXT = env.to_int("ALEPH_PERCOLATE_MAX_TEXT", 100_000)
+
         # Health check API key (required for /api/2/healthz)
         self.HEALTH_CHECK_API_KEY = env.get("ALEPH_HEALTH_CHECK_API_KEY")
 
@@ -191,8 +199,6 @@ class Settings:
         self.SQLALCHEMY_MAX_POOL_SIZE = env.to_int("ALEPH_SQLALCHEMY_POOL_SIZE", 5)
         self.SQLALCHEMY_POOL_RECYCLE = env.to_int("ALEPH_SQLALCHEMY_POOL_RECYCLE", 3600)
         self.SQLALCHEMY_POOL_TIMEOUT = env.to_int("ALEPH_SQLALCHEMY_POOL_TIMEOUT", 30)
-        self.XREF_SCROLL = env.get("ALEPH_XREF_SCROLL", "5m")
-        self.XREF_SCROLL_SIZE = env.get("ALEPH_XREF_SCROLL_SIZE", "1000")
 
         # Number of replicas to maintain. '2' means 3 overall copies.
         self.INDEX_REPLICAS = env.to_int("ALEPH_INDEX_REPLICAS", 0)
@@ -210,6 +216,11 @@ class Settings:
         # XREF Model Selection
         self.XREF_MODEL = env.get("FTM_COMPARE_MODEL", None)
         self.XREF_ALGORITHM = env.get("NOMENKLATURA_XREF_ALGORITHM", "regression-v1")
+
+        # XREF tuning and behaviour
+        self.XREF_SCROLL = env.get("ALEPH_XREF_SCROLL", "5m")
+        self.XREF_SCROLL_SIZE = env.get("ALEPH_XREF_SCROLL_SIZE", "1000")
+        self.XREF_REIFY_MENTIONS = env.as_bool("ALEPH_XREF_REIFY_MENTIONS", True)
 
         ###############################################################################
         # Feature flags

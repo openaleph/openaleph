@@ -87,7 +87,8 @@ class EntityContextLoader extends PureComponent {
     }
 
     const { threadQuery, threadResult } = this.props;
-    const showThread = entity?.schema?.isA("Email");
+    const showThread =
+      entity?.schema?.isA("Email") || entity?.schema?.isA("Message");
     if (showThread && threadResult.shouldLoad) {
       this.props.queryThread({ query: threadQuery });
     }

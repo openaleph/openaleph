@@ -4,14 +4,13 @@ import withRouter from 'app/withRouter';
 import { defineMessages, FormattedMessage, injectIntl } from 'react-intl';
 import c from 'classnames';
 import queryString from 'query-string';
-import { Tag } from '@blueprintjs/core';
+import { Callout, Tag } from '@blueprintjs/core';
 import { entityThreadQuery } from 'queries';
 import { selectThreadResult } from 'selectors';
 import togglePreview from 'util/togglePreview';
 import EmailPropertyValues from 'components/common/EmailPropertyValues';
 import {
   Entity,
-  ErrorSection,
   Property,
   Schema,
   SearchHighlight,
@@ -54,25 +53,9 @@ class EntityThreadMode extends Component {
     const columns = schema.getFeaturedProperties();
     const skeletonItems = [...Array(15).keys()];
 
-    if (result.total_type === "gte") {
-      return (
-        <ErrorSection
-          title={
-            <FormattedMessage
-              id="entity.thread.too_long.title"
-              defaultMessage="This thread is too long."
-            />
-          }
-          description={
-            <FormattedMessage
-              id="entity.thread.too_long.description"
-              defaultMessage="This thread can’t be displayed because it contains more than {limit} messages."
-              values={{ limit: result.limit }}
-            />
-          }
-        />
-      );
-    }
+    // A truncated thread (total_type "gte") is still worth showing:
+    // render the window we received with a notice, instead of refusing.
+    const truncated = result.total_type === 'gte';
 
     return (
       <HotkeysContainer
@@ -110,6 +93,15 @@ class EntityThreadMode extends Component {
         ]}
       >
         <div className="EntityThreadMode">
+          {truncated && (
+            <Callout intent="warning" icon="warning-sign">
+              <FormattedMessage
+                id="entity.thread.truncated"
+                defaultMessage="This thread is longer than what can be displayed — showing {count} messages."
+                values={{ count: result.results?.length || result.limit }}
+              />
+            </Callout>
+          )}
           <table className="data-table references-data-table">
             <thead>
               <tr>
