@@ -399,6 +399,11 @@ This document provides a comprehensive reference for all configuration parameter
 - **Default**: `"1000"`
 - **Description**: Number of documents to fetch per scroll request during cross-referencing.
 
+#### `ALEPH_XREF_REIFY_MENTIONS`
+- **Type**: Boolean
+- **Default**: `True`
+- **Description**: Disable generating entities from NER results during xref
+
 #### `FTM_COMPARE_MODEL`
 - **Type**: String
 - **Default**: None
