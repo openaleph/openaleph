@@ -110,11 +110,10 @@ function query({ search, filters, sortCol, sortDir, page, pageSize }) {
     }
   }
 
-  for (const [displayCol, { op, val }] of Object.entries(filters)) {
+  for (const [idxStr, { op, val }] of Object.entries(filters)) {
     if (!val) continue;
-    const idx = columns.indexOf(displayCol);
-    if (idx === -1) continue;
-    const alias = colAliases[idx];
+    const alias = colAliases[parseInt(idxStr)];
+    if (!alias) continue;
     const num = parseNumber(val.trim());
     if (op === 'equals') {
       if (num !== undefined) {
@@ -149,7 +148,7 @@ function query({ search, filters, sortCol, sortDir, page, pageSize }) {
   }
 
   const where = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
-  const orderAlias = sortCol ? colAliases[columns.indexOf(sortCol)] : null;
+  const orderAlias = sortCol !== null && sortCol !== undefined ? colAliases[sortCol] : null;
   const order = orderAlias ? `ORDER BY ${orderAlias} ${sortDir}` : '';
   const offset = (page - 1) * pageSize;
 

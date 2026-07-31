@@ -67,7 +67,7 @@ class CSVExplorer extends Component {
       sortCol: null,
       sortDir: 'ASC',
       page: 1,
-      filterCol: '',
+      filterCol: null,
       filterOp: 'contains',
       filterVal: '',
       hiddenCols: new Set(),
@@ -113,7 +113,7 @@ class CSVExplorer extends Component {
           columns,
           total,
           sortCol: null,
-          filterCol: '',
+          filterCol: null,
           filterOp: 'contains',
           filterVal: '',
           filters: {},
@@ -168,25 +168,37 @@ class CSVExplorer extends Component {
     this.timer = setTimeout(() => this.runQuery(), 350);
   }
 
-  onSortDir(col, dir) {
-    this.setState({ sortCol: col, sortDir: dir, page: 1 }, () => this.runQuery());
+  onSortDir(i, dir) {
+    const toggle = this.state.sortCol === i && this.state.sortDir === dir;
+    this.setState(
+      { sortCol: toggle ? null : i, sortDir: toggle ? null : dir, page: 1 },
+      () => this.runQuery()
+    );
   }
 
   onPage(page) {
     this.setState({ page }, () => this.runQuery());
   }
 
+
   onHideCol(i) {
-    this.setState(({ hiddenCols }) => {
+    this.setState(({ hiddenCols, sortCol }) => {
       const next = new Set(hiddenCols);
       next.add(i);
-      return { hiddenCols: next };
-    });
+      const updated_state = { hiddenCols: next };
+      if (sortCol === i) {
+        updated_state.sortCol = null;
+        updated_state.sortDir = null;
+        updated_state.page = 1;
+      }
+      return updated_state;
+    }, () => this.runQuery());
   }
+
 
   onApplyFilter() {
     const { filterCol, filterOp, filterVal, filters } = this.state;
-    if (!filterCol) return;
+    if (filterCol === null) return;
     const newFilters = {
       ...filters,
       [filterCol]: { op: filterOp, val: filterVal },
@@ -196,10 +208,8 @@ class CSVExplorer extends Component {
 
   get filterState() {
     const filterVal = this.state.filterVal?.trim();
-    const filterCol = this.state.filterCol?.trim();
-
     if (!filterVal) return false;
-    if (!filterCol || filterCol === '- column -') return false;
+    if (this.state.filterCol === null) return false;
     return true;
   }
 
@@ -312,14 +322,14 @@ class CSVExplorer extends Component {
         <div className="CSVExplorer__filterbar-row">
           <div className="bp4-html-select bp4-small">
             <select
-              value={filterCol}
-              onChange={(e) => this.setState({ filterCol: e.target.value })}
+              value={filterCol ?? ''}
+              onChange={(e) => this.setState({ filterCol: e.target.value === '' ? null : parseInt(e.target.value) })}
             >
               <option value="">
                 {intl.formatMessage(messages.filter_column_placeholder)}
               </option>
               {columns.map((col, i) => (
-                <option key={i} value={col}>
+                <option key={i} value={i}>
                   {col}
                 </option>
               ))}
@@ -364,9 +374,9 @@ class CSVExplorer extends Component {
         </div>
         {activeFilters.length > 0 && (
           <div className="CSVExplorer__filterbar-tags">
-            {activeFilters.map(([col, { op, val }]) => (
-              <span key={col} className="CSVExplorer__filter-tag">
-                <strong>{col}</strong>{' '}
+            {activeFilters.map(([idx, { op, val }]) => (
+              <span key={idx} className="CSVExplorer__filter-tag">
+                <strong>{columns[idx]}</strong>{' '}
                 {
                   {
                     contains: 'contains',
@@ -381,7 +391,7 @@ class CSVExplorer extends Component {
                 "{val}"
                 <button
                   onClick={() => {
-                    const { [col]: _removed, ...rest } = this.state.filters;
+                    const { [idx]: _removed, ...rest } = this.state.filters;
                     this.setState({ filters: rest, page: 1 }, () =>
                       this.runQuery()
                     );
@@ -430,7 +440,7 @@ class CSVExplorer extends Component {
                     {columns.map((col, i) => !hiddenCols.has(i) && (
                       <th
                         key={i}
-                        className={sortCol === col ? `sorted-${sortDir.toLowerCase()}` : ''}
+                        className={sortCol === i ? `sorted-${sortDir.toLowerCase()}` : ''}
                       >
                         <Popover2
                           content={
@@ -438,14 +448,14 @@ class CSVExplorer extends Component {
                               <MenuItem
                                 icon="sort-asc"
                                 text={intl.formatMessage(messages.sort_asc)}
-                                active={sortCol === col && sortDir === 'ASC'}
-                                onClick={() => this.onSortDir(col, 'ASC')}
+                                active={sortCol === i && sortDir === 'ASC'}
+                                onClick={() => this.onSortDir(i, 'ASC')}
                               />
                               <MenuItem
                                 icon="sort-desc"
                                 text={intl.formatMessage(messages.sort_desc)}
-                                active={sortCol === col && sortDir === 'DESC'}
-                                onClick={() => this.onSortDir(col, 'DESC')}
+                                active={sortCol === i && sortDir === 'DESC'}
+                                onClick={() => this.onSortDir(i, 'DESC')}
                               />
                               <MenuDivider />
                               <MenuItem
@@ -460,7 +470,9 @@ class CSVExplorer extends Component {
                         >
                           <span className="CSVExplorer__th-label">
                             {col}
-                            {sortCol === col && (sortDir === 'ASC' ? ' ↑' : ' ↓')}
+                            <span style={{ visibility: sortCol === i ? 'visible' : 'hidden' }}>
+                              {sortDir === 'ASC' ? ' ↑' : ' ↓'}
+                            </span>
                           </span>
                         </Popover2>
                       </th>
