@@ -8,7 +8,7 @@ import {
   Button,
   Spinner,
   NonIdealState,
-  Position,
+  Position, Menu, MenuItem, MenuDivider,
 } from '@blueprintjs/core';
 import { defineMessages, injectIntl, FormattedMessage } from 'react-intl';
 
@@ -32,6 +32,22 @@ const messages = defineMessages({
     id: 'document.csv_explorer.filter_apply',
     defaultMessage: 'Apply',
   },
+  retry: {
+    id: 'document.csv_explorer.retry',
+    defaultMessage: 'Retry',
+  },
+  sort_asc: {
+    id: 'document.csv_explorer.sort_asc',
+    defaultMessage: 'Sort asc.',
+  },
+  sort_desc: {
+    id: 'document.csv_explorer.sort_desc',
+    defaultMessage: 'Sort desc.',
+  },
+  hide_column: {
+    id: 'document.csv_explorer.hide_column',
+    defaultMessage: 'Hide',
+  },
 });
 
 class CSVExplorer extends Component {
@@ -51,13 +67,14 @@ class CSVExplorer extends Component {
       sortCol: null,
       sortDir: 'ASC',
       page: 1,
-      filterCol: '',
+      filterCol: null,
       filterOp: 'contains',
       filterVal: '',
+      hiddenCols: new Set(),
     };
     this.worker = null;
+    this.timer = null;
     this.onSearch = this.onSearch.bind(this);
-    this.onSort = this.onSort.bind(this);
     this.onPage = this.onPage.bind(this);
     this.onApplyFilter = this.onApplyFilter.bind(this);
   }
@@ -67,6 +84,7 @@ class CSVExplorer extends Component {
   }
 
   componentWillUnmount() {
+    clearTimeout(this.timer);
     if (this.worker) this.worker.terminate();
   }
 
@@ -90,14 +108,22 @@ class CSVExplorer extends Component {
       const { type } = event.data;
       if (type === 'ready') {
         const { columns, total, delimiter } = event.data;
-        const separatorUpdate =
-          this.state.separator === 'auto' ? { separator: delimiter } : {};
-        this.setState(
-          { columns, total, loading: false, ...separatorUpdate },
-          () => {
-            this.runQuery();
-          }
-        );
+        const separatorUpdate = this.state.separator === 'auto' ? { separator: delimiter } : {};
+        this.setState({
+          columns,
+          total,
+          sortCol: null,
+          filterCol: null,
+          filterOp: 'contains',
+          filterVal: '',
+          filters: {},
+          page: 1,
+          hiddenCols: new Set(),
+          loading: false,
+          ...separatorUpdate,
+        }, () => {
+          this.runQuery();
+        });
       } else if (type === 'results') {
         this.setState({ rows: event.data.rows, total: event.data.total });
       } else if (type === 'error') {
@@ -107,10 +133,9 @@ class CSVExplorer extends Component {
 
     // resolve the archive link to a fresh signed URL first, as the worker
     // fetches it without the session's Authorization header
-    const worker = this.worker;
     resolveArchiveUrl(document.links.file || document.links.csv)
       .then((csvUrl) => {
-        worker.postMessage({
+        this.worker.postMessage({
           type: 'init',
           csvUrl,
           skiprows,
@@ -119,11 +144,12 @@ class CSVExplorer extends Component {
         });
       })
       .catch((error) => {
-        this.setState({ error: error.message, loading: false });
+        this.setState({ error: error.message || 'Explorer failed unexpectedly.', loading: false });
       });
   }
 
   runQuery() {
+    if (!this.worker || this.state.error) return;
     const { search, filters, sortCol, sortDir, page } = this.state;
     this.worker.postMessage({
       type: 'query',
@@ -137,16 +163,15 @@ class CSVExplorer extends Component {
   }
 
   onSearch(e) {
-    this.setState({ search: e.target.value, page: 1 }, () => this.runQuery());
+    this.setState({ search: e.target.value, page: 1 });
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.runQuery(), 350);
   }
 
-  onSort(col) {
+  onSortDir(i, dir) {
+    const toggle = this.state.sortCol === i && this.state.sortDir === dir;
     this.setState(
-      ({ sortCol, sortDir }) => ({
-        sortCol: col,
-        sortDir: sortCol === col && sortDir === 'ASC' ? 'DESC' : 'ASC',
-        page: 1,
-      }),
+      { sortCol: toggle ? null : i, sortDir: toggle ? null : dir, page: 1 },
       () => this.runQuery()
     );
   }
@@ -155,9 +180,25 @@ class CSVExplorer extends Component {
     this.setState({ page }, () => this.runQuery());
   }
 
+
+  onHideCol(i) {
+    this.setState(({ hiddenCols, sortCol }) => {
+      const next = new Set(hiddenCols);
+      next.add(i);
+      const updated_state = { hiddenCols: next };
+      if (sortCol === i) {
+        updated_state.sortCol = null;
+        updated_state.sortDir = null;
+        updated_state.page = 1;
+      }
+      return updated_state;
+    }, () => this.runQuery());
+  }
+
+
   onApplyFilter() {
     const { filterCol, filterOp, filterVal, filters } = this.state;
-    if (!filterCol) return;
+    if (filterCol === null) return;
     const newFilters = {
       ...filters,
       [filterCol]: { op: filterOp, val: filterVal },
@@ -167,19 +208,20 @@ class CSVExplorer extends Component {
 
   get filterState() {
     const filterVal = this.state.filterVal?.trim();
-    const filterCol = this.state.filterCol?.trim();
-
     if (!filterVal) return false;
-    if (!filterCol || filterCol === '- column -') return false;
+    if (this.state.filterCol === null) return false;
     return true;
   }
 
   onSettingsChange(patch) {
-    this.setState(patch, () => {
-      if (this.worker) {
-        this.worker.postMessage({ type: 'updateSettings', ...patch });
-      }
-    });
+    // in the error state the worker may be dead: only stage the settings,
+    // the retry action re-inits from state
+    if (this.state.error) {
+      this.setState(patch);
+      return;
+    }
+    this.setState({ ...patch, loading: true }, () => {
+      if (this.worker) { this.worker.postMessage({ type: 'updateSettings', ...patch }); }});
   }
 
   renderSettings() {
@@ -213,7 +255,7 @@ class CSVExplorer extends Component {
               <option value=",">,</option>
               <option value=";">;</option>
               <option value=":">:</option>
-              <option value="\t">tab</option>
+              <option value={'\t'}>tab</option>
               <option value="|">|</option>
             </select>
             <span className="bp4-icon bp4-icon-double-caret-vertical" />
@@ -235,8 +277,8 @@ class CSVExplorer extends Component {
 
   renderToolbar() {
     const { intl } = this.props;
-    const { search, total, skiprows } = this.state;
-    const delimiter = this.state.separator || 'auto';
+    const { search, total, skiprows, hiddenCols } = this.state;
+    const delimiter = this.state.separator === '\t' ? 'tab' : this.state.separator || "auto";
 
     return (
       <div className="CSVExplorer__toolbar">
@@ -248,9 +290,17 @@ class CSVExplorer extends Component {
           onChange={this.onSearch}
         />
         <span className="CSVExplorer__meta">
-          Total: {total.toLocaleString()} • Skipped: {skiprows.toLocaleString()}{' '}
-          • Separator: "{delimiter}"
-        </span>
+          Total: {total.toLocaleString()} • Skipped: {skiprows.toLocaleString()} • Separator: "{delimiter}"
+          {hiddenCols.size > 0 && (
+            <>
+              {' '}• {hiddenCols.size} hidden (
+              <button
+                className="CSVExplorer__link-button"
+                onClick={() => this.setState({ hiddenCols: new Set() })}
+              >show all</button>)
+            </>
+          )}
+      </span>
         <Popover2
           content={this.renderSettings()}
           position={Position.BOTTOM_RIGHT}
@@ -272,14 +322,14 @@ class CSVExplorer extends Component {
         <div className="CSVExplorer__filterbar-row">
           <div className="bp4-html-select bp4-small">
             <select
-              value={filterCol}
-              onChange={(e) => this.setState({ filterCol: e.target.value })}
+              value={filterCol ?? ''}
+              onChange={(e) => this.setState({ filterCol: e.target.value === '' ? null : parseInt(e.target.value) })}
             >
               <option value="">
                 {intl.formatMessage(messages.filter_column_placeholder)}
               </option>
               {columns.map((col, i) => (
-                <option key={i} value={col}>
+                <option key={i} value={i}>
                   {col}
                 </option>
               ))}
@@ -324,9 +374,9 @@ class CSVExplorer extends Component {
         </div>
         {activeFilters.length > 0 && (
           <div className="CSVExplorer__filterbar-tags">
-            {activeFilters.map(([col, { op, val }]) => (
-              <span key={col} className="CSVExplorer__filter-tag">
-                <strong>{col}</strong>{' '}
+            {activeFilters.map(([idx, { op, val }]) => (
+              <span key={idx} className="CSVExplorer__filter-tag">
+                <strong>{columns[idx]}</strong>{' '}
                 {
                   {
                     contains: 'contains',
@@ -341,7 +391,7 @@ class CSVExplorer extends Component {
                 "{val}"
                 <button
                   onClick={() => {
-                    const { [col]: _removed, ...rest } = this.state.filters;
+                    const { [idx]: _removed, ...rest } = this.state.filters;
                     this.setState({ filters: rest, page: 1 }, () =>
                       this.runQuery()
                     );
@@ -358,37 +408,73 @@ class CSVExplorer extends Component {
   }
 
   render() {
-    const { loading, error, columns, rows, sortCol, sortDir, page, total } =
-      this.state;
+    const { intl } = this.props;
+    const { loading, error, columns, rows, sortCol, sortDir, page, total, hiddenCols } = this.state;
     const totalPages = Math.ceil(total / PAGE_SIZE);
-
-    if (error) {
-      return <NonIdealState icon="error" title="Error" description={error} />;
-    }
 
     return (
       <div className="CSVExplorer__table-container">
         {this.renderToolbar()}
-        {columns.length > 0 && this.renderFilterBar()}
-        {loading && <NonIdealState icon={<Spinner />} title="Loading…" />}
-        {!loading && columns.length > 0 && (
+        {error && (
+          <NonIdealState
+            icon="error"
+            title="Error"
+            description={error}
+            action={
+              <Button intent="primary" onClick={() => this.initWorker()}>
+                <FormattedMessage {...messages.retry} />
+              </Button>
+            }
+          />
+        )}
+        {!error && columns.length > 0 && this.renderFilterBar()}
+        {!error && loading && (
+          <NonIdealState icon={<Spinner />} title="Loading…" />
+        )}
+        {!error && !loading && columns.length > 0 && (
           <>
             <div className="CSVExplorer__scroll">
               <table className="CSVExplorer__table">
                 <thead>
                   <tr>
-                    {columns.map((col, i) => (
+                    {columns.map((col, i) => !hiddenCols.has(i) && (
                       <th
                         key={i}
-                        onClick={() => this.onSort(col)}
-                        className={
-                          sortCol === col
-                            ? `sorted-${sortDir.toLowerCase()}`
-                            : ''
-                        }
+                        className={sortCol === i ? `sorted-${sortDir.toLowerCase()}` : ''}
                       >
-                        {col}
-                        {sortCol === col && (sortDir === 'ASC' ? ' ↑' : ' ↓')}
+                        <Popover2
+                          content={
+                            <Menu className="CSVExplorer__col-menu">
+                              <MenuItem
+                                icon="sort-asc"
+                                text={intl.formatMessage(messages.sort_asc)}
+                                active={sortCol === i && sortDir === 'ASC'}
+                                onClick={() => this.onSortDir(i, 'ASC')}
+                              />
+                              <MenuItem
+                                icon="sort-desc"
+                                text={intl.formatMessage(messages.sort_desc)}
+                                active={sortCol === i && sortDir === 'DESC'}
+                                onClick={() => this.onSortDir(i, 'DESC')}
+                              />
+                              <MenuDivider />
+                              <MenuItem
+                                icon="eye-off"
+                                text={intl.formatMessage(messages.hide_column)}
+                                onClick={() => this.onHideCol(i)}
+                              />
+                            </Menu>
+                          }
+                          position={Position.BOTTOM}
+                          minimal
+                        >
+                          <span className="CSVExplorer__th-label">
+                            {col}
+                            <span style={{ visibility: sortCol === i ? 'visible' : 'hidden' }}>
+                              {sortDir === 'ASC' ? ' ↑' : ' ↓'}
+                            </span>
+                          </span>
+                        </Popover2>
                       </th>
                     ))}
                   </tr>
@@ -396,7 +482,7 @@ class CSVExplorer extends Component {
                 <tbody>
                   {rows.map((row, i) => (
                     <tr key={i}>
-                      {row.map((cell, j) => (
+                      {row.map((cell, j) => !hiddenCols.has(j) && (
                         <td key={j}>{cell}</td>
                       ))}
                     </tr>
