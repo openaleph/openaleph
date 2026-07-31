@@ -32,6 +32,8 @@ services:
 
   ingest:
     image: ghcr.io/openaleph/ingest-file:latest
+    # ingest-file is currently published only for AMD64.
+    platform: linux/amd64
     command: procrastinate worker -q ingest
     tmpfs:
       - /tmp:mode=777
