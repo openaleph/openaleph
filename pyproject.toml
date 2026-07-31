@@ -12,7 +12,7 @@ license = "MIT"
 readme = "README.md"
 requires-python = ">=3.12,<3.15"
 dependencies = [
-    "followthemoney (>=4.10.0,<5.0.0)",
+    "followthemoney (>=4.10.1,<5.0.0)",
     "openaleph-search (>=5.3.1,<6.0.0)",
     "openaleph-procrastinate (>=5.3.1,<6.0.0)",
     "ftmq[postgres] (>=4.10.0,<5.0.0)",
