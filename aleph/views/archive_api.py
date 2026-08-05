@@ -104,7 +104,7 @@ def resolve() -> WerkzeugResponse:
     file_name = entity_filename(proxy, extension=extension)
     if mime_type is None:
         mime_type = proxy.first("mimeType", quiet=True)
-    expire = datetime.utcnow() + timedelta(days=1)
+    expire = datetime.utcnow() + timedelta(hours=1)
     # For storage backends that support signing (S3, GCS), hand out the
     # signed storage URL directly and save clients the extra hop through
     # the retrieve endpoint below.
