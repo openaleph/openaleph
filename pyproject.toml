@@ -56,7 +56,7 @@ dependencies = [
     "legacy-cgi; python_version >= '3.13'",
     "nh3 (>=0.3.6,<0.4.0)",
     "dateparser (>=1.4.1,<2.0.0)",
-    "anystore[http,s3] (>=1.2.5,<2.0.0)",
+    "anystore[http,s3] (>=1.2.6,<2.0.0)",
 ]
 
 [project.scripts]
