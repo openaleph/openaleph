@@ -109,10 +109,10 @@ export function investigationsQuery(location) {
 
 export function datasetsQuery(location) {
   const context = { 'exclude:category': 'casefile' };
-  return Query.fromLocation('collections', location, context, 'collections')
+  const query = Query.fromLocation('collections', location, context, 'collections')
     .defaultFacet('countries')
-    .defaultFacet('category')
-    .defaultSortBy('created_at', 'desc');
+    .defaultFacet('category');
+  return query.hasQuery() ? query : query.defaultSortBy('created_at', 'desc');
 }
 
 export function collectionEntitySetsQuery(location, collectionId) {
