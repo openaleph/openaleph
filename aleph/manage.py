@@ -50,6 +50,7 @@ from aleph.logic.roles import (
     create_user,
     delete_role,
     rename_user,
+    rotate_api_key,
     update_roles,
     user_add,
     user_del,
@@ -1204,6 +1205,18 @@ def createuser(email, password=None, name=None, admin=False):
     """Create a user and show their API key."""
     role = create_user(email, name, password, is_admin=admin)
     print("User created. ID: %s, API Key: %s" % (role.id, role.api_key))
+
+
+@cli.command("rotate-apikey")
+@click.argument("email")
+def rotateapikey(email):
+    """Rotate user api key"""
+    key = rotate_api_key(email)
+    if key:
+        print(f"New API key: {key[:5]}...")
+        # print(f"New API key: {key}")
+    else:
+        print(f"{email} not found")
 
 
 @cli.command()
