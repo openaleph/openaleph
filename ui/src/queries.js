@@ -112,7 +112,7 @@ export function datasetsQuery(location) {
   const query = Query.fromLocation('collections', location, context, 'collections')
     .defaultFacet('countries')
     .defaultFacet('category');
-  return query.hasQuery() ? query : query.defaultSortBy('created_at', 'desc');
+  return query.defaultSortBy('created_at', 'desc');
 }
 
 export function collectionEntitySetsQuery(location, collectionId) {
