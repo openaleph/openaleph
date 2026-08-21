@@ -93,6 +93,8 @@ CollectionCreate:
       type: string
       format: ftm-url
       nullable: true
+    casefile:
+      type: boolean
     category:
       type: string
       format: category

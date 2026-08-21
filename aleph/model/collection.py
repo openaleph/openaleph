@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from functools import cache
 
-from banal import ensure_dict, ensure_list
+from banal import as_bool, ensure_dict, ensure_list
 from flask_babel import lazy_gettext
 from followthemoney.dataset.util import dataset_name_check
 from followthemoney.exc import InvalidData
@@ -294,6 +294,11 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
             collection.creator = authz.role
         collection.deleted_at = None
         collection.data_updated_at = None
+        # `casefile` is derived from `category`, but clients send it as an
+        # explicit flag on creation – honour it over the payload category,
+        # which they may be filling with a default value.
+        if as_bool(data.get("casefile")):
+            data = {**data, "category": cls.CASEFILE}
         collection.update(data, authz)
         db.session.flush()
         if collection.creator is not None:

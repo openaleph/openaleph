@@ -111,6 +111,41 @@ class CollectionsApiTestCase(TestCase):
         assert "Collected" in res.json["label"], res.json
         assert validate(res.json, "Collection")
 
+    def test_create_casefile_flag(self):
+        _, headers = self.login(is_admin=True)
+        url = "/api/2/collections"
+
+        # openaleph-client sends `casefile` alongside a default category, which
+        # would otherwise win for admins and turn the case into a dataset.
+        data = {"foreign_id": "case", "label": "Case", "casefile": True}
+        data["category"] = "other"
+        res = self.client.post(url, json=data, headers=headers)
+        assert res.status_code == 200, res.json
+        assert res.json["category"] == "casefile", res.json
+        assert res.json["casefile"] is True, res.json
+
+        # Without the flag, the category is still honoured for admins.
+        data = {"foreign_id": "dataset", "label": "Data", "casefile": False}
+        data["category"] = "other"
+        res = self.client.post(url, json=data, headers=headers)
+        assert res.status_code == 200, res.json
+        assert res.json["category"] == "other", res.json
+        assert res.json["casefile"] is False, res.json
+
+        # Non-admins keep creating casefiles regardless of the flag.
+        _, headers_user = self.login()
+        data = {"foreign_id": "user_case", "label": "Case", "casefile": False}
+        data["category"] = "other"
+        res = self.client.post(url, json=data, headers=headers_user)
+        assert res.status_code == 200, res.json
+        assert res.json["category"] == "casefile", res.json
+
+        # An external collection can never be a casefile.
+        data = {"foreign_id": "ext", "label": "Ext", "casefile": True}
+        data["external"] = True
+        res = self.client.post(url, json=data, headers=headers)
+        assert res.status_code == 400, res.json
+
     def test_create_foreign_id(self):
         role, headers = self.login()
         _, headers_other = self.login(foreign_id="other")
