@@ -19,6 +19,7 @@ from aleph.model import (
     Permission,
     Role,
 )
+from aleph.model.common import make_token
 from aleph.model.role import membership
 from aleph.settings import SETTINGS
 
@@ -91,6 +92,18 @@ def create_user(email, name, password, is_admin=False):
     db.session.commit()
     update_role(role)
     return role
+
+
+def rotate_api_key(email):
+    """Generate a new API key"""
+    role = Role.by_email(email)
+    if role is None:
+        return None
+    role.api_key = make_token()
+    db.session.add(role)
+    db.session.commit()
+    update_role(role)
+    return role.api_key
 
 
 def rename_user(email, name):
