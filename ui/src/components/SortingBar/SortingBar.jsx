@@ -9,6 +9,10 @@ import SortingBarSelect from 'components/SortingBar/SortingBarSelect';
 import './SortingBar.scss';
 
 const messages = defineMessages({
+  relevance: {
+    id: 'sorting.bar.relevance',
+    defaultMessage: 'Relevance',
+  },
   created_at: {
     id: 'sorting.bar.created_at',
     defaultMessage: 'Creation Date',
@@ -74,21 +78,19 @@ class SortingBar extends Component {
 
   onSort({ field, direction }) {
     const { query, sortDirection, sortField, updateQuery } = this.props;
-
-    const newQuery = query.sortBy(
-      field || sortField,
-      direction || sortDirection
-    );
+    const newQuery = query.sortBy(field || sortField, direction || sortDirection);
     updateQuery(newQuery);
   }
 
   renderSortingButtons() {
-    const { intl, sortingFields, sortDirection, sortField } = this.props;
+    const { intl, query, sortingFields, sortDirection, sortField } = this.props;
 
-    const sortingItems = sortingFields.map((field) => ({
-      field,
-      label: intl.formatMessage(messages[field]),
-    }));
+    const sortingItems = sortingFields
+      .filter((field) => field !== 'relevance' || query.hasQuery())
+      .map((field) => ({
+        field,
+        label: intl.formatMessage(messages[field]),
+      }));
 
     let activeSort = sortingItems.filter(({ field }) => field === sortField);
     activeSort = activeSort.length ? activeSort[0] : sortingItems[0];
@@ -107,25 +109,27 @@ class SortingBar extends Component {
             />
           </div>
         </div>
-        <div className="SortingBar__item">
-          <span className="SortingBar__label">
-            <FormattedMessage
-              id="sorting.bar.direction"
-              defaultMessage="Direction:"
-            />
-          </span>
-          <div className="SortingBar__control">
-            <Button
-              icon={sortDirection === 'desc' ? 'arrow-down' : 'arrow-up'}
-              onClick={() =>
-                this.onSort({
-                  direction: sortDirection === 'desc' ? 'asc' : 'desc',
-                })
-              }
-              minimal
-            />
+        {sortField !== 'relevance' && (
+          <div className="SortingBar__item">
+            <span className="SortingBar__label">
+              <FormattedMessage
+                id="sorting.bar.direction"
+                defaultMessage="Direction:"
+              />
+            </span>
+            <div className="SortingBar__control">
+              <Button
+                icon={sortDirection === 'desc' ? 'arrow-down' : 'arrow-up'}
+                onClick={() =>
+                  this.onSort({
+                    direction: sortDirection === 'desc' ? 'asc' : 'desc',
+                  })
+                }
+                minimal
+              />
+            </div>
           </div>
-        </div>
+        )}
       </>
     );
   }
@@ -159,7 +163,7 @@ const mapStateToProps = (state, ownProps) => {
 
     return {
       sortField: field,
-      sortDirection: direction,
+      sortDirection: direction || 'desc',
     };
   }
   return {};

@@ -61,6 +61,13 @@ class CollectionsQuery(Query):
 
         return query
 
+    def get_sort(self):
+        # if self.parser.sorts[0][0] == "relevance" crashes on empty
+        sort = [f for (f, d) in self.parser.sorts]
+        if sort == ["relevance"]:
+            return self.SORT_DEFAULT
+        return super().get_sort()
+
     def get_index(self):
         return collections_index()
 
