@@ -2,8 +2,8 @@ import logging
 
 from followthemoney import model
 from normality import normalize
+from openaleph_search.index.configure import configure_index
 from openaleph_search.index.indexer import (
-    configure_index,
     delete_safe,
     index_safe,
     query_delete,

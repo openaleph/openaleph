@@ -3,7 +3,8 @@ from datetime import datetime
 
 from banal import hash_data
 from followthemoney.util import get_entity_id
-from openaleph_search.index.indexer import configure_index, index_safe, query_delete
+from openaleph_search.index.configure import configure_index
+from openaleph_search.index.indexer import index_safe, query_delete
 from openaleph_search.index.mapping import FieldType
 from openaleph_search.index.util import index_name, index_settings
 
