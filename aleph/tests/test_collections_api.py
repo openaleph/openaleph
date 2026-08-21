@@ -133,7 +133,7 @@ class CollectionsApiTestCase(TestCase):
         assert res.json["casefile"] is False, res.json
 
         # Non-admins keep creating casefiles regardless of the flag.
-        _, headers_user = self.login()
+        _, headers_user = self.login("non_admin")
         data = {"foreign_id": "user_case", "label": "Case", "casefile": False}
         data["category"] = "other"
         res = self.client.post(url, json=data, headers=headers_user)
