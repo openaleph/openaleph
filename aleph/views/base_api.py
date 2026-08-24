@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from functools import lru_cache
 
 from babel import Locale
@@ -269,11 +268,11 @@ def _check_redis():
 
 
 def _check_archive():
-    from openaleph_procrastinate.archive import get_archive
+    from openaleph_procrastinate.repository import get_archive
 
     try:
-        archive = get_archive()
-        archive.put("healthz", datetime.now())
+        archive = get_archive("healthz")
+        archive.healthz()
     except Exception as exc:
         raise RuntimeError(f"Archive health check failed: {exc}")
 

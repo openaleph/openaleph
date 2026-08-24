@@ -296,7 +296,8 @@ class EntitySerializer(Serializer):
                     "entities_api.translate", entity_id=proxy.id
                 )
 
-            tracer = defer.tasks.translate.get_tracer(TRACER_URI)
+            dataset = "collection_%s" % obj["collection"]["id"]
+            tracer = defer.tasks.translate.get_tracer(dataset, TRACER_URI)
             obj["processing_status"] = {"translate": tracer.is_processing(obj["id"])}
 
         return obj
