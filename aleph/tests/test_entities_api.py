@@ -1,13 +1,18 @@
 import datetime
 import json
 import logging
+import os
 from pprint import pformat
+from unittest.mock import patch
+
+from openaleph_procrastinate.defer import tasks as defer_tasks
 
 from aleph.core import db
 from aleph.index.util import index_entity
 from aleph.model.bookmark import Bookmark
 from aleph.settings import SETTINGS
 from aleph.tests.util import JSON, TestCase, get_caption
+from aleph.views.serializers import TRACER_URI
 from aleph.views.util import validate
 
 log = logging.getLogger(__name__)
@@ -103,6 +108,68 @@ class EntitiesApiTestCase(TestCase):
         assert "LegalEntity" in res.json["schema"], res.json
         assert "Winnie" in get_caption(res.json), res.json
         validate(res.json, "Entity")
+
+    def test_translate_processing_status(self):
+        """Queueing a translation must surface in the detail view's
+        processing_status until the worker clears the tracer entry."""
+        _, headers = self.login(is_admin=True)
+        doc = self.create_entity(
+            {
+                "schema": "PlainText",
+                "properties": {
+                    "fileName": "story.txt",
+                    "bodyText": ["hello world"],
+                    "detectedLanguage": ["eng"],
+                },
+            },
+            self.col,
+        )
+        db.session.commit()
+        index_entity(doc)
+        url = "/api/2/entities/%s" % doc.id
+
+        # same cache key as the serializer, so this is the very same Tracer
+        tracer = defer_tasks.translate.get_tracer(
+            "collection_%s" % self.col.id, TRACER_URI
+        )
+        self.addCleanup(tracer.finish, doc.id)
+
+        source_languages = SETTINGS.FTM_TRANSLATE_SOURCE_LANGUAGES
+        SETTINGS.FTM_TRANSLATE_SOURCE_LANGUAGES = ["eng"]
+        self.addCleanup(
+            setattr, SETTINGS, "FTM_TRANSLATE_SOURCE_LANGUAGES", source_languages
+        )
+
+        # `DeferSettings` is a module-level singleton, so the stage has to be
+        # enabled on the attribute; `PROCRASTINATE_SYNC=0` keeps `Job.defer`
+        # from draining the queue with an in-process worker.
+        translate_patch = patch.object(defer_tasks.translate, "defer", True)
+        translate_patch.start()
+        self.addCleanup(translate_patch.stop)
+        env_patch = patch.dict(os.environ, {"PROCRASTINATE_SYNC": "0"})
+        env_patch.start()
+        self.addCleanup(env_patch.stop)
+
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res.json
+        assert res.json["processing_status"]["translate"] is False, res.json
+        assert "translate" in res.json["links"], res.json["links"]
+
+        res = self.client.post(
+            url + "/translate",
+            data=json.dumps({"source_language": "eng"}),
+            content_type=JSON,
+            headers=headers,
+        )
+        assert res.status_code == 202, (res.status_code, res.data)
+
+        res = self.client.get(url, headers=headers)
+        assert res.json["processing_status"]["translate"] is True, res.json
+
+        # the ftm-translate worker deletes the tracer entry when it succeeds
+        tracer.finish(doc.id)
+        res = self.client.get(url, headers=headers)
+        assert res.json["processing_status"]["translate"] is False, res.json
 
     def test_view_bookmarked(self):
         role, headers = self.login(is_admin=True)

@@ -88,7 +88,7 @@ def queue_translate(
     with app.open():
         defer.translate(app, dataset, [proxy], **context)
     # we want to trace the processing status for the UI:
-    tracer = defer.tasks.translate.get_tracer(oa_settings.redis_url)
+    tracer = defer.tasks.translate.get_tracer(dataset, oa_settings.redis_url)
     tracer.add(proxy.id)
 
 
