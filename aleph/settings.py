@@ -220,7 +220,7 @@ class Settings:
         # XREF tuning and behaviour
         self.XREF_SCROLL = env.get("ALEPH_XREF_SCROLL", "5m")
         self.XREF_SCROLL_SIZE = env.get("ALEPH_XREF_SCROLL_SIZE", "1000")
-        self.XREF_REIFY_MENTIONS = env.as_bool("ALEPH_XREF_REIFY_MENTIONS", True)
+        self.XREF_REIFY_MENTIONS = env.to_bool("ALEPH_XREF_REIFY_MENTIONS", True)
 
         ###############################################################################
         # Feature flags
