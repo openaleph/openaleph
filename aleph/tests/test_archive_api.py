@@ -1,11 +1,15 @@
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 from urllib.parse import parse_qs, urlparse
 
 from followthemoney.proxy import EntityProxy
+from ftm_lakehouse import get_archive as lakehouse_archive
+from ftm_lakehouse.core.conventions import path as lakehouse_path
 from openaleph_search.index.entities import index_proxy
 
 from aleph.core import archive
 from aleph.logic.util import archive_token, archive_url
+from aleph.repository.archive import get_archive
 from aleph.tests.util import TestCase
 
 
@@ -18,24 +22,44 @@ class ArchiveApiTestCase(TestCase):
         self.content_hash2 = archive.archive_file(self.fixture2)
         self.role, self.headers = self.login(foreign_id="archive_admin", is_admin=True)
         self.col = self.create_collection(creator=self.role)
-        # Index the document proxy directly: going through the Entity model
-        # would strip checksum-type properties like contentHash, which users
-        # must not set themselves.
+        self.doc_id = self.index_document(self.col, self.content_hash)
+
+    def index_document(self, collection, content_hash, entity_id="document"):
+        """Index the document proxy directly: going through the Entity model
+        would strip checksum-type properties like contentHash, which users
+        must not set themselves."""
         doc = EntityProxy.from_dict(
             {
-                "id": "document",
+                "id": entity_id,
                 "schema": "PlainText",
                 "properties": {
                     "fileName": "website.html",
                     "mimeType": "text/html",
-                    "contentHash": self.content_hash,
+                    "contentHash": content_hash,
                 },
             },
             cleaned=False,
         )
-        doc.id = self.col.ns.sign(doc.id)
-        index_proxy(dataset=self.col.name, collection_id=self.col.id, proxy=doc)
-        self.doc_id = doc.id
+        doc.id = collection.ns.sign(doc.id)
+        index_proxy(dataset=collection.name, collection_id=collection.id, proxy=doc)
+        return doc.id
+
+    def create_lakehouse_collection(self, foreign_id="lakehouse_coll"):
+        """An external collection whose files live in its own lakehouse
+        dataset, on the local file system for this test."""
+        uri = "file://%s" % Path(self.temp_dir).joinpath(foreign_id)
+        collection = self.create_collection(
+            creator=self.role,  # admin
+            label="Lakehouse Collection",
+            foreign_id=foreign_id,
+            category="leak",
+            external=True,
+            lakehouse_uri=uri,
+        )
+        # the files of an external collection are put there by whatever
+        # manages the lakehouse dataset, not by aleph
+        file = lakehouse_archive(collection.foreign_id, uri=uri).store(self.fixture)
+        return collection, file.checksum
 
     def test_no_token(self):
         res = self.client.get("/api/2/archive")
@@ -57,15 +81,16 @@ class ArchiveApiTestCase(TestCase):
         parsed_url = urlparse(claim_url)
         token = parse_qs(parsed_url.query).get("token", [None])[0]
         assert token is not None
-        role_id = archive_token(token)[-1]
+        *_, role_id, collection_id = archive_token(token)
         assert role_id is None
+        assert collection_id is None
 
         # explicitly pass through role id to jwt
         claim_url = archive_url(self.content_hash, file_name="foo", role_id=1)
         parsed_url = urlparse(claim_url)
         token = parse_qs(parsed_url.query).get("token", [None])[0]
         assert token is not None
-        role_id = archive_token(token)[-1]
+        *_, role_id, collection_id = archive_token(token)
         assert role_id == 1
 
     def test_resolve_missing_params(self):
@@ -93,12 +118,13 @@ class ArchiveApiTestCase(TestCase):
         location = res.headers.get("Location")
         assert "/api/2/archive?token=" in location, location
 
-        # the signed token carries the requesting role
+        # the signed token carries the requesting role and the collection
         parsed_url = urlparse(location)
         token = parse_qs(parsed_url.query).get("token", [None])[0]
         assert token is not None
-        role_id = archive_token(token)[-1]
+        *_, role_id, collection_id = archive_token(token)
         assert role_id == self.role.id
+        assert collection_id == self.col.id
 
         # the redirect target serves the actual blob
         res = self.client.get(location)
@@ -127,7 +153,7 @@ class ArchiveApiTestCase(TestCase):
         url = "/api/2/archive/resolve?entity=%s" % self.doc_id
         mock_archive = MagicMock()
         mock_archive.generate_url.return_value = signed_url
-        with patch("aleph.views.archive_api.archive", new=mock_archive):
+        with patch("aleph.views.archive_api.get_archive", return_value=mock_archive):
             res = self.client.get(url, headers=self.headers)
             assert res.status_code == 302, res
             assert res.headers.get("Location") == signed_url, res.headers
@@ -135,3 +161,66 @@ class ArchiveApiTestCase(TestCase):
             res = self.client.get(url + "&redirect=false", headers=self.headers)
             assert res.status_code == 200, res
             assert res.json.get("url") == signed_url, res.json
+
+    def test_resolve_lakehouse(self):
+        collection, content_hash = self.create_lakehouse_collection()
+        doc_id = self.index_document(collection, content_hash)
+        url = "/api/2/archive/resolve?entity=%s" % doc_id
+        res = self.client.get(url, headers=self.headers)
+        assert res.status_code == 302, res
+
+        # a local lakehouse cannot sign urls, so this goes through a token
+        location = res.headers.get("Location")
+        assert "/api/2/archive?token=" in location, location
+        token = parse_qs(urlparse(location).query).get("token", [None])[0]
+        *_, collection_id = archive_token(token)
+        assert collection_id == collection.id
+
+        # ... and the retrieve endpoint serves the blob from the lakehouse
+        res = self.client.get(location)
+        assert res.status_code == 200, res.status_code
+        disposition = res.headers.get("Content-Disposition")
+        assert "website.html" in disposition, disposition
+        assert res.data == self.fixture.read_bytes()
+
+    def test_resolve_lakehouse_signed(self):
+        collection, content_hash = self.create_lakehouse_collection(
+            foreign_id="lakehouse_signed"
+        )
+        doc_id = self.index_document(collection, content_hash)
+        signed_url = "https://lakehouse.example.org/signed-blob-url"
+        url = "/api/2/archive/resolve?entity=%s" % doc_id
+        # the same (cached) archive the view resolves to
+        archive = get_archive(collection)
+        with patch.object(archive.store._fs, "sign", return_value=signed_url):
+            res = self.client.get(url, headers=self.headers)
+            assert res.status_code == 302, res
+            assert res.headers.get("Location") == signed_url, res.headers
+
+    def test_resolve_lakehouse_public(self):
+        collection, content_hash = self.create_lakehouse_collection(
+            foreign_id="lakehouse_public"
+        )
+        doc_id = self.index_document(collection, content_hash)
+        prefix = "https://lakehouse.example.org/public"
+        url = "/api/2/archive/resolve?entity=%s" % doc_id
+        archive = get_archive(collection)
+        with patch.object(archive._archive._model, "public_url_prefix", prefix):
+            res = self.client.get(url, headers=self.headers)
+            assert res.status_code == 302, res
+            blob = lakehouse_path.archive_blob(content_hash)
+            assert res.headers.get("Location") == "%s/%s" % (prefix, blob), res.headers
+
+    def test_resolve_lakehouse_legacy_hash(self):
+        # a collection can be moved to a lakehouse while its entities still
+        # carry the sha1 checksums of the legacy archive
+        collection, _ch = self.create_lakehouse_collection(foreign_id="lakehouse_sha1")
+        doc_id = self.index_document(collection, self.content_hash, "legacy-document")
+        url = "/api/2/archive/resolve?entity=%s" % doc_id
+        res = self.client.get(url, headers=self.headers)
+        assert res.status_code == 302, res
+        location = res.headers.get("Location")
+        assert "/api/2/archive?token=" in location, location
+
+        res = self.client.get(location)
+        assert res.status_code == 404, res.status_code

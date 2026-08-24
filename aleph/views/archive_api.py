@@ -4,12 +4,14 @@ from datetime import datetime, timedelta
 from flask import Blueprint, redirect, request, send_file
 from flask.wrappers import Response
 from followthemoney.helpers import entity_filename
+from openaleph_procrastinate.exceptions import ArchiveFileNotFound
 from rigour.mime.types import CSV, PDF
 from werkzeug.exceptions import BadRequest
 from werkzeug.wrappers import Response as WerkzeugResponse
 
-from aleph.core import archive
 from aleph.logic.util import archive_token, archive_url
+from aleph.model import Collection
+from aleph.repository.archive import get_archive
 from aleph.util import make_entity_proxy
 from aleph.views.context import tag_request
 from aleph.views.util import get_flag, get_index_entity, jsonify
@@ -105,6 +107,10 @@ def resolve() -> WerkzeugResponse:
     if mime_type is None:
         mime_type = proxy.first("mimeType", quiet=True)
     expire = datetime.utcnow() + timedelta(hours=1)
+    # The blobs of a collection can live in its own lakehouse dataset instead
+    # of the global archive.
+    collection = Collection.by_id(entity.get("collection_id"))
+    archive = get_archive(collection)
     # For storage backends that support signing (S3, GCS), hand out the
     # signed storage URL directly and save clients the extra hop through
     # the retrieve endpoint below.
@@ -116,13 +122,15 @@ def resolve() -> WerkzeugResponse:
     )
     if url is None:
         # The storage backend cannot sign URLs (e.g. local file archive),
-        # so hand out a token-authorized link to the retrieve endpoint.
+        # so hand out a token-authorized link to the retrieve endpoint. It
+        # carries the collection, which decides the backend on the way back.
         url = archive_url(
             content_hash,
             file_name=file_name,
             mime_type=mime_type,
             expire=expire,
             role_id=request.authz.id,
+            collection_id=collection.id if collection is not None else None,
         )
     if not get_flag("redirect", default=True):
         return jsonify({"url": url})
@@ -153,8 +161,12 @@ def retrieve():
       - Archive
     """
     token = request.args.get("token")
-    content_hash, file_name, mime_type, expire, role_id = archive_token(token)
+    content_hash, file_name, mime_type, expire, role_id, collection_id = archive_token(
+        token
+    )
     tag_request(content_hash=content_hash, file_name=file_name, role_id=role_id)
+    collection = Collection.by_id(collection_id)
+    archive = get_archive(collection)
     url = archive.generate_url(
         content_hash,
         file_name=file_name,
@@ -164,15 +176,16 @@ def retrieve():
     if url is not None:
         return redirect(url)
     try:
-        local_path = archive.load_file(content_hash)
-        if local_path is None:
-            return Response(status=404)
-        return send_file(
-            str(local_path),
-            as_attachment=True,
-            conditional=True,
-            download_name=file_name,
-            mimetype=mime_type,
-        )
-    finally:
-        archive.cleanup_file(content_hash)
+        # The temporary copy is released when this returns, before the body is
+        # streamed – the file stays readable through the open handle.
+        with archive.local_path(content_hash) as local_path:
+            return send_file(
+                str(local_path),
+                as_attachment=True,
+                conditional=True,
+                download_name=file_name,
+                mimetype=mime_type,
+            )
+    except (ArchiveFileNotFound, ValueError):
+        # `ValueError`: the lakehouse only knows sha256 checksums.
+        return Response(status=404)
