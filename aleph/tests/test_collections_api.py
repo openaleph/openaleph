@@ -540,6 +540,138 @@ class CollectionsApiTestCase(TestCase):
         res = self.client.post(bulk_url, headers=headers, data=bulk_data)
         assert res.status_code == 403, res
 
+    def test_lakehouse_uri(self):
+        _, headers = self.login(is_admin=True)
+
+        # Default: no lakehouse uri on a collection that is not external
+        url = "/api/2/collections/%s" % self.col.id
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res
+        assert res.json["external"] is False
+        assert "lakehouse_uri" not in res.json
+
+        # A lakehouse uri requires an external collection
+        data = res.json
+        data["lakehouse_uri"] = "s3://lakehouse/test_coll"
+        res = self.client.post(
+            url, data=json.dumps(data), headers=headers, content_type=JSON
+        )
+        assert res.status_code == 400, res
+
+        # ... it can be set within the same update that makes it external
+        data["external"] = True
+        res = self.client.post(
+            url, data=json.dumps(data), headers=headers, content_type=JSON
+        )
+        assert res.status_code == 200, res
+        assert res.json["external"] is True
+        assert res.json["lakehouse_uri"] == "s3://lakehouse/test_coll"
+
+        # ... and it survives updates of other metadata
+        data = res.json
+        data["label"] = "New label"
+        res = self.client.post(
+            url, data=json.dumps(data), headers=headers, content_type=JSON
+        )
+        assert res.status_code == 200, res
+        assert res.json["lakehouse_uri"] == "s3://lakehouse/test_coll"
+
+        # It is set on the external collection
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res
+        assert res.json["lakehouse_uri"] == "s3://lakehouse/test_coll"
+        assert validate(res.json, "Collection")
+
+        # The lakehouse uri can't stay when the collection is not external
+        data = res.json
+        data["external"] = False
+        res = self.client.post(
+            url, data=json.dumps(data), headers=headers, content_type=JSON
+        )
+        assert res.status_code == 400, res
+
+        # ... but both can be unset within the same update
+        data.pop("lakehouse_uri")
+        res = self.client.post(
+            url, data=json.dumps(data), headers=headers, content_type=JSON
+        )
+        assert res.status_code == 200, res
+        assert res.json["external"] is False
+        assert "lakehouse_uri" not in res.json
+
+    def test_lakehouse_uri_create(self):
+        _, headers = self.login(is_admin=True)
+        url = "/api/2/collections"
+
+        # Can't create a collection with a lakehouse uri if it's not external
+        data = {
+            "foreign_id": "lakehouse",
+            "label": "Lakehouse",
+            "category": "leak",
+            "lakehouse_uri": "s3://lakehouse/lakehouse",
+        }
+        res = self.client.post(url, json=data, headers=headers)
+        assert res.status_code == 400, res.json
+
+        # ... but an external one
+        data["foreign_id"] = "lakehouse_external"
+        data["external"] = True
+        res = self.client.post(url, json=data, headers=headers)
+        assert res.status_code == 200, res.json
+        assert res.json["external"] is True
+        assert res.json["lakehouse_uri"] == "s3://lakehouse/lakehouse"
+
+        # Same via the db path
+        collection = self.create_collection(
+            creator=Role.load_cli_user(),  # admin
+            label="External Collection",
+            foreign_id="test_coll_lakehouse",
+            category="leak",
+            countries=["us"],
+            languages=["eng"],
+            external=True,
+            lakehouse_uri="s3://lakehouse/test_coll_lakehouse",
+        )
+        assert collection.lakehouse_uri == "s3://lakehouse/test_coll_lakehouse"
+
+        # Can't create a non-external "lakehouse" collection via db path
+        with pytest.raises(InvalidData, match="lakehouse_uri"):
+            self.create_collection(
+                creator=Role.load_cli_user(),  # admin
+                label="Lakehouse Collection",
+                foreign_id="test_coll_lakehouse_internal",
+                category="leak",
+                countries=["us"],
+                languages=["eng"],
+                lakehouse_uri="s3://lakehouse/nope",
+            )
+
+    def test_lakehouse_uri_non_admin(self):
+        role, headers = self.login()
+        self.grant(self.col, role, True, True)
+
+        # Non-admins can't set a lakehouse uri, it is ignored
+        url = "/api/2/collections/%s" % self.col.id
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res
+        data = res.json
+        data["lakehouse_uri"] = "s3://lakehouse/test_coll"
+        res = self.client.post(
+            url, data=json.dumps(data), headers=headers, content_type=JSON
+        )
+        assert res.status_code == 200, res
+        assert "lakehouse_uri" not in res.json
+
+        # Same on creation
+        data = {
+            "foreign_id": "lakehouse",
+            "label": "Lakehouse",
+            "lakehouse_uri": "s3://lakehouse/lakehouse",
+        }
+        res = self.client.post("/api/2/collections", json=data, headers=headers)
+        assert res.status_code == 200, res.json
+        assert "lakehouse_uri" not in res.json
+
     def test_collection_create_restricted(self):
         """Only "investigators" can create collections"""
 
