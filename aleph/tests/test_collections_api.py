@@ -550,8 +550,15 @@ class CollectionsApiTestCase(TestCase):
         assert res.json["external"] is False
         assert "lakehouse_uri" not in res.json
 
-        # A lakehouse uri requires an external collection
+        # make collection non-casefile
         data = res.json
+        data["category"] = "other"
+        res = self.client.post(
+            url, data=json.dumps(data), headers=headers, content_type=JSON
+        )
+        assert res.status_code == 200
+
+        # A lakehouse uri requires an external collection
         data["lakehouse_uri"] = "s3://lakehouse/test_coll"
         res = self.client.post(
             url, data=json.dumps(data), headers=headers, content_type=JSON
