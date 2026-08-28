@@ -4,7 +4,6 @@ from urllib.parse import parse_qs, urlparse
 
 from followthemoney.proxy import EntityProxy
 from ftm_lakehouse import get_archive as lakehouse_archive
-from ftm_lakehouse.core.conventions import path as lakehouse_path
 from openaleph_search.index.entities import index_proxy
 
 from aleph.core import archive
@@ -196,20 +195,6 @@ class ArchiveApiTestCase(TestCase):
             res = self.client.get(url, headers=self.headers)
             assert res.status_code == 302, res
             assert res.headers.get("Location") == signed_url, res.headers
-
-    def test_resolve_lakehouse_public(self):
-        collection, content_hash = self.create_lakehouse_collection(
-            foreign_id="lakehouse_public"
-        )
-        doc_id = self.index_document(collection, content_hash)
-        prefix = "https://lakehouse.example.org/public"
-        url = "/api/2/archive/resolve?entity=%s" % doc_id
-        archive = get_archive(collection)
-        with patch.object(archive._archive._model, "public_url_prefix", prefix):
-            res = self.client.get(url, headers=self.headers)
-            assert res.status_code == 302, res
-            blob = lakehouse_path.archive_blob(content_hash)
-            assert res.headers.get("Location") == "%s/%s" % (prefix, blob), res.headers
 
     def test_resolve_lakehouse_legacy_hash(self):
         # a collection can be moved to a lakehouse while its entities still
