@@ -16,11 +16,11 @@ implement signing itself.
 from datetime import datetime
 from functools import cache, lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
+from urllib.parse import urlparse
 
 from anystore.store.base import Store
 from anystore.types import Uri
-from anystore.util import join_uri
 from ftm_lakehouse import get_archive as _get_archive
 from ftm_lakehouse.core.conventions import path
 from openaleph_procrastinate.repository import Archive as BaseArchive
@@ -76,12 +76,12 @@ class LakehouseArchive(BaseLakehouseArchive):
     # build a second store and, for a http lakehouse, insist on
     # `ARCHIVE_API_KEY` / `ARCHIVE_API_SECRET`.
     TIMEOUT = AnystoreArchive.TIMEOUT
-    _sign_kwargs = AnystoreArchive._sign_kwargs
-    _sign_url = AnystoreArchive.generate_url
+    generate_url = AnystoreArchive.generate_url
 
     def __init__(self, dataset: str, uri: Uri) -> None:
         self._archive = _get_archive(dataset, uri=uri)
         self._is_local = self._archive._store.is_local
+        self._base = "://".join(urlparse(str(uri))[:2])
 
     @property
     def store(self) -> Store:
@@ -101,24 +101,10 @@ class LakehouseArchive(BaseLakehouseArchive):
             pass
         return None
 
-    def generate_url(
-        self,
-        content_hash: str,
-        file_name: str | None = None,
-        mime_type: str | None = None,
-        expire: datetime | None = None,
-    ) -> str | None:
-        prefix = self._archive._model.get_public_prefix()
-        if prefix is not None:
-            # a public lakehouse serves its blobs without signing
-            key = self._locate_key(content_hash)
-            if key is None:
-                return None
-            return join_uri(prefix, key)
-        url: str | None = self._sign_url(
-            content_hash, file_name=file_name, mime_type=mime_type, expire=expire
-        )
-        return url
+    def _sign_kwargs(self, *args, **kwargs) -> dict[str, Any]:
+        sign_kwargs = AnystoreArchive._sign_kwargs(self, *args, **kwargs)
+        sign_kwargs["base_url"] = self._base
+        return sign_kwargs
 
     def archive_file(
         self, file_path: Path, mime_type: str | None = None, origin: str | None = None
