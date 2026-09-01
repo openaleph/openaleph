@@ -179,6 +179,7 @@ class EntityViews extends React.Component {
           {hasCSVExplorer && (
             <Tab
               id="csv-explorer"
+              disabled={!!processingError?.length}
               title={
                 <>
                   <Icon icon="database" className="left-icon" />
@@ -412,7 +413,7 @@ class EntityViews extends React.Component {
               panel={<EntityMoreLikeThisMode entity={entity} />}
             />
           )}
-          {entity.schema.isDocument() && !isPreview && (
+          {entity.schema.isDocument() && !isPreview && !entity.schema.isA('Table') && (
             <Tab
               id="screening"
               disabled={screening.total === 0}
@@ -432,6 +433,7 @@ class EntityViews extends React.Component {
           {entity?.collection?.writeable && entity.schema.isA('Table') && (
             <Tab
               id="mapping"
+              disabled={!!processingError?.length}
               title={
                 <>
                   <Icon icon="new-object" className="left-icon" />
