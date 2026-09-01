@@ -4605,13 +4605,15 @@ werkzeug = ">=3.1.3,<4.0.0"
 
 [[package]]
 name = "openaleph-servicelayer"
-version = "1.24.0"
+version = "1.25.0"
 description = "Basic remote service functions for openaleph components"
 optional = false
 python-versions = "*"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "openaleph_servicelayer-1.25.0-py2.py3-none-any.whl", hash = "sha256:e6ff511113225f945ab5ee0c15d963e86fcf19dc94d0ed77bc59a2552a34c2d8"},
+    {file = "openaleph_servicelayer-1.25.0.tar.gz", hash = "sha256:ccd0ed8047155ec429bfefa1561aa557372876f1b6076cce6768ba8ef491ccf0"},
+]
 
 [package.dependencies]
 anystore = {version = ">=1.3.1", extras = ["http", "putfs"], optional = true, markers = "extra == \"anystore\""}
@@ -4628,12 +4630,6 @@ amazon = ["boto3 (>=1.11.9,<2.0.0)"]
 anystore = ["anystore[http,putfs] (>=1.3.1)"]
 dev = ["boto3 (>=1.11.9,<2.0.0)", "coverage", "moto (<5)", "pytest (>=3.6)", "pytest-cov", "time-machine (>=2.14.1,<3.0.0)", "twine", "uvicorn"]
 google = ["google-cloud-storage (>=1.31.0,<3.0.0)", "grpcio (>=1.32.0,<2.0.0)"]
-
-[package.source]
-type = "git"
-url = "https://github.com/openaleph/openaleph-servicelayer.git"
-reference = "HEAD"
-resolved_reference = "1c49ab601a0b450cd5f87943d38bffad79a5c977"
 
 [[package]]
 name = "openpyxl"
@@ -7758,4 +7754,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.15"
-content-hash = "3e7261c8def8fceef278c4c200352c54668a803aa6a7ebd39117b763c1876737"
+content-hash = "2311973d62773afb25fb7668fa80f99c83fab0a65f0905d73d3b9be79852d5e1"
