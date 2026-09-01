@@ -417,9 +417,8 @@ class CSVExplorer extends Component {
         {this.renderToolbar()}
         {error && (
           <NonIdealState
-            icon="error"
-            title="Error"
-            description={error}
+            icon="issue"
+            title={error}
             action={
               <Button intent="primary" onClick={() => this.initWorker()}>
                 <FormattedMessage {...messages.retry} />

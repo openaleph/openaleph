@@ -65,7 +65,7 @@ async function processCSV() {
   });
 
   if (!parsed.data.length) {
-    self.postMessage({ type: 'error', message: 'No data found in CSV' });
+    self.postMessage({ type: 'error', message: 'No data found' });
     return;
   }
 
