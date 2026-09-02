@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 from functools import cache
+from typing import TYPE_CHECKING, Any
 
 from banal import as_bool, ensure_dict, ensure_list
 from flask_babel import lazy_gettext
@@ -16,6 +17,9 @@ from aleph.core import db
 from aleph.model.common import IdModel, SoftDeleteModel, make_textid
 from aleph.model.permission import Permission
 from aleph.model.role import Role
+
+if TYPE_CHECKING:
+    from aleph.authz import Authz
 
 log = logging.getLogger(__name__)
 
@@ -87,6 +91,10 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
     # external managed, appears read-only in UI even for admins
     external = db.Column(db.Boolean, default=False)
 
+    # location of the data in an external lakehouse, only for external
+    # collections
+    lakehouse_uri = db.Column(db.Unicode, nullable=True)
+
     # Collection inherits the `updated_at` column from `DatedModel`.
     # These two fields are used to express different semantics: while
     # `updated_at` is used to describe the last change of the metadata,
@@ -108,7 +116,7 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
         self.data_updated_at = datetime.utcnow()
         db.session.add(self)
 
-    def update(self, data, authz):
+    def update(self, data: dict[str, Any], authz: "Authz") -> None:
         self.label = data.get("label", self.label)
         self.summary = data.get("summary", self.summary)
         self.publisher = data.get("publisher", self.publisher)
@@ -145,6 +153,9 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
             self.external = data.get("external", False)
             if self.external and self.category == self.CASEFILE:
                 raise InvalidData("Can't set casefile for external collection")
+            self.lakehouse_uri = stringify(data.get("lakehouse_uri"))
+            if self.lakehouse_uri and not self.external:
+                raise InvalidData("Can't set lakehouse_uri for non-external collection")
             creator = ensure_dict(data.get("creator"))
             creator_id = data.get("creator_id", creator.get("id"))
             creator = Role.by_id(creator_id)
@@ -192,7 +203,7 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
             self._ns = Namespace(self.foreign_id)
         return self._ns
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         data = self.to_dict_dates()
         data["category"] = self.CASEFILE
         if self.category in self.CATEGORIES:
@@ -228,6 +239,7 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
                 "contains_ai": self.contains_ai,
                 "contains_ai_comment": self.contains_ai_comment,
                 "external": self.external,
+                "lakehouse_uri": self.lakehouse_uri,
                 "taggable": self.taggable,
             }
         )

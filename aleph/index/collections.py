@@ -88,6 +88,7 @@ def configure_collections():
             "contains_ai_comment": {"type": "text"},
             "taggable": FieldType.BOOL,
             "external": FieldType.BOOL,
+            "lakehouse_uri": FieldType.KEYWORD,
             "created_at": {"type": "date"},
             "updated_at": {"type": "date"},
             "count": {"type": "long"},

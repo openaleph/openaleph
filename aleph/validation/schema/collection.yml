@@ -55,6 +55,11 @@ Collection:
       type: string
     taggable:
       type: boolean
+    external:
+      type: boolean
+    lakehouse_uri:
+      type: string
+      nullable: true
 
 CollectionCreate:
   type: object
@@ -111,6 +116,11 @@ CollectionCreate:
       type: string
     taggable:
       type: boolean
+    external:
+      type: boolean
+    lakehouse_uri:
+      type: string
+      nullable: true
   required: ["label"]
 
 CollectionUpdate:
