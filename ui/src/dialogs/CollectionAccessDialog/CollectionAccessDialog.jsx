@@ -14,6 +14,11 @@ import { showSuccessToast, showWarningToast } from 'app/toast';
 
 import './CollectionAccessDialog.scss';
 
+// external collections are never writeable, but users holding write access can
+// still manage their permissions ("shareable")
+const canManagePermissions = (collection) =>
+  !!collection && (collection.writeable || collection.shareable);
+
 const messages = defineMessages({
   title: {
     id: 'collection.edit.access_title',
@@ -35,7 +40,7 @@ const messages = defineMessages({
 
 class PermissionRow extends PureComponent {
   render() {
-    const { permission, onToggle } = this.props;
+    const { permission, onToggle, showWrite } = this.props;
     return (
       <tr>
         <td>
@@ -47,12 +52,14 @@ class PermissionRow extends PureComponent {
             onClick={() => onToggle(permission, 'read')}
           />
         </td>
-        <td className="other-rows">
-          <Checkbox
-            checked={permission.write}
-            onClick={() => onToggle(permission, 'write')}
-          />
-        </td>
+        {showWrite && (
+          <td className="other-rows">
+            <Checkbox
+              checked={permission.write}
+              onClick={() => onToggle(permission, 'write')}
+            />
+          </td>
+        )}
       </tr>
     );
   }
@@ -128,7 +135,7 @@ class CollectionAccessDialog extends Component {
   fetchPermissions() {
     const { collection } = this.props;
     this.setPermissions([], true);
-    if (collection && collection.writeable) {
+    if (canManagePermissions(collection)) {
       this.props.fetchCollectionPermissions(collection.id);
     }
   }
@@ -142,10 +149,14 @@ class CollectionAccessDialog extends Component {
     const { collection, intl } = this.props;
     const { permissions, blocking } = this.state;
 
-    if (!collection || !collection.writeable || !permissions) {
+    if (!canManagePermissions(collection) || !permissions) {
       return null;
     }
 
+    // write access can't be granted on external collections, so the column is
+    // only shown for collections the current user can actually edit
+    const showWrite = !!collection.writeable;
+    const colSpan = showWrite ? '3' : '2';
     const exclude = permissions.map((perm) => perm.role.id);
     const systemRoles = this.filterPermissions('system');
     const groupRoles = this.filterPermissions('group');
@@ -172,12 +183,14 @@ class CollectionAccessDialog extends Component {
                       defaultMessage="View"
                     />
                   </th>
-                  <th>
-                    <FormattedMessage
-                      id="collection.edit.permissionstable.edit"
-                      defaultMessage="Edit"
-                    />
-                  </th>
+                  {showWrite && (
+                    <th>
+                      <FormattedMessage
+                        id="collection.edit.permissionstable.edit"
+                        defaultMessage="Edit"
+                      />
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -186,12 +199,13 @@ class CollectionAccessDialog extends Component {
                     key={permission.role.id}
                     permission={permission}
                     onToggle={this.onToggle}
+                    showWrite={showWrite}
                   />
                 ))}
                 {groupRoles.length > 0 && (
                   <>
                     <tr key="groups">
-                      <td className="header-topic" colSpan="3">
+                      <td className="header-topic" colSpan={colSpan}>
                         <FormattedMessage
                           id="collection.edit.groups"
                           defaultMessage="Groups"
@@ -203,12 +217,13 @@ class CollectionAccessDialog extends Component {
                         key={permission.role.id}
                         permission={permission}
                         onToggle={this.onToggle}
+                        showWrite={showWrite}
                       />
                     ))}
                   </>
                 )}
                 <tr key="users">
-                  <td className="header-topic" colSpan="3">
+                  <td className="header-topic" colSpan={colSpan}>
                     <FormattedMessage
                       id="collection.edit.users"
                       defaultMessage="Users"
@@ -220,10 +235,11 @@ class CollectionAccessDialog extends Component {
                     key={permission.role.id}
                     permission={permission}
                     onToggle={this.onToggle}
+                    showWrite={showWrite}
                   />
                 ))}
                 <tr key="add">
-                  <td colSpan="3">
+                  <td colSpan={colSpan}>
                     <Role.Select onSelect={this.onAddRole} exclude={exclude} />
                     <Callout intent={Intent.WARNING}>
                       <FormattedMessage

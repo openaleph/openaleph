@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import Any
 from urllib.parse import urlencode, urljoin
 
 import jwt
@@ -11,6 +12,11 @@ from aleph.settings import SETTINGS
 
 ALGORITHM = "HS256"
 DECODE = [ALGORITHM]
+
+# content hash, file name, mime type, expiration, role id, collection id
+ArchiveToken = tuple[
+    str | None, str | None, str | None, datetime, int | None, int | None
+]
 
 
 def latin_alt(value):
@@ -47,24 +53,44 @@ def entity_url(entity_id=None, **query):
 
 
 def archive_url(
-    content_hash, file_name=None, mime_type=None, expire=None, role_id=None
-):
+    content_hash: str | None,
+    file_name: str | None = None,
+    mime_type: str | None = None,
+    expire: datetime | None = None,
+    role_id: int | None = None,
+    collection_id: int | None = None,
+) -> str | None:
     """Create an access authorization link for an archive blob."""
     if content_hash is None:
         return None
     if expire is None:
         expire = datetime.utcnow() + timedelta(days=1)
-    payload = {"c": content_hash, "f": file_name, "m": mime_type, "exp": expire}
+    payload: dict[str, Any] = {
+        "c": content_hash,
+        "f": file_name,
+        "m": mime_type,
+        "exp": expire,
+    }
     if role_id is not None:
         payload["r"] = role_id
+    if collection_id is not None:
+        # the collection decides which archive backend serves the blob
+        payload["k"] = collection_id
     token = jwt.encode(payload, SETTINGS.SECRET_KEY, algorithm=ALGORITHM)
     return url_for("archive_api.retrieve", _query=[("token", token)])
 
 
-def archive_token(token):
+def archive_token(token: str) -> ArchiveToken:
     token = jwt.decode(token, key=SETTINGS.SECRET_KEY, algorithms=DECODE, verify=True)
     expire = datetime.utcfromtimestamp(token["exp"])
-    return token.get("c"), token.get("f"), token.get("m"), expire, token.get("r")
+    return (
+        token.get("c"),
+        token.get("f"),
+        token.get("m"),
+        expire,
+        token.get("r"),
+        token.get("k"),
+    )
 
 
 def entity_fingerprints(entity: EntityProxy) -> set[str]:
