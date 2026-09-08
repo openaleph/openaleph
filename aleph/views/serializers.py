@@ -176,6 +176,7 @@ class CollectionSerializer(Serializer):
     def _serialize(self, obj):
         pk = obj.get("id")
         authz = request.authz if obj.get("secret") else None
+        can_write = request.authz.can(pk, request.authz.WRITE)
         obj["links"] = {
             "self": url_for("collections_api.view", collection_id=pk),
             "xref_export": url_for("xref_api.export", collection_id=pk, _authz=authz),
@@ -183,9 +184,8 @@ class CollectionSerializer(Serializer):
             "ui": collection_url(pk),
         }
         obj["shallow"] = obj.get("shallow", True)
-        obj["writeable"] = not obj.get("external") and request.authz.can(
-            pk, request.authz.WRITE
-        )
+        obj["writeable"] = not obj.get("external") and can_write
+        obj["shareable"] = can_write
         creator_id = obj.pop("creator_id", None)
         obj["creator"] = self.resolve(Role, creator_id, RoleSerializer)
         obj["team"] = []
