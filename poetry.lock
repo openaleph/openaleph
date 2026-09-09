@@ -344,20 +344,21 @@ trio = ["trio (>=0.32.0)"]
 
 [[package]]
 name = "anystore"
-version = "1.3.1"
+version = "1.4.0"
 description = "Store and cache things anywhere"
 optional = false
 python-versions = "<3.15,>=3.11"
 groups = ["main"]
 files = [
-    {file = "anystore-1.3.1-py3-none-any.whl", hash = "sha256:94372fbe107bcfea9fae6e32354fc76d51f2149f0edf7426523bd1a8983ab706"},
-    {file = "anystore-1.3.1.tar.gz", hash = "sha256:8531fd6310cae855f15dfad412d26686cc28023c30e7649f058676696c51c38e"},
+    {file = "anystore-1.4.0-py3-none-any.whl", hash = "sha256:dc2bee069ec7233f8556d864b45e25b48ef96a63b523c3a90567920ae2974667"},
+    {file = "anystore-1.4.0.tar.gz", hash = "sha256:6e2251e9d68c7266129e53f1d4f767978de75172b2403408651611da2639068c"},
 ]
 
 [package.dependencies]
+"backports.zstd" = {version = "*", markers = "python_version < \"3.14\""}
 banal = ">=1.1.2,<2.0.0"
 cloudpickle = ">=3.1.0,<4.0.0"
-dateparser = ">=1.2.2,<2.0.0"
+dateparser = ">=1.4.3,<2.0.0"
 fsspec = [
     {version = ">2023.10,<2027"},
     {version = ">2023.10,<2027", extras = ["http"], optional = true, markers = "extra == \"http\""},
@@ -369,7 +370,7 @@ pyaml = ">=26.7.0,<27.0.0"
 pydantic = ">=2.13.4,<3.0.0"
 pydantic-settings = ">=2.15.0,<3.0.0"
 rich = ">=10.0.0,<16.0.0"
-rigour = ">=2.3.1,<3.0.0"
+rigour = ">=2.4.1,<3.0.0"
 s3fs = {version = ">2023.10,<2027", optional = true, markers = "extra == \"s3\""}
 structlog = ">=22.0.0"
 tqdm = ">=4.70.0,<5.0.0"
@@ -378,6 +379,7 @@ uuid7 = ">=0.1.0,<0.2.0"
 
 [package.extras]
 http = ["fsspec[http] (>2023.10,<2027)"]
+lz4 = ["lz4 (>=4.4.0,<5.0.0)"]
 putfs = ["putfs (>=0.4.2,<0.5.0)"]
 redis = ["fakeredis (>=2.37.1,<3.0.0)", "redis (>=8.1.0)"]
 s3 = ["s3fs (>2023.10,<2027)"]
@@ -522,69 +524,69 @@ tests = ["pytest", "pytest-asyncio"]
 
 [[package]]
 name = "ast-serialize"
-version = "0.10.0"
+version = "0.11.0"
 description = "Python bindings for mypy AST serialization"
 optional = false
 python-versions = ">=3.7"
 groups = ["main"]
 files = [
-    {file = "ast_serialize-0.10.0-cp314-cp314-pyemscripten_2026_0_wasm32.whl", hash = "sha256:2759bc9e04b13f11b80a23a7aec8da16a27217e0f4bf61019f06ea533511d2ed"},
-    {file = "ast_serialize-0.10.0-cp314-cp314t-macosx_10_12_x86_64.whl", hash = "sha256:2eef5883e824ff7d303be13ca1dd1aaeb1975ac9f3da5ceecb3ae43c84a54773"},
-    {file = "ast_serialize-0.10.0-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:6ee514e465bd43dddc6b0b1d05b5baf64035b5f945ae558d4f1021b368f1c4c1"},
-    {file = "ast_serialize-0.10.0-cp314-cp314t-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b910e8c67547efe5a5d5524de7ce80dc50a45debafaaf4b29000fc72b34a8902"},
-    {file = "ast_serialize-0.10.0-cp314-cp314t-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:0103ce489e91b0467cc2bf2fc7eaf80b7b61d5e48aed070a9c3d594e41dffaad"},
-    {file = "ast_serialize-0.10.0-cp314-cp314t-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:5cc1e7e5b6db230c980a2916350d07f9b7ad6f08fb1ab6932bd393aa0c6d9220"},
-    {file = "ast_serialize-0.10.0-cp314-cp314t-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:226535f407b70f22109c5faf777cb5c8e9189bf44f29b2fb4ba87093c2c01743"},
-    {file = "ast_serialize-0.10.0-cp314-cp314t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8274eebef548a927c3691c7f7c2f4635dde700164ce942273a464cc914241ae9"},
-    {file = "ast_serialize-0.10.0-cp314-cp314t-manylinux_2_31_riscv64.whl", hash = "sha256:6c944147c80cff8cfad185835bd4772c690019988331f05095d1d5f393eefe06"},
-    {file = "ast_serialize-0.10.0-cp314-cp314t-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:6760026ee6903cd63d89e77a0cb9ea4f150fe619ec541b8590bcaacf26dfbb81"},
-    {file = "ast_serialize-0.10.0-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:5f72062e17859d9cbf946fcd6b2d7b20d79a4fc5dc51e28198d86c6455cd1ed4"},
-    {file = "ast_serialize-0.10.0-cp314-cp314t-musllinux_1_2_armv7l.whl", hash = "sha256:0eb4562df6842d900b127c59c2896e8684e2a5eb69518cc79bfa24ec0b6bd808"},
-    {file = "ast_serialize-0.10.0-cp314-cp314t-musllinux_1_2_i686.whl", hash = "sha256:2afa657d7ce1a1e150dfa4794d1d303441bd17367d69941f9712c15e4d273b3c"},
-    {file = "ast_serialize-0.10.0-cp314-cp314t-musllinux_1_2_ppc64le.whl", hash = "sha256:7ff5abf0897f54d62bd32a2878bb154d648ceaf77f553ff39b264c1191b0d60f"},
-    {file = "ast_serialize-0.10.0-cp314-cp314t-musllinux_1_2_riscv64.whl", hash = "sha256:6f8b8a4c4e02d1bea4e2212727fa6ddf824d8c5926df03452ad491470ce37699"},
-    {file = "ast_serialize-0.10.0-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:84bac4b6f441824d91e0540362f12c0e0f8820294652521b4ce9d7e7faa56b5b"},
-    {file = "ast_serialize-0.10.0-cp314-cp314t-win32.whl", hash = "sha256:15bd638e70753e58b3d1f2859dfdeef268bc9ebfd349c5acf477bad01cb97cfc"},
-    {file = "ast_serialize-0.10.0-cp314-cp314t-win_amd64.whl", hash = "sha256:4cb6d447b3510e47090b66560e17a466f3d61e42699c475482b505fd80ff8c83"},
-    {file = "ast_serialize-0.10.0-cp314-cp314t-win_arm64.whl", hash = "sha256:efde0f316f226d4e7b211d62bc0cc17f6b4cd2d057622b889183a38956d0f9ce"},
-    {file = "ast_serialize-0.10.0-cp315-abi3.abi3t-macosx_10_12_x86_64.whl", hash = "sha256:cbcc3542259ae08153e634d50dc220723415fb24510856523052b5eeb10b4950"},
-    {file = "ast_serialize-0.10.0-cp315-abi3.abi3t-macosx_11_0_arm64.whl", hash = "sha256:2251086be53a375d256faefaedffe5ccd99187be614788f8279b41dae1c5fdee"},
-    {file = "ast_serialize-0.10.0-cp315-abi3.abi3t-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d1358ef5d98f9dc96468d171317d78d746f9ef8ca45577298512a737ba9d6514"},
-    {file = "ast_serialize-0.10.0-cp315-abi3.abi3t-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:59ef8acc0ba4315024e5000e5fa8ea656a02e375ebb5ce020f3582d308d6153d"},
-    {file = "ast_serialize-0.10.0-cp315-abi3.abi3t-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:3c9715c4379b33740c94819e55afe59e28d6d3f30f69b903b4fcb2ecb5335531"},
-    {file = "ast_serialize-0.10.0-cp315-abi3.abi3t-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:26e6dc5d1f7aa642d9e94b98e4d3e1c81dc6b595f01619658f7e9268379826c0"},
-    {file = "ast_serialize-0.10.0-cp315-abi3.abi3t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:760dce78c6c4d4df30d3df9b80be1c521e0ee1d275ae54906e9a95b150692567"},
-    {file = "ast_serialize-0.10.0-cp315-abi3.abi3t-manylinux_2_31_riscv64.whl", hash = "sha256:40a7f487e2f5523518270600e0b7f2c61beac3106da142d911c3386ed7abbcfa"},
-    {file = "ast_serialize-0.10.0-cp315-abi3.abi3t-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:a1c252b746da0ad1883b82502eeff859221eef1d66d3f95dcb2373760a34d440"},
-    {file = "ast_serialize-0.10.0-cp315-abi3.abi3t-musllinux_1_2_aarch64.whl", hash = "sha256:719c7a121cc3022d78b7f4f7a9fd159586e521531c0e495a245375d2c4695d4e"},
-    {file = "ast_serialize-0.10.0-cp315-abi3.abi3t-musllinux_1_2_armv7l.whl", hash = "sha256:d7621157ac99ae00957196e7094fe279e7547d8b505046a9d5509c4fc740e9fc"},
-    {file = "ast_serialize-0.10.0-cp315-abi3.abi3t-musllinux_1_2_i686.whl", hash = "sha256:82087a71fe39925ab0068ef2f25444a1c87d1e5f1901f32dcf82f6eddddeac6a"},
-    {file = "ast_serialize-0.10.0-cp315-abi3.abi3t-musllinux_1_2_ppc64le.whl", hash = "sha256:8aac958cf0c0b2595a0487c7b5d2ecac88fa5c0221b83b1420ac4bf472f84cb7"},
-    {file = "ast_serialize-0.10.0-cp315-abi3.abi3t-musllinux_1_2_riscv64.whl", hash = "sha256:a53a4d528171b8b709b4e7d89654532189bff53947f24ac4db9c465bb10e7cd2"},
-    {file = "ast_serialize-0.10.0-cp315-abi3.abi3t-musllinux_1_2_x86_64.whl", hash = "sha256:93ae740c6d6f5641573122a7dcffa4baa7ef9144109c54584baad5bf827ad388"},
-    {file = "ast_serialize-0.10.0-cp315-abi3.abi3t-win32.whl", hash = "sha256:4d10d8fb4b82d5bae455ce9f606920d8dcd563b812b43dcd8d6f9b11089cfb23"},
-    {file = "ast_serialize-0.10.0-cp315-abi3.abi3t-win_amd64.whl", hash = "sha256:5917460c0f8322755872db1792788fcaa3835d1fb6a3f129c65ace700c7e4663"},
-    {file = "ast_serialize-0.10.0-cp315-abi3.abi3t-win_arm64.whl", hash = "sha256:8efb53cf1c439516a563664e014ba9b6b4fd86b4869c180954edce3954a51870"},
-    {file = "ast_serialize-0.10.0-cp315-cp315-pyemscripten_2026_5_wasm32.whl", hash = "sha256:7272522ca885c0091b4f4165b9403eb54a59e157a248592cc2539098c7ada50b"},
-    {file = "ast_serialize-0.10.0-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:382cb721e2624dd1c2f4f7afd2a9b500930b057d2e24e1078cf6999c5fad1b31"},
-    {file = "ast_serialize-0.10.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:56a28b7567ba17f602a17d5603133a1292d307e957b3b5c3f66538e87548aed3"},
-    {file = "ast_serialize-0.10.0-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:8919e79a4525cdac63d51cd117c57f324936c902c7ecd0fd09d02aa88323b74d"},
-    {file = "ast_serialize-0.10.0-cp39-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:1109077d53b377d022d799bc4b171c32c3a711a716248a918d3e07875b5513cd"},
-    {file = "ast_serialize-0.10.0-cp39-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:5d17c50e1f6e8d950d79c66a18b863dee16cea3106f597203883131dd9c6ca4f"},
-    {file = "ast_serialize-0.10.0-cp39-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:cf2c6cc5a62839869317523e0f74737db0d1759d72fb62cffe57a40e040d6a55"},
-    {file = "ast_serialize-0.10.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:eb1b20121a62da5937b0c11c8f31667be0102342bf55459bb44a10d8549f8f3f"},
-    {file = "ast_serialize-0.10.0-cp39-abi3-manylinux_2_31_riscv64.whl", hash = "sha256:6e45f7d7a663c28ed44d52b4069e32335edb7a0653a908a43bef2801d8d7c344"},
-    {file = "ast_serialize-0.10.0-cp39-abi3-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:5c75ed7d94660e3ed4fd3c35672ab16c248c0be51d6b845de3edebbb6cf4526c"},
-    {file = "ast_serialize-0.10.0-cp39-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:45cfbde7e43a56a386b47f13b415d1fa4421b0a5e07ae0c84a7d883ac9aca4b2"},
-    {file = "ast_serialize-0.10.0-cp39-abi3-musllinux_1_2_armv7l.whl", hash = "sha256:b3a52baa4c457d17a5729aa9bd698da8e61731f1670b4fe33923da54daa480e3"},
-    {file = "ast_serialize-0.10.0-cp39-abi3-musllinux_1_2_i686.whl", hash = "sha256:c07cb3f354c234cfacf81da95194b085186d7f4c1f7ad06c7f04fb49e320ef6d"},
-    {file = "ast_serialize-0.10.0-cp39-abi3-musllinux_1_2_ppc64le.whl", hash = "sha256:8c91b2bc42a12252be53966a1f1b14cc5c843dfca82bee3bce38f2e96b327aa6"},
-    {file = "ast_serialize-0.10.0-cp39-abi3-musllinux_1_2_riscv64.whl", hash = "sha256:cb698ad6625a55d5d618c9d887423fd04d65dc5ad0f3ae5a8cbd96c46cea2438"},
-    {file = "ast_serialize-0.10.0-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:4496c0d20111a243525cb074a3e9a9313bbd7d3fb1d40ddee2ade9ef680b80c6"},
-    {file = "ast_serialize-0.10.0-cp39-abi3-win32.whl", hash = "sha256:ca5ff9030b426b245cf7897137872cdb6ebe43b2e4c5e04d5812ed24955a91ba"},
-    {file = "ast_serialize-0.10.0-cp39-abi3-win_amd64.whl", hash = "sha256:f1a8508054137a1cc67a64915ba588e75f03f546a9b16424aaf0cc9854b0a2a2"},
-    {file = "ast_serialize-0.10.0-cp39-abi3-win_arm64.whl", hash = "sha256:354d12c7463266f2ca655af6f0333ee91ea98c875ffc5f47f10f03c7fe8a0667"},
-    {file = "ast_serialize-0.10.0.tar.gz", hash = "sha256:f47a26cc7d2605fb645b6e7f6c21cf4fb8d7833d00ea8b48e26f057b14eccd01"},
+    {file = "ast_serialize-0.11.0-cp314-cp314-pyemscripten_2026_0_wasm32.whl", hash = "sha256:9c47daae633c843dec15c5ff5f8ec9c471deecc5257dc1f47156ebb7cc8c5b91"},
+    {file = "ast_serialize-0.11.0-cp314-cp314t-macosx_10_12_x86_64.whl", hash = "sha256:d9c73f6e08778d696f7452f9c61e914b3a0c5ec3f24f9664785550b001bb6bb6"},
+    {file = "ast_serialize-0.11.0-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:781657cd74567f5b814ce3529c636bb205824bdb86951e79a05d58190ce2599b"},
+    {file = "ast_serialize-0.11.0-cp314-cp314t-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:79baeca550ad2d2eac4619e8b848a9ebe01c6c72bf90549dbb7935df83db8e29"},
+    {file = "ast_serialize-0.11.0-cp314-cp314t-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:aea29e01c9ef7f9c46da1fccdbed1811cc2a85233d0c0d4ac9c04ffaf3c3352a"},
+    {file = "ast_serialize-0.11.0-cp314-cp314t-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:3e50f6d77d8f619e04625db5a72ab5c5256ab1b13d6de3dadbcaf3547711631d"},
+    {file = "ast_serialize-0.11.0-cp314-cp314t-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:d13a1350eb5767501d4a32bbb31ae63c17ab1c9f13f41c08e7d28150f73ac138"},
+    {file = "ast_serialize-0.11.0-cp314-cp314t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:09c38f1aa78fd664028486ad1e8e7567b88a47adf373a9e56cf1395012108edf"},
+    {file = "ast_serialize-0.11.0-cp314-cp314t-manylinux_2_31_riscv64.whl", hash = "sha256:666be7180941373dbef1083b6d5f8b566c8257afa96b21ac521df96272d4e8ef"},
+    {file = "ast_serialize-0.11.0-cp314-cp314t-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:5b08b50d364d80dfe49002c683e9753f6e703b6c9e230737fe22fc5272235448"},
+    {file = "ast_serialize-0.11.0-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:f02d0905a1c1b81ead9b277a4b35c62698619a0625a73c114b81b26f75612a2d"},
+    {file = "ast_serialize-0.11.0-cp314-cp314t-musllinux_1_2_armv7l.whl", hash = "sha256:635d63498882a5ba3b1170c6eaf1aa1c78026267e40dcbbdf4bc42b6d7babeeb"},
+    {file = "ast_serialize-0.11.0-cp314-cp314t-musllinux_1_2_i686.whl", hash = "sha256:ed1a8c44bc0557bdc3dbcf9d38df843b72f9950ef1f92d95db7c45cc8efbf136"},
+    {file = "ast_serialize-0.11.0-cp314-cp314t-musllinux_1_2_ppc64le.whl", hash = "sha256:c590495b1212d91bf696b3333c31ca1765c1b980d07bf5825f9278030211df67"},
+    {file = "ast_serialize-0.11.0-cp314-cp314t-musllinux_1_2_riscv64.whl", hash = "sha256:b19176a6f04aadca38a80ed4e070fef896db47901257df513dceb9c7fc4751ed"},
+    {file = "ast_serialize-0.11.0-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:1e185d0dc0712e8568eb0477bb29583341fb00542eff3246a39d3841ee9a0d9c"},
+    {file = "ast_serialize-0.11.0-cp314-cp314t-win32.whl", hash = "sha256:01d6b2aaa91810a377ea06524388e2e77af3a32dd9e1870e38b3627534f195ce"},
+    {file = "ast_serialize-0.11.0-cp314-cp314t-win_amd64.whl", hash = "sha256:c077a1c8bb3645e49256f4d31679fa4a3cfe1455cbf99080ddb3bbd40afa2457"},
+    {file = "ast_serialize-0.11.0-cp314-cp314t-win_arm64.whl", hash = "sha256:9e488e94ba0fe4cef06391702387656e283a3fe77653976a9a95a92a15e6ff39"},
+    {file = "ast_serialize-0.11.0-cp315-abi3.abi3t-macosx_10_12_x86_64.whl", hash = "sha256:75d12e18c8d6691ceda09f514de2effcac628b217c0b3ea17851d217bfdbdab8"},
+    {file = "ast_serialize-0.11.0-cp315-abi3.abi3t-macosx_11_0_arm64.whl", hash = "sha256:ee8928ae9305f921484239a97030146dbb674cc10327fdf84124c4a20f73382e"},
+    {file = "ast_serialize-0.11.0-cp315-abi3.abi3t-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c345fb4e035ca5db948b781d894f5d98d8a271497ce0fee319f9375d5d358c9b"},
+    {file = "ast_serialize-0.11.0-cp315-abi3.abi3t-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:e7523fce1258c810c277799557771e35a851e5c1f132d0a68ca4551675f868b7"},
+    {file = "ast_serialize-0.11.0-cp315-abi3.abi3t-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:1d861d8232f6c1661b805f22c96c3923a76c8feed1a4e504cecc0eaa3cd4077e"},
+    {file = "ast_serialize-0.11.0-cp315-abi3.abi3t-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:93206e8059d23952475099967174b7a3f573ca7dc19bdcaa59dbfbf86d76e52b"},
+    {file = "ast_serialize-0.11.0-cp315-abi3.abi3t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:18e28f523669d07547795aac3d9a5cf9e7c8d6ddf3dd48fe2090009ab35d0f69"},
+    {file = "ast_serialize-0.11.0-cp315-abi3.abi3t-manylinux_2_31_riscv64.whl", hash = "sha256:cd6b802249a22d0f44cee22452910a653493e4b974a8dbe401f6b85cb4d74219"},
+    {file = "ast_serialize-0.11.0-cp315-abi3.abi3t-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:3f552edbf9e7e0fe69b1eda569cf775c2279e5f0b839727d63c39a73adaef966"},
+    {file = "ast_serialize-0.11.0-cp315-abi3.abi3t-musllinux_1_2_aarch64.whl", hash = "sha256:0ecc5e1282b8ce7c73fc204bde4eb3bad500784e1f0e14f0b9ea624124095821"},
+    {file = "ast_serialize-0.11.0-cp315-abi3.abi3t-musllinux_1_2_armv7l.whl", hash = "sha256:2110f04937ac932c03839af266a57a8b29fd97b0789d500fa92782bdad70f475"},
+    {file = "ast_serialize-0.11.0-cp315-abi3.abi3t-musllinux_1_2_i686.whl", hash = "sha256:2fc6fcdbf95a358f3be9af5ee8ccad40e0ef61ed6b84b942003e5bd983ac4cc9"},
+    {file = "ast_serialize-0.11.0-cp315-abi3.abi3t-musllinux_1_2_ppc64le.whl", hash = "sha256:6a5879e45a85c0cce453c1302250a9d644bab59c2d615e6720da03c2d1baffe3"},
+    {file = "ast_serialize-0.11.0-cp315-abi3.abi3t-musllinux_1_2_riscv64.whl", hash = "sha256:6cf3edf38d808e3f26094473f593feb3c05d68d4c53b366c9c3a1c3284438f71"},
+    {file = "ast_serialize-0.11.0-cp315-abi3.abi3t-musllinux_1_2_x86_64.whl", hash = "sha256:c912d84a7eed20aa51ce864a37e60c275a3c4f972056aab20247ec8d01b8457e"},
+    {file = "ast_serialize-0.11.0-cp315-abi3.abi3t-win32.whl", hash = "sha256:f504a2c787d22822fcfa4297bbb014cef1dc06962a30d2710c8c1cd5cf8326ec"},
+    {file = "ast_serialize-0.11.0-cp315-abi3.abi3t-win_amd64.whl", hash = "sha256:d0ee62b0149144785e2ea158cade30a41d90446cbaeae5745cb996adcee99c68"},
+    {file = "ast_serialize-0.11.0-cp315-abi3.abi3t-win_arm64.whl", hash = "sha256:2468e68d7f5b6d80fb619f614734f46ab8c2d474437bcba16cf3f63b5e1b3f79"},
+    {file = "ast_serialize-0.11.0-cp315-cp315-pyemscripten_2026_5_wasm32.whl", hash = "sha256:ce35aa812044357c2a2767964def40c06c7b1ecbb94d98c73715b7978a460beb"},
+    {file = "ast_serialize-0.11.0-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:d2e3fb7476f2ccc2c2e40155f8e04e6110be98b6f51e52cc5476f3be5b1a1956"},
+    {file = "ast_serialize-0.11.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:fc0a2fc3335a72a750c84e2a8cf113e4265edc930ac1b64b5f52fb7685070e3a"},
+    {file = "ast_serialize-0.11.0-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:26803ffd2daac676b4acf6683d527af091ed2fbf1c7eca861216702c3296d408"},
+    {file = "ast_serialize-0.11.0-cp39-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:c394f64c4a7aba67173dda8b70087b37c82dc899265dca160a9ccd0d2c9e1ff5"},
+    {file = "ast_serialize-0.11.0-cp39-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:ce307fe34458a9fb87c660730796e55f977acf5c4e9c645a806faf3436d402a9"},
+    {file = "ast_serialize-0.11.0-cp39-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:82f67de691ae29aa44afc6fff5d7c77f93bd5218954757a9453ebdbe924cfb12"},
+    {file = "ast_serialize-0.11.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:2605d538e17e9569643b5c0722da8d39b1d758391e2a1902f44abfe42b8f7f78"},
+    {file = "ast_serialize-0.11.0-cp39-abi3-manylinux_2_31_riscv64.whl", hash = "sha256:8dcae98b677ca0ed9988d09b83394db65385ca6f45b0ee8892e68c90e5d8df74"},
+    {file = "ast_serialize-0.11.0-cp39-abi3-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:8a2ed2669adf5e92f4d0cfd70a72c8f949c66309657eabb54a2c7a0ba2577f8d"},
+    {file = "ast_serialize-0.11.0-cp39-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:60d3fd70362b539318e1149ca09df0d0f9ff03e7ea72b117453003a9d8598ab7"},
+    {file = "ast_serialize-0.11.0-cp39-abi3-musllinux_1_2_armv7l.whl", hash = "sha256:1241b3963a07bd474f0a5d53f054bbbda278c805efd1d7b4ce41d0d3c5becc1e"},
+    {file = "ast_serialize-0.11.0-cp39-abi3-musllinux_1_2_i686.whl", hash = "sha256:a2fbc5cbff379354d6e07296f0f953955543f60134ffd91fb8f14fc0b4f1aeaa"},
+    {file = "ast_serialize-0.11.0-cp39-abi3-musllinux_1_2_ppc64le.whl", hash = "sha256:0cc0c793063fe07e52244c66ceb2b2c5eecaa826dbb250fdeb7f0502e5697782"},
+    {file = "ast_serialize-0.11.0-cp39-abi3-musllinux_1_2_riscv64.whl", hash = "sha256:d475173e59fec5dd1bad84d8351c7f5230119b1d5c68bad93264657589a93043"},
+    {file = "ast_serialize-0.11.0-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:26bd819c06ee10df68dbcf2fb12c8fd2249bcadffe25ba7011f0686cbfd69b94"},
+    {file = "ast_serialize-0.11.0-cp39-abi3-win32.whl", hash = "sha256:4c4c2df749d1dc6bba9a9e8cc4b5c3dfc39a351fbfe4ce22ca49c2d488c7a7ce"},
+    {file = "ast_serialize-0.11.0-cp39-abi3-win_amd64.whl", hash = "sha256:dd3c69e27b1be3172880bce2867c359106c28c5909f1ca6154bb7bf89847c419"},
+    {file = "ast_serialize-0.11.0-cp39-abi3-win_arm64.whl", hash = "sha256:eb22d9300e7a064fa8c45e2c1e568a4e36c4c91487ea0da5e7f589905365c866"},
+    {file = "ast_serialize-0.11.0.tar.gz", hash = "sha256:8b4b9862436eaf1442d6a16b7e138d4ff6ae558bdb6fde1c4cd87735093d5744"},
 ]
 
 [[package]]
@@ -1839,14 +1841,14 @@ valkey = ["valkey (>=6) ; python_version >= \"3.8\""]
 
 [[package]]
 name = "filelock"
-version = "3.32.5"
+version = "3.32.6"
 description = "A platform independent file lock."
 optional = false
 python-versions = ">=3.10"
 groups = ["dev"]
 files = [
-    {file = "filelock-3.32.5-py3-none-any.whl", hash = "sha256:142cd9fa77a872c5e78c62329a0d15278fadc686eb89e760017968961a4fd6b2"},
-    {file = "filelock-3.32.5.tar.gz", hash = "sha256:f6a6a28f743f9b95ce19db5abe0f376f75eb56517dff21e1a4751e2657d3e83d"},
+    {file = "filelock-3.32.6-py3-none-any.whl", hash = "sha256:3f16ecd0117feae0dfc147e8c62eb5daeccd8bd800378c3ddf416de9b4feb6b1"},
+    {file = "filelock-3.32.6.tar.gz", hash = "sha256:a3f55a18af3652a94d8f47d6055df434f254ca1d02ef2524850c6d249ca2512c"},
 ]
 
 [[package]]
@@ -2235,22 +2237,21 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "ftm-lakehouse"
-version = "0.7.1"
+version = "0.8.1"
 description = "Data standard, storage and retrieval for structured and unstructured FollowTheMoney data"
 optional = false
-python-versions = "<3.15,>=3.11"
+python-versions = "<3.15,>=3.12"
 groups = ["main"]
 files = [
-    {file = "ftm_lakehouse-0.7.1-py3-none-any.whl", hash = "sha256:9e7708a66f42d14dfbf8af93476c2a5cb0d0bac329c4dcb6f903411bc55e2021"},
-    {file = "ftm_lakehouse-0.7.1.tar.gz", hash = "sha256:1ccf36cd8fc9f665389ee7cf120b7e3c58f8e4000406b513db3b37fb60b970af"},
+    {file = "ftm_lakehouse-0.8.1-py3-none-any.whl", hash = "sha256:8676c25de831b86ca1e77e16a39345d1a743689299148a3b395f4c1684c19c96"},
+    {file = "ftm_lakehouse-0.8.1.tar.gz", hash = "sha256:0d08bb1208c798da16918c1fe835a52865d79b3d39c58f22f4250ba725d9c1b2"},
 ]
 
 [package.dependencies]
 adbc-driver-postgresql = {version = ">=1.12,<2", optional = true, markers = "extra == \"postgres\""}
-anystore = ">=1.3.1,<2.0.0"
-"backports.zstd" = {version = "*", markers = "python_version < \"3.14\""}
-followthemoney = ">=4.10.2,<5.0.0"
-ftmq = {version = ">=5.0.0,<6.0.0", extras = ["lake"]}
+anystore = ">=1.4.0,<2.0.0"
+followthemoney = ">=4.11.0,<5.0.0"
+ftmq = {version = ">=5.1.0,<6.0.0", extras = ["lake"]}
 httpx = ">=0.28.1,<0.29.0"
 psycopg2-binary = {version = ">=2.9,<3", optional = true, markers = "extra == \"postgres\""}
 putfs = ">=0.4.2,<0.5.0"
@@ -2266,31 +2267,31 @@ s3 = ["s3fs (>2024.2.0)"]
 
 [[package]]
 name = "ftmq"
-version = "5.0.0"
+version = "5.1.0"
 description = "followthemoney query dsl and io helpers"
 optional = false
 python-versions = "<3.15,>=3.11"
 groups = ["main"]
 files = [
-    {file = "ftmq-5.0.0-py3-none-any.whl", hash = "sha256:af75229a1152ab20447b5d3ed81a78bbe1d34c103c442b46ff4edd6fccd4e0a6"},
-    {file = "ftmq-5.0.0.tar.gz", hash = "sha256:2ea39f8daade3597e0b916236cfa48cd9071d6820aa8abe9f09875d46341f9d3"},
+    {file = "ftmq-5.1.0-py3-none-any.whl", hash = "sha256:682d9e4f1bf0511de76facdfc304eea9939001ff546054a74596645d33d1564d"},
+    {file = "ftmq-5.1.0.tar.gz", hash = "sha256:e97b16f55341f1c9f04289caa786e8f9b3b5b52b2c75c029761563c297dbade7"},
 ]
 
 [package.dependencies]
-anystore = ">=1.2.6,<2.0.0"
+anystore = ">=1.4.0,<2.0.0"
 deltalake = {version = ">=1.6.3,<2.0.0", optional = true, markers = "extra == \"lake\""}
 duckdb = {version = ">=1.5.5,<2.0.0", optional = true, markers = "extra == \"lake\""}
-followthemoney = ">=4.10.2,<5.0.0"
+followthemoney = ">=4.11.0,<5.0.0"
 nomenklatura = ">=4.14.0,<5.0.0"
 normality = ">=3.1.0,<4.0.0"
 orjson = ">=3.10.18,<4.0.0"
 pandas = {version = ">=3.0.5,<4.0.0", optional = true, markers = "extra == \"lake\""}
-psycopg = {version = ">=3.2.9,<4.0.0", extras = ["pool"], optional = true, markers = "extra == \"postgres\""}
+psycopg = {version = ">=3.3.5,<4.0.0", extras = ["pool"], optional = true, markers = "extra == \"postgres\""}
 pyarrow = {version = ">=25.0.1,<26.0.0", optional = true, markers = "extra == \"lake\""}
 pyrql = ">=0.7.11,<1.0.0"
-rigour = ">=2.3.1,<3.0.0"
+rigour = ">=2.4.1,<3.0.0"
 sqlalchemy = {version = ">=2.0.51,<3.0.0", optional = true, markers = "extra == \"postgres\""}
-typer = ">=0.26.8,<1"
+typer = ">=0.27.2,<1"
 
 [package.extras]
 aleph = ["alephclient (>=2.6.0,<3.0.0)", "furl (>=2.1.4,<3.0.0)"]
@@ -2298,7 +2299,7 @@ api = ["fastapi (>=0.139.2,<0.140.0)", "furl (>=2.1.4,<3.0.0)", "granian (>=2.7.
 duckdb = ["duckdb (>=1.5.5,<2.0.0)", "duckdb-engine (>=0.17.0,<0.18.0)", "sqlalchemy (>=2.0.51,<3.0.0)"]
 lake = ["deltalake (>=1.6.3,<2.0.0)", "duckdb (>=1.5.5,<2.0.0)", "pandas (>=3.0.5,<4.0.0)", "pyarrow (>=25.0.1,<26.0.0)"]
 level = ["plyvel (>=1.5.1,<2.0.0)"]
-postgres = ["psycopg[pool] (>=3.2.9,<4.0.0)", "sqlalchemy (>=2.0.51,<3.0.0)"]
+postgres = ["psycopg[pool] (>=3.3.5,<4.0.0)", "sqlalchemy (>=2.0.51,<3.0.0)"]
 search = ["tantivy (>=0.26.0,<0.27.0)"]
 sql = ["sqlalchemy (>=2.0.51,<3.0.0)"]
 
@@ -4272,14 +4273,14 @@ files = [
 
 [[package]]
 name = "narwhals"
-version = "2.25.0"
+version = "2.26.0"
 description = "Extremely lightweight compatibility layer between dataframe libraries"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "narwhals-2.25.0-py3-none-any.whl", hash = "sha256:1f0f403e8c7e4463cde9bfe78b12fdd809e3ae3dda6d9b2f802934fb9c7a6a8f"},
-    {file = "narwhals-2.25.0.tar.gz", hash = "sha256:62c036c810662bf7820b7737077176313bc59350eeeefb808510f388c743e4b2"},
+    {file = "narwhals-2.26.0-py3-none-any.whl", hash = "sha256:29326d74f107c347fd1009bd58e38d9f7c7c5b51e6de97bc93dbc325d9038b54"},
+    {file = "narwhals-2.26.0.tar.gz", hash = "sha256:6b9cadca82f375c7e4cf584fdc86ca25da54827307a9c58f94547ee6104b82dd"},
 ]
 
 [package.extras]
@@ -4534,32 +4535,28 @@ files = [
 
 [[package]]
 name = "openaleph-procrastinate"
-version = "5.3.3"
+version = "5.3.4"
 description = "Task queue logic for OpenAleph built upon procrastinate"
 optional = false
-python-versions = ">=3.11,<3.15"
+python-versions = "<3.15,>=3.12"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "openaleph_procrastinate-5.3.4-py3-none-any.whl", hash = "sha256:99ea0971a64cc6896def4363becd76c05b42249421e4ad7b8937463db031b404"},
+    {file = "openaleph_procrastinate-5.3.4.tar.gz", hash = "sha256:78b05bc61e3f9236b8e06a664aba13d473abc769f3becd10bedd1f2329c0476d"},
+]
 
 [package.dependencies]
-anystore = {version = ">=1.3.1,<2.0.0", extras = ["http", "s3"]}
+anystore = {version = ">=1.4.0,<2.0.0", extras = ["putfs", "s3"]}
 cachetools = "<6"
-followthemoney = ">=4.10.1,<5.0.0"
-ftm-lakehouse = {version = ">=0.7.1,<0.8.0", extras = ["postgres"]}
-ftmq = ">=5.0.0,<6.0.0"
+followthemoney = ">=4.11.0,<5.0.0"
+ftm-lakehouse = {version = ">=0.8.1,<0.9.0", extras = ["postgres"]}
+ftmq = ">=5.1.0,<6.0.0"
 openaleph-servicelayer = ">=1.25.0,<2.0.0"
 procrastinate = ">=3.9.0,<4.0.0"
 psycopg = ">=3.3.4,<4.0.0"
 psycopg-pool = ">=3.3.1,<4.0.0"
 pydantic = ">=2.11.7,<3.0.0"
 pydantic-settings = ">=2.15.0,<3.0.0"
-
-[package.source]
-type = "git"
-url = "https://github.com/openaleph/openaleph-procrastinate.git"
-reference = "HEAD"
-resolved_reference = "f81b519fd9391c48ff680a54ade607fa7e13ae5d"
 
 [[package]]
 name = "openaleph-search"
@@ -4879,14 +4876,14 @@ files = [
 
 [[package]]
 name = "platformdirs"
-version = "4.11.7"
+version = "4.11.8"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`."
 optional = false
 python-versions = ">=3.10"
 groups = ["main", "dev"]
 files = [
-    {file = "platformdirs-4.11.7-py3-none-any.whl", hash = "sha256:8a02cb259042c79d1cd0450facc2fe6dc9d303ae7901afbe33bf8ea0b188cef6"},
-    {file = "platformdirs-4.11.7.tar.gz", hash = "sha256:4f41487eeeeeb07f3a6625e61d9bc0ae6809f92d3386dbd74392fbb76108104d"},
+    {file = "platformdirs-4.11.8-py3-none-any.whl", hash = "sha256:52f2f181bbfde907966932cc8312d967d02976422d66d537ea16092b8e291081"},
+    {file = "platformdirs-4.11.8.tar.gz", hash = "sha256:f23abafea7dd4276d1f29104b83598d7dcc567cafd07c9c951e66665645437fc"},
 ]
 
 [[package]]
@@ -7370,14 +7367,14 @@ files = [
 
 [[package]]
 name = "virtualenv"
-version = "21.7.8"
+version = "21.7.9"
 description = "Virtual Python Environment builder"
 optional = false
 python-versions = ">=3.9"
 groups = ["dev"]
 files = [
-    {file = "virtualenv-21.7.8-py3-none-any.whl", hash = "sha256:3040eb3cbf5d32b10ffd57d167e6a162237ad82ba7d8cf1400a1efed593d85ac"},
-    {file = "virtualenv-21.7.8.tar.gz", hash = "sha256:1dc49c790072a9072cb1803f9bd62aa69cd583077cada32390f75505cdc64c9b"},
+    {file = "virtualenv-21.7.9-py3-none-any.whl", hash = "sha256:ba3b0bb41063c848d84d76a9fe3fb7711aaa0f2fe78708e8f3cd9714770e4eac"},
+    {file = "virtualenv-21.7.9.tar.gz", hash = "sha256:a7e42d81d779dec8afd7dc4be71640fb959ea861bccfa5980cb4ad9f92e30675"},
 ]
 
 [package.dependencies]
@@ -7751,4 +7748,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.15"
-content-hash = "aa6a9d257a2cf8f7c3dcff31efa846a6f6198ea29f381bdf79c666b1e5eda228"
+content-hash = "2e467dc2da0c733850b58cf85f3ed630ebfdf0450073adb42b3f4729b0f50ee1"
