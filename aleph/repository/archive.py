@@ -93,7 +93,7 @@ class LakehouseArchive(BaseLakehouseArchive):
         layout (`xx/yy/zz/<hash>`), which is not the one the lakehouse uses."""
         try:
             if self._archive.exists(content_hash):
-                return path.archive_blob(content_hash)
+                return str(path.ArchiveKey(content_hash).blob)
         except ValueError:
             # the lakehouse only knows sha256 checksums, but a collection that
             # was moved there can still have sha1 hashes of the legacy archive
