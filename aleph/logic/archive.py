@@ -9,7 +9,7 @@ from openaleph_search.index.indexes import entities_read_index
 from openaleph_search.index.util import MAX_REQUEST_TIMEOUT, MAX_TIMEOUT
 
 from aleph.core import archive, db
-from aleph.model import Document, Export
+from aleph.model import Collection, Document, Export
 
 log = logging.getLogger(__name__)
 
@@ -57,12 +57,25 @@ def cleanup_archive(prefix=None):
             archive.delete_file(content_hash)
 
 
+def lakehouse_collection_ids() -> list[int]:
+    """The ids of the collections that keep their blobs in their own lakehouse
+    dataset instead of in the archive behind aleph."""
+    q = db.session.query(Collection.id)
+    q = q.filter(Collection.lakehouse_uri != None)  # noqa: E711
+    q = q.filter(Collection.lakehouse_uri != "")
+    return [collection_id for (collection_id,) in q]
+
+
 def iter_document_checksums(
     batch_size: int = DOCUMENT_BATCH_SIZE,
 ) -> Generator[str, None, None]:
-    """Stream the distinct content hashes stored in the documents table."""
+    """Stream the distinct content hashes stored in the documents table,
+    skipping the collections that have a `lakehouse_uri`."""
     q = db.session.query(Document.content_hash).distinct()
     q = q.filter(Document.content_hash != None)  # noqa: E711
+    exclude = lakehouse_collection_ids()
+    if len(exclude):
+        q = q.filter(Document.collection_id.notin_(exclude))
     for (content_hash,) in q.yield_per(batch_size):
         yield content_hash
 
@@ -73,10 +86,18 @@ def iter_index_checksums(
     """Stream the distinct checksums mentioned by entities in the search
     index. This sweeps the checksum group field of all schemata that can
     carry one (documents, but also e.g. pages and packages) using a
-    composite aggregation, which pages through the terms in order."""
+    composite aggregation, which pages through the terms in order. The
+    collections that have a `lakehouse_uri` are skipped."""
     schemata = model.get_type_schemata(registry.checksum)
     index = entities_read_index(schemata)
     es = get_es()
+    exclude = lakehouse_collection_ids()
+    query: dict[str, Any] = {"match_all": {}}
+    if len(exclude):
+        # `collection_id` is indexed as a keyword, so the ids have to be
+        # stringified to match.
+        collection_ids = [str(collection_id) for collection_id in exclude]
+        query = {"bool": {"must_not": [{"terms": {"collection_id": collection_ids}}]}}
     after: dict[str, Any] | None = None
     while True:
         composite: dict[str, Any] = {
@@ -87,6 +108,7 @@ def iter_index_checksums(
             composite["after"] = after
         body = {
             "size": 0,
+            "query": query,
             "timeout": MAX_TIMEOUT,
             "aggs": {"checksums": {"composite": composite}},
         }
@@ -105,6 +127,10 @@ def iter_checksums() -> Generator[str, None, None]:
     the documents table, followed by the ones mentioned by entities in the
     search index. Hashes are de-duplicated within each of the two sources,
     but not across them.
+
+    Only the collections without a `lakehouse_uri` are considered: the blobs
+    of a collection that has one don't live in the archive behind aleph but
+    in that (external) lakehouse dataset.
 
     This does not touch the archive itself. The hashes of the blobs stored
     in a local (file-based) archive are the names of its leaf directories,

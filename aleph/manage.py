@@ -1362,6 +1362,9 @@ def checksums(outfile: TextIO) -> None:
     more than once as the two sources overlap, pipe through `sort -u` to
     get a unique listing.
 
+    Collections that have a `lakehouse_uri` are left out: their blobs are
+    stored in that external lakehouse dataset, not in the aleph archive.
+
     The counterpart is the listing of the blobs that are actually stored
     in a local (file-based) archive. Those live in the leaf directories
     of the archive path, each of which is named after the content hash it
