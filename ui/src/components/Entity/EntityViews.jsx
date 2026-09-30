@@ -101,7 +101,9 @@ class EntityViews extends React.Component {
     const hasTextOnlyMode = entity.schema.isAny(['Pages', 'Image']);
     const hasTextMode =
       hasTextOnlyMode || entity.schema.isAny(['Video', 'Audio']);
-    const hasBrowseMode = entity.schema.isA('Folder');
+    const isFolder = entity.schema.isA('Folder');
+    const hasBrowseMode =
+      isFolder || (entity.schema.isDocument() && children.total > 0);
     const hasCSVExplorer = !isPreview && entity.schema.isA('Table');
     const hasViewer = entity.schema.isAny([
       'Pages',
@@ -112,7 +114,7 @@ class EntityViews extends React.Component {
       'PlainText',
     ]);
     const hasDocumentViewMode =
-      hasViewer || (!hasBrowseMode && !hasTextOnlyMode);
+      hasViewer || (!isFolder && !hasTextOnlyMode);
     const hasViewMode = entity.schema.isDocument() && hasDocumentViewMode;
     const hasTranslation = !!entity.getFirst('translatedText');
     const processingError = entity.getProperty('processingError');
