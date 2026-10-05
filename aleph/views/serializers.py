@@ -220,8 +220,11 @@ class EntitySerializer(Serializer):
             prop = schema.get(name)
             if prop is None or prop.type != registry.entity:
                 continue
+            prop_range = prop.range
+            if prop_range is not None and prop_range.is_a(Document.SCHEMA):
+                prop_range = model.get(Document.SCHEMA)
             for value in ensure_list(values):
-                self.queue(Entity, value, schema=prop.range)
+                self.queue(Entity, value, schema=prop_range)
 
     def _serialize(self, obj):  # noqa: C901
         proxy = make_entity_proxy(dict(obj))

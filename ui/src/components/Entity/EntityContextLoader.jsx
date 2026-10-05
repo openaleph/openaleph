@@ -100,7 +100,7 @@ class EntityContextLoader extends PureComponent {
     }
 
     const { childrenResult, childrenQuery } = this.props;
-    if (entity?.schema?.isA('Folder') && childrenResult.shouldLoad) {
+    if (entity?.schema?.isDocument() && childrenResult.shouldLoad) {
       this.props.queryEntities({ query: childrenQuery });
     }
   }
