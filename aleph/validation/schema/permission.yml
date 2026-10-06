@@ -18,6 +18,9 @@ PermissionUpdate:
       type: boolean
     read:
       type: boolean
+    email:
+      type: string
+      format: email
     role_id:
       type: string
     role:

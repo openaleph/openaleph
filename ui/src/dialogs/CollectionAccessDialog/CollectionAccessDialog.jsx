@@ -1,5 +1,12 @@
 import React, { Component, PureComponent } from 'react';
-import { Button, Classes, Callout, Checkbox, Intent } from '@blueprintjs/core';
+import {
+  Button,
+  Classes,
+  Callout,
+  Checkbox,
+  InputGroup,
+  Intent,
+} from '@blueprintjs/core';
 import { defineMessages, FormattedMessage, injectIntl } from 'react-intl';
 import { compose } from 'redux';
 import { connect } from 'react-redux';
@@ -36,6 +43,26 @@ const messages = defineMessages({
     id: 'collection.edit.save_button',
     defaultMessage: 'Save changes',
   },
+  email_placeholder: {
+    id: 'collection.edit.email_placeholder',
+    defaultMessage: 'E-mail address',
+  },
+  add_email: {
+    id: 'collection.edit.add_email',
+    defaultMessage: 'Add person by e-mail',
+  },
+  remove_email: {
+    id: 'collection.edit.remove_email',
+    defaultMessage: 'Remove',
+  },
+});
+
+let nextEmailRowId = 0;
+const newEmailRow = () => ({
+  key: `email-${nextEmailRowId++}`,
+  email: '',
+  read: true,
+  write: false,
 });
 
 class PermissionRow extends PureComponent {
@@ -60,6 +87,54 @@ class PermissionRow extends PureComponent {
             />
           </td>
         )}
+        <td className="action-cell" />
+      </tr>
+    );
+  }
+}
+
+class EmailRow extends PureComponent {
+  render() {
+    const { row, onChange, onRemove, showWrite, autoFocus, intl } = this.props;
+    return (
+      <tr className="email-row">
+        <td>
+          <InputGroup
+            type="email"
+            value={row.email}
+            autoFocus={autoFocus}
+            placeholder={intl.formatMessage(messages.email_placeholder)}
+            onChange={(e) => onChange(row.key, 'email', e.target.value)}
+            // the dialog is wrapped in a <form> without a submit handler, so
+            // stop Enter from triggering a native (page-reloading) submit
+            onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
+          />
+        </td>
+        <td className="other-rows">
+          <Checkbox
+            checked={row.read}
+            onChange={() => onChange(row.key, 'read', !row.read)}
+          />
+        </td>
+        {showWrite && (
+          <td className="other-rows">
+            <Checkbox
+              checked={row.write}
+              onChange={() => onChange(row.key, 'write', !row.write)}
+            />
+          </td>
+        )}
+        <td className="action-cell">
+          <Button
+            minimal
+            small
+            icon="trash"
+            intent={Intent.DANGER}
+            aria-label={intl.formatMessage(messages.remove_email)}
+            title={intl.formatMessage(messages.remove_email)}
+            onClick={() => onRemove(row.key)}
+          />
+        </td>
       </tr>
     );
   }
@@ -70,9 +145,13 @@ class CollectionAccessDialog extends Component {
     super(props);
     this.state = {
       permissions: [],
+      emailRows: [],
       blocking: false,
     };
-    this.onAddRole = this.onAddRole.bind(this);
+    this.bodyRef = React.createRef();
+    this.onAddEmailRow = this.onAddEmailRow.bind(this);
+    this.onChangeEmailRow = this.onChangeEmailRow.bind(this);
+    this.onRemoveEmailRow = this.onRemoveEmailRow.bind(this);
     this.onToggle = this.onToggle.bind(this);
     this.onSubmit = this.onSubmit.bind(this);
   }
@@ -95,10 +174,28 @@ class CollectionAccessDialog extends Component {
     }
   }
 
-  onAddRole(role) {
-    const { permissions } = this.state;
-    permissions.push({ role, read: true, write: false });
-    this.setState({ permissions });
+  onAddEmailRow() {
+    this.setState(
+      ({ emailRows }) => ({ emailRows: [...emailRows, newEmailRow()] }),
+      () => {
+        const body = this.bodyRef.current;
+        if (body) body.scrollTo({ top: body.scrollHeight, behavior: 'smooth' });
+      }
+    );
+  }
+
+  onChangeEmailRow(key, field, value) {
+    this.setState(({ emailRows }) => ({
+      emailRows: emailRows.map((row) =>
+        row.key === key ? { ...row, [field]: value } : row
+      ),
+    }));
+  }
+
+  onRemoveEmailRow(key) {
+    this.setState(({ emailRows }) => ({
+      emailRows: emailRows.filter((row) => row.key !== key),
+    }));
   }
 
   onToggle(permission, flag) {
@@ -112,11 +209,20 @@ class CollectionAccessDialog extends Component {
 
   async onSubmit() {
     const { intl, collection } = this.props;
-    const { permissions, blocking } = this.state;
+    const { permissions, emailRows, blocking } = this.state;
     if (blocking) return;
+
+    const emailPermissions = emailRows
+      .map(({ email, read, write }) => ({ email: email.trim(), read, write }))
+      .filter(({ email }) => email.length > 0);
+
     this.setState({ blocking: true });
     try {
-      await this.props.updateCollectionPermissions(collection.id, permissions);
+      await this.props.updateCollectionPermissions(collection.id, [
+        ...permissions,
+        ...emailPermissions,
+      ]);
+      this.setState({ emailRows: [] });
       this.props.toggleDialog();
       showSuccessToast(intl.formatMessage(messages.save_success));
     } catch (e) {
@@ -147,7 +253,7 @@ class CollectionAccessDialog extends Component {
 
   render() {
     const { collection, intl } = this.props;
-    const { permissions, blocking } = this.state;
+    const { permissions, emailRows, blocking } = this.state;
 
     if (!canManagePermissions(collection) || !permissions) {
       return null;
@@ -156,8 +262,7 @@ class CollectionAccessDialog extends Component {
     // write access can't be granted on external collections, so the column is
     // only shown for collections the current user can actually edit
     const showWrite = !!collection.writeable;
-    const colSpan = showWrite ? '3' : '2';
-    const exclude = permissions.map((perm) => perm.role.id);
+    const colSpan = showWrite ? '4' : '3';
     const systemRoles = this.filterPermissions('system');
     const groupRoles = this.filterPermissions('group');
     const userRoles = this.filterPermissions('user');
@@ -171,7 +276,10 @@ class CollectionAccessDialog extends Component {
         title={intl.formatMessage(messages.title)}
         enforceFocus={false}
       >
-        <div className={Classes.DIALOG_BODY}>
+        <div
+          className={`${Classes.DIALOG_BODY} CollectionAccessDialog__body`}
+          ref={this.bodyRef}
+        >
           <div className="CollectionPermissions">
             <table className="settings-table">
               <thead>
@@ -191,6 +299,7 @@ class CollectionAccessDialog extends Component {
                       />
                     </th>
                   )}
+                  <th className="action-cell" />
                 </tr>
               </thead>
               <tbody>
@@ -238,9 +347,25 @@ class CollectionAccessDialog extends Component {
                     showWrite={showWrite}
                   />
                 ))}
+                {emailRows.map((row, index) => (
+                  <EmailRow
+                    key={row.key}
+                    row={row}
+                    intl={intl}
+                    showWrite={showWrite}
+                    autoFocus={index === emailRows.length - 1}
+                    onChange={this.onChangeEmailRow}
+                    onRemove={this.onRemoveEmailRow}
+                  />
+                ))}
                 <tr key="add">
                   <td colSpan={colSpan}>
-                    <Role.Select onSelect={this.onAddRole} exclude={exclude} />
+                    <Button
+                      icon="plus"
+                      onClick={this.onAddEmailRow}
+                      disabled={blocking}
+                      text={intl.formatMessage(messages.add_email)}
+                    />
                     <Callout intent={Intent.WARNING}>
                       <FormattedMessage
                         id="collection.edit.permissions_warning"
