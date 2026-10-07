@@ -8,6 +8,7 @@ from warnings import warn
 import click
 from flask.cli import FlaskGroup
 from followthemoney import EntityProxy
+from followthemoney.exc import InvalidData
 from followthemoney.namespace import Namespace
 from normality import slugify
 from openaleph_procrastinate.util import (
@@ -217,6 +218,108 @@ def touch(foreign_id, sync=True):
     collection.touch()
     db.session.commit()
     compute_collection(collection, force=True, sync=True)
+
+
+@cli.command()
+@click.argument("foreign_id")
+@click.option("-l", "--label", help="Collection label")
+@click.option("-s", "--summary", help="Collection summary (description)")
+@click.option("-c", "--category", type=click.Choice(list(Collection.CATEGORIES.keys())))
+@click.option("--frequency", type=click.Choice(list(Collection.FREQUENCIES.keys())))
+@click.option("--country", "countries", multiple=True, help="Country code (repeatable)")
+@click.option(
+    "--language", "languages", multiple=True, help="Language code (repeatable)"
+)
+@click.option("--publisher", help="Publisher name")
+@click.option("--publisher-url", help="Publisher URL")
+@click.option("--info-url", help="Info URL")
+@click.option("--data-url", help="Data URL")
+@click.option(
+    "--external/--no-external",
+    default=None,
+    help="Externally managed collection (read-only in the UI)",
+)
+@click.option(
+    "--lakehouse-uri",
+    help="Lakehouse URI (external collections only), pass '' to unset",
+)
+@click.option("--restricted/--no-restricted", default=None)
+@click.option("--xref/--no-xref", default=None, help="Run xref on entity changes")
+@click.option("--taggable/--no-taggable", default=None)
+@click.option("--contains-ai/--no-contains-ai", default=None)
+@click.option("--contains-ai-comment")
+@click.option(
+    "--create/--no-create",
+    default=True,
+    help="Create the collection if it doesn't exist",
+)
+@click.option("--sync/--async", default=True)
+def configure(
+    foreign_id: str,
+    label: str | None = None,
+    summary: str | None = None,
+    category: str | None = None,
+    frequency: str | None = None,
+    countries: tuple[str, ...] = (),
+    languages: tuple[str, ...] = (),
+    publisher: str | None = None,
+    publisher_url: str | None = None,
+    info_url: str | None = None,
+    data_url: str | None = None,
+    external: bool | None = None,
+    lakehouse_uri: str | None = None,
+    restricted: bool | None = None,
+    xref: bool | None = None,
+    taggable: bool | None = None,
+    contains_ai: bool | None = None,
+    contains_ai_comment: str | None = None,
+    create: bool = True,
+    sync: bool = True,
+) -> None:
+    """Create or update the metadata of a collection."""
+    options = {
+        "label": label,
+        "summary": summary,
+        "category": category,
+        "frequency": frequency,
+        "countries": list(countries) or None,
+        "languages": list(languages) or None,
+        "publisher": publisher,
+        "publisher_url": publisher_url,
+        "info_url": info_url,
+        "data_url": data_url,
+        "external": external,
+        "lakehouse_uri": lakehouse_uri,
+        "restricted": restricted,
+        "xref": xref,
+        "taggable": taggable,
+        "contains_ai": contains_ai,
+        "contains_ai_comment": contains_ai_comment,
+    }
+    changes = {k: v for k, v in options.items() if v is not None}
+    authz = Authz.from_role(Role.load_cli_user())
+    collection = Collection.by_foreign_id(foreign_id)
+    try:
+        if collection is None:
+            if not create:
+                raise click.BadParameter("No such collection: %r" % foreign_id)
+            data = {"foreign_id": foreign_id, "label": foreign_id, **changes}
+            # new collections default to casefile, which can't be external
+            if data.get("external") and "category" not in data:
+                data["category"] = "other"
+            create_collection(data, authz, sync=sync)
+            collection = Collection.by_foreign_id(foreign_id)
+            log.info("Created collection: %r", foreign_id)
+        else:
+            collection.update(changes, authz)
+            db.session.commit()
+            update_collection(collection, sync=sync)
+            log.info("Updated collection: %r", foreign_id)
+    except (InvalidData, ValueError) as exc:
+        db.session.rollback()
+        raise click.ClickException(str(exc))
+    rows = [(k, v) for k, v in collection.to_dict().items() if k in options]
+    print(tabulate([("foreign_id", collection.foreign_id), *rows]))
 
 
 @cli.command()

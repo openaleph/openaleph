@@ -139,21 +139,24 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
         self.updated_at = datetime.utcnow()
 
         # contains ai generated content
-        self.contains_ai = data.get("contains_ai")
-        self.contains_ai_comment = data.get("contains_ai_comment")
-
-        # tagging functionality (external collections can't be tagged)
-        self.taggable = data.get("taggable", self.taggable) and not self.external
+        self.contains_ai = data.get("contains_ai", self.contains_ai)
+        self.contains_ai_comment = data.get(
+            "contains_ai_comment", self.contains_ai_comment
+        )
 
         # Some fields are editable only by admins in order to have a strict
         # separation between source evidence and case material. As well,
         # casefiles must never be "external"
         if authz.is_admin:
             self.category = data.get("category", self.category)
-            self.external = data.get("external", False)
+            self.external = as_bool(data.get("external", self.external))
             if self.external and self.category == self.CASEFILE:
                 raise InvalidData("Can't set casefile for external collection")
-            self.lakehouse_uri = stringify(data.get("lakehouse_uri"))
+            if "lakehouse_uri" in data:
+                self.lakehouse_uri = stringify(data["lakehouse_uri"])
+            elif not self.external:
+                # un-setting `external` drops the lakehouse location as well
+                self.lakehouse_uri = None
             if self.lakehouse_uri and not self.external:
                 raise InvalidData("Can't set lakehouse_uri for non-external collection")
             creator = ensure_dict(data.get("creator"))
@@ -161,6 +164,13 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
             creator = Role.by_id(creator_id)
             if creator is not None:
                 self.creator = creator
+
+        # tagging functionality (external collections can't be tagged), this
+        # needs to run after `external` is updated above
+        if self.external and as_bool(data.get("taggable")):
+            raise InvalidData("Can't set taggable for external collection")
+        taggable = as_bool(data.get("taggable", self.taggable))
+        self.taggable = taggable and not self.external
 
         db.session.add(self)
         db.session.flush()
