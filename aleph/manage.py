@@ -254,7 +254,7 @@ def touch(foreign_id, sync=True):
     help="Create the collection if it doesn't exist",
 )
 @click.option("--sync/--async", default=True)
-def configure(
+def configure_collection(
     foreign_id: str,
     label: str | None = None,
     summary: str | None = None,
