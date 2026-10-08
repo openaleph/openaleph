@@ -30,7 +30,8 @@ def suggest():
       description: >-
         For a given `prefix`, suggest matching user accounts. For
         security reasons, the prefix must be more than three
-        characters long.
+        characters long. Disabled (403) if `ALEPH_SHARE_SUGGEST_ROLES`
+        is turned off.
       parameters:
       - in: query
         name: prefix
@@ -54,7 +55,7 @@ def suggest():
       tags:
       - Role
     """
-    require(request.authz.logged_in)
+    require(request.authz.logged_in, SETTINGS.SHARE_SUGGEST_ROLES)
     parser = QueryParser(request.args, request.authz, limit=10)
     if parser.prefix is None or len(parser.prefix) < 3:
         # Do not return 400 because it's a routine event.

@@ -14,7 +14,7 @@ import {
   updateCollectionPermissions,
   fetchCollectionPermissions,
 } from 'actions';
-import { selectCollectionPermissions } from 'selectors';
+import { selectCollectionPermissions, selectFeatureFlags } from 'selectors';
 import { Role } from 'components/common';
 import FormDialog from 'dialogs/common/FormDialog';
 import { showSuccessToast, showWarningToast } from 'app/toast';
@@ -149,6 +149,7 @@ class CollectionAccessDialog extends Component {
       blocking: false,
     };
     this.bodyRef = React.createRef();
+    this.onAddRole = this.onAddRole.bind(this);
     this.onAddEmailRow = this.onAddEmailRow.bind(this);
     this.onChangeEmailRow = this.onChangeEmailRow.bind(this);
     this.onRemoveEmailRow = this.onRemoveEmailRow.bind(this);
@@ -172,6 +173,12 @@ class CollectionAccessDialog extends Component {
     if (!this.state.permissions.length && permissions.results) {
       this.setPermissions(permissions.results, false);
     }
+  }
+
+  onAddRole(role) {
+    this.setState(({ permissions }) => ({
+      permissions: [...permissions, { role, read: true, write: false }],
+    }));
   }
 
   onAddEmailRow() {
@@ -252,7 +259,7 @@ class CollectionAccessDialog extends Component {
   }
 
   render() {
-    const { collection, intl } = this.props;
+    const { collection, shareSuggestRoles, intl } = this.props;
     const { permissions, emailRows, blocking } = this.state;
 
     if (!canManagePermissions(collection) || !permissions) {
@@ -263,6 +270,7 @@ class CollectionAccessDialog extends Component {
     // only shown for collections the current user can actually edit
     const showWrite = !!collection.writeable;
     const colSpan = showWrite ? '4' : '3';
+    const exclude = permissions.map((perm) => perm.role.id);
     const systemRoles = this.filterPermissions('system');
     const groupRoles = this.filterPermissions('group');
     const userRoles = this.filterPermissions('user');
@@ -360,12 +368,19 @@ class CollectionAccessDialog extends Component {
                 ))}
                 <tr key="add">
                   <td colSpan={colSpan}>
-                    <Button
-                      icon="plus"
-                      onClick={this.onAddEmailRow}
-                      disabled={blocking}
-                      text={intl.formatMessage(messages.add_email)}
-                    />
+                    {shareSuggestRoles ? (
+                      <Role.Select
+                        onSelect={this.onAddRole}
+                        exclude={exclude}
+                      />
+                    ) : (
+                      <Button
+                        icon="plus"
+                        onClick={this.onAddEmailRow}
+                        disabled={blocking}
+                        text={intl.formatMessage(messages.add_email)}
+                      />
+                    )}
                     <Callout intent={Intent.WARNING}>
                       <FormattedMessage
                         id="collection.edit.permissions_warning"
@@ -401,7 +416,10 @@ class CollectionAccessDialog extends Component {
 
 const mapStateToProps = (state, ownProps) => {
   const collectionId = ownProps.collection.id;
-  return { permissions: selectCollectionPermissions(state, collectionId) };
+  return {
+    permissions: selectCollectionPermissions(state, collectionId),
+    shareSuggestRoles: !!selectFeatureFlags(state)?.share_suggest_roles,
+  };
 };
 const mapDispatchToProps = {
   updateCollectionPermissions,

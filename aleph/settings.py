@@ -118,6 +118,9 @@ class Settings:
         self.PASSWORD_LOGIN = env.to_bool("ALEPH_PASSWORD_LOGIN", not self.OAUTH)
         self.ALLOW_REGISTRATION = env.to_bool("ALEPH_ALLOW_REGISTRATION", False)
 
+        # turning it off then works by exact e-mail address only
+        self.SHARE_SUGGEST_ROLES = env.to_bool("ALEPH_SHARE_SUGGEST_ROLES", True)
+
         # Roles that haven't logged in since X months will stop receiving notifications.
         self.ROLE_INACTIVE = timedelta(days=env.to_int("ALEPH_ROLE_INACTIVE", 6 * 30))
 
