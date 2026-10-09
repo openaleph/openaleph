@@ -81,6 +81,7 @@ def _metadata_locale(locale):
             "timelines": as_bool(SETTINGS.ENABLE_TIMELINES),
             "lists": as_bool(SETTINGS.ENABLE_LISTS),
             "diagrams": as_bool(SETTINGS.ENABLE_NETWORK_DIAGRAMS),
+            "share_suggest_roles": as_bool(SETTINGS.SHARE_SUGGEST_ROLES),
         },
         "feedback_urls": {
             "documents": SETTINGS.FEEDBACK_URL_DOCUMENTS,

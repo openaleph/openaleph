@@ -202,6 +202,11 @@ This document provides a comprehensive reference for all configuration parameter
 - **Default**: `true` if OAuth is disabled, otherwise `false`
 - **Description**: Enables password-based authentication. Typically disabled when using SSO/OAuth.
 
+#### `ALEPH_SHARE_SUGGEST_ROLES`
+- **Type**: Boolean
+- **Default**: `true`
+- **Description**: When sharing a collection, suggest user accounts matching a typed name prefix. This lets any logged-in user look up other users' names, so it should be turned off on public instances with open registration. When disabled, collections can only be shared by entering a user's exact e-mail address.
+
 ### Session Management
 
 #### `ALEPH_SESSION_EXPIRE`
