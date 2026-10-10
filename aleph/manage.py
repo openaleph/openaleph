@@ -468,6 +468,12 @@ def reindex(
         "(`procrastinate worker -q <name>`). Implies --queue-batches."
     ),
 )
+@click.option(
+    "--exclude",
+    "excludes",
+    multiple=True,
+    help="Foreign ID of a collection to skip (repeatable)",
+)
 def reindex_full(
     flush: bool = False,
     queue: bool = False,
@@ -477,10 +483,14 @@ def reindex_full(
     queue_batches: bool = False,
     batch_size: int = 10_000,
     queue_name: str | None = None,
+    excludes: tuple[str, ...] = (),
 ) -> None:
     """Re-index all collections."""
+    collections = Collection.all()
+    if excludes:
+        collections = collections.filter(Collection.foreign_id.notin_(excludes))
     _reindex_collections(
-        Collection.all(),
+        collections,
         queue=queue,
         flush=flush,
         model=model,

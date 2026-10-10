@@ -147,6 +147,12 @@ aleph reindex-full --queue --queue-name reindex
 procrastinate worker -q reindex
 ```
 
+To skip specific collections (e.g. very large ones you reindex separately), pass their foreign IDs with `--exclude` (repeatable):
+
+```bash
+aleph reindex-full --queue --queue-batches --exclude big_leak --exclude other_dataset
+```
+
 #### Synchronous Reindexing (For Development or Debugging)
 
 Reindex collections sequentially with visible log output in one process (use tmux or something to keep it running):
