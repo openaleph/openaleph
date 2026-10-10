@@ -2250,59 +2250,59 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "ftm-lakehouse"
-version = "0.8.5"
+version = "0.9.0"
 description = "Data standard, storage and retrieval for structured and unstructured FollowTheMoney data"
 optional = false
-python-versions = "<3.15,>=3.12"
+python-versions = ">=3.12,<3.15"
 groups = ["main"]
-files = [
-    {file = "ftm_lakehouse-0.8.5-py3-none-any.whl", hash = "sha256:03f5e3a6b3857d560c4108e3dff5acd4b8000f46fab549f237e5e5a1533d6d43"},
-    {file = "ftm_lakehouse-0.8.5.tar.gz", hash = "sha256:442492a294b73f7f860f56971f260e91c0493524498a2cf4f6d25d0bfa299cb6"},
-]
+files = []
+develop = false
 
 [package.dependencies]
-adbc-driver-postgresql = {version = ">=1.12.0,<2.0.0", optional = true, markers = "extra == \"postgres\""}
-anystore = ">=1.5.0,<2.0.0"
+adbc-driver-postgresql = {version = ">=1.12.0,<2.0.0", optional = true}
+anystore = ">=1.5.3,<2.0.0"
 followthemoney = ">=4.11.0,<5.0.0"
-ftmq = {version = ">=5.2.0,<6.0.0", extras = ["lake"]}
+ftmq = {git = "https://github.com/dataresearchcenter/ftmq.git", rev = "feat/aggregate-unsafe", extras = ["lake"]}
 httpx = ">=0.28.1,<0.29.0"
-psycopg = {version = ">=3.2,<4", extras = ["binary"], optional = true, markers = "extra == \"postgres\""}
+psycopg = {version = ">=3.2,<4", extras = ["binary"], optional = true}
 zfs-agent = ">=0.0.1,<0.0.2"
 
 [package.extras]
-api = ["aiohttp (!=4.0.0a0,!=4.0.0a1)", "fastapi (>=0.141.1,<0.142.0)", "granian (>=2.8.3,<3.0.0)", "putfs (>=0.5.0,<0.6.0)", "uvloop (>=0.22.1,<0.23.0)"]
+api = ["aiohttp (!=4.0.0a0,!=4.0.0a1)", "fastapi (>=0.141.1,<0.142.0)", "granian (>=2.8.3,<3.0.0)", "putfs (>=0.6.0,<0.7.0)", "uvloop (>=0.22.1,<0.23.0)"]
 azure = ["adlfs"]
 gcs = ["gcsfs (>2024.2.0)"]
 http = ["aiohttp (!=4.0.0a0,!=4.0.0a1)"]
 postgres = ["adbc-driver-postgresql (>=1.12.0,<2.0.0)", "psycopg[binary] (>=3.2,<4)"]
 s3 = ["s3fs (>2024.2.0)"]
 
+[package.source]
+type = "git"
+url = "https://github.com/openaleph/ftm-lakehouse.git"
+reference = "chore/aggregate-unsafe-upstream"
+resolved_reference = "43e81a72916177217c533fde60eeaf144695b4aa"
+
 [[package]]
 name = "ftmq"
 version = "5.3.0"
 description = "followthemoney query dsl and io helpers"
 optional = false
-python-versions = "<3.15,>=3.11"
+python-versions = ">=3.11,<3.15"
 groups = ["main"]
-files = [
-    {file = "ftmq-5.3.0-py3-none-any.whl", hash = "sha256:c09011b2f7ee4cd061b79673b64e84064075e85fec961d47ab0525d8a5ba7e7d"},
-    {file = "ftmq-5.3.0.tar.gz", hash = "sha256:5cc2b6b9a2ee141bca5d7b3e9f4d3a7d9457493bae4c8039f8e2b3dc73492828"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 anystore = ">=1.5.3,<2.0.0"
-deltalake = {version = ">=1.6.6,<2.0.0", optional = true, markers = "extra == \"lake\""}
-duckdb = {version = ">=1.5.6,<2.0.0", optional = true, markers = "extra == \"lake\""}
+deltalake = {version = ">=1.6.6,<2.0.0", optional = true}
+duckdb = {version = ">=1.5.6,<2.0.0", optional = true}
 followthemoney = ">=4.11.0,<5.0.0"
 nomenklatura = ">=4.17.0,<5.0.0"
 normality = ">=3.1.0,<4.0.0"
 orjson = ">=3.10.18,<4.0.0"
-pandas = {version = ">=3.0.6,<4.0.0", optional = true, markers = "extra == \"lake\""}
-psycopg = {version = ">=3.3.6,<4.0.0", extras = ["pool"], optional = true, markers = "extra == \"postgres\""}
-pyarrow = {version = ">=25.0.1,<26.0.0", optional = true, markers = "extra == \"lake\""}
+pandas = {version = ">=3.0.6,<4.0.0", optional = true}
+pyarrow = {version = ">=25.0.1,<26.0.0", optional = true}
 pyrql = ">=0.7.11,<1.0.0"
 rigour = ">=2.5.0,<3.0.0"
-sqlalchemy = {version = ">=2.1.3,<3.0.0", optional = true, markers = "extra == \"postgres\""}
 typer = ">=0.27.2,<1"
 
 [package.extras]
@@ -2313,6 +2313,12 @@ level = ["plyvel (>=1.5.1,<2.0.0)"]
 postgres = ["psycopg[pool] (>=3.3.6,<4.0.0)", "sqlalchemy (>=2.1.3,<3.0.0)"]
 search = ["tantivy (>=0.26.2,<0.27.0)"]
 sql = ["sqlalchemy (>=2.1.3,<3.0.0)"]
+
+[package.source]
+type = "git"
+url = "https://github.com/dataresearchcenter/ftmq.git"
+reference = "feat/aggregate-unsafe"
+resolved_reference = "723b914fdfb9ca8efa8cf43d786d36b7978eb5a7"
 
 [[package]]
 name = "fuzzywuzzy"
@@ -4588,49 +4594,57 @@ name = "openaleph-procrastinate"
 version = "5.3.4"
 description = "Task queue logic for OpenAleph built upon procrastinate"
 optional = false
-python-versions = "<3.15,>=3.12"
+python-versions = ">=3.12,<3.15"
 groups = ["main"]
-files = [
-    {file = "openaleph_procrastinate-5.3.4-py3-none-any.whl", hash = "sha256:99ea0971a64cc6896def4363becd76c05b42249421e4ad7b8937463db031b404"},
-    {file = "openaleph_procrastinate-5.3.4.tar.gz", hash = "sha256:78b05bc61e3f9236b8e06a664aba13d473abc769f3becd10bedd1f2329c0476d"},
-]
+files = []
+develop = false
 
 [package.dependencies]
-anystore = {version = ">=1.4.0,<2.0.0", extras = ["putfs", "s3"]}
+anystore = {version = ">=1.5.3,<2.0.0", extras = ["putfs", "s3"]}
 cachetools = "<6"
 followthemoney = ">=4.11.0,<5.0.0"
-ftm-lakehouse = {version = ">=0.8.1,<0.9.0", extras = ["postgres"]}
-ftmq = ">=5.1.0,<6.0.0"
+ftm-lakehouse = {git = "https://github.com/openaleph/ftm-lakehouse.git", rev = "chore/aggregate-unsafe-upstream", extras = ["postgres"]}
+ftmq = ">=5.3.0,<6.0.0"
 openaleph-servicelayer = ">=1.25.0,<2.0.0"
-procrastinate = ">=3.9.0,<4.0.0"
-psycopg = ">=3.3.4,<4.0.0"
-psycopg-pool = ">=3.3.1,<4.0.0"
+procrastinate = ">=3.10.0,<4.0.0"
+psycopg = ">=3.3.6,<4.0.0"
+psycopg-pool = ">=3.3.3,<4.0.0"
 pydantic = ">=2.11.7,<3.0.0"
 pydantic-settings = ">=2.15.0,<3.0.0"
+
+[package.source]
+type = "git"
+url = "https://github.com/openaleph/openaleph-procrastinate.git"
+reference = "HEAD"
+resolved_reference = "839d2187a77fbb166f49f8bd1c2330fd7c26aa88"
 
 [[package]]
 name = "openaleph-search"
 version = "5.3.3"
 description = "OpenAleph index & search module"
 optional = false
-python-versions = "<3.15,>=3.12"
+python-versions = ">=3.12,<3.15"
 groups = ["main"]
-files = [
-    {file = "openaleph_search-5.3.3-py3-none-any.whl", hash = "sha256:ff53239c6a778a1b89c05430d3cc46c6235f7436ac5c77b2d374298dfa53c98b"},
-    {file = "openaleph_search-5.3.3.tar.gz", hash = "sha256:f35daf9aa70cae7579280b6ab047c5e2a2f63622156b4f8b6b5f293f7d2e3b85"},
-]
+files = []
+develop = false
 
 [package.dependencies]
-aiohttp = ">=3.14.1,<4.0.0"
+aiohttp = ">=3.14.4,<4.0.0"
 cachetools = "<6"
 elasticsearch = ">=9,<10"
-followthemoney = ">=4.10.2,<5.0.0"
-ftmq = ">=5.0.0,<6.0.0"
+followthemoney = ">=4.11.0,<5.0.0"
+ftmq = {git = "https://github.com/dataresearchcenter/ftmq.git", rev = "feat/aggregate-unsafe"}
 orjson = ">=3.11.9,<4.0.0"
-pydantic = ">=2.11.9,<3.0.0"
+pydantic = ">=2.13.5,<3.0.0"
 pydantic-settings = ">=2.14.2,<3.0.0"
-rigour = ">=2.3.1,<3.0.0"
+rigour = ">=2.4.1,<3.0.0"
 werkzeug = ">=3.1.3,<4.0.0"
+
+[package.source]
+type = "git"
+url = "https://github.com/openaleph/openaleph-search.git"
+reference = "HEAD"
+resolved_reference = "1c0f176eefbc529fde9ed1e6ea46cc0dc1229391"
 
 [[package]]
 name = "openaleph-servicelayer"
@@ -7973,4 +7987,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.15"
-content-hash = "f5606cfd307d75def2ebcdcd78b4e60bb291ffc632df9cf73b17b3441c91141e"
+content-hash = "49ad057faacc7caafc78bc968ce719e1a26ef8b0551cf4a2b79a1f7297cc9556"

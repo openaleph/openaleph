@@ -5,7 +5,7 @@ from typing import Generator, Iterable
 
 from anystore.logging import get_logger
 from followthemoney.dataset.util import dataset_name_check
-from followthemoney.proxy import EntityProxy
+from ftmq.aggregate import EntityDict, aggregate_fragments_unsafe
 from ftmq.store.fragments.dataset import Fragments
 from openaleph_procrastinate.manage import cancel_jobs
 from openaleph_procrastinate.settings import OPENALEPH_MANAGEMENT_QUEUE
@@ -154,6 +154,23 @@ def aggregate_model(collection: Collection, aggregator):
     writer.flush()
 
 
+def _iter_entity_data(
+    aggregator: Fragments,
+    entity_ids: Iterable[str] | None = None,
+    skip_errors: bool = False,
+) -> Generator[EntityDict, None, None]:
+    """Merge the trusted fragments of the aggregator into entity dicts, as
+    `Fragments.iterate` but without the `EntityProxy` roundtrip."""
+    # sorted id batches as `Fragments.iterate_batched`: a full sort is too slow
+    if entity_ids is None:
+        batches: Iterable[Iterable[str]] = aggregator.get_sorted_id_batches()
+    else:
+        batches = [entity_ids]
+    for batch in batches:
+        fragments = aggregator.fragments(entity_ids=batch)
+        yield from aggregate_fragments_unsafe(fragments, skip_errors=skip_errors)
+
+
 def index_aggregator(
     collection: Collection,
     aggregator: Fragments,
@@ -162,9 +179,9 @@ def index_aggregator(
     sync: bool = False,
 ) -> None:
     # no schema filter: entities are always merged from all their fragments
-    def _generate() -> Generator[EntityProxy, None, None]:
+    def _generate() -> Generator[EntityDict, None, None]:
         idx = 0
-        entities = aggregator.iterate(entity_id=entity_ids, skip_errors=skip_errors)
+        entities = _iter_entity_data(aggregator, entity_ids, skip_errors)
 
         # Batch fetch all tags for all entities at once
         tags_map = defaultdict(set)
@@ -183,7 +200,7 @@ def index_aggregator(
                 tags_map[tag.entity_id].add(tag.tag)
 
         # Now iterate through entities and add tags
-        for idx, proxy in enumerate(entities, 1):
+        for idx, data in enumerate(entities, 1):
             if idx > 0 and idx % 1000 == 0:
                 log.debug(
                     f"[{collection}] Index: {idx}...",
@@ -191,10 +208,10 @@ def index_aggregator(
                 )
 
             # Add tags to entity context if any exist
-            if proxy.id in tags_map:
-                proxy.context["tags"] = list(tags_map[proxy.id])
+            if data["id"] in tags_map:
+                data["tags"] = list(tags_map[data["id"]])
 
-            yield proxy
+            yield data
         log.debug(
             f"[{collection}] Indexed {idx} entities",
             dataset=collection.name,
