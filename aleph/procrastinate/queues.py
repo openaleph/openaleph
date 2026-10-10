@@ -106,6 +106,7 @@ def queue_index_batch(
     collection: Collection,
     entity_ids: list[str] | None = None,
     id_range: IdRange | None = None,
+    queue: str | None = None,
     **context: Any,
 ) -> None:
     context = {**context, **get_context(collection)}
@@ -116,7 +117,7 @@ def queue_index_batch(
         payload["entity_ids"] = entity_ids
     dataset = get_aggregator_name(collection)
     task = "aleph.procrastinate.tasks.index_entities_by_ids"
-    queue = settings.reindex.queue
+    queue = queue or settings.reindex.queue
     with app.open():
         job = DatasetJob(dataset=dataset, payload=payload, queue=queue, task=task)
         job.defer(app, priority=settings.reindex.min_priority)

@@ -259,6 +259,7 @@ def _index_batch(
     queue_batches: bool | None = False,
     skip_errors: bool | None = True,
     sync: bool | None = False,
+    queue_name: str | None = None,
 ) -> None:
     aggregator = get_aggregator(collection)
     if id_range is not None:
@@ -270,7 +271,9 @@ def _index_batch(
             f"[{collection}] Queuing batch ({batch})",
             dataset=collection.name,
         )
-        queue_index_batch(collection, entity_ids=entity_ids, id_range=id_range)
+        queue_index_batch(
+            collection, entity_ids=entity_ids, id_range=id_range, queue=queue_name
+        )
     else:
         log.info(
             f"[{collection}] Processing batch ({batch})",
@@ -297,6 +300,7 @@ def reindex_collection(
     queue_batches: bool = False,
     batch_size: int = 10_000,
     origin: str | None = None,
+    queue_name: str | None = None,
 ) -> None:
     """Re-index all entities from the model, mappings and aggregator cache.
 
@@ -310,6 +314,7 @@ def reindex_collection(
         profiles: Process profile fragments and aggregate to the aggregator
         queue_batches: Queue batches for parallelization
         origin: Filter entities by aggregator origin (e.g., 'xref', 'aleph')
+        queue_name: Worker queue for the batches, implies queue_batches
     """
     from aleph.logic.profiles import profile_fragments
 
@@ -325,7 +330,13 @@ def reindex_collection(
         log.debug(f"[{collection}] Flushing...", dataset=collection.name)
         index.delete_entities(collection.id, sync=True)
 
-    options = {"queue_batches": queue_batches, "skip_errors": skip_errors, "sync": sync}
+    queue_batches = queue_batches or queue_name is not None
+    options = {
+        "queue_batches": queue_batches,
+        "skip_errors": skip_errors,
+        "sync": sync,
+        "queue_name": queue_name,
+    }
     if origin is None:
         for id_range in aggregator.get_id_ranges(batch_size):
             _index_batch(collection, id_range=id_range, **options)

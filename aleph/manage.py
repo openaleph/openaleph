@@ -353,6 +353,7 @@ def _reindex_collection(
     profiles: bool = True,
     queue_batches: bool = False,
     batch_size: int = 10_000,
+    queue_name: str | None = None,
 ) -> None:
     log.info("[%s] Starting to re-index", collection)
     try:
@@ -364,6 +365,7 @@ def _reindex_collection(
             profiles=profiles,
             queue_batches=queue_batches,
             batch_size=batch_size,
+            queue_name=queue_name,
         )
     except Exception:
         log.exception("Failed to re-index: %s", collection)
@@ -398,6 +400,15 @@ def _reindex_collections(
     default=10_000,
     help="Batch size for processing entities (default: 10000)",
 )
+@click.option(
+    "--queue-name",
+    type=str,
+    default=None,
+    help=(
+        "Worker queue for the batches, e.g. for dedicated index workers "
+        "(`procrastinate worker -q <name>`). Implies --queue-batches."
+    ),
+)
 def reindex(
     foreign_id: str,
     flush: bool = False,
@@ -406,6 +417,7 @@ def reindex(
     profiles: bool = True,
     queue_batches: bool = False,
     batch_size: int = 10_000,
+    queue_name: str | None = None,
 ) -> None:
     """Index all the aggregator contents for a collection."""
     collection = get_collection(foreign_id)
@@ -417,6 +429,7 @@ def reindex(
         profiles=profiles,
         queue_batches=queue_batches,
         batch_size=batch_size,
+        queue_name=queue_name,
     )
 
 
@@ -446,6 +459,15 @@ def reindex(
     default=10_000,
     help="Batch size for processing entities (default: 10000)",
 )
+@click.option(
+    "--queue-name",
+    type=str,
+    default=None,
+    help=(
+        "Worker queue for the batches, e.g. for dedicated index workers "
+        "(`procrastinate worker -q <name>`). Implies --queue-batches."
+    ),
+)
 def reindex_full(
     flush: bool = False,
     queue: bool = False,
@@ -454,6 +476,7 @@ def reindex_full(
     profiles: bool = True,
     queue_batches: bool = False,
     batch_size: int = 10_000,
+    queue_name: str | None = None,
 ) -> None:
     """Re-index all collections."""
     _reindex_collections(
@@ -465,6 +488,7 @@ def reindex_full(
         profiles=profiles,
         queue_batches=queue_batches,
         batch_size=batch_size,
+        queue_name=queue_name,
     )
 
 
@@ -494,6 +518,15 @@ def reindex_full(
     default=10_000,
     help="Batch size for processing entities (default: 10000)",
 )
+@click.option(
+    "--queue-name",
+    type=str,
+    default=None,
+    help=(
+        "Worker queue for the batches, e.g. for dedicated index workers "
+        "(`procrastinate worker -q <name>`). Implies --queue-batches."
+    ),
+)
 def reindex_casefiles(
     flush: bool = False,
     queue: bool = False,
@@ -502,6 +535,7 @@ def reindex_casefiles(
     profiles: bool = True,
     queue_batches: bool = False,
     batch_size: int = 10_000,
+    queue_name: str | None = None,
 ) -> None:
     """Re-index all the casefile collections."""
     _reindex_collections(
@@ -513,6 +547,7 @@ def reindex_casefiles(
         profiles=profiles,
         queue_batches=queue_batches,
         batch_size=batch_size,
+        queue_name=queue_name,
     )
 
 
