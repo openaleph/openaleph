@@ -5,6 +5,7 @@ Tasks handled by procrastinate that can be triggered from other programs
 import functools
 
 from anystore.logging import get_logger
+from ftmq.store.fragments.dataset import IdRange
 from openaleph_procrastinate import defer
 from openaleph_procrastinate.app import make_app
 from openaleph_procrastinate.exceptions import InvalidJob
@@ -73,11 +74,17 @@ def index_entities(job: DatasetJob, collection: Collection) -> None:
 
 @aleph_task(retry=defer.tasks.index.max_retries)
 def index_entities_by_ids(job: DatasetJob, collection: Collection) -> None:
-    entity_ids = set(job.payload.get("entity_ids", []))
-    if entity_ids:
-        aggregator = get_aggregator(collection)
+    aggregator = get_aggregator(collection)
+    id_range = job.payload.get("id_range")
+    if id_range is not None:
+        id_range = IdRange(*id_range)
+        collections.index_aggregator(collection, aggregator, id_range=id_range)
+    else:
+        entity_ids = set(job.payload.get("entity_ids", []))
+        if not entity_ids:
+            return
         collections.index_aggregator(collection, aggregator, entity_ids)
-        collections.refresh_collection(collection.id)
+    collections.refresh_collection(collection.id)
 
 
 @aleph_task(retry=defer.tasks.reindex.max_retries)

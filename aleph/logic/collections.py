@@ -1,3 +1,4 @@
+import itertools
 import time
 from collections import defaultdict
 from datetime import datetime
@@ -6,7 +7,7 @@ from typing import Generator, Iterable
 from anystore.logging import get_logger
 from followthemoney.dataset.util import dataset_name_check
 from ftmq.aggregate import EntityDict, aggregate_fragments_unsafe
-from ftmq.store.fragments.dataset import Fragments
+from ftmq.store.fragments.dataset import Fragments, IdRange
 from openaleph_procrastinate.manage import cancel_jobs
 from openaleph_procrastinate.settings import OPENALEPH_MANAGEMENT_QUEUE
 from openaleph_search.index import entities as entities_index
@@ -158,16 +159,18 @@ def _iter_entity_data(
     aggregator: Fragments,
     entity_ids: Iterable[str] | None = None,
     skip_errors: bool = False,
+    id_range: IdRange | None = None,
 ) -> Generator[EntityDict, None, None]:
     """Merge the trusted fragments of the aggregator into entity dicts, as
     `Fragments.iterate` but without the `EntityProxy` roundtrip."""
-    # sorted id batches as `Fragments.iterate_batched`: a full sort is too slow
-    if entity_ids is None:
-        batches: Iterable[Iterable[str]] = aggregator.get_sorted_id_batches()
-    else:
-        batches = [entity_ids]
-    for batch in batches:
-        fragments = aggregator.fragments(entity_ids=batch)
+    if entity_ids is not None:
+        fragments = aggregator.fragments(entity_ids=entity_ids)
+        yield from aggregate_fragments_unsafe(fragments, skip_errors=skip_errors)
+        return
+    # sorted id ranges as `Fragments.iterate_batched`: a full sort is too slow
+    ranges = [id_range] if id_range is not None else aggregator.get_id_ranges()
+    for range_ in ranges:
+        fragments = aggregator.fragments(id_range=range_)
         yield from aggregate_fragments_unsafe(fragments, skip_errors=skip_errors)
 
 
@@ -177,41 +180,33 @@ def index_aggregator(
     entity_ids: Iterable[str] | None = None,
     skip_errors: bool = False,
     sync: bool = False,
+    id_range: IdRange | None = None,
 ) -> None:
     # no schema filter: entities are always merged from all their fragments
     def _generate() -> Generator[EntityDict, None, None]:
         idx = 0
-        entities = _iter_entity_data(aggregator, entity_ids, skip_errors)
-
-        # Batch fetch all tags for all entities at once
-        tags_map = defaultdict(set)
-        if entity_ids:
+        entities = _iter_entity_data(aggregator, entity_ids, skip_errors, id_range)
+        # tags by the ids seen: the aleph database may sort ids differently
+        # than the aggregator, so an id range can't select them
+        for chunk in itertools.batched(entities, 1000):
+            tags_map = defaultdict(set)
             tags_query = db.session.query(Tag).filter(
-                Tag.entity_id.in_(entity_ids), Tag.collection_id == collection.id
-            )
-            for tag in tags_query.all():
-                tags_map[tag.entity_id].add(tag.tag)
-        else:
-            # If no specific entity_ids, prefetch all tags for the collection
-            tags_query = db.session.query(Tag).filter(
-                Tag.collection_id == collection.id
+                Tag.entity_id.in_([data["id"] for data in chunk]),
+                Tag.collection_id == collection.id,
             )
             for tag in tags_query.all():
                 tags_map[tag.entity_id].add(tag.tag)
 
-        # Now iterate through entities and add tags
-        for idx, data in enumerate(entities, 1):
-            if idx > 0 and idx % 1000 == 0:
-                log.debug(
-                    f"[{collection}] Index: {idx}...",
-                    dataset=collection.name,
-                )
-
-            # Add tags to entity context if any exist
-            if data["id"] in tags_map:
-                data["tags"] = list(tags_map[data["id"]])
-
-            yield data
+            for data in chunk:
+                # Add tags to entity context if any exist
+                if data["id"] in tags_map:
+                    data["tags"] = list(tags_map[data["id"]])
+                yield data
+            idx += len(chunk)
+            log.debug(
+                f"[{collection}] Index: {idx}...",
+                dataset=collection.name,
+            )
         log.debug(
             f"[{collection}] Indexed {idx} entities",
             dataset=collection.name,
@@ -259,21 +254,26 @@ def _process_mappings(collection: Collection, aggregator):
 
 def _index_batch(
     collection: Collection,
-    entity_ids: list[str],
+    entity_ids: list[str] | None = None,
+    id_range: IdRange | None = None,
     queue_batches: bool | None = False,
     skip_errors: bool | None = True,
     sync: bool | None = False,
 ) -> None:
     aggregator = get_aggregator(collection)
+    if id_range is not None:
+        batch = f"ids {id_range.after} - {id_range.last}"
+    else:
+        batch = f"{len(entity_ids or [])} entities"
     if queue_batches:
         log.info(
-            f"[{collection}] Queuing batch ({len(entity_ids)} entities)",
+            f"[{collection}] Queuing batch ({batch})",
             dataset=collection.name,
         )
-        queue_index_batch(collection, entity_ids)
+        queue_index_batch(collection, entity_ids=entity_ids, id_range=id_range)
     else:
         log.info(
-            f"[{collection}] Processing batch ({len(entity_ids)} entities)",
+            f"[{collection}] Processing batch ({batch})",
             dataset=collection.name,
         )
         index_aggregator(
@@ -282,6 +282,7 @@ def _index_batch(
             entity_ids=entity_ids,
             skip_errors=bool(skip_errors),
             sync=bool(sync),
+            id_range=id_range,
         )
 
 
@@ -324,8 +325,14 @@ def reindex_collection(
         log.debug(f"[{collection}] Flushing...", dataset=collection.name)
         index.delete_entities(collection.id, sync=True)
 
-    for batch in aggregator.get_sorted_id_batches(batch_size, origin=origin):
-        _index_batch(collection, batch, queue_batches, skip_errors, sync)
+    options = {"queue_batches": queue_batches, "skip_errors": skip_errors, "sync": sync}
+    if origin is None:
+        for id_range in aggregator.get_id_ranges(batch_size):
+            _index_batch(collection, id_range=id_range, **options)
+    else:
+        # only the ids with fragments of `origin`, a range holds every id
+        for batch in aggregator.get_sorted_id_batches(batch_size, origin=origin):
+            _index_batch(collection, entity_ids=batch, **options)
     if not queue_batches:
         compute_collection(collection, force=True)
 
