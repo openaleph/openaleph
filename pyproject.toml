@@ -56,7 +56,6 @@ dependencies = [
     "sentry-sdk[flask] (==2.19.2)",
     "legacy-cgi; python_version >= '3.13'",
     "nh3 (>=0.3.6,<0.4.0)",
-    "dateparser (>=1.4.1,<2.0.0)",
     "anystore[http,putfs,s3] (>=1.4.2,<2.0.0)",
 ]
 

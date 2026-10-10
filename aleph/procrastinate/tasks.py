@@ -28,7 +28,12 @@ from aleph.logic.aggregator import get_aggregator
 from aleph.model.collection import Collection
 from aleph.procrastinate.util import ensure_collection
 
+# seconds without heartbeat before a worker and its jobs count as stalled
+STALLED_TIMEOUT = 3600
+
 app = make_app(__loader__.name)
+# used when pruning stalled workers on worker startup
+app.worker_defaults["stalled_worker_timeout"] = STALLED_TIMEOUT
 aleph_flask_app = create_app()
 log = get_logger(__name__)
 
@@ -78,21 +83,19 @@ def index_entities_by_ids(job: DatasetJob, collection: Collection) -> None:
 @aleph_task(retry=defer.tasks.reindex.max_retries)
 def reindex_collection(job: DatasetJob, collection: Collection) -> None:
     flush = job.context.get("flush", False)
-    diff_only = job.context.get("diff_only", False)
     model = job.context.get("model", True)
     mappings = job.context.get("mappings", True)
+    profiles = job.context.get("profiles", True)
     queue_batches = job.context.get("queue_batches", True)
     batch_size = job.context.get("batch_size", 10_000)
-    schema = job.context.get("schema", None)
     collections.reindex_collection(
         collection,
         flush=bool(flush),
-        diff_only=bool(diff_only),
         model=bool(model),
         mappings=bool(mappings),
+        profiles=bool(profiles),
         queue_batches=bool(queue_batches),
         batch_size=int(batch_size),
-        schema=schema,
     )
     collections.refresh_collection(collection.id)
 
@@ -181,9 +184,11 @@ def periodic_clean_and_compute(timestamp: int):
 # every 15 minutes
 @app.periodic(cron="*/15 * * * *")
 @app.task(queue=OPENALEPH_MANAGEMENT_QUEUE, queueing_lock="periodic-retry-stalled")
-async def periodic_retry_stalled(timestamp: int):
+async def periodic_retry_stalled(timestamp: int) -> None:
     # https://procrastinate.readthedocs.io/en/stable/howto/production/retry_stalled_jobs.html
-    stalled_jobs = await app.job_manager.get_stalled_jobs()
+    stalled_jobs = await app.job_manager.get_stalled_jobs(
+        seconds_since_heartbeat=STALLED_TIMEOUT
+    )
     jobs = 0
     for job in stalled_jobs:
         jobs += 1

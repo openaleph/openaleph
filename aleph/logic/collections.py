@@ -1,11 +1,12 @@
 import time
 from collections import defaultdict
 from datetime import datetime
-from typing import Generator
+from typing import Generator, Iterable
 
-import dateparser
 from anystore.logging import get_logger
 from followthemoney.dataset.util import dataset_name_check
+from followthemoney.proxy import EntityProxy
+from ftmq.store.fragments.dataset import Fragments
 from openaleph_procrastinate.manage import cancel_jobs
 from openaleph_procrastinate.settings import OPENALEPH_MANAGEMENT_QUEUE
 from openaleph_search.index import entities as entities_index
@@ -41,27 +42,6 @@ from aleph.procrastinate.queues import (
 from aleph.procrastinate.status import get_collection_status
 
 log = get_logger(__name__)
-
-
-def _parse_timestamp(timestamp_str: str | None) -> datetime | None:
-    """Parse an arbitrary timestamp string via `dateparser` into a datetime
-    object."""
-    if timestamp_str is None:
-        return None
-
-    # Use dateparser to handle various formats including relative dates
-    parsed = dateparser.parse(
-        timestamp_str,
-        settings={
-            "TIMEZONE": "UTC",
-            "RETURN_AS_TIMEZONE_AWARE": False,
-            "PREFER_DATES_FROM": "past",  # For ambiguous dates, prefer past
-        },
-    )
-
-    if parsed is None:
-        raise ValueError(f"Invalid timestamp format: `{timestamp_str}`")
-    return parsed
 
 
 def create_collection(data, authz, sync=False):
@@ -176,17 +156,15 @@ def aggregate_model(collection: Collection, aggregator):
 
 def index_aggregator(
     collection: Collection,
-    aggregator,
-    entity_ids=None,
-    skip_errors=False,
-    sync=False,
-    schema=None,
-):
-    def _generate():
+    aggregator: Fragments,
+    entity_ids: Iterable[str] | None = None,
+    skip_errors: bool = False,
+    sync: bool = False,
+) -> None:
+    # no schema filter: entities are always merged from all their fragments
+    def _generate() -> Generator[EntityProxy, None, None]:
         idx = 0
-        entities = aggregator.iterate(
-            entity_id=entity_ids, skip_errors=skip_errors, schema=schema
-        )
+        entities = aggregator.iterate(entity_id=entity_ids, skip_errors=skip_errors)
 
         # Batch fetch all tags for all entities at once
         tags_map = defaultdict(set)
@@ -262,65 +240,12 @@ def _process_mappings(collection: Collection, aggregator):
             log.exception(f"Failed mapping: {mapping!r}", dataset=collection.name)
 
 
-def _get_diff_reindex_batches(
-    collection: Collection,
-    batch_size: int = 10_000,
-    since=None,
-    until=None,
-) -> Generator[list[str], None, None]:
-    """Get batches of entity IDs that need reindexing in diff-only mode.
-
-    Yields batches of entity IDs that exist in the aggregator but not in the index.
-
-    Args:
-        collection: The collection to check
-        batch_size: Size of each batch (default: 10,000)
-        since: Optional timestamp filter for aggregator (ISO format or timestamp)
-        until: Optional timestamp filter for aggregator (ISO format or timestamp)
-
-    Yields:
-        Lists of entity IDs to reindex, up to batch_size per list
-    """
-    batch = []
-    total_missing = 0
-
-    for aggregator_id, index_id in index_diff(collection, since=since, until=until):
-        # Entity is in aggregator but not in index - needs reindexing
-        if index_id is None and aggregator_id is not None:
-            batch.append(aggregator_id)
-            total_missing += 1
-
-            if len(batch) >= batch_size:
-                log.info(
-                    f"[{collection}] Diff-only mode: found batch of {len(batch)} "
-                    f"entities missing from index (total so far: {total_missing})",
-                    dataset=collection.name,
-                )
-                yield batch
-                batch = []
-
-    # Yield remaining items in the last partial batch
-    if batch:
-        log.info(
-            f"[{collection}] Diff-only mode: found {total_missing} entities "
-            f"total missing from index",
-            dataset=collection.name,
-        )
-        yield batch
-    elif total_missing == 0:
-        log.info(
-            f"[{collection}] Diff-only mode: no entities missing from index",
-            dataset=collection.name,
-        )
-
-
 def _index_batch(
     collection: Collection,
     entity_ids: list[str],
     queue_batches: bool | None = False,
     skip_errors: bool | None = True,
     sync: bool | None = False,
-    schema: str | None = None,
 ) -> None:
     aggregator = get_aggregator(collection)
     if queue_batches:
@@ -340,54 +265,20 @@ def _index_batch(
             entity_ids=entity_ids,
             skip_errors=bool(skip_errors),
             sync=bool(sync),
-            schema=schema,
         )
-
-
-def _process_batches(
-    collection: Collection,
-    entity_ids: list[str] | None,
-    batch_size: int,
-    queue_batches: bool,
-    skip_errors: bool,
-    sync: bool,
-    schema: str | None = None,
-    since=None,
-    until=None,
-    origin: str | None = None,
-):
-    """Process entities in batches."""
-    aggregator = get_aggregator(collection)
-    if entity_ids:
-        batches = (
-            entity_ids[i : i + batch_size]
-            for i in range(0, len(entity_ids), batch_size)
-        )
-    else:
-        batches = aggregator.get_sorted_id_batches(
-            batch_size, schema=schema, since=since, until=until, origin=origin
-        )
-
-    for batch in batches:
-        _index_batch(collection, batch, queue_batches, skip_errors, sync, schema)
 
 
 def reindex_collection(
     collection: Collection,
-    skip_errors=True,
-    sync=False,
-    flush=False,
-    diff_only=False,
-    model=True,
-    mappings=True,
-    profiles=True,
-    queue_batches=False,
-    batch_size=10_000,
-    schema=None,
-    since=None,
-    until=None,
-    origin=None,
-):
+    skip_errors: bool = True,
+    sync: bool = False,
+    flush: bool = False,
+    model: bool = True,
+    mappings: bool = True,
+    profiles: bool = True,
+    queue_batches: bool = False,
+    batch_size: int = 10_000,
+) -> None:
     """Re-index all entities from the model, mappings and aggregator cache.
 
     Args:
@@ -395,21 +286,12 @@ def reindex_collection(
         skip_errors: Skip entities that fail to index
         sync: Wait for index operations to complete
         flush: Delete all existing entities from index before reindexing
-        diff_only: Only reindex entities that are in aggregator but not in index
         model: Aggregate model from database (Entities, Documents) before indexing
         mappings: Process collection mappings and aggregate to the aggregator
         profiles: Process profile fragments and aggregate to the aggregator
         queue_batches: Queue batches for parallelization
-        schema: Filter entities by schema (e.g., Person, Company)
-        since: Optional timestamp filter for aggregator (ISO format or timestamp)
-        until: Optional timestamp filter for aggregator (ISO format or timestamp)
-        origin: Filter entities by aggregator origin (e.g., 'xref', 'aleph')
     """
     from aleph.logic.profiles import profile_fragments
-
-    # Parse timestamp strings to datetime objects for ftmq
-    since_dt = _parse_timestamp(since)
-    until_dt = _parse_timestamp(until)
 
     aggregator = get_aggregator(collection)
     if mappings:
@@ -423,39 +305,8 @@ def reindex_collection(
         log.debug(f"[{collection}] Flushing...", dataset=collection.name)
         index.delete_entities(collection.id, sync=True)
 
-    # Handle diff-only mode separately - it yields batches directly
-    if diff_only:
-        batches = _get_diff_reindex_batches(
-            collection, batch_size=batch_size, since=since_dt, until=until_dt
-        )
-        has_batches = False
-        for batch in batches:
-            has_batches = True
-            _index_batch(collection, batch, queue_batches, skip_errors, sync, schema)
-
-        if not has_batches:
-            log.info(
-                f"[{collection}] Diff-only mode: no entities to reindex",
-                dataset=collection.name,
-            )
-
-        if not queue_batches:
-            compute_collection(collection, force=True)
-        return
-
-    # Regular reindex mode
-    _process_batches(
-        collection,
-        None,
-        batch_size,
-        queue_batches,
-        skip_errors,
-        sync,
-        schema,
-        since_dt,
-        until_dt,
-        origin=origin,
-    )
+    for batch in aggregator.get_sorted_id_batches(batch_size):
+        _index_batch(collection, batch, queue_batches, skip_errors, sync)
     if not queue_batches:
         compute_collection(collection, force=True)
 
@@ -561,77 +412,3 @@ def validate_collection_foreign_ids():
     else:
         log.info("All collection foreign_ids are valid")
         return []
-
-
-def index_diff(  # noqa: C901
-    collection,
-    since=None,
-    until=None,
-) -> Generator[tuple[str | None, str | None], None, None]:
-    """Compare entity IDs between aggregator and search index.
-
-    This returns a tuple generator with (aggregator_id, index_id) (which are the
-    same) or if 1 of the values is None, it means the entity is missing either
-    in the aggregator or in the index.
-
-    Args:
-        collection: The collection to compare
-        since: Optional timestamp filter for aggregator (ISO format or timestamp)
-        until: Optional timestamp filter for aggregator (ISO format or timestamp)
-    """
-    log.info(
-        f"[{collection.name}] Streaming sorted entity ID tuples from aggregator and index...",
-        dataset=collection.name,
-    )
-    aggregator = get_aggregator(collection)
-    aggregator_ids = aggregator.get_sorted_ids(since=since, until=until)
-    index_ids = entities_index.iter_entity_ids(collection_id=collection.id, sort="_id")
-
-    while True:
-        aggregator_id = next(aggregator_ids, None)
-        index_id = next(index_ids, None)
-
-        # we have nothing
-        if aggregator_id is None and index_id is None:
-            return
-        # end of aggregator ids
-        elif aggregator_id is None:
-            yield None, index_id
-            # yield remaining index ids
-            while True:
-                try:
-                    yield None, next(index_ids)
-                except StopIteration:
-                    return
-
-        # end of index ids:
-        elif index_id is None:
-            yield aggregator_id, None
-            # yield remaining aggregator ids
-            while True:
-                try:
-                    yield next(aggregator_ids), None
-                except StopIteration:
-                    return
-
-        # same id in both stores
-        elif aggregator_id == index_id:
-            yield aggregator_id, index_id
-
-        else:
-            # id in aggregator but not in index
-            if aggregator_id < index_id:
-                # catch up with missing ids
-                while aggregator_id != index_id:
-                    yield aggregator_id, None
-                    aggregator_id = next(aggregator_ids, None)
-                    if aggregator_id is None:
-                        break
-            # id in index but not in aggregator
-            elif aggregator_id > index_id:
-                # catch up with missing ids
-                while aggregator_id != index_id:
-                    yield None, index_id
-                    index_id = next(index_ids, None)
-                    if index_id is None:
-                        break
