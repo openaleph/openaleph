@@ -295,6 +295,7 @@ def reindex_collection(
     profiles: bool = True,
     queue_batches: bool = False,
     batch_size: int = 10_000,
+    origin: str | None = None,
 ) -> None:
     """Re-index all entities from the model, mappings and aggregator cache.
 
@@ -307,6 +308,7 @@ def reindex_collection(
         mappings: Process collection mappings and aggregate to the aggregator
         profiles: Process profile fragments and aggregate to the aggregator
         queue_batches: Queue batches for parallelization
+        origin: Filter entities by aggregator origin (e.g., 'xref', 'aleph')
     """
     from aleph.logic.profiles import profile_fragments
 
@@ -322,7 +324,7 @@ def reindex_collection(
         log.debug(f"[{collection}] Flushing...", dataset=collection.name)
         index.delete_entities(collection.id, sync=True)
 
-    for batch in aggregator.get_sorted_id_batches(batch_size):
+    for batch in aggregator.get_sorted_id_batches(batch_size, origin=origin):
         _index_batch(collection, batch, queue_batches, skip_errors, sync)
     if not queue_batches:
         compute_collection(collection, force=True)
