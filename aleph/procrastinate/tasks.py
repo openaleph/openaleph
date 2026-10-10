@@ -77,7 +77,7 @@ def index_entities_by_ids(job: DatasetJob, collection: Collection) -> None:
     aggregator = get_aggregator(collection)
     id_range = job.payload.get("id_range")
     if id_range is not None:
-        id_range = IdRange(*id_range)
+        id_range = IdRange(**id_range)
         collections.index_aggregator(collection, aggregator, id_range=id_range)
     else:
         entity_ids = set(job.payload.get("entity_ids", []))

@@ -112,7 +112,8 @@ def queue_index_batch(
     context = {**context, **get_context(collection)}
     payload: dict[str, Any] = {"context": context}
     if id_range is not None:
-        payload["id_range"] = list(id_range)
+        # a dict: job serialization drops `None` from lists (an open bound)
+        payload["id_range"] = id_range._asdict()
     else:
         payload["entity_ids"] = entity_ids
     dataset = get_aggregator_name(collection)
