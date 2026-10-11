@@ -140,6 +140,19 @@ This creates multiple tasks for 10,000 entity batches that workers will consume 
 - OpenAleph Status dashboard
 - Database task queue
 
+To keep a large reindex apart from the regular workload, route the batches to a dedicated worker queue with `--queue-name` (it implies `--queue-batches`) and run index workers on that queue:
+
+```bash
+aleph reindex-full --queue --queue-name reindex
+procrastinate worker -q reindex
+```
+
+To skip specific collections (e.g. very large ones you reindex separately), pass their foreign IDs with `--exclude` (repeatable):
+
+```bash
+aleph reindex-full --queue --queue-batches --exclude big_leak --exclude other_dataset
+```
+
 #### Synchronous Reindexing (For Development or Debugging)
 
 Reindex collections sequentially with visible log output in one process (use tmux or something to keep it running):

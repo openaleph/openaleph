@@ -5,6 +5,7 @@ Tasks handled by procrastinate that can be triggered from other programs
 import functools
 
 from anystore.logging import get_logger
+from ftmq.store.fragments.dataset import IdRange
 from openaleph_procrastinate import defer
 from openaleph_procrastinate.app import make_app
 from openaleph_procrastinate.exceptions import InvalidJob
@@ -28,7 +29,12 @@ from aleph.logic.aggregator import get_aggregator
 from aleph.model.collection import Collection
 from aleph.procrastinate.util import ensure_collection
 
+# seconds without heartbeat before a worker and its jobs count as stalled
+STALLED_TIMEOUT = 3600
+
 app = make_app(__loader__.name)
+# used when pruning stalled workers on worker startup
+app.worker_defaults["stalled_worker_timeout"] = STALLED_TIMEOUT
 aleph_flask_app = create_app()
 log = get_logger(__name__)
 
@@ -68,31 +74,37 @@ def index_entities(job: DatasetJob, collection: Collection) -> None:
 
 @aleph_task(retry=defer.tasks.index.max_retries)
 def index_entities_by_ids(job: DatasetJob, collection: Collection) -> None:
-    entity_ids = set(job.payload.get("entity_ids", []))
-    if entity_ids:
-        aggregator = get_aggregator(collection)
+    aggregator = get_aggregator(collection)
+    id_range = job.payload.get("id_range")
+    if id_range is not None:
+        id_range = IdRange(**id_range)
+        collections.index_aggregator(collection, aggregator, id_range=id_range)
+    else:
+        entity_ids = set(job.payload.get("entity_ids", []))
+        if not entity_ids:
+            return
         collections.index_aggregator(collection, aggregator, entity_ids)
-        collections.refresh_collection(collection.id)
+    collections.refresh_collection(collection.id)
 
 
 @aleph_task(retry=defer.tasks.reindex.max_retries)
 def reindex_collection(job: DatasetJob, collection: Collection) -> None:
     flush = job.context.get("flush", False)
-    diff_only = job.context.get("diff_only", False)
     model = job.context.get("model", True)
     mappings = job.context.get("mappings", True)
+    profiles = job.context.get("profiles", True)
     queue_batches = job.context.get("queue_batches", True)
     batch_size = job.context.get("batch_size", 10_000)
-    schema = job.context.get("schema", None)
+    queue_name = job.context.get("queue_name")
     collections.reindex_collection(
         collection,
         flush=bool(flush),
-        diff_only=bool(diff_only),
         model=bool(model),
         mappings=bool(mappings),
+        profiles=bool(profiles),
         queue_batches=bool(queue_batches),
         batch_size=int(batch_size),
-        schema=schema,
+        queue_name=queue_name,
     )
     collections.refresh_collection(collection.id)
 
@@ -181,9 +193,11 @@ def periodic_clean_and_compute(timestamp: int):
 # every 15 minutes
 @app.periodic(cron="*/15 * * * *")
 @app.task(queue=OPENALEPH_MANAGEMENT_QUEUE, queueing_lock="periodic-retry-stalled")
-async def periodic_retry_stalled(timestamp: int):
+async def periodic_retry_stalled(timestamp: int) -> None:
     # https://procrastinate.readthedocs.io/en/stable/howto/production/retry_stalled_jobs.html
-    stalled_jobs = await app.job_manager.get_stalled_jobs()
+    stalled_jobs = await app.job_manager.get_stalled_jobs(
+        seconds_since_heartbeat=STALLED_TIMEOUT
+    )
     jobs = 0
     for job in stalled_jobs:
         jobs += 1

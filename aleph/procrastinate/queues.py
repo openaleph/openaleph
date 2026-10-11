@@ -3,6 +3,7 @@ from typing import Any, TypedDict
 import structlog
 from banal import clean_dict
 from followthemoney.proxy import EntityProxy
+from ftmq.store.fragments.dataset import IdRange
 from openaleph_procrastinate import defer
 from openaleph_procrastinate.app import make_app
 from openaleph_procrastinate.model import DatasetJob
@@ -102,13 +103,22 @@ def queue_index(
 
 
 def queue_index_batch(
-    collection: Collection, entity_ids: list[str], **context: Any
+    collection: Collection,
+    entity_ids: list[str] | None = None,
+    id_range: IdRange | None = None,
+    queue: str | None = None,
+    **context: Any,
 ) -> None:
     context = {**context, **get_context(collection)}
-    payload = {"context": context, "entity_ids": entity_ids}
+    payload: dict[str, Any] = {"context": context}
+    if id_range is not None:
+        # a dict: job serialization drops `None` from lists (an open bound)
+        payload["id_range"] = id_range._asdict()
+    else:
+        payload["entity_ids"] = entity_ids
     dataset = get_aggregator_name(collection)
     task = "aleph.procrastinate.tasks.index_entities_by_ids"
-    queue = settings.reindex.queue
+    queue = queue or settings.reindex.queue
     with app.open():
         job = DatasetJob(dataset=dataset, payload=payload, queue=queue, task=task)
         job.defer(app, priority=settings.reindex.min_priority)
