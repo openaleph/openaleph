@@ -386,14 +386,14 @@ trio = ["trio (>=0.32.0)"]
 
 [[package]]
 name = "anystore"
-version = "1.5.3"
+version = "1.5.4"
 description = "Store and cache things anywhere"
 optional = false
 python-versions = "<3.15,>=3.11"
 groups = ["main"]
 files = [
-    {file = "anystore-1.5.3-py3-none-any.whl", hash = "sha256:2b27218c619156e5334e9b7ca59e4714c48e4f8bd1a8286d7317aa9b1efa69f1"},
-    {file = "anystore-1.5.3.tar.gz", hash = "sha256:d2e7262c05597cf239cd37266f06259588e790e282e31f42a2694031a41d039f"},
+    {file = "anystore-1.5.4-py3-none-any.whl", hash = "sha256:9607f7378bbc15ac9c25d46e505b824f1f8a0f29b45b365f9893ef0f675e4033"},
+    {file = "anystore-1.5.4.tar.gz", hash = "sha256:dc22a4bf827da51b15f02901a7fb9074b55312bfe71de8c7bd32953dff676a64"},
 ]
 
 [package.dependencies]
@@ -407,7 +407,7 @@ fsspec = [
 ]
 imohash = ">=1.1.0,<2.0.0"
 orjson = ">=3.12.0,<4.0.0"
-putfs = {version = ">=0.6.0,<0.7.0", optional = true, markers = "extra == \"putfs\""}
+putfs = {version = ">=0.6.1,<0.7.0", optional = true, markers = "extra == \"putfs\""}
 pyaml = ">=26.7.0,<27.0.0"
 pydantic = ">=2.13.4,<3.0.0"
 pydantic-settings = ">=2.15.0,<3.0.0"
@@ -422,7 +422,7 @@ uuid7 = ">=0.1.0,<0.2.0"
 [package.extras]
 http = ["fsspec[http] (>2023.10,<2027)"]
 lz4 = ["lz4 (>=4.4.0,<5.0.0)"]
-putfs = ["putfs (>=0.6.0,<0.7.0)"]
+putfs = ["putfs (>=0.6.1,<0.7.0)"]
 redis = ["fakeredis (>=2.37.1,<3.0.0)", "redis (>=8.1.0)"]
 s3 = ["s3fs (>2023.10,<2027)"]
 sql = ["sqlalchemy (>=2.1.3,<3.0.0)"]
@@ -4651,8 +4651,8 @@ werkzeug = ">=3.1.3,<4.0.0"
 [package.source]
 type = "git"
 url = "https://github.com/openaleph/openaleph-search.git"
-reference = "HEAD"
-resolved_reference = "93cdaec5e3562deb9a202f8a205d3b436f889df5"
+reference = "feat/mapping-improvements"
+resolved_reference = "b527f800be4f01ec39ac6e27650354c081376166"
 
 [[package]]
 name = "openaleph-servicelayer"
@@ -7995,4 +7995,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.15"
-content-hash = "1dd64d2bbb29eacb91f13c38f9f93b5795207c18af3c15de3de5ab6c4bb80024"
+content-hash = "3e54a9151222c714837e45a3418c0f6fc96f78fae97e645e5b2664461b853e57"
