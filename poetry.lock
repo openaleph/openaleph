@@ -2326,7 +2326,7 @@ sql = ["sqlalchemy (>=2.1.3,<3.0.0)"]
 type = "git"
 url = "https://github.com/dataresearchcenter/ftmq.git"
 reference = "HEAD"
-resolved_reference = "2488be55fd43c0c05bc1b0588e96770957e1a79b"
+resolved_reference = "5394ecf33886ef20d238865b2e1eee87732d68d6"
 
 [[package]]
 name = "fuzzywuzzy"
@@ -7995,4 +7995,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.15"
-content-hash = "3e54a9151222c714837e45a3418c0f6fc96f78fae97e645e5b2664461b853e57"
+content-hash = "b34c34ee84e398f1b71839786e7e0c6bdb7537e2e96fdbb8078e8613d79eb0fc"

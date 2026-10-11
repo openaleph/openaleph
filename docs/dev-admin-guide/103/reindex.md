@@ -153,6 +153,26 @@ To skip specific collections (e.g. very large ones you reindex separately), pass
 aleph reindex-full --queue --queue-batches --exclude big_leak --exclude other_dataset
 ```
 
+For very large collections, walking all entity ids to cut the batches can be slower than the workers index them. `--sample-ranges` cuts the batches from a table sample in one query instead. `--batch-size` then counts fragments rather than entities (a document can have many), so raise it for document-heavy collections:
+
+```bash
+aleph reindex big_leak --queue-batches --sample-ranges --batch-size 50000
+```
+
+To continue a stopped `aleph reindex` of a collection, pass the last id of its last queued batch as `--resume-id`. Batches that were already queued stay in the queue, and the pre-index steps already ran, so skip them:
+
+```sql
+-- in the procrastinate database
+SELECT args->'payload'->'id_range'->>'last' FROM procrastinate_jobs
+WHERE task_name = 'aleph.procrastinate.tasks.index_entities_by_ids'
+  AND args->>'dataset' = 'collection_<id>'
+ORDER BY id DESC LIMIT 1;
+```
+
+```bash
+aleph reindex big_leak --queue-batches --no-model --no-mappings --no-profiles --resume-id <id>
+```
+
 #### Synchronous Reindexing (For Development or Debugging)
 
 Reindex collections sequentially with visible log output in one process (use tmux or something to keep it running):

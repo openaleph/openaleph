@@ -301,6 +301,8 @@ def reindex_collection(
     batch_size: int = 10_000,
     origin: str | None = None,
     queue_name: str | None = None,
+    sample_ranges: bool = False,
+    resume_id: str | None = None,
 ) -> None:
     """Re-index all entities from the model, mappings and aggregator cache.
 
@@ -315,6 +317,9 @@ def reindex_collection(
         queue_batches: Queue batches for parallelization
         origin: Filter entities by aggregator origin (e.g., 'xref', 'aleph')
         queue_name: Worker queue for the batches, implies queue_batches
+        sample_ranges: Batch by id ranges of about `batch_size` fragments from a
+            table sample instead of walking all ids (for big collections)
+        resume_id: Only batch the ids past this one, to continue a stopped run
     """
     from aleph.logic.profiles import profile_fragments
 
@@ -338,7 +343,11 @@ def reindex_collection(
         "queue_name": queue_name,
     }
     if origin is None:
-        for id_range in aggregator.get_id_ranges(batch_size):
+        if sample_ranges:
+            id_ranges = aggregator.get_sampled_id_ranges(batch_size, after=resume_id)
+        else:
+            id_ranges = aggregator.get_id_ranges(batch_size, after=resume_id)
+        for id_range in id_ranges:
             _index_batch(collection, id_range=id_range, **options)
     else:
         # only the ids with fragments of `origin`, a range holds every id

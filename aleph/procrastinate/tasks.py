@@ -96,6 +96,7 @@ def reindex_collection(job: DatasetJob, collection: Collection) -> None:
     queue_batches = job.context.get("queue_batches", True)
     batch_size = job.context.get("batch_size", 10_000)
     queue_name = job.context.get("queue_name")
+    sample_ranges = job.context.get("sample_ranges", False)
     collections.reindex_collection(
         collection,
         flush=bool(flush),
@@ -105,6 +106,7 @@ def reindex_collection(job: DatasetJob, collection: Collection) -> None:
         queue_batches=bool(queue_batches),
         batch_size=int(batch_size),
         queue_name=queue_name,
+        sample_ranges=bool(sample_ranges),
     )
     collections.refresh_collection(collection.id)
 

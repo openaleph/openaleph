@@ -354,6 +354,8 @@ def _reindex_collection(
     queue_batches: bool = False,
     batch_size: int = 10_000,
     queue_name: str | None = None,
+    sample_ranges: bool = False,
+    resume_id: str | None = None,
 ) -> None:
     log.info("[%s] Starting to re-index", collection)
     try:
@@ -366,6 +368,8 @@ def _reindex_collection(
             queue_batches=queue_batches,
             batch_size=batch_size,
             queue_name=queue_name,
+            sample_ranges=sample_ranges,
+            resume_id=resume_id,
         )
     except Exception:
         log.exception("Failed to re-index: %s", collection)
@@ -409,6 +413,24 @@ def _reindex_collections(
         "(`procrastinate worker -q <name>`). Implies --queue-batches."
     ),
 )
+@click.option(
+    "--sample-ranges",
+    is_flag=True,
+    default=False,
+    help=(
+        "Batch by id ranges from a table sample instead of walking all ids, "
+        "faster for big collections. --batch-size then counts fragments."
+    ),
+)
+@click.option(
+    "--resume-id",
+    type=str,
+    default=None,
+    help=(
+        "Only batch the entity ids past this one, to continue a stopped run "
+        "from the last id of its last queued batch."
+    ),
+)
 def reindex(
     foreign_id: str,
     flush: bool = False,
@@ -418,8 +440,12 @@ def reindex(
     queue_batches: bool = False,
     batch_size: int = 10_000,
     queue_name: str | None = None,
+    sample_ranges: bool = False,
+    resume_id: str | None = None,
 ) -> None:
     """Index all the aggregator contents for a collection."""
+    if flush and resume_id is not None:
+        raise click.UsageError("--flush would drop what was indexed before --resume-id")
     collection = get_collection(foreign_id)
     _reindex_collection(
         collection,
@@ -430,6 +456,8 @@ def reindex(
         queue_batches=queue_batches,
         batch_size=batch_size,
         queue_name=queue_name,
+        sample_ranges=sample_ranges,
+        resume_id=resume_id,
     )
 
 
@@ -469,6 +497,15 @@ def reindex(
     ),
 )
 @click.option(
+    "--sample-ranges",
+    is_flag=True,
+    default=False,
+    help=(
+        "Batch by id ranges from a table sample instead of walking all ids, "
+        "faster for big collections. --batch-size then counts fragments."
+    ),
+)
+@click.option(
     "--exclude",
     "excludes",
     multiple=True,
@@ -483,6 +520,7 @@ def reindex_full(
     queue_batches: bool = False,
     batch_size: int = 10_000,
     queue_name: str | None = None,
+    sample_ranges: bool = False,
     excludes: tuple[str, ...] = (),
 ) -> None:
     """Re-index all collections."""
@@ -499,6 +537,7 @@ def reindex_full(
         queue_batches=queue_batches,
         batch_size=batch_size,
         queue_name=queue_name,
+        sample_ranges=sample_ranges,
     )
 
 
@@ -537,6 +576,15 @@ def reindex_full(
         "(`procrastinate worker -q <name>`). Implies --queue-batches."
     ),
 )
+@click.option(
+    "--sample-ranges",
+    is_flag=True,
+    default=False,
+    help=(
+        "Batch by id ranges from a table sample instead of walking all ids, "
+        "faster for big collections. --batch-size then counts fragments."
+    ),
+)
 def reindex_casefiles(
     flush: bool = False,
     queue: bool = False,
@@ -546,6 +594,7 @@ def reindex_casefiles(
     queue_batches: bool = False,
     batch_size: int = 10_000,
     queue_name: str | None = None,
+    sample_ranges: bool = False,
 ) -> None:
     """Re-index all the casefile collections."""
     _reindex_collections(
@@ -558,6 +607,7 @@ def reindex_casefiles(
         queue_batches=queue_batches,
         batch_size=batch_size,
         queue_name=queue_name,
+        sample_ranges=sample_ranges,
     )
 
 
