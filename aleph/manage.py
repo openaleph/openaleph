@@ -1236,41 +1236,42 @@ def dump_profiles(outfile, foreign_id=None):
             outfile.write(encoder.encode(data) + "\n")
 
 
+def _status_rows(dataset, collection: str):
+    """Render a DatasetStatus as tabulate rows (dataset, batch, queue)."""
+    rows = [[collection, "", "", dataset.todo, dataset.doing, dataset.succeeded]]
+    for batch in dataset.batches:
+        for queue in batch.queues:
+            rows.append(
+                [
+                    collection,
+                    batch.name,
+                    queue.name,
+                    queue.todo,
+                    queue.doing,
+                    queue.succeeded,
+                ]
+            )
+    return rows
+
+
 @cli.command()
 @click.argument("foreign_id", required=False)
 def status(foreign_id=None):
-    """Get the queue status (pending and finished tasks.)"""
-    if foreign_id is not None:
-        collection = get_collection(foreign_id)
-        status = get_collection_status(collection)
-        status = {"datasets": {foreign_id: status}}
-    else:
-        status = get_status()
+    """Get the queue status (pending, running and finished tasks.)"""
     headers = ["Collection", "Job", "Stage", "Pending", "Running", "Finished"]
     rows = []
-    for foreign_id, dataset in status.get("datasets").items():
-        rows.append(
-            [
-                foreign_id,
-                "",
-                "",
-                dataset["pending"],
-                dataset["running"],
-                dataset["finished"],
-            ]
+    if foreign_id is not None:
+        collection = get_collection(foreign_id)
+        dataset = get_collection_status(
+            collection,
+            include_collection_data=False,
+            active_only=False,
         )
-        for job in dataset.get("jobs"):
-            for stage in job.get("stages"):
-                rows.append(
-                    [
-                        foreign_id,
-                        stage["job_id"],
-                        stage["stage"],
-                        stage["pending"],
-                        stage["running"],
-                        stage["finished"],
-                    ]
-                )
+        if dataset is not None:
+            rows.extend(_status_rows(dataset, foreign_id))
+    else:
+        for dataset in get_status():
+            rows.extend(_status_rows(dataset, dataset.name))
     print(tabulate(rows, headers))
 
 
