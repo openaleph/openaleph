@@ -29,6 +29,7 @@ if [ ! -f "$ENV_FILE" ]; then
     sed \
       -e "s/^ALEPH_SECRET_KEY=.*/ALEPH_SECRET_KEY=$secret_key/" \
       -e 's/^ALEPH_SINGLE_USER=.*/ALEPH_SINGLE_USER=true/' \
+      -e 's,^# PROCRASTINATE_DB_URI=postgresql://aleph:aleph@postgres/aleph,PROCRASTINATE_DB_URI=postgresql://aleph:aleph@postgres/aleph,' \
       -e 's,^# FTM_FRAGMENTS_URI=postgresql://aleph:aleph@postgres/aleph,FTM_FRAGMENTS_URI=postgresql://aleph:aleph@postgres/aleph,' \
       "$ROOT_DIR/aleph.env.tmpl" >"$ENV_FILE"
   )
