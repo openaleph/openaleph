@@ -115,9 +115,13 @@ def flush_mapping(collection, mapping_id, sync=True):
     db.session.commit()
 
 
-def cleanup_mappings():
+def cleanup_mappings(collection_id: int | None = None) -> None:
     """Delete mappings where the associated table is gone."""
-    for mapping in Mapping.all().order_by(Mapping.collection_id.desc()):
+    if collection_id is not None:
+        mappings = Mapping.by_collection(collection_id)
+    else:
+        mappings = Mapping.all().order_by(Mapping.collection_id.desc())
+    for mapping in mappings:
         aggregator = get_aggregator(mapping.collection)
         table = _get_table(mapping, aggregator)
         if table is not None:

@@ -34,6 +34,7 @@ from aleph.logic.collections import (
     reindex_collection,
     reingest_collection,
     update_collection,
+    upgrade_collection,
     upgrade_collections,
     validate_collection_foreign_ids,
 )
@@ -834,6 +835,15 @@ def update():
     update_roles()
     upgrade_collections()
     cleanup_mappings()
+
+
+@cli.command("update-collection")
+@click.argument("foreign_id")
+def update_collection_command(foreign_id: str) -> None:
+    """Re-index a single collection and clear its caches."""
+    collection = get_collection(foreign_id)
+    upgrade_collection(collection)
+    cleanup_mappings(collection.id)
 
 
 @cli.command()

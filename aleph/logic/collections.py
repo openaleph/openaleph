@@ -380,16 +380,20 @@ def delete_collection(collection, keep_metadata=False, sync=False):
     Authz.flush()
 
 
-def upgrade_collections(cleanup_external: bool = False):
+def upgrade_collection(collection: Collection, cleanup_external: bool = False) -> None:
+    if collection.deleted_at is not None:
+        delete_collection(collection, keep_metadata=True, sync=True)
+    else:
+        compute_collection(collection, force=True)
+    # destroy local ftm store for external collections
+    if cleanup_external and collection.external:
+        aggregator = get_aggregator(collection)
+        aggregator.drop()
+
+
+def upgrade_collections(cleanup_external: bool = False) -> None:
     for collection in Collection.all(deleted=True):
-        if collection.deleted_at is not None:
-            delete_collection(collection, keep_metadata=True, sync=True)
-        else:
-            compute_collection(collection, force=True)
-        # destroy local ftm store for external collections
-        if cleanup_external and collection.external:
-            aggregator = get_aggregator(collection)
-            aggregator.drop()
+        upgrade_collection(collection, cleanup_external=cleanup_external)
     # update global cache:
     compute_collections()
 
