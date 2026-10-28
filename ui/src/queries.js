@@ -210,6 +210,8 @@ export function entityPercolateQuery(location, entityId) {
     {
       'filter:schemata': 'LegalEntity',
       highlight: true,
+      dehydrate: true, // this excludes entity properties from the response
+      include_fields: 'properties.topics',
     },
     'percolate'
   )
@@ -274,6 +276,7 @@ export function entityReferenceQuery(location, entity, reference) {
   const context = {
     [`filter:properties.${reference?.property?.name}`]: entity?.id,
     'filter:schemata': reference?.schema,
+    dehydrate: true, // this excludes entity properties from the response
   };
   const path =
     entity?.id && reference?.schema && reference?.property
@@ -296,6 +299,7 @@ export function profileReferenceQuery(location, profile, reference) {
   const context = {
     [`filter:properties.${reference?.property?.name}`]: profile?.entities,
     'filter:schemata': reference?.schema,
+    dehydrate: true, // this excludes entity properties from the response
   };
   const path =
     profile?.id && reference?.schema && reference?.property
