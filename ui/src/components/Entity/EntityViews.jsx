@@ -23,7 +23,7 @@ import {
   entityReferenceQuery,
   entitySimilarQuery,
   entityMoreLikeThisQuery,
-  folderDocumentsQuery,
+  folderChildrenCountQuery,
   entityThreadQuery,
 } from 'queries';
 import {
@@ -456,7 +456,7 @@ class EntityViews extends React.Component {
 
 const mapStateToProps = (state, ownProps) => {
   const { entity, location, activeMode, isPreview } = ownProps;
-  const childrenQuery = folderDocumentsQuery(location, entity.id, undefined);
+  const childrenQuery = folderChildrenCountQuery(location, entity.id);
   const reference = selectEntityReference(state, entity.id, activeMode);
 
   // Check if we're in a search preview and get search result count

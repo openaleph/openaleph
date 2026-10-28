@@ -148,12 +148,20 @@ export function folderDocumentsQuery(location, documentId, queryText) {
   const field = hasSearch
     ? 'filter:properties.ancestors'
     : 'filter:properties.parent';
-  const context = { 'filter:schemata': 'Document', [field]: documentId };
+  const context = {
+    'filter:schemata': 'Document',
+    [field]: documentId,
+    dehydrate: true, // this excludes entity properties from the response
+  };
   let query = Query.fromLocation(path, location, context, 'document');
   if (queryText) {
     query = query.setString('q', queryText);
   }
   return query;
+}
+
+export function folderChildrenCountQuery(location, documentId) {
+  return folderDocumentsQuery(location, documentId).limit(0);
 }
 
 export function entitySimilarQuery(location, entityId) {
