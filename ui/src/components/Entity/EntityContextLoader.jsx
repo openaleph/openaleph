@@ -34,7 +34,7 @@ import {
   entityMentionsQuery,
   entityThreadQuery,
   entityNearbyQuery,
-  folderDocumentsQuery,
+  folderChildrenCountQuery,
   entityReferencesQuery,
 } from 'queries';
 
@@ -118,7 +118,7 @@ const mapStateToProps = (state, ownProps) => {
   const mentionsQuery = entityMentionsQuery(location, entityId);
   const threadQuery = entityThreadQuery(location, entityId);
   const nearbyQuery = entityNearbyQuery(location, entityId);
-  const childrenQuery = folderDocumentsQuery(location, entityId, undefined);
+  const childrenQuery = folderChildrenCountQuery(location, entityId);
   const expandQuery = entityReferencesQuery(entityId);
   return {
     entity: selectEntity(state, entityId),

@@ -148,12 +148,20 @@ export function folderDocumentsQuery(location, documentId, queryText) {
   const field = hasSearch
     ? 'filter:properties.ancestors'
     : 'filter:properties.parent';
-  const context = { 'filter:schemata': 'Document', [field]: documentId };
+  const context = {
+    'filter:schemata': 'Document',
+    [field]: documentId,
+    dehydrate: true, // this excludes entity properties from the response
+  };
   let query = Query.fromLocation(path, location, context, 'document');
   if (queryText) {
     query = query.setString('q', queryText);
   }
   return query;
+}
+
+export function folderChildrenCountQuery(location, documentId) {
+  return folderDocumentsQuery(location, documentId).limit(0);
 }
 
 export function entitySimilarQuery(location, entityId) {
@@ -202,6 +210,8 @@ export function entityPercolateQuery(location, entityId) {
     {
       'filter:schemata': 'LegalEntity',
       highlight: true,
+      dehydrate: true, // this excludes entity properties from the response
+      include_fields: 'properties.topics',
     },
     'percolate'
   )
@@ -266,6 +276,7 @@ export function entityReferenceQuery(location, entity, reference) {
   const context = {
     [`filter:properties.${reference?.property?.name}`]: entity?.id,
     'filter:schemata': reference?.schema,
+    dehydrate: true, // this excludes entity properties from the response
   };
   const path =
     entity?.id && reference?.schema && reference?.property
@@ -288,6 +299,7 @@ export function profileReferenceQuery(location, profile, reference) {
   const context = {
     [`filter:properties.${reference?.property?.name}`]: profile?.entities,
     'filter:schemata': reference?.schema,
+    dehydrate: true, // this excludes entity properties from the response
   };
   const path =
     profile?.id && reference?.schema && reference?.property
