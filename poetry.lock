@@ -398,14 +398,14 @@ trio = ["trio (>=0.32.0)"]
 
 [[package]]
 name = "anystore"
-version = "1.5.5"
+version = "1.5.6"
 description = "Store and cache things anywhere"
 optional = false
-python-versions = "<3.15,>=3.11"
+python-versions = "<3.16,>=3.11"
 groups = ["main"]
 files = [
-    {file = "anystore-1.5.5-py3-none-any.whl", hash = "sha256:fe93c97359a0d539efb58b5508db6f9aed56c85c2590c5dc468899ba705013d8"},
-    {file = "anystore-1.5.5.tar.gz", hash = "sha256:79ec45d13fef77bfd28bd69395d219c59ecc54b5487fa8a86cbe38c5b009dd02"},
+    {file = "anystore-1.5.6-py3-none-any.whl", hash = "sha256:4e57c5837de78bf2e68bc7b20a7c7a6a574002b02832a44abcb9a6790d2ed2b5"},
+    {file = "anystore-1.5.6.tar.gz", hash = "sha256:c0b787325937c78480391498eef1c4a418b5fb75bbe43fe009800ca3dc8de42e"},
 ]
 
 [package.dependencies]
@@ -419,12 +419,12 @@ fsspec = [
 ]
 imohash = ">=1.1.0,<2.0.0"
 orjson = ">=3.12.0,<4.0.0"
-putfs = {version = ">=0.6.1,<0.7.0", optional = true, markers = "extra == \"putfs\""}
+putfs = {version = ">=0.6.2,<0.7.0", optional = true, markers = "python_version < \"3.15\" and extra == \"putfs\""}
 pyaml = ">=26.7.0,<27.0.0"
 pydantic = ">=2.14.1,<3.0.0"
-pydantic-settings = ">=2.15.0,<3.0.0"
+pydantic-settings = ">=2.16.1,<3.0.0"
 rich = ">=10.0.0,<16.0.0"
-rigour = ">=2.4.1,<3.0.0"
+rigour = ">=2.6.1,<3.0.0"
 s3fs = {version = ">2023.10,<2027", optional = true, markers = "extra == \"s3\""}
 structlog = ">=22.0.0"
 tqdm = ">=4.70.0,<5.0.0"
@@ -434,10 +434,10 @@ uuid7 = ">=0.1.0,<0.2.0"
 [package.extras]
 http = ["fsspec[http] (>2023.10,<2027)"]
 lz4 = ["lz4 (>=4.4.0,<5.0.0)"]
-putfs = ["putfs (>=0.6.1,<0.7.0)"]
+putfs = ["putfs (>=0.6.2,<0.7.0) ; python_version < \"3.15\""]
 redis = ["fakeredis (>=2.37.1,<3.0.0)", "redis (>=8.1.0)"]
 s3 = ["s3fs (>2023.10,<2027)"]
-sql = ["sqlalchemy (>=2.1.3,<3.0.0)"]
+sql = ["sqlalchemy (>=2.1.6,<3.0.0)"]
 
 [[package]]
 name = "apispec"
@@ -2278,21 +2278,23 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "ftm-lakehouse"
-version = "0.9.0"
+version = "0.10.0"
 description = "Data standard, storage and retrieval for structured and unstructured FollowTheMoney data"
 optional = false
-python-versions = ">=3.12,<3.15"
+python-versions = "<3.15,>=3.12"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "ftm_lakehouse-0.10.0-py3-none-any.whl", hash = "sha256:112e32259738442443d5866ca57d77a727b92a2edf8c477fc38f62b3348344bb"},
+    {file = "ftm_lakehouse-0.10.0.tar.gz", hash = "sha256:4e55100a1161dd1b7e109933918cb5cc9c60aeddc1b7a72ed5538d04682c28b4"},
+]
 
 [package.dependencies]
-adbc-driver-postgresql = {version = ">=1.12.0,<2.0.0", optional = true}
-anystore = ">=1.5.5,<2.0.0"
+adbc-driver-postgresql = {version = ">=1.12.0,<2.0.0", optional = true, markers = "extra == \"postgres\""}
+anystore = ">=1.5.6,<2.0.0"
 followthemoney = ">=4.11.2,<5.0.0"
-ftmq = {git = "https://github.com/dataresearchcenter/ftmq.git", extras = ["lake"]}
+ftmq = {version = ">=5.3.1,<6.0.0", extras = ["lake"]}
 httpx = ">=0.28.1,<0.29.0"
-psycopg = {version = ">=3.2,<4", extras = ["binary"], optional = true}
+psycopg = {version = ">=3.2,<4", extras = ["binary"], optional = true, markers = "extra == \"postgres\""}
 zfs-agent = ">=0.0.1,<0.0.2"
 
 [package.extras]
@@ -2303,36 +2305,32 @@ http = ["aiohttp (!=4.0.0a0,!=4.0.0a1)"]
 postgres = ["adbc-driver-postgresql (>=1.12.0,<2.0.0)", "psycopg[binary] (>=3.2,<4)"]
 s3 = ["s3fs (>2024.2.0)"]
 
-[package.source]
-type = "git"
-url = "https://github.com/openaleph/ftm-lakehouse.git"
-reference = "HEAD"
-resolved_reference = "f475c536a04d399aea74871d8132ee54b7cdb28a"
-
 [[package]]
 name = "ftmq"
-version = "5.3.0"
+version = "5.3.1"
 description = "followthemoney query dsl and io helpers"
 optional = false
-python-versions = ">=3.11,<3.15"
+python-versions = "<3.15,>=3.11"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "ftmq-5.3.1-py3-none-any.whl", hash = "sha256:11da4080e1d0e9984d4d188fe6077dd6d76c26a561f8f9461382eeafca732e48"},
+    {file = "ftmq-5.3.1.tar.gz", hash = "sha256:15cbdb531b82ef7a1f82e792badd3e67cf67df046274d7b59ea88eb8a12c287e"},
+]
 
 [package.dependencies]
-anystore = ">=1.5.3,<2.0.0"
-deltalake = {version = ">=1.6.6,<2.0.0", optional = true}
-duckdb = {version = ">=1.5.6,<2.0.0", optional = true}
-followthemoney = ">=4.11.0,<5.0.0"
-nomenklatura = ">=4.17.2,<5.0.0"
+anystore = ">=1.5.6,<2.0.0"
+deltalake = {version = ">=1.6.6,<2.0.0", optional = true, markers = "extra == \"lake\""}
+duckdb = {version = ">=1.5.6,<2.0.0", optional = true, markers = "extra == \"lake\""}
+followthemoney = ">=4.11.2,<5.0.0"
+nomenklatura = ">=4.17.5,<5.0.0"
 normality = ">=3.1.0,<4.0.0"
 orjson = ">=3.10.18,<4.0.0"
-pandas = {version = ">=3.1.0,<4.0.0", optional = true}
-psycopg = {version = ">=3.3.6,<4.0.0", extras = ["pool"], optional = true}
-pyarrow = {version = ">=25.0.1,<26.0.0", optional = true}
+pandas = {version = ">=3.1.0,<4.0.0", optional = true, markers = "extra == \"lake\""}
+psycopg = {version = ">=3.3.6,<4.0.0", extras = ["pool"], optional = true, markers = "extra == \"postgres\""}
+pyarrow = {version = ">=25.0.1,<26.0.0", optional = true, markers = "extra == \"lake\""}
 pyrql = ">=0.7.11,<1.0.0"
 rigour = ">=2.6.1,<3.0.0"
-sqlalchemy = {version = ">=2.1.6,<3.0.0", optional = true}
+sqlalchemy = {version = ">=2.1.6,<3.0.0", optional = true, markers = "extra == \"postgres\""}
 typer = ">=0.27.2,<1"
 
 [package.extras]
@@ -2343,12 +2341,6 @@ level = ["plyvel (>=1.5.1,<2.0.0)"]
 postgres = ["psycopg[pool] (>=3.3.6,<4.0.0)", "sqlalchemy (>=2.1.6,<3.0.0)"]
 search = ["tantivy (>=0.26.2,<0.27.0)"]
 sql = ["sqlalchemy (>=2.1.6,<3.0.0)"]
-
-[package.source]
-type = "git"
-url = "https://github.com/dataresearchcenter/ftmq.git"
-reference = "HEAD"
-resolved_reference = "3d10b5f1ff74f0ce9dc53c1584e0a65afdbe0b50"
 
 [[package]]
 name = "fuzzywuzzy"
@@ -4589,11 +4581,11 @@ files = []
 develop = false
 
 [package.dependencies]
-anystore = {version = ">=1.5.3,<2.0.0", extras = ["putfs", "s3"]}
+anystore = {version = ">=1.5.6,<2.0.0", extras = ["putfs", "s3"]}
 cachetools = "<6"
-followthemoney = ">=4.11.0,<5.0.0"
-ftm-lakehouse = {git = "https://github.com/openaleph/ftm-lakehouse.git", extras = ["postgres"]}
-ftmq = ">=5.3.0,<6.0.0"
+followthemoney = ">=4.11.2,<5.0.0"
+ftm-lakehouse = {version = ">=0.10.0,<0.11.0", extras = ["postgres"]}
+ftmq = ">=5.3.1,<6.0.0"
 openaleph-servicelayer = ">=1.25.0,<2.0.0"
 procrastinate = ">=3.10.0,<4.0.0"
 psycopg = ">=3.3.6,<4.0.0"
@@ -4605,7 +4597,7 @@ pydantic-settings = ">=2.15.0,<3.0.0"
 type = "git"
 url = "https://github.com/openaleph/openaleph-procrastinate.git"
 reference = "HEAD"
-resolved_reference = "b66283f84b63403f4ed6a7e46aa6dbf1a7e1fb3c"
+resolved_reference = "309c8d1b5cb38adfdec6835a3cd847e354bd041e"
 
 [[package]]
 name = "openaleph-search"
@@ -4622,7 +4614,7 @@ aiohttp = ">=3.14.5,<4.0.0"
 cachetools = "<6"
 elasticsearch = ">=9,<10"
 followthemoney = ">=4.11.2,<5.0.0"
-ftmq = {git = "https://github.com/dataresearchcenter/ftmq.git"}
+ftmq = ">=5.3.1,<6.0.0"
 orjson = ">=3.11.9,<4.0.0"
 pydantic = ">=2.14.1,<3.0.0"
 pydantic-settings = ">=2.16.1,<3.0.0"
@@ -4633,7 +4625,7 @@ werkzeug = ">=3.1.3,<4.0.0"
 type = "git"
 url = "https://github.com/openaleph/openaleph-search"
 reference = "HEAD"
-resolved_reference = "32a78ee3e16e7302ee673c12451b1e5d3106fa1e"
+resolved_reference = "c2fe58f2cb4639b8637c4054680dd188c954b6f0"
 
 [[package]]
 name = "openaleph-servicelayer"
@@ -7973,4 +7965,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.15"
-content-hash = "a799975b56df5c51c8bfa259845a3a9b83e1ff090abdce55ab8d9d30f24ee79e"
+content-hash = "441e4f0ee4535f613a6f5ddaf1b35914947b9263da5b0927a2791f5ba82294e1"
