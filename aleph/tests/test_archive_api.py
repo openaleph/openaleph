@@ -57,8 +57,8 @@ class ArchiveApiTestCase(TestCase):
         )
         # the files of an external collection are put there by whatever
         # manages the lakehouse dataset, not by aleph
-        file = lakehouse_archive(collection.foreign_id, uri=uri).store(self.fixture)
-        return collection, file.checksum
+        checksum = lakehouse_archive(collection.foreign_id, uri=uri).store(self.fixture)
+        return collection, checksum
 
     def test_no_token(self):
         res = self.client.get("/api/2/archive")
