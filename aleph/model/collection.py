@@ -91,6 +91,10 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
     # external managed, appears read-only in UI even for admins
     external = db.Column(db.Boolean, default=False)
 
+    # read-only for everyone (incl. admins), like the global ALEPH_MAINTENANCE
+    # flag but scoped to this collection
+    maintenance = db.Column(db.Boolean, default=False)
+
     # location of the data in an external lakehouse, only for external
     # collections
     lakehouse_uri = db.Column(db.Unicode, nullable=True)
@@ -150,6 +154,7 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
         if authz.is_admin:
             self.category = data.get("category", self.category)
             self.external = as_bool(data.get("external", self.external))
+            self.maintenance = as_bool(data.get("maintenance", self.maintenance))
             if self.external and self.category == self.CASEFILE:
                 raise InvalidData("Can't set casefile for external collection")
             if "lakehouse_uri" in data:
@@ -249,6 +254,7 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
                 "contains_ai": self.contains_ai,
                 "contains_ai_comment": self.contains_ai_comment,
                 "external": self.external,
+                "maintenance": self.maintenance,
                 "lakehouse_uri": self.lakehouse_uri,
                 "taggable": self.taggable,
             }

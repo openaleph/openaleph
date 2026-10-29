@@ -57,6 +57,8 @@ Collection:
       type: boolean
     external:
       type: boolean
+    maintenance:
+      type: boolean
     lakehouse_uri:
       type: string
       nullable: true
@@ -117,6 +119,8 @@ CollectionCreate:
     taggable:
       type: boolean
     external:
+      type: boolean
+    maintenance:
       type: boolean
     lakehouse_uri:
       type: string

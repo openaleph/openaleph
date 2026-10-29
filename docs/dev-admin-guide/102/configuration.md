@@ -34,7 +34,7 @@ This document provides a comprehensive reference for all configuration parameter
 #### `ALEPH_MAINTENANCE`
 - **Type**: Boolean
 - **Default**: `false`
-- **Description**: Puts the system into read-only mode. Use together with `ALEPH_APP_BANNER` to display a notification for users (see below).
+- **Description**: Puts the system into read-only mode. Use together with `ALEPH_APP_BANNER` to display a notification for users (see below). To put a single collection into read-only mode instead, use `aleph configure-collection <foreign_id> --maintenance` (and `--no-maintenance` to lift it).
 
 ---
 

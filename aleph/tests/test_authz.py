@@ -87,6 +87,15 @@ class AuthzTestCase(TestCase):
         assert authz.can(self.public, authz.WRITE) is False, authz._collections
         SETTINGS.MAINTENANCE = False
 
+    def test_collection_maintenance(self):
+        self.public.maintenance = True
+        db.session.commit()
+        authz = Authz.from_role(self.admin)
+        assert authz.can(self.public, authz.READ) is True, authz._collections
+        assert authz.can(self.public, authz.WRITE) is False, authz._collections
+        assert authz.can(self.public.id, authz.WRITE) is False, authz._collections
+        assert authz.can(self.private, authz.WRITE) is True, authz._collections
+
     def test_token(self):
         authz = Authz.from_role(self.admin)
         token = authz.to_token()
