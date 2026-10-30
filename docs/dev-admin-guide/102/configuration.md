@@ -472,7 +472,7 @@ This document provides a comprehensive reference for all configuration parameter
 #### `FTM_ASSETS_URL`
 - **Type**: String (URL)
 - **Default**: None
-- **Description**: Base URL for Follow the Money (FTM) assets and resources.
+- **Description**: Base URL the [ftm-assets](https://github.com/dataresearchcenter/ftm-assets) images are served from statically. Entity images are looked up by `wikidataId` at `<url>/<id>/meta.json`.
 
 ---
 

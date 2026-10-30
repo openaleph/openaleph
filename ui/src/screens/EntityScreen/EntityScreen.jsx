@@ -91,7 +91,7 @@ class EntityScreen extends Component {
   }
 
   render() {
-    const { entity, entityId, intl, parsedHash, ftmAssetsApi } = this.props;
+    const { entity, entityId, intl, parsedHash, ftmAssetsRoot } = this.props;
     if (entity.profileId && parsedHash.profile === undefined) {
       parsedHash.via = entity.id;
       return (
@@ -182,10 +182,10 @@ class EntityScreen extends Component {
                     <EntityTags entity={entity} />
                   </div>
                 )}
-                {ftmAssetsApi && (
+                {ftmAssetsRoot && (
                   <div className="ItemOverview__image">
                     <EntityImage
-                      api={ftmAssetsApi}
+                      root={ftmAssetsRoot}
                       entity={entity}
                       thumbnail
                       fallback={false}
@@ -222,8 +222,8 @@ const mapStateToProps = (state, ownProps) => {
   const entity = selectEntity(state, entityId);
   const parsedHash = queryString.parse(location.hash);
   parsedHash.mode = selectEntityView(state, entityId, parsedHash.mode, false);
-  const ftmAssetsApi = selectServiceUrl(state, 'ftm_assets');
-  return { entity, entityId, parsedHash, ftmAssetsApi };
+  const ftmAssetsRoot = selectServiceUrl(state, 'ftm_assets');
+  return { entity, entityId, parsedHash, ftmAssetsRoot };
 };
 
 export default compose(
