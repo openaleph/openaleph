@@ -241,6 +241,11 @@ def touch(foreign_id, sync=True):
     "--lakehouse-uri",
     help="Lakehouse URI (external collections only), pass '' to unset",
 )
+@click.option(
+    "--maintenance/--no-maintenance",
+    default=None,
+    help="Maintenance mode: collection is read-only for everyone, incl. admins",
+)
 @click.option("--restricted/--no-restricted", default=None)
 @click.option("--xref/--no-xref", default=None, help="Run xref on entity changes")
 @click.option("--taggable/--no-taggable", default=None)
@@ -266,6 +271,7 @@ def configure_collection(
     data_url: str | None = None,
     external: bool | None = None,
     lakehouse_uri: str | None = None,
+    maintenance: bool | None = None,
     restricted: bool | None = None,
     xref: bool | None = None,
     taggable: bool | None = None,
@@ -288,6 +294,7 @@ def configure_collection(
         "data_url": data_url,
         "external": external,
         "lakehouse_uri": lakehouse_uri,
+        "maintenance": maintenance,
         "restricted": restricted,
         "xref": xref,
         "taggable": taggable,

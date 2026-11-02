@@ -45,6 +45,7 @@ class Authz(object):
         self.session_write = not SETTINGS.MAINTENANCE and self.logged_in
         self.can_browse_anonymous = not SETTINGS.REQUIRE_LOGGED_IN or self.logged_in
         self._collections = {}
+        self._collection_cache: dict[int, Collection | None] = {}
 
     def collections(self, action) -> list[int]:
         if self.is_admin:
@@ -78,8 +79,6 @@ class Authz(object):
             return False
         if action == self.WRITE and not self.session_write:
             return False
-        if self.is_admin:
-            return True
 
         if isinstance(collection, Collection):
             collection_obj = collection
@@ -91,22 +90,34 @@ class Authz(object):
             except (TypeError, ValueError):
                 return False
 
+        # Block writes on collections in maintenance mode, also for admins,
+        # same as the global ALEPH_MAINTENANCE flag
+        if action == self.WRITE and self._collection_flag(
+            collection, collection_obj, "maintenance"
+        ):
+            return False
+        if self.is_admin:
+            return True
+
         # Block writes on external collections
-        if action == self.WRITE:
-            if collection_obj is not None:
-                if collection_obj.external:
-                    return False
-            elif self._is_external_collection(collection):
-                return False
+        if action == self.WRITE and self._collection_flag(
+            collection, collection_obj, "external"
+        ):
+            return False
         return collection in self.collections(action)
 
-    def _is_external_collection(self, collection_id):
-        if not hasattr(self, "_external_cache"):
-            self._external_cache = {}
-        if collection_id not in self._external_cache:
-            coll = Collection.by_id(collection_id)
-            self._external_cache[collection_id] = coll.external if coll else False
-        return self._external_cache[collection_id]
+    def _collection_flag(
+        self, collection_id: int, collection: Collection | None, flag: str
+    ) -> bool:
+        """Read a boolean column of a collection, loading and caching the
+        collection by id if the object isn't at hand."""
+        if collection is None:
+            if collection_id not in self._collection_cache:
+                self._collection_cache[collection_id] = Collection.by_id(collection_id)
+            collection = self._collection_cache[collection_id]
+        if collection is None:
+            return False
+        return bool(getattr(collection, flag))
 
     def can_bulk_import(self):
         if not self.can_browse_anonymous or not self.session_write:
