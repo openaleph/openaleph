@@ -7,7 +7,8 @@ from aleph.authz import Authz
 from aleph.core import db
 from aleph.logic.aggregator import get_aggregator
 from aleph.logic.collections import compute_collection, update_collection
-from aleph.model import EntitySet
+from aleph.logic.roles import create_group, user_add
+from aleph.model import Collection, EntitySet
 from aleph.model.role import Role
 from aleph.settings import SETTINGS
 from aleph.tests.util import JSON, TestCase
@@ -702,3 +703,70 @@ class CollectionsApiTestCase(TestCase):
         assert not role.is_admin
         res = self.client.post(url, json=data, headers=headers)
         assert res.status_code == 200
+
+    def test_collection_create_limited(self):
+        """Investigators may only own a limited number of investigations"""
+
+        SETTINGS.INVESTIGATOR_GROUP = "investigator"
+        SETTINGS.INVESTIGATOR_MAX_INVESTIGATIONS = 2
+
+        role, headers = self.login("limited")
+        group = create_group("investigator")
+        user_add(group.name, role.foreign_id)
+        assert role.is_investigator
+        assert role.investigations_limit == 2
+
+        url = "/api/2/collections"
+        res = self.client.post(url, json={"label": "one"}, headers=headers)
+        assert res.status_code == 200, res.json
+        res = self.client.post(url, json={"label": "two"}, headers=headers)
+        assert res.status_code == 200, res.json
+        second_id = res.json["id"]
+        res = self.client.post(url, json={"label": "three"}, headers=headers)
+        assert res.status_code == 403, res.json
+        assert "maximum number of investigations" in res.json["message"]
+
+        # own role exposes the quota
+        res = self.client.get(f"/api/2/roles/{role.id}", headers=headers)
+        assert res.json["investigations_limit"] == 2
+        assert res.json["investigations_count"] == 2
+
+        # deleting an investigation frees a slot
+        res = self.client.delete(f"{url}/{second_id}?sync=true", headers=headers)
+        assert res.status_code == 204, res.json
+        res = self.client.post(url, json={"label": "three"}, headers=headers)
+        assert res.status_code == 200, res.json
+
+        # zero means unlimited
+        SETTINGS.INVESTIGATOR_MAX_INVESTIGATIONS = 0
+        assert role.investigations_limit is None
+        res = self.client.post(url, json={"label": "four"}, headers=headers)
+        assert res.status_code == 200, res.json
+
+        # admins are never limited
+        SETTINGS.INVESTIGATOR_MAX_INVESTIGATIONS = 1
+        admin, admin_headers = self.login("limited_admin", is_admin=True)
+        assert admin.investigations_limit is None
+        for label in ("a", "b"):
+            res = self.client.post(url, json={"label": label}, headers=admin_headers)
+            assert res.status_code == 200, res.json
+
+        # without an investigator group the limit is ignored
+        SETTINGS.INVESTIGATOR_GROUP = None
+        assert role.investigations_limit is None
+        res = self.client.post(url, json={"label": "five"}, headers=headers)
+        assert res.status_code == 200, res.json
+
+        # reset
+        SETTINGS.INVESTIGATOR_MAX_INVESTIGATIONS = 3
+
+    def test_collection_count_casefiles_by_creator(self):
+        role = self.create_user("counter")
+        assert Collection.count_casefiles_by_creator(role.id) == 0
+        self.create_collection(creator=role, label="case", casefile=True)
+        self.create_collection(creator=role, label="case 2", casefile=True)
+        assert Collection.count_casefiles_by_creator(role.id) == 2
+        other = self.create_user("other_counter")
+        self.create_collection(creator=other, label="other case", casefile=True)
+        assert Collection.count_casefiles_by_creator(role.id) == 2
+        assert Collection.count_casefiles_by_creator(other.id) == 1

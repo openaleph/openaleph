@@ -1,6 +1,7 @@
 from banal import ensure_list
 from flask import Blueprint, request
-from werkzeug.exceptions import BadRequest
+from flask_babel import gettext
+from werkzeug.exceptions import BadRequest, Forbidden
 
 from aleph.core import db
 from aleph.index.collections import update_collection_stats
@@ -84,6 +85,10 @@ def create():
               schema:
                 $ref: '#/components/schemas/Collection'
     """
+    if request.authz.is_investigator and request.authz.investigations_limit_reached():
+        raise Forbidden(
+            gettext("You have reached the maximum number of investigations.")
+        )
     require(request.authz.can_create_investigation())
     data = parse_request("CollectionCreate")
     sync = get_flag("sync", True)

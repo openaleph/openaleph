@@ -86,6 +86,16 @@ class Role(db.Model, IdModel, SoftDeleteModel):
         return True
 
     @property
+    def investigations_limit(self) -> int | None:
+        """Max investigations this role may own, None if unlimited. Only
+        applies to non-admin members of the configured investigator group."""
+        if self.is_admin or SETTINGS.INVESTIGATOR_GROUP is None:
+            return None
+        if SETTINGS.INVESTIGATOR_MAX_INVESTIGATIONS <= 0:
+            return None
+        return SETTINGS.INVESTIGATOR_MAX_INVESTIGATIONS
+
+    @property
     def is_alertable(self):
         if self.email is None or not self.is_actor:
             return False

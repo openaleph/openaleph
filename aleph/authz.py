@@ -146,12 +146,25 @@ class Authz(object):
             return False
         return True
 
-    def can_create_investigation(self):
+    def can_create_investigation(self) -> bool:
         if not self.session_write:
             return False
         if self.is_admin:
             return True
-        return self.is_investigator
+        if not self.is_investigator:
+            return False
+        return not self.investigations_limit_reached()
+
+    def investigations_limit_reached(self) -> bool:
+        """Check the live count of owned investigations against the role's
+        limit. The role is loaded from the database on purpose, the cached
+        token state would go stale."""
+        if self.is_admin or self.role is None:
+            return False
+        limit = self.role.investigations_limit
+        if limit is None:
+            return False
+        return Collection.count_casefiles_by_creator(self.id) >= limit
 
     def match(self, roles):
         """See if there's overlap in roles."""

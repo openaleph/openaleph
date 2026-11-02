@@ -202,6 +202,16 @@ This document provides a comprehensive reference for all configuration parameter
 - **Default**: `true` if OAuth is disabled, otherwise `false`
 - **Description**: Enables password-based authentication. Typically disabled when using SSO/OAuth.
 
+#### `ALEPH_INVESTIGATOR_GROUP`
+- **Type**: String
+- **Default**: None
+- **Description**: Name of a group whose members are allowed to create investigations. When unset, every logged-in user can create investigations. Admins can always create investigations.
+
+#### `ALEPH_INVESTIGATOR_MAX_INVESTIGATIONS`
+- **Type**: Integer
+- **Default**: `3`
+- **Description**: Maximum number of investigations a member of the investigator group may own. Set to `0` for no limit. Only enforced when `ALEPH_INVESTIGATOR_GROUP` is set; admins are never limited. Deleting an investigation frees up a slot.
+
 #### `ALEPH_SHARE_SUGGEST_ROLES`
 - **Type**: Boolean
 - **Default**: `true`

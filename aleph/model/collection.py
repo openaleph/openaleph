@@ -288,6 +288,13 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
         return cls._apply_authz(q, authz)
 
     @classmethod
+    def count_casefiles_by_creator(cls, role_id: int) -> int:
+        """Number of non-deleted investigations created by the given role."""
+        q = super(Collection, cls).all()
+        q = q.filter(cls.category == cls.CASEFILE, cls.creator_id == role_id)
+        return q.count()
+
+    @classmethod
     def all_by_ids(cls, ids, deleted=False, authz=None):
         q = super(Collection, cls).all_by_ids(ids, deleted=deleted)
         return cls._apply_authz(q, authz)

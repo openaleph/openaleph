@@ -201,6 +201,14 @@ export function selectInvestigator(state) {
   return role.is_investigator || false;
 }
 
+export function selectInvestigationQuota(state) {
+  const role = selectCurrentRole(state);
+  /* eslint-disable camelcase */
+  const limit = role.investigations_limit ?? null;
+  const count = role.investigations_count ?? 0;
+  return { limit, count, reached: limit !== null && count >= limit };
+}
+
 export function selectAdmin(state) {
   const role = selectCurrentRole(state);
   /* eslint-disable camelcase */

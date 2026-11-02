@@ -197,3 +197,29 @@ class RolesApiTestCase(TestCase):
 
         # reset
         SETTINGS.INVESTIGATOR_GROUP = None
+
+    def test_roles_investigation_quota(self):
+        """The investigation quota is only exposed on the user's own role"""
+        role, headers = self.login("quota1")
+        _, admin_headers = self.login("quota_admin", is_admin=True)
+
+        # no group set: unlimited
+        res = self.client.get(f"/api/2/roles/{role.id}", headers=headers)
+        assert res.json["investigations_limit"] is None
+        assert res.json["investigations_count"] == 0
+
+        SETTINGS.INVESTIGATOR_GROUP = "investigator"
+        res = self.client.get(f"/api/2/roles/{role.id}", headers=headers)
+        assert res.json["investigations_limit"] == 3
+        assert res.json["investigations_count"] == 0
+
+        self.create_collection(creator=role, label="case", casefile=True)
+        res = self.client.get(f"/api/2/roles/{role.id}", headers=headers)
+        assert res.json["investigations_count"] == 1
+
+        # not exposed when viewing someone else's role
+        res = self.client.get(f"/api/2/roles/{role.id}", headers=admin_headers)
+        assert "investigations_limit" not in res.json
+        assert "investigations_count" not in res.json
+
+        SETTINGS.INVESTIGATOR_GROUP = None

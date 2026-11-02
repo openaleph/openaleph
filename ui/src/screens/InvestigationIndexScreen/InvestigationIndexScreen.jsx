@@ -9,7 +9,7 @@ import Dashboard from 'components/Dashboard/Dashboard';
 import CollectionIndex from 'components/CollectionIndex/CollectionIndex';
 import InvestigationCreateButton from 'components/Toolbar/InvestigationCreateButton';
 import { investigationsQuery } from 'queries';
-import { selectInvestigator } from 'selectors';
+import { selectInvestigationQuota, selectInvestigator } from 'selectors';
 
 const messages = defineMessages({
   title: {
@@ -37,11 +37,16 @@ const messages = defineMessages({
     defaultMessage:
       'You are not authorized to create new investigations. Contact your platform administrator.',
   },
+  limit_reached: {
+    id: 'cases.limit_reached',
+    defaultMessage:
+      'You have reached the maximum of {limit} investigations. Delete an existing investigation to create a new one.',
+  },
 });
 
 export class InvestigationIndexScreen extends Component {
   render() {
-    const { query, intl, canCreate } = this.props;
+    const { query, intl, canCreate, quota } = this.props;
     return (
       <Screen
         className="InvestigationIndexScreen"
@@ -59,17 +64,25 @@ export class InvestigationIndexScreen extends Component {
                 defaultMessage="Investigations let you upload and share documents and data which belong to a particular story. You can upload PDFs, email archives or spreadsheets, and they will be made easy to search and browse."
               />
             </p>
-            {canCreate ? (
+            {!canCreate && (
+              <p className="Dashboard__subheading">
+                {intl.formatMessage(messages.not_investigator)}
+              </p>
+            )}
+            {canCreate && quota.reached && (
+              <p className="Dashboard__subheading">
+                {intl.formatMessage(messages.limit_reached, {
+                  limit: quota.limit,
+                })}
+              </p>
+            )}
+            {canCreate && !quota.reached && (
               <div className="Dashboard__actions">
                 <InvestigationCreateButton
                   icon="briefcase"
                   text={intl.formatMessage(messages.create)}
                 />
               </div>
-            ) : (
-              <p className="Dashboard__subheading">
-                {intl.formatMessage(messages.not_investigator)}
-              </p>
             )}
           </div>
           <CollectionIndex
@@ -90,6 +103,7 @@ const mapStateToProps = (state, ownProps) => {
   return {
     query: investigationsQuery(location),
     canCreate: selectInvestigator(state),
+    quota: selectInvestigationQuota(state),
   };
 };
 

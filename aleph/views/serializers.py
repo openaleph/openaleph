@@ -141,7 +141,12 @@ class RoleSerializer(Serializer):
         obj["shallow"] = obj.get("shallow", True)
         if self.nested:
             obj.pop("api_key", None)
-        if not obj["writeable"]:
+
+        if request.authz.logged_in and obj.get("id") == str(request.authz.id):
+            role = request.authz.role
+            obj["investigations_limit"] = role.investigations_limit
+            obj["investigations_count"] = Collection.count_casefiles_by_creator(role.id)
+        else:  # someone else is looking at that role, drop all sensitive data
             obj.pop("has_password", None)
             obj.pop("is_admin", None)
             obj.pop("is_muted", None)

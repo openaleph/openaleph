@@ -102,6 +102,11 @@ class Settings:
 
         # Restrict permission to create investigations to this group
         self.INVESTIGATOR_GROUP = env.get("ALEPH_INVESTIGATOR_GROUP")
+        # Max investigations a non-admin investigator may own, 0 = unlimited.
+        # Only enforced when INVESTIGATOR_GROUP is set.
+        self.INVESTIGATOR_MAX_INVESTIGATIONS = env.to_int(
+            "ALEPH_INVESTIGATOR_MAX_INVESTIGATIONS", 3
+        )
 
         # No authentication. Everyone is admin.
         self.SINGLE_USER = env.to_bool("ALEPH_SINGLE_USER")
