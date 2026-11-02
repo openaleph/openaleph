@@ -2,6 +2,7 @@ import logging
 from typing import Any, Iterator
 
 from banal import ensure_list
+from flask import request
 from followthemoney import EntityProxy
 from openaleph_search import EntitiesQuery, Query, SearchQueryParser
 from openaleph_search.core import get_es
@@ -31,7 +32,7 @@ class CollectionsQuery(Query):
     def get_filters(self, **kwargs):
         filters = super(CollectionsQuery, self).get_filters(**kwargs)
         if self.parser.getbool("filter:writeable"):
-            ids = self.parser.authz.collections(self.parser.authz.WRITE)
+            ids = request.authz.collections(request.authz.WRITE)
             filters.append({"ids": {"values": ids}})
         return filters
 
