@@ -102,6 +102,8 @@ jobs:
           docker run --rm \
             --network host \
             -v ${{ github.workspace }}/requirements-dev.txt:/tmp/requirements-dev.txt:ro \
+            -v ${{ github.workspace }}/contrib/start-local.sh:/aleph/contrib/start-local.sh:ro \
+            -v ${{ github.workspace }}/aleph.env.tmpl:/aleph/aleph.env.tmpl:ro \
             -e OPENALEPH_ELASTICSEARCH_URI=http://localhost:9200 \
             -e OPENALEPH_DB_URI=postgresql://aleph:aleph@localhost:5432/aleph \
             -e PROCRASTINATE_DB_URI=postgresql://aleph:aleph@localhost:5432/aleph \
