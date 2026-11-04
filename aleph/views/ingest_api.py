@@ -131,11 +131,13 @@ def ingest_upload(collection_id):
     upload_dir = ensure_path(mkdtemp(prefix="aleph.upload."))
     try:
         content_hash = None
+        upload_file_name = None
         for storage in request.files.values():
             path = safe_filename(storage.filename, default="upload")
             path = upload_dir.joinpath(path)
             storage.save(str(path))
             content_hash = archive.archive_file(path)
+            upload_file_name = path.name
         document = Document.save(
             collection=collection,
             parent=parent,
@@ -144,6 +146,10 @@ def ingest_upload(collection_id):
             meta=meta,
             role_id=request.authz.id,
         )
+        if upload_file_name is not None and not document.to_proxy(ns=collection.ns).has(
+            "fileName"
+        ):
+            document.update({**document.meta, "file_name": upload_file_name})
         collection.touch()
         db.session.commit()
         proxy = document.to_proxy(ns=collection.ns)
