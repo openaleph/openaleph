@@ -10,7 +10,7 @@ We are indexing more information now, most notably about person and company name
 
 The reindexing is parallelized and can be as fast as resources available.
 
-On [search.openaleph.org](https://search.openaleph.org) we can re-index several TB within one day. On our managed [DARC](https://darc.li) deployments we have seen throughput of 40.000 entity docs / second. More full-text requires more computation time for Elasticsearch, as the ICU analysis is heavy.
+On [search.openaleph.org](https://search.openaleph.org) we can re-index several TB within one day. On our managed [DARC](https://darc.li) deployments we have seen throughput of 100.000 entity docs / second. More full-text requires more computation time for Elasticsearch, as the ICU analysis is heavy.
 
 It is hard to predict as many factors impact the speed for reindexing, but a rule of thumb is that an OpenAleph instance with less than 1 TB of index data can be reindexed within 24h.
 
