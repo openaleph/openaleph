@@ -91,8 +91,14 @@ def get_profile(entityset_id, authz=None):
 def profile_fragments(collection, aggregator, entity_id=None):
     """In order to make the profile_id visible on entities in a collection,
     we generate stub entities in the FtM store that contain only a context.
+
+    If `entity_id` is given, only that entity's stub is refreshed; the stubs of
+    all other entities in the collection must be left alone.
     """
-    aggregator.delete(origin=ORIGIN)
+    if entity_id is not None:
+        aggregator.delete(entity_id=entity_id, origin=ORIGIN)
+    else:
+        aggregator.delete(origin=ORIGIN)
     writer = aggregator.bulk()
     profile_id = None
     for profile_id, entity_id in EntitySet.all_profiles(  # noqa: B020
