@@ -5,6 +5,8 @@ import c from 'classnames';
 import Schema from './Schema';
 import Transliterate from './Transliterate';
 import { Classes } from '@blueprintjs/core';
+import { decodeMimeHeader } from 'util/isBase64Encoded';
+
 
 export interface FTMEntityExtended extends FTMEntity {
   caption?: string;
@@ -34,7 +36,9 @@ class EntityLabel extends React.Component<IEntityLabelProps> {
       return null;
     }
 
-    const caption = entity.caption || entity.getCaption();
+    let caption = entity.caption || entity.getCaption();
+    caption = caption ? decodeMimeHeader(caption) : entity.schema.name;
+
     const label = truncate ? truncateText(caption, truncate) : caption;
     return (
       <span

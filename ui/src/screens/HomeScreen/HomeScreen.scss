@@ -7,6 +7,7 @@ $white: #fff8f1;
   background-color: $white;
   font-family: $pt-font-family;
   font-size: 16px;
+
   @media screen and (max-width: $aleph-screen-sm-max-width) {
     font-size: 14px;
   }
@@ -62,6 +63,7 @@ $white: #fff8f1;
         color: $white;
       }
     }
+
     &--light {
       background-color: $white;
     }
@@ -206,13 +208,14 @@ $white: #fff8f1;
     &:not(.no-wrap) {
       @media screen and (max-width: $aleph-screen-sm-max-width) {
         display: block;
-        & > * {
+
+        &>* {
           margin-bottom: $vertical-spacing;
         }
       }
     }
 
-    & > * {
+    &>* {
       flex: 0 0;
       padding: 0 1.5%;
     }
@@ -222,12 +225,13 @@ $white: #fff8f1;
     iframe {
       width: 100% !important;
     }
-    & > * {
+
+    &>* {
       flex-basis: 50%;
     }
   }
 
-  &__thirds > * {
+  &__thirds>* {
     flex-basis: 33.33%;
   }
 
@@ -246,6 +250,7 @@ $white: #fff8f1;
         background: $white;
         border-radius: 10px;
       }
+
       p {
         margin: auto;
         margin-top: $aleph-grid-size * 2;
@@ -269,6 +274,7 @@ $white: #fff8f1;
   .Statistics.#{$bp-ns}-callout {
     border: 1px solid $aleph-border-color;
   }
+
   .Statistics__headline.#{$bp-ns}-heading {
     padding-bottom: $aleph-grid-size;
     margin-top: $aleph-grid-size * 0.5;
@@ -342,6 +348,7 @@ $white: #fff8f1;
     @media screen and (max-width: $aleph-screen-sm-max-width) {
       grid-template-columns: 1fr;
     }
+
     @media screen and (min-width: $aleph-screen-sm-max-width + 1) and (max-width: $aleph-screen-md-max-width) {
       grid-template-columns: repeat(2, 1fr);
     }
@@ -483,6 +490,7 @@ $white: #fff8f1;
     justify-content: center;
     gap: 16px;
     flex-wrap: wrap;
+    margin-top: 80px;
   }
 
   .oa-btn {

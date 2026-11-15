@@ -2,6 +2,7 @@ import React from 'react';
 import _ from 'lodash';
 import { FormattedMessage } from 'react-intl';
 import { Mention, Property, Collection, Role, Date } from 'components/common';
+import { RE_ENCODED_HEADER } from 'util/isBase64Encoded';
 
 import './EntityProperties.scss';
 
@@ -35,7 +36,7 @@ class EntityProperties extends React.PureComponent {
                 <span className="value">
                   <Mention.List
                     prop={prop}
-                    values={entity.getProperty(prop)}
+                    values={entity.getProperty(prop).filter((value) => !RE_ENCODED_HEADER.test(value))}
                     missing={missing}
                     translitLookup={entity.latinized}
                   />

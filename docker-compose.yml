@@ -23,7 +23,7 @@ services:
       POSTGRES_DATABASE: aleph
 
   elasticsearch:
-    image: ghcr.io/openaleph/elasticsearch:9
+    image: ghcr.io/openaleph/elasticsearch:${ELASTIC_TAG:-9.3.3}
     restart: on-failure
     ports:
       - "127.0.0.1:9200:9200"

@@ -84,7 +84,7 @@ def create():
               schema:
                 $ref: '#/components/schemas/Collection'
     """
-    require(request.authz.session_write)
+    require(request.authz.can_create_investigation())
     data = parse_request("CollectionCreate")
     sync = get_flag("sync", True)
     try:
@@ -317,7 +317,9 @@ def bulk(collection_id):
             )
     collection.touch()
     db.session.commit()
-    queue_index(collection, entities)
+    # if external, it was already sent to the index in "bulk_write"
+    if not collection.external:
+        queue_index(collection, entities)
     return ("", 204)
 
 

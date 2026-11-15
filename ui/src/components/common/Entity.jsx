@@ -62,8 +62,9 @@ class EntityLoad extends Component {
   }
 
   fetchIfNeeded() {
-    const { id, entity } = this.props;
-    if (entity.shouldLoad) {
+    const { id, entity, deep } = this.props;
+    // `deep` also refetches entities only cached as shallow search results
+    if (deep ? entity.shouldLoadDeep : entity.shouldLoad) {
       this.props.fetchEntity({ id });
     }
   }

@@ -46,6 +46,9 @@ class Settings:
         self.APP_BANNER = env.get("ALEPH_APP_BANNER")
         self.APP_MESSAGES_URL = env.get("ALEPH_APP_MESSAGES_URL", None)
 
+        # Entity-specific banner configuration as JSON
+        self.ENTITY_BANNER_RULES = self._parse_entity_banner_rules()
+
         # Force HTTPS here:
         self.FORCE_HTTPS = env.to_bool(
             "ALEPH_FORCE_HTTPS",
@@ -97,6 +100,9 @@ class Settings:
         self.OAUTH_TOKEN_METHOD = env.get("ALEPH_OAUTH_TOKEN_METHOD", "POST")
         self.OAUTH_ADMIN_GROUP = env.get("ALEPH_OAUTH_ADMIN_GROUP", "superuser")
 
+        # Restrict permission to create investigations to this group
+        self.INVESTIGATOR_GROUP = env.get("ALEPH_INVESTIGATOR_GROUP")
+
         # No authentication. Everyone is admin.
         self.SINGLE_USER = env.to_bool("ALEPH_SINGLE_USER")
 
@@ -110,6 +116,10 @@ class Settings:
 
         # Disable password-based authentication for SSO settings:
         self.PASSWORD_LOGIN = env.to_bool("ALEPH_PASSWORD_LOGIN", not self.OAUTH)
+        self.ALLOW_REGISTRATION = env.to_bool("ALEPH_ALLOW_REGISTRATION", False)
+
+        # turning it off then works by exact e-mail address only
+        self.SHARE_SUGGEST_ROLES = env.to_bool("ALEPH_SHARE_SUGGEST_ROLES", True)
 
         # Roles that haven't logged in since X months will stop receiving notifications.
         self.ROLE_INACTIVE = timedelta(days=env.to_int("ALEPH_ROLE_INACTIVE", 6 * 30))
@@ -141,6 +151,14 @@ class Settings:
         # API rate limiting (req/min for anonymous users)
         self.API_RATE_LIMIT = env.to_int("ALEPH_API_RATE_LIMIT", 30)
         self.API_RATE_WINDOW = 15  # minutes
+
+        # Max size (characters) of caller-supplied text for POST /api/2/beta/percolate.
+        # The abuse budget analogous to screening's MAX_SOURCE_NAMES: a percolate
+        # document is matched against every stored query, so an unbounded body is
+        # a cheap way to load the cluster. 100k chars is comfortably longer than
+        # any realistic screening input (an article, a bundle of related-party
+        # names) while capping worst-case cost.
+        self.PERCOLATE_MAX_TEXT = env.to_int("ALEPH_PERCOLATE_MAX_TEXT", 100_000)
 
         # Health check API key (required for /api/2/healthz)
         self.HEALTH_CHECK_API_KEY = env.get("ALEPH_HEALTH_CHECK_API_KEY")
@@ -184,8 +202,6 @@ class Settings:
         self.SQLALCHEMY_MAX_POOL_SIZE = env.to_int("ALEPH_SQLALCHEMY_POOL_SIZE", 5)
         self.SQLALCHEMY_POOL_RECYCLE = env.to_int("ALEPH_SQLALCHEMY_POOL_RECYCLE", 3600)
         self.SQLALCHEMY_POOL_TIMEOUT = env.to_int("ALEPH_SQLALCHEMY_POOL_TIMEOUT", 30)
-        self.XREF_SCROLL = env.get("ALEPH_XREF_SCROLL", "5m")
-        self.XREF_SCROLL_SIZE = env.get("ALEPH_XREF_SCROLL_SIZE", "1000")
 
         # Number of replicas to maintain. '2' means 3 overall copies.
         self.INDEX_REPLICAS = env.to_int("ALEPH_INDEX_REPLICAS", 0)
@@ -203,6 +219,11 @@ class Settings:
         # XREF Model Selection
         self.XREF_MODEL = env.get("FTM_COMPARE_MODEL", None)
         self.XREF_ALGORITHM = env.get("NOMENKLATURA_XREF_ALGORITHM", "regression-v1")
+
+        # XREF tuning and behaviour
+        self.XREF_SCROLL = env.get("ALEPH_XREF_SCROLL", "5m")
+        self.XREF_SCROLL_SIZE = env.get("ALEPH_XREF_SCROLL_SIZE", "1000")
+        self.XREF_REIFY_MENTIONS = env.to_bool("ALEPH_XREF_REIFY_MENTIONS", True)
 
         ###############################################################################
         # Feature flags
@@ -236,6 +257,9 @@ class Settings:
         # External services
         self.FTM_ASSETS_URL = env.get("FTM_ASSETS_URL")
         self.FTM_TRANSLATE_TARGET_LANGUAGE = env.get("FTM_TRANSLATE_TARGET_LANGUAGE")
+        self.FTM_TRANSLATE_SOURCE_LANGUAGES = (
+            env.get("FTM_TRANSLATE_SOURCE_LANGUAGES") or ""
+        ).split(",")
 
         ###############################################################################
         # Additional configuration
@@ -258,6 +282,95 @@ class Settings:
                         )
                         raise e
                     setattr(self, key[len(json_prefix) :], json_value)
+
+    def _parse_entity_banner_rules(self):
+        """Parse entity banner rules from environment variable."""
+        rules_json = env.get("ALEPH_ENTITY_BANNER_RULES")
+        if not rules_json:
+            return []
+
+        try:
+            rules = json.loads(rules_json)
+            if not isinstance(rules, list):
+                log.error("ALEPH_ENTITY_BANNER_RULES must be a JSON array")
+                return []
+
+            # List of dangerous JavaScript keywords to block
+            illegal_keywords = [
+                "eval",
+                "Function",
+                "setTimeout",
+                "setInterval",
+                "window",
+                "document",
+                "global",
+                "fetch",
+                "XMLHttpRequest",
+                "import",
+                "require",
+                "alert",
+                "confirm",
+                "prompt",
+                "localStorage",
+                "sessionStorage",
+                "__proto__",
+                "constructor",
+                "prototype",
+                "atob",
+                "btoa",
+            ]
+
+            for i, rule in enumerate(rules):
+                if (
+                    not isinstance(rule, dict)
+                    or "condition" not in rule
+                    or "message" not in rule
+                ):
+                    log.error(
+                        f"Banner rule {i} must have 'condition' and 'message' fields"
+                    )
+                    return []
+
+                message = rule["message"].strip()
+                if not message or message == "":
+                    log.error(f"Banner rule {i} has empty message.")
+
+                condition = rule["condition"]
+                if not isinstance(condition, str):
+                    log.error(f"Banner rule {i} condition must be a string")
+                    return []
+
+                for keyword in illegal_keywords:
+                    if keyword in condition:
+                        log.error(
+                            f"Banner rule {i} contains illegal keyword: {keyword}"
+                        )
+                        return []
+
+                intent = rule.get("intent", "warning")
+                if intent not in ["primary", "success", "warning", "danger", "none"]:
+                    log.warning(
+                        f"Banner rule {i} has invalid intent '{intent}', fallback to 'warning'"
+                    )
+                    intent = "warning"
+
+                icon_map = {
+                    "primary": "info-sign",
+                    "success": "tick-circle",
+                    "warning": "warning-sign",
+                    "danger": "error",
+                    "none": "info-sign",
+                }
+
+                rule["intent"] = intent
+                rule["icon"] = icon_map[intent]
+
+            log.info(f"Loaded {len(rules)} entity banner rules")
+            return rules
+
+        except JSONDecodeError as e:
+            log.error(f"Could not parse ALEPH_ENTITY_BANNER_RULES as JSON: {e}")
+            return []
 
 
 SETTINGS = Settings()

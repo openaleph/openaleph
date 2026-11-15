@@ -11,7 +11,13 @@ import { selectLocale, selectModel } from 'selectors';
 
 import './Property.scss';
 
-const getEntityLink = (entity) => <Entity.Link entity={entity} icon />;
+const getEntityLink = (entity, preview = false) => (
+  <Entity.Link
+    entity={entity}
+    icon
+    preview={preview}
+  />
+);
 
 class EditableProperty extends React.Component {
   constructor(props) {
@@ -78,12 +84,18 @@ class Property {
 
   static Reverse = connect(mapStateToProps)(VLProperty.Reverse);
 
-  static Value = (props) => (
-    <VLProperty.Value {...props} getEntityLink={getEntityLink} />
+  static Value = ({ preview = false, ...props }) => (
+    <VLProperty.Value
+      {...props}
+      getEntityLink={(entity) => getEntityLink(entity, preview)}
+    />
   );
 
-  static Values = (props) => (
-    <VLProperty.Values {...props} getEntityLink={getEntityLink} />
+  static Values = ({ preview = false, ...props }) => (
+    <VLProperty.Values
+      {...props}
+      getEntityLink={(entity) => getEntityLink(entity, preview)}
+    />
   );
 
   static Editable = connect(mapStateToProps)(EditableProperty);

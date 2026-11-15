@@ -1,17 +1,39 @@
 import React from 'react';
+import { connect } from 'react-redux';
 import { FormattedMessage } from 'react-intl';
-import { Classes } from '@blueprintjs/core';
+import { Classes, Callout, Intent } from '@blueprintjs/core';
 import c from 'classnames';
 import { Entity, Schema, RelativeTime } from 'components/common';
+import { selectMetadata } from 'selectors';
 
 import 'components/common/ItemOverview.scss';
 
 class EntityHeading extends React.PureComponent {
+  getEntityBanner(entity, bannerRules) {
+    if (!bannerRules?.length) return null;
+    
+    for (const rule of bannerRules) {
+      try {
+        // eslint-disable-next-line no-new-func
+        if (new Function('entity', `return ${rule.condition}`)(entity)) {
+          return rule;
+        }
+      } catch {
+        // Skip invalid conditions
+      }
+    }
+    
+    return null;
+  }
+
   render() {
-    const { entity, isProfile = false } = this.props;
+    const { entity, isProfile = false, metadata } = this.props;
     const lastViewedDate = entity.lastViewed
       ? new Date(parseInt(entity.lastViewed, 10))
       : Date.now();
+    
+    const bannerRules = metadata?.app?.entity_banner_rules || [];
+    const banner = this.getEntityBanner(entity, bannerRules);
 
     return (
       <>
@@ -46,9 +68,21 @@ class EntityHeading extends React.PureComponent {
             />
           </span>
         )}
+        
+        {banner && (
+          <div className="ItemOverview__heading__banner" style={{ marginTop: '12px' }}>
+            <Callout intent={Intent[banner.intent.toUpperCase()]} icon={banner.icon}>
+              {banner.message}
+            </Callout>
+          </div>
+        )}
       </>
     );
   }
 }
 
-export default EntityHeading;
+const mapStateToProps = (state) => ({
+  metadata: selectMetadata(state),
+});
+
+export default connect(mapStateToProps)(EntityHeading);

@@ -17,11 +17,14 @@ import {
   TextLoading,
 } from 'components/common';
 import {
+  entityMentionsQuery,
   entityNearbyQuery,
+  entityPercolateQuery,
   entityReferenceQuery,
   entitySimilarQuery,
   entityMoreLikeThisQuery,
-  folderDocumentsQuery,
+  folderChildrenCountQuery,
+  entityThreadQuery,
 } from 'queries';
 import {
   selectEntitiesResult,
@@ -30,17 +33,24 @@ import {
   selectEntityReference,
   selectSimilarResult,
   selectMoreLikeThisResult,
+  selectMentionsResult,
   selectNearbyResult,
+  selectPercolateResult,
+  selectThreadResult,
 } from 'selectors';
 import EntityProperties from 'components/Entity/EntityProperties';
 import EntityReferencesMode from 'components/Entity/EntityReferencesMode';
 import EntityTagsMode from 'components/Entity/EntityTagsMode';
 import EntitySimilarMode from 'components/Entity/EntitySimilarMode';
 import EntityMoreLikeThisMode from 'components/Entity/EntityMoreLikeThisMode';
+import EntityMentionsMode from 'components/Entity/EntityMentionsMode';
+import EntityScreeningMode from 'components/Entity/EntityScreeningMode';
 import EntityMappingMode from 'components/Entity/EntityMappingMode';
 import EntityNearbyMode from 'components/Entity/EntityNearbyMode';
 import DocumentViewMode from 'components/Document/DocumentViewMode';
 import TranslationViewer from 'viewers/TranslationViewer';
+import CSVExplorer from 'viewers/CSVExplorer';
+import EntityThreadMode from './EntityThreadMode';
 
 import './EntityViews.scss';
 
@@ -74,6 +84,9 @@ class EntityViews extends React.Component {
       tags,
       similar,
       moreLikeThis,
+      mentions,
+      screening,
+      thread,
       nearby,
       children,
       reference,
@@ -88,7 +101,10 @@ class EntityViews extends React.Component {
     const hasTextOnlyMode = entity.schema.isAny(['Pages', 'Image']);
     const hasTextMode =
       hasTextOnlyMode || entity.schema.isAny(['Video', 'Audio']);
-    const hasBrowseMode = entity.schema.isA('Folder');
+    const isFolder = entity.schema.isA('Folder');
+    const hasBrowseMode =
+      isFolder || (entity.schema.isDocument() && children.total > 0);
+    const hasCSVExplorer = !isPreview && entity.schema.isA('Table');
     const hasViewer = entity.schema.isAny([
       'Pages',
       'Email',
@@ -98,7 +114,7 @@ class EntityViews extends React.Component {
       'PlainText',
     ]);
     const hasDocumentViewMode =
-      hasViewer || (!hasBrowseMode && !hasTextOnlyMode);
+      hasViewer || (!isFolder && !hasTextOnlyMode);
     const hasViewMode = entity.schema.isDocument() && hasDocumentViewMode;
     const hasTranslation = !!entity.getFirst('translatedText');
     const processingError = entity.getProperty('processingError');
@@ -114,7 +130,7 @@ class EntityViews extends React.Component {
           <Callout className="EntityViews__workbook-warning">
             <FormattedMessage
               id="entity.info.workbook_warning"
-              defaultMessage="This sheet is part of workbook {link}"
+              defaultMessage="This sheet may include values from formulas. It is part of the workbook {link}"
               values={{
                 link: <Entity.Link entity={entityParent} icon />,
               }}
@@ -160,6 +176,22 @@ class EntityViews extends React.Component {
               panel={
                 <DocumentViewMode document={entity} activeMode={activeMode} />
               }
+            />
+          )}
+          {hasCSVExplorer && (
+            <Tab
+              id="csv-explorer"
+              disabled={!!processingError?.length}
+              title={
+                <>
+                  <Icon icon="database" className="left-icon" />
+                  <FormattedMessage
+                    id="entity.info.csv_explorer"
+                    defaultMessage="Explore data"
+                  />
+                </>
+              }
+              panel={<CSVExplorer document={entity} />}
             />
           )}
           {hasTextMode && (
@@ -259,12 +291,37 @@ class EntityViews extends React.Component {
                   query={referenceQuery}
                   reference={reference}
                   hideCollection={true}
+                  isPreview={isPreview}
                 />
               }
             />
           ))}
           {!references.total && references.isPending && (
             <Tab id="loading" title={<TextLoading loading={true} />} />
+          )}
+          {(entity.schema.isA("Email") || entity.schema.isA("Message")) && (
+            <Tab
+              id="thread"
+              disabled={thread.total === 0}
+              title={
+                <TextLoading loading={thread.isPending}>
+                  <Schema.Icon
+                    schema={entity.schema.name}
+                    className="left-icon"
+                  />
+                  <FormattedMessage
+                    id="entity.info.thread"
+                    defaultMessage="Thread"
+                  />
+                  <ResultCount result={thread} />
+                </TextLoading>
+              }
+              panel={
+                <EntityThreadMode
+                  entity={entity}
+                  isPreview={isPreview}
+                />}
+            />
           )}
           {entity.schema.isDocument() &&
             (!processingError || !processingError.length) && (
@@ -324,6 +381,23 @@ class EntityViews extends React.Component {
               panel={<EntitySimilarMode entity={entity} />}
             />
           )}
+          {entity?.schema?.isA('LegalEntity') && !isPreview && (
+            <Tab
+              id="mentions"
+              disabled={mentions.total === 0}
+              title={
+                <TextLoading loading={mentions.total === undefined}>
+                  <Icon icon="document" className="left-icon" />
+                  <FormattedMessage
+                    id="entity.info.mentions"
+                    defaultMessage="Document Results"
+                  />
+                  <ResultCount result={mentions} />
+                </TextLoading>
+              }
+              panel={<EntityMentionsMode entity={entity} />}
+            />
+          )}
           {entity.schema.isDocument() && !isPreview && (
             <Tab
               id="more-like-this"
@@ -341,9 +415,27 @@ class EntityViews extends React.Component {
               panel={<EntityMoreLikeThisMode entity={entity} />}
             />
           )}
+          {entity.schema.isDocument() && !isPreview && !entity.schema.isA('Table') && (
+            <Tab
+              id="screening"
+              disabled={screening.total === 0}
+              title={
+                <TextLoading loading={screening.total === undefined}>
+                  <Icon icon="shield" className="left-icon" />
+                  <FormattedMessage
+                    id="entity.info.screening"
+                    defaultMessage="Screening"
+                  />
+                  <ResultCount result={screening} />
+                </TextLoading>
+              }
+              panel={<EntityScreeningMode entity={entity} />}
+            />
+          )}
           {entity?.collection?.writeable && entity.schema.isA('Table') && (
             <Tab
               id="mapping"
+              disabled={!!processingError?.length}
               title={
                 <>
                   <Icon icon="new-object" className="left-icon" />
@@ -364,7 +456,7 @@ class EntityViews extends React.Component {
 
 const mapStateToProps = (state, ownProps) => {
   const { entity, location, activeMode, isPreview } = ownProps;
-  const childrenQuery = folderDocumentsQuery(location, entity.id, undefined);
+  const childrenQuery = folderChildrenCountQuery(location, entity.id);
   const reference = selectEntityReference(state, entity.id, activeMode);
 
   // Check if we're in a search preview and get search result count
@@ -416,6 +508,15 @@ const mapStateToProps = (state, ownProps) => {
       state,
       entityMoreLikeThisQuery(location, entity.id)
     ),
+    mentions: selectMentionsResult(
+      state,
+      entityMentionsQuery(location, entity.id)
+    ),
+    screening: selectPercolateResult(
+      state,
+      entityPercolateQuery(location, entity.id)
+    ),
+    thread: selectThreadResult(state, entityThreadQuery(location, entity.id)),
     nearby: selectNearbyResult(state, entityNearbyQuery(location, entity.id)),
     nearbyQuery: entityNearbyQuery(location, entity.id),
     children: selectEntitiesResult(state, childrenQuery),

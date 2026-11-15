@@ -3,7 +3,7 @@
 # =============================================================================
 # This stage installs build tools and compiles Python dependencies.
 # Heavy packages like pyicu require compilation.
-FROM python:3.13-slim AS builder
+FROM python:3.14-slim AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -50,7 +50,7 @@ RUN find /opt/venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || 
 # =============================================================================
 # Separate stage for downloading large model files.
 # This allows model updates without rebuilding dependencies.
-FROM python:3.13-slim AS models
+FROM python:3.14-slim AS models
 
 RUN apt-get -qq -y update \
     && apt-get -qq --no-install-recommends -y install curl \
@@ -67,10 +67,43 @@ RUN mkdir -p /opt/ftm-compare/word-frequencies/ \
     && curl -L -o "/opt/ftm-compare/model.pkl" "$ALEPH_FTM_COMPARE_MODEL_URI"
 
 # =============================================================================
-# Stage 3: Runtime
+# Stage 3: Download custom FollowTheMoney schema
+# =============================================================================
+# Fetch the DARC FollowTheMoney schema overlay so it can be mounted at runtime
+# via FTM_MODEL_PATH.
+FROM debian:bookworm-slim AS ftm-schema
+
+# Pin to an immutable commit so the build cache is keyed on actual schema
+# content. A branch tarball (refs/heads/main.tar.gz) has a static URL, so
+# BuildKit caches the download layer on that string and serves a stale layer
+# even after main advances. The SHA below is referenced in the download RUN,
+# so BuildKit re-runs that layer only when the SHA changes.
+#
+# To pick up upstream schema changes, bump FTM_SCHEMA_SHA. Resolve the latest
+# main commit with:
+#   git ls-remote https://github.com/dataresearchcenter/followthemoney-darc-schema.git refs/heads/main
+# Or override per-build: docker build --build-arg FTM_SCHEMA_SHA=<sha> .
+ARG FTM_SCHEMA_REPO=dataresearchcenter/followthemoney-darc-schema
+ARG FTM_SCHEMA_SHA=cbd6876a07c13bca19165bc8b356f2a63ef119e4
+
+RUN apt-get -qq -y update \
+    && apt-get -qq --no-install-recommends -y install ca-certificates curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN test -n "${FTM_SCHEMA_SHA}" \
+    && mkdir -p /tmp/extract \
+    && curl -fsSL -o /tmp/s.tgz \
+       "https://github.com/${FTM_SCHEMA_REPO}/archive/${FTM_SCHEMA_SHA}.tar.gz" \
+    && tar -xzf /tmp/s.tgz -C /tmp/extract --strip-components=1 \
+    && mv /tmp/extract/schema /opt/ftm-schema \
+    && rm -rf /tmp/s.tgz /tmp/extract
+
+# =============================================================================
+# Stage 4: Runtime
 # =============================================================================
 # Minimal runtime image without build tools.
-FROM python:3.13-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 LABEL org.opencontainers.image.source="https://github.com/openaleph/openaleph"
 LABEL org.opencontainers.image.description="Aleph - Follow The Money"
@@ -109,6 +142,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Copy model files from models stage
 COPY --from=models /opt/ftm-compare /opt/ftm-compare
 
+# Copy custom FollowTheMoney schema
+COPY --from=ftm-schema /opt/ftm-schema /opt/ftm-schema
+
 # Copy application code
 COPY --chown=app:app aleph /aleph/aleph
 COPY --chown=app:app gunicorn.conf.py /aleph/gunicorn.conf.py
@@ -128,6 +164,7 @@ ENV OPENALEPH_ELASTICSEARCH_URI=http://elasticsearch:9200/ \
     ARCHIVE_TYPE=file \
     ARCHIVE_PATH=/data \
     FTM_COMPARE_FREQUENCIES_DIR=/opt/ftm-compare/word-frequencies/ \
+    FTM_MODEL_PATH=/opt/ftm-schema \
     # FTM_COMPARE_MODEL=/opt/ftm-compare/model.pkl \
     NOMENKLATURA_XREF_MODEL=regression-v1 \
     PROCRASTINATE_APP=aleph.procrastinate.tasks.app \

@@ -17,9 +17,24 @@ export const queryMoreLikeThis = asyncActionCreator(
   { name: 'QUERY_MORE_LIKE_THIS' }
 );
 
+export const queryThread = asyncActionCreator(
+  (query) => async () => queryEndpoint(query),
+  { name: 'QUERY_THREAD' }
+);
+
 export const queryNearby = asyncActionCreator(
   (query) => async () => queryEndpoint(query),
   { name: 'QUERY_NEARBY' }
+);
+
+export const queryPercolate = asyncActionCreator(
+  (query) => async () => queryEndpoint(query),
+  { name: 'QUERY_PERCOLATE' }
+);
+
+export const queryMentions = asyncActionCreator(
+  (query) => async () => queryEndpoint(query),
+  { name: 'QUERY_MENTIONS' }
 );
 
 export const queryEntityExpand = asyncActionCreator(
@@ -93,8 +108,9 @@ export const triggerEntityTranscribe = asyncActionCreator(
 );
 
 export const triggerEntityTranslate = asyncActionCreator(
-  (entityId) => async () => {
-    await endpoint.post(`entities/${entityId}/translate`);
+  (entityId, sourceLanguage) => async () => {
+    const data = sourceLanguage ? { source_language: sourceLanguage } : {};
+    await endpoint.post(`entities/${entityId}/translate`, data);
     return { id: entityId };
   },
   { name: 'TRIGGER_ENTITY_TRANSLATE' }

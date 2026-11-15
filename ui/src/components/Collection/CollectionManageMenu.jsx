@@ -52,8 +52,39 @@ class CollectionManageMenu extends React.Component {
 
   render() {
     const { intl, collection } = this.props;
-    if (!collection?.writeable) {
+    if (!collection?.writeable && !collection?.shareable) {
       return null;
+    }
+    if (!collection?.writeable && collection?.shareable) {
+      // user can only share but not edit
+      return (
+        <>
+          <Popover
+            placement="bottom-end"
+            content={
+              <Menu>
+                <MenuItem
+                  key={'access'}
+                  onClick={() => this.toggleDialog('isAccessOpen')}
+                  text={intl.formatMessage(messages.access)}
+                  icon="key"
+                />
+              </Menu>
+            }
+          >
+            <Button
+              icon="cog"
+              rightIcon="caret-down"
+              className="CollectionManageMenu__trigger"
+            />
+          </Popover>
+          <CollectionAccessDialog
+            isOpen={!!this.state.isAccessOpen}
+            toggleDialog={() => this.toggleDialog('isAccessOpen')}
+            collection={collection}
+          />
+        </>
+      );
     }
     const deleteMessage =
       messages[collection?.casefile ? 'delete_casefile' : 'delete_dataset'];

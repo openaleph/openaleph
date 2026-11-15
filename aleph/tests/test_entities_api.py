@@ -1,13 +1,18 @@
 import datetime
 import json
 import logging
+import os
 from pprint import pformat
+from unittest.mock import patch
+
+from openaleph_procrastinate.defer import tasks as defer_tasks
 
 from aleph.core import db
 from aleph.index.util import index_entity
 from aleph.model.bookmark import Bookmark
 from aleph.settings import SETTINGS
 from aleph.tests.util import JSON, TestCase, get_caption
+from aleph.views.serializers import TRACER_URI
 from aleph.views.util import validate
 
 log = logging.getLogger(__name__)
@@ -104,6 +109,68 @@ class EntitiesApiTestCase(TestCase):
         assert "Winnie" in get_caption(res.json), res.json
         validate(res.json, "Entity")
 
+    def test_translate_processing_status(self):
+        """Queueing a translation must surface in the detail view's
+        processing_status until the worker clears the tracer entry."""
+        _, headers = self.login(is_admin=True)
+        doc = self.create_entity(
+            {
+                "schema": "PlainText",
+                "properties": {
+                    "fileName": "story.txt",
+                    "bodyText": ["hello world"],
+                    "detectedLanguage": ["eng"],
+                },
+            },
+            self.col,
+        )
+        db.session.commit()
+        index_entity(doc)
+        url = "/api/2/entities/%s" % doc.id
+
+        # same cache key as the serializer, so this is the very same Tracer
+        tracer = defer_tasks.translate.get_tracer(
+            "collection_%s" % self.col.id, TRACER_URI
+        )
+        self.addCleanup(tracer.finish, doc.id)
+
+        source_languages = SETTINGS.FTM_TRANSLATE_SOURCE_LANGUAGES
+        SETTINGS.FTM_TRANSLATE_SOURCE_LANGUAGES = ["eng"]
+        self.addCleanup(
+            setattr, SETTINGS, "FTM_TRANSLATE_SOURCE_LANGUAGES", source_languages
+        )
+
+        # `DeferSettings` is a module-level singleton, so the stage has to be
+        # enabled on the attribute; `PROCRASTINATE_SYNC=0` keeps `Job.defer`
+        # from draining the queue with an in-process worker.
+        translate_patch = patch.object(defer_tasks.translate, "defer", True)
+        translate_patch.start()
+        self.addCleanup(translate_patch.stop)
+        env_patch = patch.dict(os.environ, {"PROCRASTINATE_SYNC": "0"})
+        env_patch.start()
+        self.addCleanup(env_patch.stop)
+
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res.json
+        assert res.json["processing_status"]["translate"] is False, res.json
+        assert "translate" in res.json["links"], res.json["links"]
+
+        res = self.client.post(
+            url + "/translate",
+            data=json.dumps({"source_language": "eng"}),
+            content_type=JSON,
+            headers=headers,
+        )
+        assert res.status_code == 202, (res.status_code, res.data)
+
+        res = self.client.get(url, headers=headers)
+        assert res.json["processing_status"]["translate"] is True, res.json
+
+        # the ftm-translate worker deletes the tracer entry when it succeeds
+        tracer.finish(doc.id)
+        res = self.client.get(url, headers=headers)
+        assert res.json["processing_status"]["translate"] is False, res.json
+
     def test_view_bookmarked(self):
         role, headers = self.login(is_admin=True)
         url = "/api/2/entities/%s" % self.id
@@ -141,7 +208,7 @@ class EntitiesApiTestCase(TestCase):
         res = self.client.get(url, headers=headers)
 
         actual = res.json["safeHtml"]
-        expected = ["<html><body><div><p>Hello World!</p></div></body></html>"]
+        expected = ["<p>Hello World!</p>"]
         assert actual == expected, actual
 
     def test_view_sanitize_html_multi_value(self):
@@ -161,8 +228,8 @@ class EntitiesApiTestCase(TestCase):
 
         actual = res.json["safeHtml"]
         expected = [
-            "<html><body><p>This is part 1.</p></body></html>",
-            "<html><body><p>This is part 2.</p></body></html>",
+            "This is part 1.",
+            "This is part 2.",
         ]
         assert actual == expected, actual
 
@@ -844,3 +911,288 @@ class EntitiesApiTestCase(TestCase):
         assert (
             membership_count == 0
         ), f"Expected 0 for membershipOrganization, got {membership_count}"
+
+    def test_mentions(self):
+        """Basic e2e for /entities/<entity_id>/mentions.
+
+        Creates a Person and a Document whose text mentions the person's name.
+        The mentions endpoint should return the document.
+        Thorough coverage lives in openaleph-search's test_mentions.py.
+        """
+        _, headers = self.login(is_admin=True)
+
+        # Create a person entity
+        person_data = {
+            "schema": "Person",
+            "collection_id": self.col_id,
+            "properties": {"name": "Winnie the Pooh"},
+        }
+        person = self.client.post(
+            "/api/2/entities",
+            data=json.dumps(person_data),
+            headers=headers,
+            content_type=JSON,
+        )
+        assert person.status_code == 200, person.json
+        person_id = person.json["id"]
+
+        # Create a document that mentions the person
+        doc_data = {
+            "schema": "PlainText",
+            "collection_id": self.col_id,
+            "properties": {
+                "name": "story.txt",
+                "bodyText": [
+                    "Once upon a time, Winnie the Pooh went to the forest "
+                    "to find some honey."
+                ],
+            },
+        }
+        doc = self.client.post(
+            "/api/2/entities",
+            data=json.dumps(doc_data),
+            headers=headers,
+            content_type=JSON,
+        )
+        assert doc.status_code == 200, doc.json
+        doc_id = doc.json["id"]
+
+        # Query mentions for the person
+        url = f"/api/2/entities/{person_id}/mentions"
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res.json
+        results = res.json.get("results", [])
+        matched_ids = {r["id"] for r in results}
+        assert doc_id in matched_ids, (
+            f"Expected document {doc_id} in mentions results, "
+            f"got: {[r.get('id') for r in results]}"
+        )
+
+    def test_mentions_requires_auth(self):
+        url = f"/api/2/entities/{self.id}/mentions"
+        res = self.client.get(url)
+        assert res.status_code == 403, res
+
+    def test_mentions_nonexistent_entity(self):
+        _, headers = self.login(is_admin=True)
+        url = "/api/2/entities/nonexistent-id/mentions"
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 404, res
+
+    def test_screening(self):
+        """Batch screening across a filtered source entity set.
+
+        Creates two Persons in the test collection and a document that
+        mentions one of them by name. Hitting /api/2/screening with a
+        source filter that selects those Persons (and a target filter
+        scoping documents to the same collection) should return the
+        document. Thorough coverage of MultiMentionsQuery itself lives
+        in openaleph-search."""
+        _, headers = self.login(is_admin=True)
+
+        jane = self.client.post(
+            "/api/2/entities",
+            data=json.dumps(
+                {
+                    "schema": "Person",
+                    "collection_id": self.col_id,
+                    "properties": {"name": "Jane Q. Starling"},
+                }
+            ),
+            headers=headers,
+            content_type=JSON,
+        )
+        assert jane.status_code == 200, jane.json
+        jack = self.client.post(
+            "/api/2/entities",
+            data=json.dumps(
+                {
+                    "schema": "Person",
+                    "collection_id": self.col_id,
+                    "properties": {"name": "Jack Q. Roebuck"},
+                }
+            ),
+            headers=headers,
+            content_type=JSON,
+        )
+        assert jack.status_code == 200, jack.json
+
+        doc = self.client.post(
+            "/api/2/entities",
+            data=json.dumps(
+                {
+                    "schema": "PlainText",
+                    "collection_id": self.col_id,
+                    "properties": {
+                        "name": "starling-brief.txt",
+                        "bodyText": [
+                            "The case file notes that Jane Q. Starling "
+                            "met with local officials last autumn."
+                        ],
+                    },
+                }
+            ),
+            headers=headers,
+            content_type=JSON,
+        )
+        assert doc.status_code == 200, doc.json
+        doc_id = doc.json["id"]
+
+        # Source: Persons in this collection. Target: documents in this
+        # collection. `source:` prefix splits the two scopes server-side.
+        url = (
+            "/api/2/screening"
+            f"?source:filter:schema=Person"
+            f"&source:filter:collection_id={self.col_id}"
+            f"&filter:collection_id={self.col_id}"
+        )
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res.json
+        result_ids = {r["id"] for r in res.json.get("results", [])}
+        assert doc_id in result_ids, (
+            f"Expected document {doc_id} in screening results, "
+            f"got: {sorted(result_ids)}"
+        )
+
+    def test_screening_empty_source(self):
+        """A source filter that matches no entities should return 200
+        with zero results — not a 400 or a crash."""
+        _, headers = self.login(is_admin=True)
+        url = (
+            "/api/2/screening"
+            f"?source:filter:schema=Airplane"  # unknown schema → 0 entities
+            f"&filter:collection_id={self.col_id}"
+        )
+        res = self.client.get(url, headers=headers)
+        assert res.status_code == 200, res.json
+        assert res.json.get("total", 0) == 0, res.json
+
+    def test_screening_requires_auth(self):
+        res = self.client.get("/api/2/screening")
+        assert res.status_code == 403, res
+
+    def test_thread(self):
+        # Linear thread: before -> main -> after
+        #   before <- main   via entity-ref (main.inReplyToEmail = before)
+        #   main   <- after  via message-id string (after.inReplyTo = main.messageId)
+        _, headers = self.login(is_admin=True)
+        before = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "parent",
+                    "messageId": "<parent@example.com>",
+                    "date": "2024-01-01",
+                },
+            },
+            self.col,
+        )
+        before_id = self.col.ns.sign(before.id)
+        main = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "main",
+                    "messageId": "<main@example.com>",
+                    "inReplyToEmail": before_id,
+                    "date": "2024-01-02",
+                },
+            },
+            self.col,
+        )
+        main_id = self.col.ns.sign(main.id)
+        after = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "child",
+                    "messageId": "<child@example.com>",
+                    "inReplyTo": "<main@example.com>",
+                    "date": "2024-01-03",
+                },
+            },
+            self.col,
+        )
+        after_id = self.col.ns.sign(after.id)
+        db.session.commit()
+        index_entity(before)
+        index_entity(main)
+        index_entity(after)
+
+        # Full thread from main — all three entities, chronological order
+        res = self.client.get(f"/api/2/entities/{main_id}/thread", headers=headers)
+        assert res.status_code == 200, res.json
+        ids = [r["id"] for r in res.json["results"]]
+        assert before_id in ids, f"parent missing: {ids}"
+        assert main_id in ids, f"source missing: {ids}"
+        assert after_id in ids, f"child missing: {ids}"
+        # Chronological order
+        assert (
+            ids.index(before_id) < ids.index(main_id) < ids.index(after_id)
+        ), f"Expected chronological order, got: {ids}"
+
+    def test_thread_branching(self):
+        # Tree: root -> {branch_a, branch_b -> leaf}
+        # Starting from leaf, should return the full tree including
+        # sibling branch_a which is not in leaf's direct ancestry.
+        _, headers = self.login(is_admin=True)
+        root = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "root",
+                    "messageId": "<root@ex.com>",
+                    "date": "2024-01-01",
+                },
+            },
+            self.col,
+        )
+        root_id = self.col.ns.sign(root.id)
+        branch_a = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "branch_a",
+                    "inReplyTo": "<root@ex.com>",
+                    "date": "2024-01-02",
+                },
+            },
+            self.col,
+        )
+        branch_a_id = self.col.ns.sign(branch_a.id)
+        branch_b = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "branch_b",
+                    "inReplyTo": "<root@ex.com>",
+                    "date": "2024-01-03",
+                },
+            },
+            self.col,
+        )
+        branch_b_id = self.col.ns.sign(branch_b.id)
+        leaf = self.create_entity(
+            {
+                "schema": "Email",
+                "properties": {
+                    "subject": "leaf",
+                    "inReplyToEmail": branch_b_id,
+                    "date": "2024-01-04",
+                },
+            },
+            self.col,
+        )
+        leaf_id = self.col.ns.sign(leaf.id)
+        db.session.commit()
+        for e in (root, branch_a, branch_b, leaf):
+            index_entity(e)
+
+        # Starting from leaf — should get full tree including sibling
+        res = self.client.get(f"/api/2/entities/{leaf_id}/thread", headers=headers)
+        assert res.status_code == 200, res.json
+        ids = [r["id"] for r in res.json["results"]]
+        assert root_id in ids, f"root missing: {ids}"
+        assert branch_a_id in ids, f"sibling branch_a missing: {ids}"
+        assert branch_b_id in ids, f"branch_b missing: {ids}"
+        assert leaf_id in ids, f"source leaf missing: {ids}"

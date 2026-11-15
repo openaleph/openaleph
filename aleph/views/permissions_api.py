@@ -1,12 +1,13 @@
-from banal import ensure_dict
 from datetime import datetime
+
+from banal import ensure_dict
 from flask import Blueprint, request
 
 from aleph.core import db
-from aleph.model import Role, Permission
-from aleph.logic.roles import check_visible
-from aleph.logic.permissions import update_permission
 from aleph.logic.collections import update_collection
+from aleph.logic.permissions import update_permission
+from aleph.logic.roles import check_visible
+from aleph.model import Permission, Role
 from aleph.views.serializers import PermissionSerializer
 from aleph.views.util import get_db_collection, jsonify, parse_request
 
@@ -118,9 +119,13 @@ def update(collection_id):
     """
     collection = get_db_collection(collection_id, request.authz.WRITE)
     for permission in parse_request("PermissionUpdateList"):
-        role_obj = ensure_dict(permission.get("role"))
-        role_id = permission.get("role_id", role_obj.get("id"))
-        role = Role.by_id(role_id)
+        if permission.get("email"):
+            role = Role.by_email(permission.get("email").strip())
+        else:
+            role_obj = ensure_dict(permission.get("role"))
+            role_id = permission.get("role_id", role_obj.get("id"))
+            role = Role.by_id(role_id)
+
         if not check_visible(role, request.authz):
             continue
         if role.is_public:

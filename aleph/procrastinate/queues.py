@@ -3,6 +3,7 @@ from typing import Any, TypedDict
 import structlog
 from banal import clean_dict
 from followthemoney.proxy import EntityProxy
+from ftmq.store.fragments.dataset import IdRange
 from openaleph_procrastinate import defer
 from openaleph_procrastinate.app import make_app
 from openaleph_procrastinate.model import DatasetJob
@@ -41,7 +42,7 @@ class Context(TypedDict):
     priority: int | None
 
 
-def get_context(collection: Collection) -> Context:
+def get_context(collection: Collection, priority: int | None = None) -> Context:
     """Set some task context variables that configure the ingestors."""
     from aleph.logic.aggregator import get_aggregator_name
 
@@ -50,7 +51,7 @@ def get_context(collection: Collection) -> Context:
             "languages": [x for x in collection.languages if x],
             "ftmstore": get_aggregator_name(collection),
             "namespace": collection.foreign_id,
-            "priority": Priorities.USER if collection.casefile else None,
+            "priority": priority or (Priorities.USER if collection.casefile else None),
         }
     )
 
@@ -59,13 +60,13 @@ def queue_ingest(collection: Collection, proxy: EntityProxy, **context: Any) -> 
     context = {**context, **get_context(collection)}
     dataset = get_aggregator_name(collection)
     with app.open():
-        defer.ingest(app, dataset, [proxy], dehydrate=False, **context)
+        defer.ingest(app, dataset, [proxy], **context)
 
 
 def queue_analyze(
     collection: Collection, entities: list[EntityProxy], **context: Any
 ) -> None:
-    context = {**context, **get_context(collection)}
+    context = {**context, **get_context(collection, Priorities.USER)}
     dataset = get_aggregator_name(collection)
     with app.open():
         defer.analyze(app, dataset, entities, **context)
@@ -74,19 +75,23 @@ def queue_analyze(
 def queue_transcribe(
     collection: Collection, proxy: EntityProxy, **context: Any
 ) -> None:
-    context = {**context, **get_context(collection)}
+    context = {**context, **get_context(collection, Priorities.USER)}
     dataset = get_aggregator_name(collection)
     with app.open():
         defer.transcribe(app, dataset, [proxy], **context)
 
 
-def queue_translate(collection: Collection, proxy: EntityProxy, **context: Any) -> None:
-    context = {**context, **get_context(collection)}
+def queue_translate(
+    collection: Collection,
+    proxy: EntityProxy,
+    **context: Any,
+) -> None:
+    context = {**context, **get_context(collection, Priorities.USER)}
     dataset = get_aggregator_name(collection)
     with app.open():
         defer.translate(app, dataset, [proxy], **context)
     # we want to trace the processing status for the UI:
-    tracer = defer.tasks.translate.get_tracer(oa_settings.redis_url)
+    tracer = defer.tasks.translate.get_tracer(dataset, oa_settings.redis_url)
     tracer.add(proxy.id)
 
 
@@ -100,13 +105,22 @@ def queue_index(
 
 
 def queue_index_batch(
-    collection: Collection, entity_ids: list[str], **context: Any
+    collection: Collection,
+    entity_ids: list[str] | None = None,
+    id_range: IdRange | None = None,
+    queue: str | None = None,
+    **context: Any,
 ) -> None:
     context = {**context, **get_context(collection)}
-    payload = {"context": context, "entity_ids": entity_ids}
+    payload: dict[str, Any] = {"context": context}
+    if id_range is not None:
+        # a dict: job serialization drops `None` from lists (an open bound)
+        payload["id_range"] = id_range._asdict()
+    else:
+        payload["entity_ids"] = entity_ids
     dataset = get_aggregator_name(collection)
     task = "aleph.procrastinate.tasks.index_entities_by_ids"
-    queue = settings.reindex.queue
+    queue = queue or settings.reindex.queue
     with app.open():
         job = DatasetJob(dataset=dataset, payload=payload, queue=queue, task=task)
         job.defer(app, priority=settings.reindex.min_priority)

@@ -14,15 +14,16 @@ import {
   Entity,
   ErrorSection,
   Property,
-  QueryInfiniteLoad,
   Schema,
   Skeleton,
   SortableTH,
 } from 'components/common';
+import FacetedResultList from 'components/EntitySearch/FacetedResultList';
 import EntityProperties from 'components/Entity/EntityProperties';
 import ensureArray from 'util/ensureArray';
 import { queryEntities } from 'actions/index';
 import EntityActionBar from './EntityActionBar';
+import EmailPropertyValues from 'components/common/EmailPropertyValues';
 
 const messages = defineMessages({
   no_relationships: {
@@ -95,24 +96,42 @@ class EntityReferencesMode extends React.Component {
   }
 
   renderCell(prop, entity) {
-    const { schema, isThing } = this.props;
-    const propVal = (
-      <Property.Values
-        prop={prop}
-        values={entity.getProperty(prop.name)}
-        translitLookup={entity.latinized}
-      />
-    );
-    if (isThing && schema.caption.indexOf(prop.name) !== -1) {
+    const { schema, isThing, isPreview } = this.props;
+    const isCaption = isThing && schema.caption.indexOf(prop.name) !== -1;
+
+    // For the caption column render the entity's *single* display
+    // caption — `entity.caption` from the backend takes precedence,
+    // falling through to `entity.getCaption()`. Passing children to
+    // `Entity.Link` with `<Property.Values>` would instead render the
+    // full `name` array, which is ES-ordered and can surface a
+    // non-Latin variant ahead of the preferred Latin name. Letting
+    // `Entity.Link` fall through to `VLEntity.Label` is the same
+    // render the rest of the app uses for entity chips.
+    if (isCaption) {
       return (
         <td key={prop.name} className="entity">
-          <Entity.Link entity={entity}>
-            <Schema.Icon schema={entity.schema} className="left-icon" />
-            {propVal}
-          </Entity.Link>
+          <Entity.Link entity={entity} icon preview={!isPreview} />
         </td>
       );
     }
+
+    const propVal =
+      prop.qname === 'Email:from' ? (
+        // This is a workaround to make the email sender a link
+        <EmailPropertyValues
+          entity={entity}
+          prop={prop.name}
+          preview={!isPreview}
+        />
+      ) : (
+        <Property.Values
+          prop={prop}
+          values={entity.getProperty(prop.name)}
+          translitLookup={entity.latinized}
+          preview={!isPreview}
+          showTime={schema.isAny(['Message', 'Email'])}
+        />
+      );
     return (
       <td key={prop.name} className={prop.type.name}>
         {propVal}
@@ -121,12 +140,18 @@ class EntityReferencesMode extends React.Component {
   }
 
   renderRow(columns, entity) {
-    const { isThing, expandedId, hideCollection } = this.props;
+    const { isThing, expandedId, previewId, hideCollection } = this.props;
     const isExpanded = entity.id === expandedId;
     const expandIcon = isExpanded ? 'chevron-up' : 'chevron-down';
 
     const mainRow = (
-      <tr key={entity.id} className={c('nowrap', { prefix: isExpanded })}>
+      <tr
+        key={entity.id}
+        className={c('nowrap', {
+          prefix: isExpanded,
+          active: previewId === entity.id,
+        })}
+      >
         {!isThing && (
           <td className="expand">
             <Button
@@ -154,7 +179,15 @@ class EntityReferencesMode extends React.Component {
       <tr key={`${entity.id}-expanded`}>
         <td />
         <td colSpan={colSpan}>
-          <EntityProperties entity={entity} showMetadata={false} />
+          <Entity.Load id={entity.id} deep>
+            {(fullEntity) =>
+              fullEntity.shallow && !fullEntity.isError ? (
+                <Skeleton.Text type="span" length={50} />
+              ) : (
+                <EntityProperties entity={fullEntity} showMetadata={false} />
+              )
+            }
+          </Entity.Load>
         </td>
       </tr>,
     ];
@@ -184,8 +217,20 @@ class EntityReferencesMode extends React.Component {
   }
 
   render() {
-    const { intl, reference, query, result, schema, isThing, hideCollection } =
-      this.props;
+    const {
+      intl,
+      reference,
+      query,
+      result,
+      results,
+      schema,
+      columns,
+      isThing,
+      hideCollection,
+      navigate,
+      location,
+      isPreview,
+    } = this.props;
 
     if (!reference) {
       return (
@@ -195,11 +240,6 @@ class EntityReferencesMode extends React.Component {
         />
       );
     }
-    const { property } = reference;
-    const results = _.uniqBy(ensureArray(result.results), 'id');
-    const columns = schema
-      .getFeaturedProperties()
-      .filter((prop) => prop.name !== property.name);
     const schemaLabel = reference.schema.plural.toLowerCase();
     const placeholder =
       schema.name === 'Thing'
@@ -211,14 +251,26 @@ class EntityReferencesMode extends React.Component {
     const { field: sortedField, direction } = query.getSort();
 
     return (
-      <section className="EntityReferencesTable">
-        <EntityActionBar
-          query={query}
-          onSearchSubmit={this.onSearchSubmit}
-          searchPlaceholder={placeholder}
-        ></EntityActionBar>
-        {result.total !== 0 && (
-          <>
+      <FacetedResultList
+        query={query}
+        result={result}
+        navigate={navigate}
+        location={location}
+        fetch={this.props.queryEntities}
+        defaultFacets={['schema', 'countries', 'dates']}
+        storageKey="entity:references"
+        hideSidebarWhenEmpty
+        previewGroupLabel={schema.plural}
+        showFacets={!isPreview}
+        previewHotkeys={!isPreview}
+      >
+        <section className="EntityReferencesTable">
+          <EntityActionBar
+            query={query}
+            onSearchSubmit={this.onSearchSubmit}
+            searchPlaceholder={placeholder}
+          ></EntityActionBar>
+          {result.total !== 0 && (
             <table className="data-table references-data-table">
               <thead>
                 <tr>
@@ -254,32 +306,27 @@ class EntityReferencesMode extends React.Component {
                   skeletonItems.map((idx) => this.renderSkeleton(columns, idx))}
               </tbody>
             </table>
-            <QueryInfiniteLoad
-              query={query}
-              result={result}
-              fetch={this.props.queryEntities}
+          )}
+          {result.total === 0 && (
+            <ErrorSection
+              icon={
+                <Schema.Icon
+                  schema={reference.schema}
+                  className="left-icon"
+                  size={60}
+                />
+              }
+              title={
+                schema.name === 'Thing'
+                  ? intl.formatMessage(messages.no_results_default)
+                  : intl.formatMessage(messages.no_results, {
+                      schema: schemaLabel,
+                    })
+              }
             />
-          </>
-        )}
-        {result.total === 0 && (
-          <ErrorSection
-            icon={
-              <Schema.Icon
-                schema={reference.schema}
-                className="left-icon"
-                size={60}
-              />
-            }
-            title={
-              schema.name === 'Thing'
-                ? intl.formatMessage(messages.no_results_default)
-                : intl.formatMessage(messages.no_results, {
-                    schema: schemaLabel,
-                  })
-            }
-          />
-        )}
-      </section>
+          )}
+        </section>
+      </FacetedResultList>
     );
   }
 }
@@ -288,16 +335,34 @@ const mapStateToProps = (state, ownProps) => {
   const { location, reference, query } = ownProps;
   const parsedHash = queryString.parse(location.hash);
   const schema = selectSchema(state, reference.schema);
+  const columns = schema
+    .getFeaturedProperties()
+    .filter((prop) => prop.name !== reference.property.name);
+
+  // the reference queries are dehydrated, so request the column fields back.
+  // Email:from cells resolve the sender via the `emitters` entity property.
+  const includeProps = columns.map((prop) => prop.name);
+  if (columns.some((prop) => prop.qname === 'Email:from')) {
+    includeProps.push('emitters');
+  }
 
   // Default sort by most recent dates
-  const sortedQuery = query.defaultSortBy('dates', 'desc');
+  const sortedQuery = query
+    .defaultSortBy('dates', 'desc')
+    .addIncludeFields(includeProps.map((name) => ({ name, isProperty: true })));
+
+  const result = selectEntitiesResult(state, sortedQuery);
+  const results = _.uniqBy(ensureArray(result.results), 'id');
 
   return {
     schema,
+    columns,
     parsedHash,
     expandedId: parsedHash.expand,
+    previewId: parsedHash["preview:id"],
     query: sortedQuery,
-    result: selectEntitiesResult(state, sortedQuery),
+    result,
+    results,
     isThing: schema.isThing(),
   };
 };

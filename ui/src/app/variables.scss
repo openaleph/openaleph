@@ -157,4 +157,5 @@ $aleph-error-highlight-color: #d4130d;
 // adjust INTER font
 * {
   letter-spacing: -0.02rem;
+  font-feature-settings: "calt" 0;
 }

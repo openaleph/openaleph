@@ -74,6 +74,7 @@ interface IPropertyValueProps extends IPropertyCommonProps {
   getEntityLink?: (entity: FTMEntity) => any;
   translitLookup?: any;
   truncate?: number;
+  showTime?: boolean;
 }
 
 const getSortValue = ({
@@ -109,6 +110,7 @@ class PropertyValue extends React.PureComponent<IPropertyValueProps> {
       value,
       truncate,
       translitLookup,
+      showTime,
     } = this.props;
     if (!value) {
       return null;
@@ -155,7 +157,7 @@ class PropertyValue extends React.PureComponent<IPropertyValueProps> {
       );
     }
     if (prop.type.name === 'date') {
-      return <Date value={value as string} />;
+      return <Date value={value as string} showTime={showTime} />;
     }
     if (prop.type.name === 'number' && !isNaN(+value)) {
       return <Numeric num={+value} />;
@@ -186,6 +188,7 @@ interface IPropertyValuesProps
   translitLookup?: any;
   truncate?: number;
   truncateItem?: number;
+  showTime?: boolean;
 }
 
 interface IPropertyValuesState {
@@ -232,6 +235,7 @@ class PropertyValues extends React.PureComponent<
       separator = ' · ',
       missing = '—',
       translitLookup,
+      showTime,
     } = this.props;
     const { truncateShowAll } = this.state;
 
@@ -246,6 +250,7 @@ class PropertyValues extends React.PureComponent<
         getEntityLink={getEntityLink}
         translitLookup={translitLookup}
         truncate={truncateItem}
+        showTime={showTime}
       />
     ));
     let content;

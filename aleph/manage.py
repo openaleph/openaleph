@@ -2,12 +2,20 @@ import json
 import logging
 from itertools import count
 from pathlib import Path
+from typing import Any, Iterable, TextIO
+from warnings import warn
 
 import click
 from flask.cli import FlaskGroup
-from followthemoney.cli.util import write_object
+from followthemoney import EntityProxy
+from followthemoney.exc import InvalidData
+from followthemoney.namespace import Namespace
 from normality import slugify
-from openaleph_procrastinate.util import make_file_entity
+from openaleph_procrastinate.util import (
+    QUERY_LIMIT,
+    get_page_entity_fragments,
+    make_file_entity,
+)
 from openaleph_search.index.admin import delete_index
 from openaleph_search.index.entities import get_entity as _get_index_entity
 from openaleph_search.index.entities import iter_proxies
@@ -16,19 +24,17 @@ from tabulate import tabulate
 from aleph.authz import Authz
 from aleph.core import cache, create_app, db
 from aleph.index.collections import get_collection as _get_index_collection
-from aleph.logic.aggregator import get_aggregator
-from aleph.logic.archive import cleanup_archive
+from aleph.logic.aggregator import get_aggregator, get_aggregator_name
+from aleph.logic.archive import cleanup_archive, iter_checksums
 from aleph.logic.collections import (
     aggregate_model,
     compute_collection,
     create_collection,
     delete_collection,
-)
-from aleph.logic.collections import index_diff as _index_diff
-from aleph.logic.collections import (
     reindex_collection,
     reingest_collection,
     update_collection,
+    upgrade_collection,
     upgrade_collections,
     validate_collection_foreign_ids,
 )
@@ -43,6 +49,7 @@ from aleph.logic.roles import (
     create_user,
     delete_role,
     rename_user,
+    rotate_api_key,
     update_roles,
     user_add,
     user_del,
@@ -55,6 +62,7 @@ from aleph.procrastinate.queues import (
     OP_INGEST,
     queue_analyze,
     queue_cancel_collection,
+    queue_index,
     queue_ingest,
     queue_reindex,
 )
@@ -62,6 +70,15 @@ from aleph.procrastinate.status import get_collection_status, get_status
 from aleph.util import JSONEncoder
 
 log = logging.getLogger("aleph")
+
+
+# FIXME followthemoney 4.8.0
+def write_object(stream: TextIO, obj: Any) -> None:
+    warn("write_object() is deprecated.", DeprecationWarning, stacklevel=2)
+    if hasattr(obj, "to_dict"):
+        obj = obj.to_dict()
+    data = json.dumps(obj)
+    stream.write(data + "\n")
 
 
 def get_expanded_entity(entity_id):
@@ -203,6 +220,115 @@ def touch(foreign_id, sync=True):
 
 @cli.command()
 @click.argument("foreign_id")
+@click.option("-l", "--label", help="Collection label")
+@click.option("-s", "--summary", help="Collection summary (description)")
+@click.option("-c", "--category", type=click.Choice(list(Collection.CATEGORIES.keys())))
+@click.option("--frequency", type=click.Choice(list(Collection.FREQUENCIES.keys())))
+@click.option("--country", "countries", multiple=True, help="Country code (repeatable)")
+@click.option(
+    "--language", "languages", multiple=True, help="Language code (repeatable)"
+)
+@click.option("--publisher", help="Publisher name")
+@click.option("--publisher-url", help="Publisher URL")
+@click.option("--info-url", help="Info URL")
+@click.option("--data-url", help="Data URL")
+@click.option(
+    "--external/--no-external",
+    default=None,
+    help="Externally managed collection (read-only in the UI)",
+)
+@click.option(
+    "--lakehouse-uri",
+    help="Lakehouse URI (external collections only), pass '' to unset",
+)
+@click.option(
+    "--maintenance/--no-maintenance",
+    default=None,
+    help="Maintenance mode: collection is read-only for everyone, incl. admins",
+)
+@click.option("--restricted/--no-restricted", default=None)
+@click.option("--xref/--no-xref", default=None, help="Run xref on entity changes")
+@click.option("--taggable/--no-taggable", default=None)
+@click.option("--contains-ai/--no-contains-ai", default=None)
+@click.option("--contains-ai-comment")
+@click.option(
+    "--create/--no-create",
+    default=True,
+    help="Create the collection if it doesn't exist",
+)
+@click.option("--sync/--async", default=True)
+def configure_collection(
+    foreign_id: str,
+    label: str | None = None,
+    summary: str | None = None,
+    category: str | None = None,
+    frequency: str | None = None,
+    countries: tuple[str, ...] = (),
+    languages: tuple[str, ...] = (),
+    publisher: str | None = None,
+    publisher_url: str | None = None,
+    info_url: str | None = None,
+    data_url: str | None = None,
+    external: bool | None = None,
+    lakehouse_uri: str | None = None,
+    maintenance: bool | None = None,
+    restricted: bool | None = None,
+    xref: bool | None = None,
+    taggable: bool | None = None,
+    contains_ai: bool | None = None,
+    contains_ai_comment: str | None = None,
+    create: bool = True,
+    sync: bool = True,
+) -> None:
+    """Create or update the metadata of a collection."""
+    options = {
+        "label": label,
+        "summary": summary,
+        "category": category,
+        "frequency": frequency,
+        "countries": list(countries) or None,
+        "languages": list(languages) or None,
+        "publisher": publisher,
+        "publisher_url": publisher_url,
+        "info_url": info_url,
+        "data_url": data_url,
+        "external": external,
+        "lakehouse_uri": lakehouse_uri,
+        "maintenance": maintenance,
+        "restricted": restricted,
+        "xref": xref,
+        "taggable": taggable,
+        "contains_ai": contains_ai,
+        "contains_ai_comment": contains_ai_comment,
+    }
+    changes = {k: v for k, v in options.items() if v is not None}
+    authz = Authz.from_role(Role.load_cli_user())
+    collection = Collection.by_foreign_id(foreign_id)
+    try:
+        if collection is None:
+            if not create:
+                raise click.BadParameter("No such collection: %r" % foreign_id)
+            data = {"foreign_id": foreign_id, "label": foreign_id, **changes}
+            # new collections default to casefile, which can't be external
+            if data.get("external") and "category" not in data:
+                data["category"] = "other"
+            create_collection(data, authz, sync=sync)
+            collection = Collection.by_foreign_id(foreign_id)
+            log.info("Created collection: %r", foreign_id)
+        else:
+            collection.update(changes, authz)
+            db.session.commit()
+            update_collection(collection, sync=sync)
+            log.info("Updated collection: %r", foreign_id)
+    except (InvalidData, ValueError) as exc:
+        db.session.rollback()
+        raise click.ClickException(str(exc))
+    rows = [(k, v) for k, v in collection.to_dict().items() if k in options]
+    print(tabulate([("foreign_id", collection.foreign_id), *rows]))
+
+
+@cli.command()
+@click.argument("foreign_id")
 @click.option("--sync/--async", default=False)
 def flush(foreign_id, sync=False):
     """Flush all the contents for a given collection."""
@@ -228,37 +354,44 @@ def aggregate_model_command(foreign_id):
 
 
 def _reindex_collection(
-    collection,
-    flush=False,
-    diff_only=False,
-    model=True,
-    mappings=True,
-    profiles=True,
-    queue_batches=False,
-    batch_size=10_000,
-    schema=None,
-    since=None,
-    until=None,
-    origin=None,
-):
+    collection: Collection,
+    flush: bool = False,
+    model: bool = True,
+    mappings: bool = True,
+    profiles: bool = True,
+    queue_batches: bool = False,
+    batch_size: int = 10_000,
+    queue_name: str | None = None,
+    sample_ranges: bool = False,
+    resume_id: str | None = None,
+) -> None:
     log.info("[%s] Starting to re-index", collection)
     try:
         reindex_collection(
             collection,
             flush=flush,
-            diff_only=diff_only,
             model=model,
             mappings=mappings,
             profiles=profiles,
             queue_batches=queue_batches,
             batch_size=batch_size,
-            schema=schema,
-            since=since,
-            until=until,
-            origin=origin,
+            queue_name=queue_name,
+            sample_ranges=sample_ranges,
+            resume_id=resume_id,
         )
     except Exception:
         log.exception("Failed to re-index: %s", collection)
+
+
+def _reindex_collections(
+    collections: Iterable[Collection], queue: bool = False, **options: Any
+) -> None:
+    """Re-index collections in-process, or queue one reindex job each."""
+    for collection in collections:
+        if queue:
+            queue_reindex(collection, **options)
+        else:
+            _reindex_collection(collection, **options)
 
 
 @cli.command()
@@ -268,12 +401,6 @@ def _reindex_collection(
 @click.option("--mappings/--no-mappings", is_flag=True, default=True)
 @click.option("--profiles/--no-profiles", is_flag=True, default=True)
 @click.option(
-    "--diff-only",
-    is_flag=True,
-    default=False,
-    help="Only reindex entities that are in aggregator but not in index",
-)
-@click.option(
     "--queue-batches",
     is_flag=True,
     default=False,
@@ -286,341 +413,59 @@ def _reindex_collection(
     help="Batch size for processing entities (default: 10000)",
 )
 @click.option(
-    "-s",
-    "--schema",
-    type=str,
-    default=None,
-    help="Filter entities by schema (e.g., Person, Company)",
-)
-@click.option(
-    "--since",
+    "--queue-name",
     type=str,
     default=None,
     help=(
-        "Filter entities modified since this time. "
-        "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
+        "Worker queue for the batches, e.g. for dedicated index workers "
+        "(`procrastinate worker -q <name>`). Implies --queue-batches."
     ),
 )
 @click.option(
-    "--until",
+    "--sample-ranges",
+    is_flag=True,
+    default=False,
+    help=(
+        "Batch by id ranges from a table sample instead of walking all ids, "
+        "faster for big collections. --batch-size then counts fragments."
+    ),
+)
+@click.option(
+    "--resume-id",
     type=str,
     default=None,
     help=(
-        "Filter entities modified until this time. "
-        "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
+        "Only batch the entity ids past this one, to continue a stopped run "
+        "from the last id of its last queued batch."
     ),
-)
-@click.option(
-    "--origin",
-    type=str,
-    default=None,
-    help="Filter entities by aggregator origin (e.g., 'xref', 'aleph')",
 )
 def reindex(
-    foreign_id,
-    flush=False,
-    diff_only=False,
-    model=True,
-    mappings=True,
-    profiles=True,
-    queue_batches=False,
-    batch_size=10_000,
-    schema=None,
-    since=None,
-    until=None,
-    origin=None,
-):
+    foreign_id: str,
+    flush: bool = False,
+    model: bool = True,
+    mappings: bool = True,
+    profiles: bool = True,
+    queue_batches: bool = False,
+    batch_size: int = 10_000,
+    queue_name: str | None = None,
+    sample_ranges: bool = False,
+    resume_id: str | None = None,
+) -> None:
     """Index all the aggregator contents for a collection."""
+    if flush and resume_id is not None:
+        raise click.UsageError("--flush would drop what was indexed before --resume-id")
     collection = get_collection(foreign_id)
     _reindex_collection(
         collection,
         flush=flush,
-        diff_only=diff_only,
         model=model,
         mappings=mappings,
         profiles=profiles,
         queue_batches=queue_batches,
         batch_size=batch_size,
-        schema=schema,
-        since=since,
-        until=until,
-        origin=origin,
-    )
-
-
-def _write_entity_ids(entity_ids, output_file, description):
-    """Write entity IDs to file, sorted one per line."""
-    sorted_ids = sorted(entity_ids)
-    for entity_id in sorted_ids:
-        output_file.write(f"{entity_id}\n")
-    log.info("Wrote %d %s to %s", len(sorted_ids), description, output_file.name)
-
-
-def _compute_diff_stats(collection) -> dict[str, int]:
-    """Compute diff statistics from the streaming index_diff generator.
-
-    Returns a dict with counts and lists of entity IDs.
-    """
-    aggregator_ids = 0
-    index_ids = 0
-    in_both = 0
-    only_in_aggregator = 0
-    only_in_index = 0
-
-    for aggregator_id, index_id in _index_diff(collection):
-        if aggregator_id is not None and index_id is not None:
-            aggregator_ids += 1
-            index_ids += 1
-            in_both += 1
-        elif aggregator_id is not None:
-            # Only in aggregator
-            aggregator_ids += 1
-            only_in_aggregator += 1
-        elif index_id is not None:
-            # Only in index
-            index_ids += 1
-            only_in_index += 1
-
-    return {
-        "aggregator_ids": aggregator_ids,
-        "index_ids": index_ids,
-        "in_both": in_both,
-        "only_in_aggregator": only_in_aggregator,
-        "only_in_index": only_in_index,
-    }
-
-
-def _collect_diff_ids(collection) -> dict[str, list[str]]:
-    """Collect entity IDs from diff for file output.
-
-    Returns lists of entity IDs categorized by their location.
-    """
-    aggregator_ids = []
-    index_ids = []
-    only_in_aggregator = []
-    only_in_index = []
-
-    for aggregator_id, index_id in _index_diff(collection):
-        if aggregator_id is not None:
-            aggregator_ids.append(aggregator_id)
-        if index_id is not None:
-            index_ids.append(index_id)
-
-        if aggregator_id is not None and index_id is None:
-            only_in_aggregator.append(aggregator_id)
-        elif index_id is not None and aggregator_id is None:
-            only_in_index.append(index_id)
-
-    return {
-        "aggregator_ids": aggregator_ids,
-        "index_ids": index_ids,
-        "only_in_aggregator": only_in_aggregator,
-        "only_in_index": only_in_index,
-    }
-
-
-@cli.command("index-diff")
-@click.argument("foreign_id")
-def index_diff(foreign_id):
-    """Compare entity IDs between aggregator and search index (streaming stats only).
-
-    For exporting IDs to files, use the 'export-index-diff' command instead.
-    """
-    collection = get_collection(foreign_id)
-
-    log.info("[%s] Computing diff counts...", collection)
-    diff = _compute_diff_stats(collection)
-
-    # Display results
-    log.info(
-        "[%s] Index Diff Report:\n"
-        "  Total in aggregator:        %10d\n"
-        "  Total in index:             %10d\n"
-        "  In both:                    %10d\n"
-        "  Only in aggregator:         %10d\n"
-        "  Only in index:              %10d",
-        collection,
-        diff["aggregator_ids"],
-        diff["index_ids"],
-        diff["in_both"],
-        diff["only_in_aggregator"],
-        diff["only_in_index"],
-    )
-
-
-@cli.command("export-index-diff")
-@click.argument("foreign_id")
-@click.option(
-    "--aggregator-ids",
-    type=click.File("w"),
-    default=None,
-    help="Output file for all aggregator IDs (sorted, one per line)",
-)
-@click.option(
-    "--index-ids",
-    type=click.File("w"),
-    default=None,
-    help="Output file for all index IDs (sorted, one per line)",
-)
-@click.option(
-    "--only-aggregator",
-    type=click.File("w"),
-    default=None,
-    help="Output file for IDs only in aggregator (sorted, one per line)",
-)
-@click.option(
-    "--only-index",
-    type=click.File("w"),
-    default=None,
-    help="Output file for IDs only in index (sorted, one per line)",
-)
-def export_index_diff(
-    foreign_id,
-    aggregator_ids=None,
-    index_ids=None,
-    only_aggregator=None,
-    only_index=None,
-):
-    """Export entity IDs from index diff to files.
-
-    This command collects all entity IDs in memory and writes them to the
-    requested output files. For quick stats without file output, use 'index-diff'.
-    """
-    collection = get_collection(foreign_id)
-
-    if not any([aggregator_ids, index_ids, only_aggregator, only_index]):
-        log.error(
-            "At least one output file must be specified. "
-            "Available options: --aggregator-ids, --index-ids, --only-aggregator, --only-index"
-        )
-        return
-
-    log.info("[%s] Collecting entity IDs...", collection)
-    id_lists = _collect_diff_ids(collection)
-
-    outputs = [
-        (aggregator_ids, id_lists["aggregator_ids"], "aggregator IDs"),
-        (index_ids, id_lists["index_ids"], "index IDs"),
-        (only_aggregator, id_lists["only_in_aggregator"], "only-in-aggregator IDs"),
-        (only_index, id_lists["only_in_index"], "only-in-index IDs"),
-    ]
-    for output_file, entity_ids, description in outputs:
-        if output_file:
-            _write_entity_ids(entity_ids, output_file, description)
-
-    # Display summary
-    log.info(
-        "[%s] Export Summary:\n"
-        "  Total in aggregator:        %10d\n"
-        "  Total in index:             %10d\n"
-        "  Only in aggregator:         %10d\n"
-        "  Only in index:              %10d",
-        collection,
-        len(id_lists["aggregator_ids"]),
-        len(id_lists["index_ids"]),
-        len(id_lists["only_in_aggregator"]),
-        len(id_lists["only_in_index"]),
-    )
-
-
-@cli.command("index-diff-all")
-@click.option(
-    "--casefile",
-    type=bool,
-    default=None,
-    help="Filter by casefiles (None means all)",
-)
-def index_diff_all(casefile=None):
-    """Compare entity IDs between aggregator and search index for all collections."""
-    collections_list = []
-
-    for collection in Collection.all():
-        if casefile is not None and collection.casefile != casefile:
-            continue
-
-        try:
-            log.info("Processing %s...", collection.foreign_id)
-            diff = _compute_diff_stats(collection)
-            collections_list.append(
-                {
-                    "foreign_id": collection.foreign_id,
-                    "label": collection.label,
-                    "aggregator": diff["aggregator_ids"],
-                    "index": diff["index_ids"],
-                    "in_both": diff["in_both"],
-                    "only_aggregator": diff["only_in_aggregator"],
-                    "only_index": diff["only_in_index"],
-                }
-            )
-        except Exception as e:
-            log.error("[%s] Failed to compute diff: %s", collection, e)
-            collections_list.append(
-                {
-                    "foreign_id": collection.foreign_id,
-                    "label": collection.label,
-                    "aggregator": "ERROR",
-                    "index": "ERROR",
-                    "in_both": "ERROR",
-                    "only_aggregator": "ERROR",
-                    "only_index": "ERROR",
-                }
-            )
-
-    # Display summary table
-    headers = [
-        "Foreign ID",
-        "Label",
-        "Aggregator",
-        "Index",
-        "In Both",
-        "Missing from Index",
-        "Orphaned in Index",
-    ]
-    rows = []
-    for coll in collections_list:
-        rows.append(
-            [
-                coll["foreign_id"],
-                coll["label"][:30],  # Truncate long labels
-                coll["aggregator"],
-                coll["index"],
-                coll["in_both"],
-                coll["only_aggregator"],
-                coll["only_index"],
-            ]
-        )
-
-    table = tabulate(rows, headers=headers, tablefmt="simple")
-
-    # Show totals
-    total_aggregator = sum(
-        c["aggregator"] for c in collections_list if isinstance(c["aggregator"], int)
-    )
-    total_index = sum(
-        c["index"] for c in collections_list if isinstance(c["index"], int)
-    )
-    total_only_aggregator = sum(
-        c["only_aggregator"]
-        for c in collections_list
-        if isinstance(c["only_aggregator"], int)
-    )
-    total_only_index = sum(
-        c["only_index"] for c in collections_list if isinstance(c["only_index"], int)
-    )
-
-    log.info(
-        "Index Diff Summary for All Collections:\n\n%s\n\n"
-        "Totals across %d collections:\n"
-        "  Total entities in aggregator:      %10d\n"
-        "  Total entities in index:           %10d\n"
-        "  Total missing from index:          %10d\n"
-        "  Total orphaned in index:           %10d",
-        table,
-        len(collections_list),
-        total_aggregator,
-        total_index,
-        total_only_aggregator,
-        total_only_index,
+        queue_name=queue_name,
+        sample_ranges=sample_ranges,
+        resume_id=resume_id,
     )
 
 
@@ -628,17 +473,15 @@ def index_diff_all(casefile=None):
 @click.option("--flush", is_flag=True, default=False)
 @click.option("--model/--no-model", is_flag=True, default=True)
 @click.option("--mappings/--no-mappings", is_flag=True, default=True)
-@click.option(
-    "--diff-only",
-    is_flag=True,
-    default=False,
-    help="Only reindex entities that are in aggregator but not in index",
-)
+@click.option("--profiles/--no-profiles", is_flag=True, default=True)
 @click.option(
     "--queue",
     is_flag=True,
     default=False,
-    help="Queue the reindexing task for each collection, distribute them across workers.",
+    help=(
+        "Queue the reindexing task for each collection, distribute them across "
+        "workers. Combine with --queue-batches to also fan out the batches."
+    ),
 )
 @click.option(
     "--queue-batches",
@@ -653,83 +496,72 @@ def index_diff_all(casefile=None):
     help="Batch size for processing entities (default: 10000)",
 )
 @click.option(
-    "-s",
-    "--schema",
-    type=str,
-    default=None,
-    help="Filter entities by schema (e.g., Person, Company)",
-)
-@click.option(
-    "--since",
+    "--queue-name",
     type=str,
     default=None,
     help=(
-        "Filter entities modified since this time. "
-        "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
+        "Worker queue for the batches, e.g. for dedicated index workers "
+        "(`procrastinate worker -q <name>`). Implies --queue-batches."
     ),
 )
 @click.option(
-    "--until",
-    type=str,
-    default=None,
+    "--sample-ranges",
+    is_flag=True,
+    default=False,
     help=(
-        "Filter entities modified until this time. "
-        "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
+        "Batch by id ranges from a table sample instead of walking all ids, "
+        "faster for big collections. --batch-size then counts fragments."
     ),
+)
+@click.option(
+    "--exclude",
+    "excludes",
+    multiple=True,
+    help="Foreign ID of a collection to skip (repeatable)",
 )
 def reindex_full(
-    flush=False,
-    diff_only=False,
-    queue=False,
-    model=True,
-    mappings=True,
-    queue_batches=False,
-    batch_size=10_000,
-    schema=None,
-    since=None,
-    until=None,
-):
+    flush: bool = False,
+    queue: bool = False,
+    model: bool = True,
+    mappings: bool = True,
+    profiles: bool = True,
+    queue_batches: bool = False,
+    batch_size: int = 10_000,
+    queue_name: str | None = None,
+    sample_ranges: bool = False,
+    excludes: tuple[str, ...] = (),
+) -> None:
     """Re-index all collections."""
-    for collection in Collection.all():
-        if queue:
-            queue_reindex(
-                collection,
-                flush=flush,
-                diff_only=diff_only,
-                schema=schema,
-                since=since,
-                until=until,
-            )
-        else:
-            _reindex_collection(
-                collection,
-                flush=flush,
-                diff_only=diff_only,
-                model=model,
-                mappings=mappings,
-                queue_batches=queue_batches,
-                batch_size=batch_size,
-                schema=schema,
-                since=since,
-                until=until,
-            )
+    collections = Collection.all()
+    if excludes:
+        collections = collections.filter(Collection.foreign_id.notin_(excludes))
+    _reindex_collections(
+        collections,
+        queue=queue,
+        flush=flush,
+        model=model,
+        mappings=mappings,
+        profiles=profiles,
+        queue_batches=queue_batches,
+        batch_size=batch_size,
+        queue_name=queue_name,
+        sample_ranges=sample_ranges,
+    )
 
 
 @cli.command("reindex-casefiles")
 @click.option("--flush", is_flag=True, default=False)
 @click.option("--model/--no-model", is_flag=True, default=True)
 @click.option("--mappings/--no-mappings", is_flag=True, default=True)
-@click.option(
-    "--diff-only",
-    is_flag=True,
-    default=False,
-    help="Only reindex entities that are in aggregator but not in index",
-)
+@click.option("--profiles/--no-profiles", is_flag=True, default=True)
 @click.option(
     "--queue",
     is_flag=True,
     default=False,
-    help="Queue the reindexing task for each collection, distribute them across workers.",
+    help=(
+        "Queue the reindexing task for each collection, distribute them across "
+        "workers. Combine with --queue-batches to also fan out the batches."
+    ),
 )
 @click.option(
     "--queue-batches",
@@ -744,66 +576,47 @@ def reindex_full(
     help="Batch size for processing entities (default: 10000)",
 )
 @click.option(
-    "-s",
-    "--schema",
-    type=str,
-    default=None,
-    help="Filter entities by schema (e.g., Person, Company)",
-)
-@click.option(
-    "--since",
+    "--queue-name",
     type=str,
     default=None,
     help=(
-        "Filter entities modified since this time. "
-        "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
+        "Worker queue for the batches, e.g. for dedicated index workers "
+        "(`procrastinate worker -q <name>`). Implies --queue-batches."
     ),
 )
 @click.option(
-    "--until",
-    type=str,
-    default=None,
+    "--sample-ranges",
+    is_flag=True,
+    default=False,
     help=(
-        "Filter entities modified until this time. "
-        "Accepts: ISO dates, Unix timestamps, relative dates (e.g., '1d', '2 weeks ago')"
+        "Batch by id ranges from a table sample instead of walking all ids, "
+        "faster for big collections. --batch-size then counts fragments."
     ),
 )
 def reindex_casefiles(
-    flush=False,
-    diff_only=False,
-    queue=False,
-    model=True,
-    mappings=True,
-    queue_batches=False,
-    batch_size=10_000,
-    schema=None,
-    since=None,
-    until=None,
-):
+    flush: bool = False,
+    queue: bool = False,
+    model: bool = True,
+    mappings: bool = True,
+    profiles: bool = True,
+    queue_batches: bool = False,
+    batch_size: int = 10_000,
+    queue_name: str | None = None,
+    sample_ranges: bool = False,
+) -> None:
     """Re-index all the casefile collections."""
-    for collection in Collection.all_casefiles():
-        if queue:
-            queue_reindex(
-                collection,
-                flush=flush,
-                diff_only=diff_only,
-                schema=schema,
-                since=since,
-                until=until,
-            )
-        else:
-            _reindex_collection(
-                collection,
-                flush=flush,
-                diff_only=diff_only,
-                model=model,
-                mappings=mappings,
-                queue_batches=queue_batches,
-                batch_size=batch_size,
-                schema=schema,
-                since=since,
-                until=until,
-            )
+    _reindex_collections(
+        Collection.all_casefiles(),
+        queue=queue,
+        flush=flush,
+        model=model,
+        mappings=mappings,
+        profiles=profiles,
+        queue_batches=queue_batches,
+        batch_size=batch_size,
+        queue_name=queue_name,
+        sample_ranges=sample_ranges,
+    )
 
 
 @cli.command()
@@ -925,6 +738,99 @@ def reanalyze_collection(
 
 
 @cli.command()
+@click.option(
+    "-f",
+    "--foreign-id",
+    required=True,
+    help="Foreign ID of the collection that translations should be purged from",
+)
+@click.option(
+    "-e",
+    "--entity-id",
+    required=False,
+    help="Entity ID of the entity with translated text that should be deleted",
+)
+@click.option(
+    "-i",
+    "--infile",
+    required=False,
+    type=click.File("r"),
+    help="File path containing entity IDs of the entities \
+        with translated text that should be deleted",
+)
+def delete_translation(entity_id, foreign_id, infile):  # noqa: C901
+    """Delete translations from one entity, one entire collection \
+        or from all entities in a list. Delete FTM-Entities with origin=translate."""
+    if not entity_id and not foreign_id and not infile:
+        raise click.BadParameter("At least one of the following options needs to be \
+                provided: -e [entity_id] / -f [foreign_id] / -f [/path/to/file]")
+
+    collection = get_collection(foreign_id)
+    if not collection:
+        raise click.ClickException(f"Collection {foreign_id} not found")
+
+    ns = Namespace(foreign_id)
+    origin = "translate"
+    to_index: list[EntityProxy] = []
+    to_delete: list[str] = []
+    entity_ids: list[str] = []
+    aggregator = get_aggregator(collection)
+    aggregator_name = get_aggregator_name(collection)
+
+    if entity_id:
+        entity_ids.append(entity_id)
+    if infile:
+        entity_ids.extend(infile.readlines())
+        entity_ids = [e.strip() for e in entity_ids]
+
+    ix = 1
+    for id in entity_ids:
+        entity_data = list(aggregator.fragments(id, fragment="default"))
+        if not entity_data:
+            raise click.ClickException(
+                f"Entity {id} not found in collection {collection.id}"
+            )
+        entity = EntityProxy.from_dict(entity_data[0])
+        if entity.schema.is_a("Pages"):
+            to_delete.append(id)
+            to_index.append(entity)
+            for page_data in get_page_entity_fragments(entity, aggregator_name, ns):
+                page_entity = EntityProxy.from_dict(page_data)
+                to_delete.append(page_entity.id)
+                to_index.append(page_entity)
+                ix += 1
+                if ix >= QUERY_LIMIT:
+                    log.info(
+                        f"Deleting {QUERY_LIMIT} translations, queueing entities for re-index"
+                    )
+                    aggregator.delete_many(to_delete, origin=origin)
+                    queue_index(collection, to_index)
+                    to_delete.clear()
+                    to_index.clear()
+                    ix = 1
+        else:
+            to_delete.append(id)
+            to_index.append(entity)
+
+            if len(to_delete) >= QUERY_LIMIT:
+                log.info(
+                    f"Deleting {QUERY_LIMIT} translations, queueing entities for re-index"
+                )
+                aggregator.delete_many(to_delete, origin=origin)
+                queue_index(collection, to_index)
+                to_delete.clear()
+                to_index.clear()
+
+    if to_delete:
+        aggregator.delete_many(to_delete, origin=origin)
+        queue_index(collection, to_index)
+
+    if not entity_id and not infile:
+        aggregator.delete(origin=origin)
+        queue_reindex(collection)
+
+
+@cli.command()
 def flushdeleted():
     """Remove soft-deleted database objects."""
     cleanup_deleted()
@@ -936,6 +842,15 @@ def update():
     update_roles()
     upgrade_collections()
     cleanup_mappings()
+
+
+@cli.command("update-collection")
+@click.argument("foreign_id")
+def update_collection_command(foreign_id: str) -> None:
+    """Re-index a single collection and clear its caches."""
+    collection = get_collection(foreign_id)
+    upgrade_collection(collection)
+    cleanup_mappings(collection.id)
 
 
 @cli.command()
@@ -1022,41 +937,42 @@ def dump_profiles(outfile, foreign_id=None):
             outfile.write(encoder.encode(data) + "\n")
 
 
+def _status_rows(dataset, collection: str):
+    """Render a DatasetStatus as tabulate rows (dataset, batch, queue)."""
+    rows = [[collection, "", "", dataset.todo, dataset.doing, dataset.succeeded]]
+    for batch in dataset.batches:
+        for queue in batch.queues:
+            rows.append(
+                [
+                    collection,
+                    batch.name,
+                    queue.name,
+                    queue.todo,
+                    queue.doing,
+                    queue.succeeded,
+                ]
+            )
+    return rows
+
+
 @cli.command()
 @click.argument("foreign_id", required=False)
 def status(foreign_id=None):
-    """Get the queue status (pending and finished tasks.)"""
-    if foreign_id is not None:
-        collection = get_collection(foreign_id)
-        status = get_collection_status(collection)
-        status = {"datasets": {foreign_id: status}}
-    else:
-        status = get_status()
+    """Get the queue status (pending, running and finished tasks.)"""
     headers = ["Collection", "Job", "Stage", "Pending", "Running", "Finished"]
     rows = []
-    for foreign_id, dataset in status.get("datasets").items():
-        rows.append(
-            [
-                foreign_id,
-                "",
-                "",
-                dataset["pending"],
-                dataset["running"],
-                dataset["finished"],
-            ]
+    if foreign_id is not None:
+        collection = get_collection(foreign_id)
+        dataset = get_collection_status(
+            collection,
+            include_collection_data=False,
+            active_only=False,
         )
-        for job in dataset.get("jobs"):
-            for stage in job.get("stages"):
-                rows.append(
-                    [
-                        foreign_id,
-                        stage["job_id"],
-                        stage["stage"],
-                        stage["pending"],
-                        stage["running"],
-                        stage["finished"],
-                    ]
-                )
+        if dataset is not None:
+            rows.extend(_status_rows(dataset, foreign_id))
+    else:
+        for dataset in get_status():
+            rows.extend(_status_rows(dataset, dataset.name))
     print(tabulate(rows, headers))
 
 
@@ -1094,6 +1010,18 @@ def createuser(email, password=None, name=None, admin=False):
     """Create a user and show their API key."""
     role = create_user(email, name, password, is_admin=admin)
     print("User created. ID: %s, API Key: %s" % (role.id, role.api_key))
+
+
+@cli.command("rotate-apikey")
+@click.argument("email")
+def rotateapikey(email):
+    """Rotate user api key"""
+    key = rotate_api_key(email)
+    if key:
+        print(f"New API key: {key[:5]}...")
+        # print(f"New API key: {key}")
+    else:
+        print(f"{email} not found")
 
 
 @cli.command()
@@ -1202,11 +1130,18 @@ def publish(foreign_id):
 
 
 @cli.command()
-def upgrade():
+@click.option(
+    "--destructive",
+    type=bool,
+    default=False,
+    is_flag=True,
+    help="Allow the upgrade command to perform potential destructive data migrations",
+)
+def upgrade(destructive):
     """Create or upgrade the search index and database."""
     upgrade_system()
     # update_roles()
-    # upgrade_collections()
+    upgrade_collections(cleanup_external=destructive)
 
 
 @cli.command()
@@ -1220,6 +1155,33 @@ def resetindex():
 def resetcache():
     """Clear the redis cache."""
     cache.flush()
+
+
+@cli.command()
+@click.option("-o", "--outfile", type=click.File("w"), default="-")
+def checksums(outfile: TextIO) -> None:
+    r"""Stream all the content hashes aleph knows about, one per line.
+
+    This covers the content hashes in the documents table as well as the
+    checksums mentioned by entities in the search index. Hashes can occur
+    more than once as the two sources overlap, pipe through `sort -u` to
+    get a unique listing.
+
+    Collections that have a `lakehouse_uri` are left out: their blobs are
+    stored in that external lakehouse dataset, not in the aleph archive.
+
+    The counterpart is the listing of the blobs that are actually stored
+    in a local (file-based) archive. Those live in the leaf directories
+    of the archive path, each of which is named after the content hash it
+    holds, so printing just the last path segment gives the hashes:
+
+        find /path/to/archive -type d -links 2 -printf '%f\n'
+
+    Diffing the two sorted listings shows which blobs are dangling in the
+    archive and which ones are missing from it.
+    """
+    for content_hash in iter_checksums():
+        outfile.write("%s\n" % content_hash)
 
 
 @cli.command("cleanup-archive")

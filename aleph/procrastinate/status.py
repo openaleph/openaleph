@@ -55,10 +55,12 @@ def get_active_collections_status(
 
 
 def get_collection_status(
-    collection: Collection, include_collection_data: bool | None = True
+    collection: Collection,
+    include_collection_data: bool | None = True,
+    active_only: bool | None = True,
 ) -> CollectionStatus | None:
     dataset = get_aggregator_name(collection)
-    dataset_status = get_dataset_status(dataset)
+    dataset_status = get_dataset_status(dataset, active_only=active_only)
     if dataset_status is None:
         return
     collection_status = CollectionStatus(**dataset_status.model_dump())

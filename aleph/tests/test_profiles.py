@@ -1,5 +1,9 @@
+from sqlalchemy import select
+
+from aleph.logic.aggregator import get_aggregator
+from aleph.logic.profiles import ORIGIN as PROFILE_ORIGIN
+from aleph.logic.profiles import collection_profiles, decide_pairwise, profile_fragments
 from aleph.model import Judgement
-from aleph.logic.profiles import decide_pairwise, collection_profiles
 from aleph.tests.util import TestCase
 
 
@@ -72,3 +76,73 @@ class ProfileTestCase(TestCase):
         profile, items = result[0]
         assert len(items) == 1
         assert items[0].entity_id == "a1"
+
+    def _profile_stubs(self, coll):
+        """Map entity_id -> profile_id for the profile stubs in the aggregator."""
+        aggregator = get_aggregator(coll)
+        table = aggregator.table
+        query = select(table.c.id, table.c.entity).where(
+            table.c.origin == PROFILE_ORIGIN
+        )
+        with aggregator.store.engine.connect() as conn:
+            rows = conn.execute(query).fetchall()
+        return {row.id: row.entity["profile_id"] for row in rows}
+
+    def test_profile_fragments_keep_other_entities(self):
+        # https://github.com/openaleph/openaleph/issues/146
+        w = self.create_user("user")
+        coll = self.create_collection()
+        a1 = {"id": "a1", "schema": "Person"}
+        a2 = {"id": "a2", "schema": "Person"}
+        b1 = {"id": "b1", "schema": "Person"}
+        b2 = {"id": "b2", "schema": "Person"}
+        profile_a = decide_pairwise(
+            coll, a1, coll, a2, judgement=Judgement.POSITIVE, authz=w
+        )
+        profile_b = decide_pairwise(
+            coll, b1, coll, b2, judgement=Judgement.POSITIVE, authz=w
+        )
+        assert profile_a.id != profile_b.id
+
+        # Deciding on b1/b2 must not drop the stubs written for a1/a2.
+        stubs = self._profile_stubs(coll)
+        assert stubs == {
+            "a1": profile_a.id,
+            "a2": profile_a.id,
+            "b1": profile_b.id,
+            "b2": profile_b.id,
+        }, stubs
+
+    def test_profile_fragments_remove_only_reverted_entity(self):
+        w = self.create_user("user")
+        coll = self.create_collection()
+        a1 = {"id": "a1", "schema": "Person"}
+        a2 = {"id": "a2", "schema": "Person"}
+        a3 = {"id": "a3", "schema": "Person"}
+        profile = decide_pairwise(
+            coll, a1, coll, a2, judgement=Judgement.POSITIVE, authz=w
+        )
+        decide_pairwise(coll, a1, coll, a3, judgement=Judgement.POSITIVE, authz=w)
+        assert set(self._profile_stubs(coll)) == {"a1", "a2", "a3"}
+
+        # Reverting a2 removes its stub only.
+        decide_pairwise(coll, a1, coll, a2, judgement=Judgement.NEGATIVE, authz=w)
+        stubs = self._profile_stubs(coll)
+        assert stubs == {"a1": profile.id, "a3": profile.id}, stubs
+
+    def test_profile_fragments_full_rebuild(self):
+        w = self.create_user("user")
+        coll = self.create_collection()
+        a1 = {"id": "a1", "schema": "Person"}
+        a2 = {"id": "a2", "schema": "Person"}
+        b1 = {"id": "b1", "schema": "Person"}
+        b2 = {"id": "b2", "schema": "Person"}
+        decide_pairwise(coll, a1, coll, a2, judgement=Judgement.POSITIVE, authz=w)
+        decide_pairwise(coll, b1, coll, b2, judgement=Judgement.POSITIVE, authz=w)
+
+        # Without an entity_id, all stubs are rebuilt from the profiles.
+        aggregator = get_aggregator(coll)
+        aggregator.delete(origin=PROFILE_ORIGIN)
+        assert self._profile_stubs(coll) == {}
+        profile_fragments(coll, aggregator)
+        assert set(self._profile_stubs(coll)) == {"a1", "a2", "b1", "b2"}

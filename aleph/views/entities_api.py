@@ -1,10 +1,15 @@
 import logging
 import re
 
+from elasticsearch import ApiError as ElasticsearchApiError
 from flask import Blueprint, request
 from followthemoney.compare import compare
 from openaleph_procrastinate.defer import tasks
+from openaleph_search.query.mentions import MentionsQuery, MultiMentionsQuery
+from openaleph_search.query.queries import PercolatorQuery
+from openaleph_search.settings import MAX_PAGE
 from rigour.mime.types import ZIP
+from werkzeug.datastructures import MultiDict
 from werkzeug.exceptions import BadRequest, NotFound
 
 from aleph.core import db, url_for
@@ -39,11 +44,12 @@ from aleph.search import (
     EntitiesQuery,
     GeoDistanceQuery,
     MatchQuery,
+    MessageThreadQuery,
     MoreLikeThisQuery,
     QueryParser,
     SearchQueryParser,
 )
-from aleph.search.result import get_query_result
+from aleph.search.result import QueryResult, get_query_result
 from aleph.settings import SETTINGS
 from aleph.util import make_entity_proxy
 from aleph.views.context import enable_cache, tag_request
@@ -257,6 +263,11 @@ def match():
           type: array
           items:
             type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntityUpdate'
       responses:
         '200':
           description: Returns a list of entities in result
@@ -264,11 +275,6 @@ def match():
             application/json:
               schema:
                 $ref: '#/components/schemas/EntitiesResponse'
-      requestBody:
-        content:
-          application/json
-            schema:
-              $ref: '#/components/schemas/EntityUpdate'
       tags:
       - Entity
     """
@@ -367,10 +373,7 @@ def view(entity_id):
     proxy = make_entity_proxy(entity)
     html = proxy.get("bodyHtml", quiet=True)
     source_url = proxy.first("sourceUrl", quiet=True)
-    encoding = proxy.first("encoding", quiet=True)
-    entity["safeHtml"] = [
-        sanitize_html(value, source_url, encoding=encoding) for value in html
-    ]
+    entity["safeHtml"] = [sanitize_html(value, source_url) for value in html]
     entity["shallow"] = False
 
     if request.authz.logged_in:
@@ -517,6 +520,339 @@ def more_like_this(entity_id):
     tag_request(collection_id=entity.get("collection_id"))
     proxy = make_entity_proxy(entity)
     result = get_query_result(MoreLikeThisQuery, request, entity=proxy)
+    return EntitySerializer.jsonify_result(result)
+
+
+@blueprint.route("/api/2/entities/<entity_id>/percolate", methods=["GET"])
+def percolate(entity_id):
+    """
+    ---
+    get:
+      summary: Percolate entity text against stored queries
+      description: >-
+        Find entities mentioned in the fulltext content of the entity with
+        id `entity_id` by percolating its text against stored entity queries.
+        Only works for Document-type entities that carry indexable text.
+        Supports all standard entity search filters (filter:schema,
+        filter:dataset, filter:countries, etc.) and highlight=true for
+        surface form extraction.
+      parameters:
+      - in: path
+        name: entity_id
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Returns a list of entities whose stored queries match the document text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntitiesResponse'
+      tags:
+      - Entity
+    """
+    entity = get_index_entity(entity_id, request.authz.READ)
+    tag_request(collection_id=entity.get("collection_id"))
+    try:
+        result = get_query_result(PercolatorQuery, request, entity_id=entity_id)
+    except ValueError as err:
+        raise BadRequest(str(err))
+    return EntitySerializer.jsonify_result(result)
+
+
+@blueprint.route("/api/2/entities/<entity_id>/mentions", methods=["GET"])
+def mentions(entity_id):
+    """
+    ---
+    get:
+      summary: Find documents that mention this entity
+      description: >-
+        Given the id of a named entity (Person, Company, Organization, …),
+        return Document-family entities whose indexed text contains the
+        entity's caption or any of its matchable name variants. This is
+        the inverse of `/percolate` — that finds entities mentioned in a
+        document; this finds documents that mention an entity.
+
+        Supports all standard entity search filters (filter:schema to
+        narrow within the Document hierarchy, filter:dataset,
+        filter:countries, etc.), highlight=true for snippet extraction,
+        q=… for free-text narrowing that ANDs with the mention
+        requirement, and synonyms=true to expand the entity's names
+        into name_symbols / name_keys terms queries.
+      parameters:
+      - in: path
+        name: entity_id
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Returns a list of Document-family entities mentioning the source entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntitiesResponse'
+      tags:
+      - Entity
+    """
+    entity = get_index_entity(entity_id, request.authz.READ)
+    tag_request(collection_id=entity.get("collection_id"))
+    try:
+        result = get_query_result(MentionsQuery, request, entity_id=entity_id)
+    except ValueError as err:
+        raise BadRequest(str(err))
+    return EntitySerializer.jsonify_result(result)
+
+
+SCREENING_SOURCE_PREFIX = "source:"
+
+# Keys dropped from `source_args` before the source parser is built.
+# The source scope drives MultiMentionsQuery's name-scroll only — it
+# doesn't surface its own faceted results — so any facet-request keys
+# (which the UI adds to track counts via a separate /api/2/entities
+# call) would be pure noise here. Worse, `EntitiesQuery.get_filters()`
+# silently skips filter fields that also appear in `facet_names`
+# (because facets are normally applied via `post_filter`, which
+# `collect_source_names` bypasses); letting a stray
+# `source:facet=countries` through would drop the Nigeria filter
+# from the `es.count`, giving the caller a stale "too many entities"
+# error even after they narrowed the filter.
+_SOURCE_SKIP_PREFIXES: tuple[str, ...] = (
+    "facet",
+    "highlight",
+    "sort",
+)
+
+
+def _split_prefixed_args(args: MultiDict, prefix: str) -> tuple[MultiDict, MultiDict]:
+    """Partition request args into (unprefixed, prefixed-and-stripped).
+
+    Iterates with `multi=True` so repeated keys (e.g. multiple
+    `filter:dataset=…` values) are preserved in both output MultiDicts.
+    Keys starting with `prefix` have the prefix stripped and go to the
+    second dict; all other keys go to the first. Source-side keys that
+    are irrelevant to the name-scroll (facets / highlight / sort) are
+    dropped entirely — see `_SOURCE_SKIP_PREFIXES` for why."""
+    target: list[tuple[str, str]] = []
+    source: list[tuple[str, str]] = []
+    for key, value in args.items(multi=True):
+        if key.startswith(prefix):
+            stripped = key[len(prefix) :]
+            if stripped.split(":", 1)[0] in _SOURCE_SKIP_PREFIXES:
+                continue
+            source.append((stripped, value))
+        else:
+            target.append((key, value))
+    return MultiDict(target), MultiDict(source)
+
+
+@blueprint.route("/api/2/screening", methods=["GET"])
+def screening():
+    """
+    ---
+    get:
+      summary: Screen a filtered entity set against documents
+      description: >-
+        Batch screening (a.k.a. reverse percolation at scale): scrolls
+        a `source` entity filter — a watchlist, PEP list, sanctions
+        roster, etc., possibly spanning multiple collections — to
+        collect matchable names, then returns Document-family entities
+        whose indexed text contains any of those names as a phrase.
+
+        The request carries two independent `SearchQueryParser` scopes
+        in one URL:
+
+        - **Target** scope (the documents being searched). Unprefixed
+          parser args: `filter:*`, `q`, `sort`, `limit`, `offset`,
+          `highlight`, `highlight_count`, `synonyms`, `dehydrate`.
+        - **Source** scope (the entities whose names are the phrase
+          bank). Prefixed with `source:`:
+          `source:filter:schema=Person`,
+          `source:filter:dataset=watchlist_a`,
+          `source:filter:dataset=watchlist_b`,
+          `source:filter:topics=sanction`, etc.
+
+        Source entities are scoped by the caller's dataset read ACL the
+        same way every other entity search is — entities in datasets
+        the caller cannot read do not contribute names.
+
+        Fails with 400 when the source filter resolves to more than
+        `MAX_SOURCE_NAMES` (currently 10 000) distinct names — narrow
+        the source filter (add `source:filter:dataset=…`,
+        `source:filter:topics=…`, etc.).
+      parameters:
+      - in: query
+        name: "filter:{field}"
+        description: Filter the target document search by field.
+        schema:
+          type: string
+      - in: query
+        name: "source:filter:{field}"
+        description: Filter the source entity set by field.
+        schema:
+          type: string
+      - in: query
+        name: q
+        description: Free-text narrowing applied to the target documents.
+        schema:
+          type: string
+      - in: query
+        name: highlight
+        description: Return phrase-match fragments on each target hit.
+        schema:
+          type: boolean
+      - in: query
+        name: limit
+        description: Max target hits to return.
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Document-family entities mentioning the source set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntitiesResponse'
+        '400':
+          description: Source filter exceeds the name budget or is invalid
+      tags:
+      - Entity
+    """
+    require(request.authz.logged_in)
+    target_args, source_args = _split_prefixed_args(
+        request.args, SCREENING_SOURCE_PREFIX
+    )
+    target_parser = SearchQueryParser(target_args, auth=request.authz.search_auth)
+    source_parser = SearchQueryParser(source_args, auth=request.authz.search_auth)
+    # No single collection id to tag — the source filter can span many
+    # datasets. The parsers' `filter:dataset` values will surface in the
+    # access log via the request args themselves.
+    tag_request()
+    try:
+        result = get_query_result(
+            MultiMentionsQuery,
+            request,
+            parser=target_parser,
+            source_parser=source_parser,
+        )
+    except ValueError as err:
+        raise BadRequest(str(err))
+    except ElasticsearchApiError as err:
+        # ES caps the number of boolean clauses per query at
+        # `indices.query.bool.max_clause_count` (cluster default 1024,
+        # typical aleph deploys bump it to a few thousand). With one
+        # `match_phrase` per collected source name, a large source set
+        # can blow past the cap well before reaching the 10k names
+        # budget. Surface that as a 400 so the UI shows a narrow-
+        # the-filter callout instead of a generic 500.
+        message = getattr(err, "message", None) or str(err)
+        body_err = getattr(err, "body", None) or {}
+        if isinstance(body_err, dict):
+            reason = body_err.get("error", {}).get("root_cause", [{}])[0].get(
+                "reason"
+            ) or body_err.get("error", {}).get("reason")
+            if reason:
+                message = reason
+        if "maxClauseCount" in message or "max_clause_count" in message:
+            raise BadRequest(
+                "Source filter produced too many name variants to screen in "
+                "one query (Elasticsearch clause limit). Narrow the source "
+                f"filter further. ({message})"
+            )
+        raise
+    return EntitySerializer.jsonify_result(result)
+
+
+@blueprint.route("/api/2/entities/<entity_id>/thread", methods=["GET"])
+def thread(entity_id):
+    """
+    ---
+    get:
+      summary: Get the full message thread for an entity
+      description: >
+        Reconstructs the complete thread tree of the Email or Message
+        entity with id `entity_id`. Walks up to the root message, then
+        down from the root to collect all branches (including sibling
+        branches the source entity isn't part of). Results are sorted
+        by date ascending and include the source entity itself.
+        Scoped to the entity's own collection, bounded by a server-side
+        depth/size cap.
+      parameters:
+      - in: path
+        name: entity_id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: dehydrate
+        description: >
+          Exclude the `properties` payload from results for list-view
+          consumption. The threading-critical property fields (messageId,
+          inReplyTo, inReplyTo{Schema}) are always kept.
+        schema:
+          type: boolean
+      - in: query
+        name: include_fields
+        description: >
+          Property paths or group names to add back when `dehydrate=true`
+          (e.g. `properties.subject`, `emails`). Repeat for multiple.
+        schema:
+          type: array
+          items:
+            type: string
+      - in: query
+        name: limit
+        description: >
+          Max thread entities to return. Capped by the server at
+          MessageThreadQuery.MAX_RESULTS.
+        schema:
+          type: integer
+      - in: query
+        name: highlight
+        description: >
+          When true, each result carries a `highlight.content` preview
+          snippet pulled from the entity's bodyText (same shape as
+          entity search highlights). Defaults to false.
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Returns the full thread sorted by date ascending
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntitiesResponse'
+        '400':
+          description: Entity schema does not support threading
+      tags:
+      - Entity
+    """
+    entity = get_index_entity(entity_id, request.authz.READ)
+    collection_id = int(entity["collection_id"])
+    tag_request(collection_id=collection_id)
+    proxy = make_entity_proxy(entity)
+    if proxy.schema.name not in MessageThreadQuery.SCHEMATA:
+        raise BadRequest(
+            gettext("Threading is only supported for Email and Message entities")
+        )
+    parser = SearchQueryParser(request.values, request.authz.search_auth)
+    # Thread views are list-view consumers by default — dehydrate unless the
+    # caller explicitly opts into the full payload with ?dehydrate=false.
+    if "dehydrate" not in request.args:
+        parser.dehydrate = True
+    query = MessageThreadQuery(
+        parser=parser,
+        entity=proxy,
+        collection_id=collection_id,
+    )
+    entities = query.to_list()
+    result = QueryResult(request, parser=parser, results=entities, total=len(entities))
+    if query.truncated:
+        # The emitted `total` is a floor — there's at least one more entity
+        # in the thread beyond what we returned. Consumers detect this via
+        # the ES-style `total_type` on the response envelope.
+        result.total_type = "gte"
     return EntitySerializer.jsonify_result(result)
 
 
@@ -962,5 +1298,15 @@ def translate(entity_id):
     proxy = make_entity_proxy(entity)
     if not should_translate(collection.id, collection.foreign_id, proxy):
         raise BadRequest("Entity is not eligible for translation")
-    queue_translate(collection, proxy)
+    data = request.get_json(silent=True) or {}
+    source_language = data.get("source_language")
+    source_candidates = set(proxy.get("detectedLanguage"))
+    source_candidates.update(collection.languages or [])
+    if source_language and source_language not in source_candidates:
+        raise BadRequest(
+            f"source_language '{source_language}' is not configured for this entity"
+        )
+    elif not source_language and not proxy.has("detectedLanguage"):
+        raise BadRequest("Couldn't auto-detect language, please select one.")
+    queue_translate(collection, proxy, source_language=source_language)
     return ("", 202)

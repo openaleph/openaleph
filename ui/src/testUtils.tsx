@@ -3,12 +3,22 @@ import {
   RenderOptions as RtlRenderOptions,
 } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
+import { createStore } from 'redux';
+import { Provider } from 'react-redux';
 import { FunctionComponent, ReactElement } from 'react';
+import { MemoryRouter } from 'react-router-dom';
+import { defaultModel } from '@alephdata/followthemoney';
+import rootReducer from 'reducers';
 import translations from 'content/translations.json';
 
 type DefaultLocale = 'en';
 type Locale = keyof typeof translations | DefaultLocale;
 type RenderOptions = RtlRenderOptions & { locale?: Locale };
+
+const store = createStore(
+  rootReducer,
+  { metadata: { model: defaultModel } },
+);
 
 function render(
   ui: ReactElement,
@@ -21,9 +31,13 @@ function render(
         : undefined;
 
     return (
-      <IntlProvider key={locale} locale={locale} messages={messages}>
-        {children}
-      </IntlProvider>
+      <Provider store={store}>
+        <MemoryRouter>
+          <IntlProvider key={locale} locale={locale} messages={messages}>
+              {children}
+          </IntlProvider>
+        </MemoryRouter>
+      </Provider>
     );
   };
 

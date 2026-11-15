@@ -109,10 +109,10 @@ export function investigationsQuery(location) {
 
 export function datasetsQuery(location) {
   const context = { 'exclude:category': 'casefile' };
-  return Query.fromLocation('collections', location, context, 'collections')
+  const query = Query.fromLocation('collections', location, context, 'collections')
     .defaultFacet('countries')
-    .defaultFacet('category')
-    .defaultSortBy('created_at', 'desc');
+    .defaultFacet('category');
+  return query.defaultSortBy('created_at', 'desc');
 }
 
 export function collectionEntitySetsQuery(location, collectionId) {
@@ -148,12 +148,20 @@ export function folderDocumentsQuery(location, documentId, queryText) {
   const field = hasSearch
     ? 'filter:properties.ancestors'
     : 'filter:properties.parent';
-  const context = { 'filter:schemata': 'Document', [field]: documentId };
+  const context = {
+    'filter:schemata': 'Document',
+    [field]: documentId,
+    dehydrate: true, // this excludes entity properties from the response
+  };
   let query = Query.fromLocation(path, location, context, 'document');
   if (queryText) {
     query = query.setString('q', queryText);
   }
   return query;
+}
+
+export function folderChildrenCountQuery(location, documentId) {
+  return folderDocumentsQuery(location, documentId).limit(0);
 }
 
 export function entitySimilarQuery(location, entityId) {
@@ -177,6 +185,47 @@ export function entityMoreLikeThisQuery(location, entityId) {
   )
     .defaultFacet('collection_id', true)
     .limit(10);
+}
+
+export function entityMentionsQuery(location, entityId) {
+  const path = entityId ? `entities/${entityId}/mentions` : undefined;
+  return Query.fromLocation(
+    path,
+    location,
+    {
+      highlight: true,
+      dehydrate: true,
+    },
+    'mentions'
+  )
+    .defaultFacet('collection_id', true)
+    .limit(10);
+}
+
+export function entityPercolateQuery(location, entityId) {
+  const path = entityId ? `entities/${entityId}/percolate` : undefined;
+  return Query.fromLocation(
+    path,
+    location,
+    {
+      'filter:schemata': 'LegalEntity',
+      highlight: true,
+      dehydrate: true, // this excludes entity properties from the response
+      include_fields: 'properties.topics',
+    },
+    'percolate'
+  )
+    .defaultFacet('collection_id', true)
+    .limit(30);
+}
+
+export function entityThreadQuery(location, entityId) {
+  const path = entityId ? `entities/${entityId}/thread` : undefined;
+  // Request up to the backend's MAX_RESULTS (200) instead of the default
+  // page size: chat-style Message threads routinely exceed 30 entries.
+  return Query.fromLocation(path, location, { highlight: true }, 'thread').limit(
+    200
+  );
 }
 
 export function entityNearbyQuery(location, entityId) {
@@ -227,6 +276,7 @@ export function entityReferenceQuery(location, entity, reference) {
   const context = {
     [`filter:properties.${reference?.property?.name}`]: entity?.id,
     'filter:schemata': reference?.schema,
+    dehydrate: true, // this excludes entity properties from the response
   };
   const path =
     entity?.id && reference?.schema && reference?.property
@@ -249,6 +299,7 @@ export function profileReferenceQuery(location, profile, reference) {
   const context = {
     [`filter:properties.${reference?.property?.name}`]: profile?.entities,
     'filter:schemata': reference?.schema,
+    dehydrate: true, // this excludes entity properties from the response
   };
   const path =
     profile?.id && reference?.schema && reference?.property

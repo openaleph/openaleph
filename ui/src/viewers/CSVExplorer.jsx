@@ -1,0 +1,520 @@
+// In-browser CSV explorer for Table documents. Loads the CSV into a SQLite
+// database via a web worker (sql.js + papaparse), then runs search, filter,
+// sort and pagination queries against it without any server round-trips.
+// Requires public/sql-wasm.wasm (copied from node_modules/sql.js/dist/).
+import { Component } from 'react';
+import {
+  Tooltip,
+  Button,
+  Spinner,
+  NonIdealState,
+  Position, Menu, MenuItem, MenuDivider,
+} from '@blueprintjs/core';
+import { defineMessages, injectIntl, FormattedMessage } from 'react-intl';
+
+import { resolveArchiveUrl } from 'util/archiveUrl';
+
+import './CSVExplorer.scss';
+import { Popover2 } from '@blueprintjs/popover2';
+
+const PAGE_SIZE = 100;
+
+const messages = defineMessages({
+  search_placeholder: {
+    id: 'document.csv_explorer.search',
+    defaultMessage: 'Search…',
+  },
+  filter_column_placeholder: {
+    id: 'document.csv_explorer.filter_column',
+    defaultMessage: '- column -',
+  },
+  filter_apply: {
+    id: 'document.csv_explorer.filter_apply',
+    defaultMessage: 'Apply',
+  },
+  retry: {
+    id: 'document.csv_explorer.retry',
+    defaultMessage: 'Retry',
+  },
+  sort_asc: {
+    id: 'document.csv_explorer.sort_asc',
+    defaultMessage: 'Sort asc.',
+  },
+  sort_desc: {
+    id: 'document.csv_explorer.sort_desc',
+    defaultMessage: 'Sort desc.',
+  },
+  hide_column: {
+    id: 'document.csv_explorer.hide_column',
+    defaultMessage: 'Hide',
+  },
+});
+
+class CSVExplorer extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      skiprows: 0,
+      genericHeaders: false,
+      separator: 'auto',
+      loading: false,
+      error: null,
+      columns: [],
+      rows: [],
+      total: 0,
+      search: '',
+      filters: {},
+      sortCol: null,
+      sortDir: 'ASC',
+      page: 1,
+      filterCol: null,
+      filterOp: 'contains',
+      filterVal: '',
+      hiddenCols: new Set(),
+    };
+    this.worker = null;
+    this.timer = null;
+    this.onSearch = this.onSearch.bind(this);
+    this.onPage = this.onPage.bind(this);
+    this.onApplyFilter = this.onApplyFilter.bind(this);
+  }
+
+  componentDidMount() {
+    this.initWorker();
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this.timer);
+    if (this.worker) this.worker.terminate();
+  }
+
+  initWorker() {
+    const { document } = this.props;
+    const { skiprows, genericHeaders, separator } = this.state;
+
+    if (this.worker) this.worker.terminate();
+
+    this.setState({
+      loading: true,
+      error: null,
+      columns: [],
+      rows: [],
+      total: 0,
+    });
+
+    this.worker = new Worker(new URL('../util/sqlWorker.js', import.meta.url));
+
+    this.worker.onmessage = (event) => {
+      const { type } = event.data;
+      if (type === 'ready') {
+        const { columns, total, delimiter } = event.data;
+        const separatorUpdate = this.state.separator === 'auto' ? { separator: delimiter } : {};
+        this.setState({
+          columns,
+          total,
+          sortCol: null,
+          filterCol: null,
+          filterOp: 'contains',
+          filterVal: '',
+          filters: {},
+          page: 1,
+          hiddenCols: new Set(),
+          loading: false,
+          ...separatorUpdate,
+        }, () => {
+          this.runQuery();
+        });
+      } else if (type === 'results') {
+        this.setState({ rows: event.data.rows, total: event.data.total });
+      } else if (type === 'error') {
+        this.setState({ error: event.data.message, loading: false });
+      }
+    };
+
+    // resolve the archive link to a fresh signed URL first, as the worker
+    // fetches it without the session's Authorization header
+    resolveArchiveUrl(document.links.file || document.links.csv)
+      .then((csvUrl) => {
+        this.worker.postMessage({
+          type: 'init',
+          csvUrl,
+          skiprows,
+          genericHeaders,
+          separator,
+        });
+      })
+      .catch((error) => {
+        this.setState({ error: error.message || 'Explorer failed unexpectedly.', loading: false });
+      });
+  }
+
+  runQuery() {
+    if (!this.worker || this.state.error) return;
+    const { search, filters, sortCol, sortDir, page } = this.state;
+    this.worker.postMessage({
+      type: 'query',
+      search,
+      filters,
+      sortCol,
+      sortDir,
+      page,
+      pageSize: PAGE_SIZE,
+    });
+  }
+
+  onSearch(e) {
+    this.setState({ search: e.target.value, page: 1 });
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.runQuery(), 350);
+  }
+
+  onSortDir(i, dir) {
+    const toggle = this.state.sortCol === i && this.state.sortDir === dir;
+    this.setState(
+      { sortCol: toggle ? null : i, sortDir: toggle ? null : dir, page: 1 },
+      () => this.runQuery()
+    );
+  }
+
+  onPage(page) {
+    this.setState({ page }, () => this.runQuery());
+  }
+
+
+  onHideCol(i) {
+    this.setState(({ hiddenCols, sortCol }) => {
+      const next = new Set(hiddenCols);
+      next.add(i);
+      const updated_state = { hiddenCols: next };
+      if (sortCol === i) {
+        updated_state.sortCol = null;
+        updated_state.sortDir = null;
+        updated_state.page = 1;
+      }
+      return updated_state;
+    }, () => this.runQuery());
+  }
+
+
+  onApplyFilter() {
+    const { filterCol, filterOp, filterVal, filters } = this.state;
+    if (filterCol === null) return;
+    const newFilters = {
+      ...filters,
+      [filterCol]: { op: filterOp, val: filterVal },
+    };
+    this.setState({ filters: newFilters, page: 1 }, () => this.runQuery());
+  }
+
+  get filterState() {
+    const filterVal = this.state.filterVal?.trim();
+    if (!filterVal) return false;
+    if (this.state.filterCol === null) return false;
+    return true;
+  }
+
+  onSettingsChange(patch) {
+    // in the error state the worker may be dead: only stage the settings,
+    // the retry action re-inits from state
+    if (this.state.error) {
+      this.setState(patch);
+      return;
+    }
+    this.setState({ ...patch, loading: true }, () => {
+      if (this.worker) { this.worker.postMessage({ type: 'updateSettings', ...patch }); }});
+  }
+
+  renderSettings() {
+    const { skiprows, genericHeaders, separator } = this.state;
+
+    return (
+      <div className="CSVExplorer__settings-Popover">
+        <label>
+          <span>Skip rows</span>
+          <input
+            className="bp4-input bp4-small"
+            type="number"
+            min={0}
+            value={skiprows}
+            disabled={genericHeaders}
+            onChange={(e) =>
+              this.onSettingsChange({ skiprows: parseInt(e.target.value) || 0 })
+            }
+          />
+        </label>
+        <label>
+          <span>Separator</span>
+          <div className="bp4-html-select bp4-small">
+            <select
+              value={separator}
+              onChange={(e) =>
+                this.onSettingsChange({ separator: e.target.value })
+              }
+            >
+              <option value="auto">auto</option>
+              <option value=",">,</option>
+              <option value=";">;</option>
+              <option value=":">:</option>
+              <option value={'\t'}>tab</option>
+              <option value="|">|</option>
+            </select>
+            <span className="bp4-icon bp4-icon-double-caret-vertical" />
+          </div>
+        </label>
+        <label className="CSVExplorer__checkbox-custom">
+          <span>Add headers</span>
+          <input
+            type="checkbox"
+            checked={genericHeaders}
+            onChange={(e) =>
+              this.onSettingsChange({ genericHeaders: e.target.checked })
+            }
+          />
+        </label>
+      </div>
+    );
+  }
+
+  renderToolbar() {
+    const { intl } = this.props;
+    const { search, total, skiprows, hiddenCols } = this.state;
+    const delimiter = this.state.separator === '\t' ? 'tab' : this.state.separator || "auto";
+
+    return (
+      <div className="CSVExplorer__toolbar">
+        <input
+          className="bp4-input"
+          type="search"
+          placeholder={intl.formatMessage(messages.search_placeholder)}
+          value={search}
+          onChange={this.onSearch}
+        />
+        <span className="CSVExplorer__meta">
+          Total: {total.toLocaleString()} • Skipped: {skiprows.toLocaleString()} • Separator: "{delimiter}"
+          {hiddenCols.size > 0 && (
+            <>
+              {' '}• {hiddenCols.size} hidden (
+              <button
+                className="CSVExplorer__link-button"
+                onClick={() => this.setState({ hiddenCols: new Set() })}
+              >show all</button>)
+            </>
+          )}
+      </span>
+        <Popover2
+          content={this.renderSettings()}
+          position={Position.BOTTOM_RIGHT}
+          minimal
+        >
+          <Button minimal icon="cog" />
+        </Popover2>
+      </div>
+    );
+  }
+
+  renderFilterBar() {
+    const { intl } = this.props;
+    const { columns, filterCol, filterOp, filterVal, filters } = this.state;
+    const activeFilters = Object.entries(filters);
+
+    return (
+      <div className="CSVExplorer__filterbar">
+        <div className="CSVExplorer__filterbar-row">
+          <div className="bp4-html-select bp4-small">
+            <select
+              value={filterCol ?? ''}
+              onChange={(e) => this.setState({ filterCol: e.target.value === '' ? null : parseInt(e.target.value) })}
+            >
+              <option value="">
+                {intl.formatMessage(messages.filter_column_placeholder)}
+              </option>
+              {columns.map((col, i) => (
+                <option key={i} value={i}>
+                  {col}
+                </option>
+              ))}
+            </select>
+            <span className="bp4-icon bp4-icon-double-caret-vertical" />
+          </div>
+          <div className="bp4-html-select bp4-small">
+            <select
+              value={filterOp}
+              onChange={(e) => this.setState({ filterOp: e.target.value })}
+            >
+              <option value="contains">contains</option>
+              <option value="not_contains">not contains</option>
+              <option value="equals">=</option>
+              <option value="starts">starts with</option>
+              <option value="ends">ends with</option>
+              <option value="lt">&lt;</option>
+              <option value="gt">&gt;</option>
+            </select>
+            <span className="bp4-icon bp4-icon-double-caret-vertical" />
+          </div>
+          <input
+            className="bp4-input bp4-small"
+            type="text"
+            value={filterVal}
+            onChange={(e) => this.setState({ filterVal: e.target.value })}
+            onKeyDown={(e) => e.key === 'Enter' && this.onApplyFilter()}
+          />
+          <Tooltip
+            content="Select a column and enter a filter value"
+            disabled={this.filterState}
+          >
+            <Button
+              small
+              intent="primary"
+              disabled={!this.filterState}
+              onClick={this.onApplyFilter}
+            >
+              <FormattedMessage {...messages.filter_apply} />
+            </Button>
+          </Tooltip>
+        </div>
+        {activeFilters.length > 0 && (
+          <div className="CSVExplorer__filterbar-tags">
+            {activeFilters.map(([idx, { op, val }]) => (
+              <span key={idx} className="CSVExplorer__filter-tag">
+                <strong>{columns[idx]}</strong>{' '}
+                {
+                  {
+                    contains: 'contains',
+                    not_contains: 'not contains',
+                    equals: '=',
+                    starts: 'starts with',
+                    ends: 'ends with',
+                    lt: '<',
+                    gt: '>',
+                  }[op]
+                }{' '}
+                "{val}"
+                <button
+                  onClick={() => {
+                    const { [idx]: _removed, ...rest } = this.state.filters;
+                    this.setState({ filters: rest, page: 1 }, () =>
+                      this.runQuery()
+                    );
+                  }}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  render() {
+    const { intl } = this.props;
+    const { loading, error, columns, rows, sortCol, sortDir, page, total, hiddenCols } = this.state;
+    const totalPages = Math.ceil(total / PAGE_SIZE);
+
+    return (
+      <div className="CSVExplorer__table-container">
+        {this.renderToolbar()}
+        {error && (
+          <NonIdealState
+            icon="issue"
+            title={error}
+            action={
+              <Button intent="primary" onClick={() => this.initWorker()}>
+                <FormattedMessage {...messages.retry} />
+              </Button>
+            }
+          />
+        )}
+        {!error && columns.length > 0 && this.renderFilterBar()}
+        {!error && loading && (
+          <NonIdealState icon={<Spinner />} title="Loading…" />
+        )}
+        {!error && !loading && columns.length > 0 && (
+          <>
+            <div className="CSVExplorer__scroll">
+              <table className="CSVExplorer__table">
+                <thead>
+                  <tr>
+                    {columns.map((col, i) => !hiddenCols.has(i) && (
+                      <th
+                        key={i}
+                        className={sortCol === i ? `sorted-${sortDir.toLowerCase()}` : ''}
+                      >
+                        <Popover2
+                          content={
+                            <Menu className="CSVExplorer__col-menu">
+                              <MenuItem
+                                icon="sort-asc"
+                                text={intl.formatMessage(messages.sort_asc)}
+                                active={sortCol === i && sortDir === 'ASC'}
+                                onClick={() => this.onSortDir(i, 'ASC')}
+                              />
+                              <MenuItem
+                                icon="sort-desc"
+                                text={intl.formatMessage(messages.sort_desc)}
+                                active={sortCol === i && sortDir === 'DESC'}
+                                onClick={() => this.onSortDir(i, 'DESC')}
+                              />
+                              <MenuDivider />
+                              <MenuItem
+                                icon="eye-off"
+                                text={intl.formatMessage(messages.hide_column)}
+                                onClick={() => this.onHideCol(i)}
+                              />
+                            </Menu>
+                          }
+                          position={Position.BOTTOM}
+                          minimal
+                        >
+                          <span className="CSVExplorer__th-label">
+                            {col}
+                            <span style={{ visibility: sortCol === i ? 'visible' : 'hidden' }}>
+                              {sortDir === 'ASC' ? ' ↑' : ' ↓'}
+                            </span>
+                          </span>
+                        </Popover2>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row, i) => (
+                    <tr key={i}>
+                      {row.map((cell, j) => !hiddenCols.has(j) && (
+                        <td key={j}>{cell}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {totalPages > 1 && (
+              <div className="CSVExplorer__pagination">
+                <Button
+                  minimal
+                  small
+                  disabled={page === 1}
+                  onClick={() => this.onPage(page - 1)}
+                  icon="chevron-left"
+                />
+                <span>
+                  {page} / {totalPages}
+                </span>
+                <Button
+                  minimal
+                  small
+                  disabled={page === totalPages}
+                  onClick={() => this.onPage(page + 1)}
+                  icon="chevron-right"
+                />
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  }
+}
+
+export default injectIntl(CSVExplorer);

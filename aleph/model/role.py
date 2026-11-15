@@ -73,6 +73,19 @@ class Role(db.Model, IdModel, SoftDeleteModel):
         return True
 
     @property
+    def is_investigator(self) -> bool:
+        """Role can create investigations. There is an opt-in via settings to
+        restrict this permission to a specific group, otherwise all users can
+        create their own investigations."""
+        if not self.is_actor:
+            return False
+        if self.is_admin:
+            return True
+        if SETTINGS.INVESTIGATOR_GROUP is not None:
+            return SETTINGS.INVESTIGATOR_GROUP in [r.name for r in self.roles]
+        return True
+
+    @property
     def is_alertable(self):
         if self.email is None or not self.is_actor:
             return False
@@ -153,6 +166,7 @@ class Role(db.Model, IdModel, SoftDeleteModel):
                 "is_admin": self.is_admin,
                 "is_muted": self.is_muted,
                 "is_tester": self.is_tester,
+                "is_investigator": self.is_investigator,
                 "has_password": self.has_password,
                 # 'notified_at': self.notified_at
             }
@@ -278,6 +292,23 @@ class Role(db.Model, IdModel, SoftDeleteModel):
 
     def __repr__(self):
         return "<Role(%r,%r)>" % (self.id, self.foreign_id)
+
+    def update_groups(self, new_groups):
+
+        if set(new_groups) == set(self.roles):
+            return
+
+        self.clear_roles()
+        for group in new_groups:
+            self.add_role(group)
+            log.debug("User %r is member of %r", self, group)
+        return
+
+    def update_name(self, name):
+        if not name or self.name == name:
+            return
+        self.name = name
+        self.touch()
 
 
 Role.members = db.relationship(

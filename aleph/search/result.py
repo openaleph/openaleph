@@ -2,6 +2,7 @@ import logging
 import math
 from typing import Type
 
+from banal import ensure_list
 from openaleph_search import (
     Query,
     QueryParser,
@@ -108,6 +109,9 @@ class SearchQueryResult(QueryResult):
         super(SearchQueryResult, self).__init__(request, parser=query.parser)
         self.query = query
         result = query.search()
+        for failure in ensure_list(result.get("failures")):
+            error = failure.get("reason", {}).get("reason")
+            log.error(f"Elasticsearch error: {error}")
         hits = result.get("hits", {})
         total = hits.get("total", {})
         self.total = total.get("value")

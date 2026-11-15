@@ -1,12 +1,11 @@
 import logging
+import re
 
 from banal import ensure_list
 from flask import request
 from flask_babel import gettext
 from followthemoney import model
-from followthemoney.helpers import entity_filename
 from followthemoney.types import registry
-from rigour.mime.types import CSV, PDF
 from servicelayer import env
 
 from aleph.core import url_for
@@ -36,6 +35,7 @@ from aleph.views.util import clean_object, jsonify
 log = logging.getLogger(__name__)
 
 TRACER_URI = env.get("REDIS_URL")
+BASE64_ENCODED_PATTERN = re.compile(r"=\?{1}(.+)\?{1}([B|Q])\?{1}(.+)\?{1}=.*")
 
 
 class Serializer(object):
@@ -139,7 +139,9 @@ class RoleSerializer(Serializer):
         obj["links"] = {"self": url_for("roles_api.view", id=obj.get("id"))}
         obj["writeable"] = request.authz.can_write_role(obj.get("id"))
         obj["shallow"] = obj.get("shallow", True)
-        if self.nested or not obj["writeable"]:
+        if self.nested:
+            obj.pop("api_key", None)
+        if not obj["writeable"]:
             obj.pop("has_password", None)
             obj.pop("is_admin", None)
             obj.pop("is_muted", None)
@@ -176,6 +178,7 @@ class CollectionSerializer(Serializer):
     def _serialize(self, obj):
         pk = obj.get("id")
         authz = request.authz if obj.get("secret") else None
+        can_write = request.authz.can(pk, request.authz.WRITE)
         obj["links"] = {
             "self": url_for("collections_api.view", collection_id=pk),
             "xref_export": url_for("xref_api.export", collection_id=pk, _authz=authz),
@@ -183,7 +186,8 @@ class CollectionSerializer(Serializer):
             "ui": collection_url(pk),
         }
         obj["shallow"] = obj.get("shallow", True)
-        obj["writeable"] = request.authz.can(pk, request.authz.WRITE)
+        obj["writeable"] = not obj.get("external") and can_write
+        obj["shareable"] = can_write
         creator_id = obj.pop("creator_id", None)
         obj["creator"] = self.resolve(Role, creator_id, RoleSerializer)
         obj["team"] = []
@@ -211,15 +215,18 @@ class EntitySerializer(Serializer):
         self.queue(Collection, obj.get("collection_id"))
         self.queue(Role, obj.get("role_id"))
         schema = model.get(obj.get("schema"))
-        if schema is None or self.nested:
+        if schema is None or self.nested:  # FIXME what does that
             return
         properties = obj.get("properties", {})
         for name, values in properties.items():
             prop = schema.get(name)
             if prop is None or prop.type != registry.entity:
                 continue
+            prop_range = prop.range
+            if prop_range is not None and prop_range.is_a(Document.SCHEMA):
+                prop_range = model.get(Document.SCHEMA)
             for value in ensure_list(values):
-                self.queue(Entity, value, schema=prop.range)
+                self.queue(Entity, value, schema=prop_range)
 
     def _serialize(self, obj):  # noqa: C901
         proxy = make_entity_proxy(dict(obj))
@@ -232,6 +239,8 @@ class EntitySerializer(Serializer):
                     entity["shallow"] = True
                     value = entity
             if value is not None:
+                if type(value) is str and BASE64_ENCODED_PATTERN.search(value):
+                    continue
                 properties[prop.name].append(value)
         obj["properties"] = properties
         links = {
@@ -242,30 +251,20 @@ class EntitySerializer(Serializer):
         }
 
         if self.detail_view and proxy.schema.is_a(Document.SCHEMA):
-            content_hash = proxy.first("contentHash", quiet=True)
-            if content_hash:
-                name = entity_filename(proxy)
-                mime = proxy.first("mimeType", quiet=True)
-                links["file"] = archive_url(
-                    content_hash,
-                    file_name=name,
-                    mime_type=mime,
-                    role_id=request.authz.id,
-                )
-
-            pdf_hash = proxy.first("pdfHash", quiet=True)
-            if pdf_hash:
-                name = entity_filename(proxy, extension="pdf")
-                links["pdf"] = archive_url(
-                    pdf_hash, file_name=name, mime_type=PDF, role_id=request.authz.id
-                )
-
-            csv_hash = proxy.first("csvHash", quiet=True)
-            if csv_hash:
-                name = entity_filename(proxy, extension="csv")
-                links["csv"] = archive_url(
-                    csv_hash, file_name=name, mime_type=CSV, role_id=request.authz.id
-                )
+            # Don't embed short-lived signed archive URLs into the payload,
+            # as browsers cache it and the links go stale. Instead, link to
+            # the resolve endpoint which checks permissions at request time
+            # and redirects to a freshly signed archive URL.
+            for link, prop in (
+                ("file", "contentHash"),
+                ("pdf", "pdfHash"),
+                ("csv", "csvHash"),
+            ):
+                if proxy.first(prop, quiet=True):
+                    links[link] = url_for(
+                        "archive_api.resolve",
+                        _query=[("entity", proxy.id), ("prop", prop)],
+                    )
 
         collection = obj.get("collection") or {}
         coll_id = obj.pop("collection_id", collection.get("id"))
@@ -275,6 +274,11 @@ class EntitySerializer(Serializer):
             return None
         obj["collection"] = self.resolve(Collection, coll_id, CollectionSerializer)
         role_id = obj.pop("role_id", None)
+        # FIXME: some real world ES docs have an array here, we don't know why
+        # currently. If there is ever a bug, this _could_ solve it:
+        # if is_listish(role_id):
+        #     if len(ensure_list(role_id)) == 1:
+        #         role_id = role_id[0]
         obj["role"] = self.resolve(Role, role_id, RoleSerializer)
         obj["links"] = links
         obj["latinized"] = transliterate_values(proxy)
@@ -297,7 +301,8 @@ class EntitySerializer(Serializer):
                     "entities_api.translate", entity_id=proxy.id
                 )
 
-            tracer = defer.tasks.translate.get_tracer(TRACER_URI)
+            dataset = "collection_%s" % obj["collection"]["id"]
+            tracer = defer.tasks.translate.get_tracer(dataset, TRACER_URI)
             obj["processing_status"] = {"translate": tracer.is_processing(obj["id"])}
 
         return obj

@@ -26,16 +26,26 @@ class Authz(object):
     ACCESS = "authzca"
     TOKENS = "authztk"
 
-    def __init__(self, role_id, roles, is_admin=False, token_id=None, expire=None):
+    def __init__(
+        self,
+        role_id,
+        roles,
+        is_admin=False,
+        token_id=None,
+        expire=None,
+        is_investigator=False,
+    ):
         self.id = role_id
         self.logged_in = role_id is not None
         self.roles = set(roles)
         self.is_admin = is_admin
+        self.is_investigator = is_investigator
         self.token_id = token_id
         self.expire = expire or SETTINGS.SESSION_EXPIRE
         self.session_write = not SETTINGS.MAINTENANCE and self.logged_in
         self.can_browse_anonymous = not SETTINGS.REQUIRE_LOGGED_IN or self.logged_in
         self._collections = {}
+        self._collection_cache: dict[int, Collection | None] = {}
 
     def collections(self, action) -> list[int]:
         if self.is_admin:
@@ -69,16 +79,45 @@ class Authz(object):
             return False
         if action == self.WRITE and not self.session_write:
             return False
+
+        if isinstance(collection, Collection):
+            collection_obj = collection
+            collection = collection.id
+        else:
+            collection_obj = None
+            try:
+                collection = int(collection)
+            except (TypeError, ValueError):
+                return False
+
+        # Block writes on collections in maintenance mode, also for admins,
+        # same as the global ALEPH_MAINTENANCE flag
+        if action == self.WRITE and self._collection_flag(
+            collection, collection_obj, "maintenance"
+        ):
+            return False
         if self.is_admin:
             return True
 
-        if isinstance(collection, Collection):
-            collection = collection.id
-        try:
-            collection = int(collection)
-        except (TypeError, ValueError):
+        # Block writes on external collections
+        if action == self.WRITE and self._collection_flag(
+            collection, collection_obj, "external"
+        ):
             return False
         return collection in self.collections(action)
+
+    def _collection_flag(
+        self, collection_id: int, collection: Collection | None, flag: str
+    ) -> bool:
+        """Read a boolean column of a collection, loading and caching the
+        collection by id if the object isn't at hand."""
+        if collection is None:
+            if collection_id not in self._collection_cache:
+                self._collection_cache[collection_id] = Collection.by_id(collection_id)
+            collection = self._collection_cache[collection_id]
+        if collection is None:
+            return False
+        return bool(getattr(collection, flag))
 
     def can_bulk_import(self):
         if not self.can_browse_anonymous or not self.session_write:
@@ -101,9 +140,18 @@ class Authz(object):
         return int(role_id) in self.roles
 
     def can_register(self):
+        if not SETTINGS.ALLOW_REGISTRATION:
+            return False
         if self.logged_in or SETTINGS.MAINTENANCE or not SETTINGS.PASSWORD_LOGIN:
             return False
         return True
+
+    def can_create_investigation(self):
+        if not self.session_write:
+            return False
+        if self.is_admin:
+            return True
+        return self.is_investigator
 
     def match(self, roles):
         """See if there's overlap in roles."""
@@ -138,6 +186,7 @@ class Authz(object):
                 "id": self.id,
                 "roles": list(self.roles),
                 "is_admin": self.is_admin,
+                "is_investigator": self.is_investigator,
             }
             cache.set_complex(key, state, expires=self.expire)
         return self.token_id
@@ -154,7 +203,9 @@ class Authz(object):
         roles.add(role.id)
         roles.add(Role.load_id(Role.SYSTEM_USER))
         roles.update([g.id for g in role.roles])
-        return cls(role.id, roles, is_admin=role.is_admin)
+        return cls(
+            role.id, roles, is_admin=role.is_admin, is_investigator=role.is_investigator
+        )
 
     @classmethod
     def from_token(cls, token_id):
@@ -166,6 +217,7 @@ class Authz(object):
             state.get("id"),
             state.get("roles"),
             is_admin=state.get("is_admin"),
+            is_investigator=state.get("is_investigator"),
             token_id=token_id,
         )
 

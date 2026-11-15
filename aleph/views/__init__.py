@@ -1,6 +1,7 @@
 from aleph.views.alerts_api import blueprint as alerts_api
 from aleph.views.archive_api import blueprint as archive_api
 from aleph.views.base_api import blueprint as base_api
+from aleph.views.beta_api import blueprint as beta_api
 from aleph.views.bookmarks_api import blueprint as bookmarks_api
 from aleph.views.collections_api import blueprint as collections_api
 from aleph.views.context import blueprint as cache
@@ -45,3 +46,4 @@ def mount_app_blueprints(app):
     app.register_blueprint(exports_api)
     app.register_blueprint(bookmarks_api)
     app.register_blueprint(tags_api)
+    app.register_blueprint(beta_api)

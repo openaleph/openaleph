@@ -7,7 +7,12 @@ from openaleph_search import (
     SearchQueryParser,
 )
 
-from aleph.search.query import CollectionsQuery, EntitySetItemsQuery, NotificationsQuery
+from aleph.search.query import (
+    CollectionsQuery,
+    EntitySetItemsQuery,
+    MessageThreadQuery,
+    NotificationsQuery,
+)
 from aleph.search.result import DatabaseQueryResult
 
 __all__ = [
@@ -15,6 +20,7 @@ __all__ = [
     "CollectionsQuery",
     "NotificationsQuery",
     "EntitySetItemsQuery",
+    "MessageThreadQuery",
     "QueryParser",
     "SearchQueryParser",
     "EntitiesQuery",

@@ -33,13 +33,13 @@ repos:
       - id: absolufy-imports
 
   - repo: https://github.com/pycqa/isort
-    rev: 8.0.1
+    rev: 10.0.0b1
     hooks:
       - id: isort
         args: ["--profile", "black"]
 
   - repo: https://github.com/psf/black
-    rev: 26.3.0
+    rev: 26.10.1
     hooks:
       - id: black
         args: ["--extend-exclude", "aleph/migrate"]
@@ -53,13 +53,13 @@ repos:
         exclude: (test_[\w]+\.py|\.csv|\.json|\.lock|migrate/versions/[\w]+\.py)$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.5
+    rev: v0.17.3
     hooks:
       - id: ruff
         args: [ --fix ]
 
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.2
+    rev: v2.4.3
     hooks:
       - id: codespell
         exclude: (tests/.*|\.lock|package\.json|package-lock\.json)$
@@ -77,13 +77,13 @@ repos:
       - id: rst-inline-touching-normal
 
   - repo: https://github.com/python-poetry/poetry
-    rev: 2.3.2
+    rev: 2.5.1
     hooks:
       - id: poetry-check
       - id: poetry-lock
 
   - repo: https://github.com/python-poetry/poetry-plugin-export
-    rev: 1.10.0
+    rev: 1.10.1
     hooks:
       - id: poetry-export
         args: ["--without-hashes", "-o", "requirements.txt"]
