@@ -3,11 +3,11 @@ import re
 
 from elasticsearch import ApiError as ElasticsearchApiError
 from flask import Blueprint, request
+from flask_babel import gettext
 from followthemoney.compare import compare
 from openaleph_procrastinate.defer import tasks
 from openaleph_search.query.mentions import MentionsQuery, MultiMentionsQuery
 from openaleph_search.query.queries import PercolatorQuery
-from openaleph_search.settings import MAX_PAGE
 from rigour.mime.types import ZIP
 from werkzeug.datastructures import MultiDict
 from werkzeug.exceptions import BadRequest, NotFound
