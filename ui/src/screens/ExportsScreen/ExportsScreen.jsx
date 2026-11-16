@@ -29,7 +29,7 @@ export class ExportsScreen extends React.Component {
             <p className="Dashboard__subheading">
               <FormattedMessage
                 id="exports.manager.description"
-                defaultMessage="Below is a list of your exports. Make sure to download them before they expire."
+                defaultMessage="Below is a list of your exports. Download links expire after 4 weeks."
               />
             </p>
           </div>

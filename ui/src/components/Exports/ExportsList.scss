@@ -1,0 +1,37 @@
+@import 'app/variables.scss';
+
+.ExportGroup {
+  &__header {
+    cursor: pointer;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e1e8ed;
+    display: flex;
+    align-items: center;
+    background-color: white;
+    
+    &--open {
+      background-color: #f5f8fa;
+    }
+    
+    &--loading {
+      background-color: #f5f8fa;
+    }
+  }
+  
+  &__chevron {
+    margin-right: 8px;
+  }
+  
+  &__title {
+    font-weight: bold;
+  }
+  
+  &__subtitle {
+    font-size: 12px;
+    color: #5c7080;
+  }
+}
+
+.ExportsTable {
+  // Table styles can be added here if needed
+}

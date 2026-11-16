@@ -12,9 +12,21 @@ export const fetchExports = asyncActionCreator(
 );
 
 export const triggerQueryExport = asyncActionCreator(
-  (exportLink) => async () => {
-    const response = await endpoint.post(exportLink, {}, {});
+  (exportLink, exportTypes) => async () => {
+    const response = await endpoint.post(
+      exportLink,
+      { export_types: exportTypes },
+      {}
+    );
     return { data: response.data };
   },
   { name: 'TRIGGER_QUERY_EXPORT' }
+);
+
+export const deleteExport = asyncActionCreator(
+  (exportId) => async () => {
+    await endpoint.delete(`exports/${exportId}`);
+    return { exportId };
+  },
+  { name: 'DELETE_EXPORT' }
 );
