@@ -21,6 +21,7 @@ from aleph.model import (
 )
 from aleph.model.common import make_token
 from aleph.model.role import membership
+from aleph.scoped_tokens import revoke_scoped_tokens
 from aleph.settings import SETTINGS
 
 log = logging.getLogger(__name__)
@@ -102,6 +103,9 @@ def rotate_api_key(email):
     role.api_key = make_token()
     db.session.add(role)
     db.session.commit()
+    # A key is rotated when it may have leaked. Whoever held it could have
+    # used it to create scoped tokens, so those must not outlive it.
+    revoke_scoped_tokens(role.id)
     update_role(role)
     return role.api_key
 
@@ -190,6 +194,7 @@ def delete_role(role):
     _repo(EntitySet, EntitySet.role_id)
     _repo(EntitySetItem, EntitySetItem.added_by_id)
     _repo(Mapping, Mapping.role_id)
+    revoke_scoped_tokens(role.id)
     db.session.delete(role)
     db.session.commit()
 

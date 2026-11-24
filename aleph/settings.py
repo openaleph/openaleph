@@ -114,6 +114,13 @@ class Settings:
             "ALEPH_SESSION_EXPIRE", 800_000 if self.SINGLE_USER else 60_000
         )
 
+        # Longest lifetime a user may give a scoped API token, in seconds.
+        # Requests for more are refused. Set to 0 to turn scoped tokens off:
+        # none can be created and existing ones stop working.
+        self.SCOPED_TOKEN_MAX_EXPIRE = env.to_int(
+            "ALEPH_SCOPED_TOKEN_MAX_EXPIRE", 30 * 24 * 60 * 60
+        )
+
         # Disable password-based authentication for SSO settings:
         self.PASSWORD_LOGIN = env.to_bool("ALEPH_PASSWORD_LOGIN", not self.OAUTH)
         self.ALLOW_REGISTRATION = env.to_bool("ALEPH_ALLOW_REGISTRATION", False)
