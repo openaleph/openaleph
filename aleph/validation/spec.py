@@ -40,6 +40,22 @@ Alternatively, the API key can also be sent as a query parameter under the
 Similarly, a JWT can be sent in the Authorization header, after it has been
 returned by the login and/or OAuth processes. OpenAleph does not use session
 cookies or any other type of stateful API.
+
+## Scoped API tokens
+
+An API key grants everything its user can do and does not expire. Scripts and
+integrations that need less should use a **scoped API token**: a credential
+limited to a list of collections and to a lifetime, created with
+`POST /api/2/tokens` (which requires the API key or a session). It is sent
+like an API key, but only in the header:
+
+```Authorization: ApiKey scoped.42.1f0c9d3a5b7e2468.kq3...```
+
+A scoped token can read and write data in the collections it lists, as far as
+its user can at the time of the request. It is never an administrator, cannot
+manage the account, permissions, collections or other tokens, and is refused
+as an `api_key` query parameter. Whether an instance supports scoped tokens
+is announced as `auth.scoped_tokens_uri` in `/api/2/metadata`.
 """
 
 spec_info = {
