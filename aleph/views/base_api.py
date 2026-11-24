@@ -19,6 +19,7 @@ from aleph.core import archive, cache, get_cache, url_for
 from aleph.logic.pages import load_pages
 from aleph.logic.util import collection_url
 from aleph.model import Collection, Role
+from aleph.scoped_tokens import is_enabled as scoped_tokens_enabled
 from aleph.settings import SETTINGS
 from aleph.validation import get_openapi_spec
 from aleph.views.context import NotModified, enable_cache
@@ -34,6 +35,9 @@ def _metadata_locale(locale):
     # particularly relevant to the first render being shown to a
     # user.
     auth = {"oauth": SETTINGS.OAUTH, "require_logged_in": SETTINGS.REQUIRE_LOGGED_IN}
+    if scoped_tokens_enabled():
+        auth["scoped_tokens_uri"] = url_for("tokens_api.index")
+        auth["scoped_tokens_max_expire"] = SETTINGS.SCOPED_TOKEN_MAX_EXPIRE
     if SETTINGS.PASSWORD_LOGIN:
         auth["password_login_uri"] = url_for("sessions_api.password_login")
     if SETTINGS.PASSWORD_LOGIN and not SETTINGS.MAINTENANCE:

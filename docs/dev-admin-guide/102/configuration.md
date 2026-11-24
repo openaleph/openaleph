@@ -207,12 +207,28 @@ This document provides a comprehensive reference for all configuration parameter
 - **Default**: `true`
 - **Description**: When sharing a collection, suggest user accounts matching a typed name prefix. This lets any logged-in user look up other users' names, so it should be turned off on public instances with open registration. When disabled, collections can only be shared by entering a user's exact e-mail address.
 
+### Scoped API Tokens
+
+A user's API key grants everything the user can do and never expires. For scripts, integrations and unattended jobs, users can create **scoped API tokens** instead (`POST /api/2/tokens`, see the API documentation): credentials limited to a list of collections and to a lifetime.
+
+- A scoped token can read and write data only in the collections it lists, and only as far as its owner can at the time of each request. It is never an administrator.
+- It can only call the data endpoints (search, entities, entity sets, cross-reference results, streaming, bulk import, document upload, archive downloads). Account, permission, token and collection-administration endpoints refuse it.
+- It is accepted in the `Authorization` header only, never as the `api_key` URL parameter.
+- Tokens are created, listed and revoked with the API key or a session, never with a scoped token. The secret is shown once; only a digest is stored.
+- Blocking or deleting a user, or rotating their API key (`aleph rotate-apikey`), revokes all their scoped tokens.
+- Token records live in Redis next to the sessions. Losing or flushing Redis (`aleph resetcache`) ends all sessions and all scoped tokens; users then create new ones.
+
 ### Session Management
 
 #### `ALEPH_SESSION_EXPIRE`
 - **Type**: Integer (seconds)
 - **Default**: `800,000` (222 hours) in single-user mode, `60,000` (16.7 hours) otherwise
 - **Description**: Session duration before automatic logout.
+
+#### `ALEPH_SCOPED_TOKEN_MAX_EXPIRE`
+- **Type**: Integer (seconds)
+- **Default**: `2,592,000` (30 days)
+- **Description**: Longest lifetime a user may give a [scoped API token](#scoped-api-tokens). A request for a longer lifetime is refused, not shortened. Lowering the value ends existing tokens that exceed it. Set to `0` to turn scoped tokens off entirely: none can be created and existing ones stop working.
 
 #### `ALEPH_ROLE_INACTIVE`
 - **Type**: Integer (days)

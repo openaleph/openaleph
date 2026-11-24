@@ -20,6 +20,7 @@ from aleph.views.sessions_api import blueprint as sessions_api
 from aleph.views.status_api import blueprint as status_api
 from aleph.views.stream_api import blueprint as stream_api
 from aleph.views.tags_api import blueprint as tags_api
+from aleph.views.tokens_api import blueprint as tokens_api
 from aleph.views.xref_api import blueprint as xref_api
 
 
@@ -46,4 +47,5 @@ def mount_app_blueprints(app):
     app.register_blueprint(exports_api)
     app.register_blueprint(bookmarks_api)
     app.register_blueprint(tags_api)
+    app.register_blueprint(tokens_api)
     app.register_blueprint(beta_api)

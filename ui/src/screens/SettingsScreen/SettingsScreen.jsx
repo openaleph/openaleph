@@ -17,6 +17,7 @@ import { showSuccessToast } from 'app/toast';
 import Screen from 'components/Screen/Screen';
 import Dashboard from 'components/Dashboard/Dashboard';
 import ClipboardInput from 'components/common/ClipboardInput';
+import ScopedTokens from 'components/ScopedTokens/ScopedTokens';
 import { updateRole } from 'actions';
 import { selectMetadata, selectLocale, selectCurrentRole } from 'selectors';
 import SelectWrapper from 'components/common/SelectWrapper';
@@ -348,6 +349,20 @@ export class SettingsScreen extends React.Component {
     );
   }
 
+  renderTokens() {
+    const { metadata } = this.props;
+    const { role } = this.state;
+    // Only offered when the backend announces support for scoped tokens.
+    if (!role.id || !metadata.auth.scoped_tokens_uri) {
+      return null;
+    }
+    return (
+      <div className="settings-form">
+        <ScopedTokens maxExpire={metadata.auth.scoped_tokens_max_expire} />
+      </div>
+    );
+  }
+
   render() {
     const { intl } = this.props;
     return (
@@ -363,6 +378,7 @@ export class SettingsScreen extends React.Component {
             </h5>
           </div>
           {this.renderForm()}
+          {this.renderTokens()}
         </Dashboard>
       </Screen>
     );

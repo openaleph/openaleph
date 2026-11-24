@@ -9,6 +9,7 @@ from werkzeug.exceptions import Unauthorized
 from aleph.core import cache, db
 from aleph.model import Collection, Permission, Role
 from aleph.model.common import make_token
+from aleph.scoped_tokens import Scope, load_scope, revoke_scoped_tokens
 from aleph.settings import SETTINGS
 
 log = logging.getLogger(__name__)
@@ -34,7 +35,19 @@ class Authz(object):
         token_id=None,
         expire=None,
         is_investigator=False,
+        scope: Scope | None = None,
+        owner: "Authz | None" = None,
     ):
+        # A scoped token (see `from_scoped_token`) never carries roles or
+        # privileges of its own, whatever the caller passes in. With no
+        # roles, everything that grants by role membership grants nothing,
+        # and the only access left is the list in `collections()`.
+        self.scope = scope
+        if scope is not None:
+            if owner is None or owner.scope is not None or owner.id != role_id:
+                raise Unauthorized()
+            roles, is_admin, is_investigator, token_id = (), False, False, None
+        self._owner = owner if scope is not None else None
         self.id = role_id
         self.logged_in = role_id is not None
         self.roles = set(roles)
@@ -45,9 +58,12 @@ class Authz(object):
         self.session_write = not SETTINGS.MAINTENANCE and self.logged_in
         self.can_browse_anonymous = not SETTINGS.REQUIRE_LOGGED_IN or self.logged_in
         self._collections = {}
+        self._scoped: dict[str, list[int]] = {}
         self._collection_cache: dict[int, Collection | None] = {}
 
     def collections(self, action) -> list[int]:
+        if self.scope is not None:
+            return self._scoped_collections(action)
         if self.is_admin:
             return [c for (c,) in Collection.all_ids()]
 
@@ -71,6 +87,19 @@ class Authz(object):
             log.debug("Authz: %s: %r", self, self._collections)
             cache.kv.hset(self.ACCESS, key, json.dumps(self._collections))
         return self._collections.get(action, [])
+
+    def _scoped_collections(self, action) -> list[int]:
+        """What the owner may do right now, limited to what the token lists.
+
+        The owner's access is resolved through a regular `Authz` of the
+        owner, so the shared per-role cache only ever holds full lists, and
+        this narrowed list lives on this object only.
+        """
+        if action not in self._scoped:
+            allowed = self.scope.collections(action)
+            owned = self._owner.collections(action)
+            self._scoped[action] = [c for c in owned if c in allowed]
+        return self._scoped[action]
 
     def can(self, collection, action):
         """Query permissions to see if the user can perform the specified
@@ -153,6 +182,11 @@ class Authz(object):
             return True
         return self.is_investigator
 
+    def can_manage_tokens(self):
+        """Creating, listing and revoking scoped tokens takes a full sign-in:
+        a scoped token can never mint or see another credential."""
+        return self.logged_in and self.scope is None
+
     def match(self, roles):
         """See if there's overlap in roles."""
         roles = ensure_list(roles)
@@ -179,6 +213,9 @@ class Authz(object):
         return self.roles.difference(Role.public_roles())
 
     def to_token(self):
+        if self.scope is not None:
+            # A scoped token must not be traded for a session.
+            raise Unauthorized()
         if self.token_id is None:
             self.token_id = "%s.%s" % (self.id, make_token())
             key = cache.key(self.TOKENS, self.token_id)
@@ -222,6 +259,21 @@ class Authz(object):
         )
 
     @classmethod
+    def from_scoped_token(cls, credential):
+        """Build the authorization of a scoped token.
+
+        Raises `Unauthorized` unless the credential verifies and its owner
+        is a user who could sign in right now. The owner's roles, admin flag
+        and permissions are read at request time, so access the owner loses
+        is lost by the token at once.
+        """
+        scope = load_scope(credential)
+        owner = cls.from_role(Role.by_id(scope.role_id))
+        if not owner.logged_in or owner.id != scope.role_id:
+            raise Unauthorized()
+        return cls(owner.id, (), scope=scope, owner=owner)
+
+    @classmethod
     def flush(cls):
         cache.kv.delete(cls.ACCESS)
 
@@ -233,6 +285,7 @@ class Authz(object):
             # End all user sessions.
             prefix = cache.key(cls.TOKENS, "%s." % role.id)
             cache.flush(prefix=prefix)
+            revoke_scoped_tokens(role.id)
 
     @cached_property
     def search_auth(self) -> SearchAuth:

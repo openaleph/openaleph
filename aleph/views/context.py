@@ -10,17 +10,59 @@ from flask import Blueprint, Response, request
 from flask_babel import get_locale
 from servicelayer.rate_limit import RateLimit
 from structlog.contextvars import bind_contextvars, clear_contextvars
-from werkzeug.exceptions import TooManyRequests
+from werkzeug.exceptions import Forbidden, TooManyRequests, Unauthorized
 
 from aleph import __version__
 from aleph.authz import Authz
 from aleph.core import kv
 from aleph.model import Role
+from aleph.scoped_tokens import burn_scoped_token, is_scoped_token
 from aleph.settings import SETTINGS
 
 log = structlog.get_logger(__name__)
 local = threading.local()
 blueprint = Blueprint("context", __name__)
+
+# The complete list of endpoints a scoped token may call. Every other
+# endpoint -- including any added in the future -- refuses a scoped token,
+# whatever the owner of the token is allowed to do there. The list holds
+# reading and writing *data* inside collections, each of which checks the
+# collection through `Authz.can()` or `Authz.search_auth`. It deliberately
+# leaves out everything about the account (roles, groups, sessions, tokens,
+# alerts, notifications, bookmarks, tags, exports) and everything that
+# administers a collection (create, update, delete, permissions, mappings,
+# re-index, cross-reference runs).
+SCOPED_TOKEN_ENDPOINTS = frozenset(
+    (
+        "base_api.metadata",
+        "collections_api.index",
+        "collections_api.view",
+        "collections_api.bulk",
+        "ingest_api.ingest_upload",
+        "entities_api.index",
+        "entities_api.match",
+        "entities_api.create",
+        "entities_api.view",
+        "entities_api.similar",
+        "entities_api.tags",
+        "entities_api.update",
+        "entities_api.delete",
+        "entities_api.entitysets",
+        "entitysets_api.index",
+        "entitysets_api.create",
+        "entitysets_api.view",
+        "entitysets_api.update",
+        "entitysets_api.delete",
+        "entitysets_api.entities_index",
+        "entitysets_api.entities_update",
+        "entitysets_api.item_index",
+        "entitysets_api.item_update",
+        "xref_api.index",
+        "bulk_api.entities",
+        "archive_api.resolve",
+        "archive_api.retrieve",
+    )
+)
 
 
 class NotModified(Exception):
@@ -57,6 +99,9 @@ def enable_cache(vary_user=True, vary=None):
 
     if vary_user and request.authz.logged_in:
         cache_parts.extend((request.authz.roles))
+        if request.authz.scope is not None:
+            # A scoped token has no roles to tell its responses apart.
+            cache_parts.extend(("scoped", request.authz.scope.key_id))
         request._http_private = True
 
     request._http_etag = hash_data(cache_parts)
@@ -71,13 +116,20 @@ def _get_remote_ip():
     return request.remote_addr
 
 
-def _get_credential_authz(credential):
+def _get_credential_authz(credential, allow_scoped=True):
     if credential is None or not len(credential):
         return
     if " " in credential:
         method, credential = credential.split(" ", 1)
         if method == "Token":
             return Authz.from_token(credential)
+
+    if is_scoped_token(credential):
+        # Never falls through to the API key lookup below.
+        if not allow_scoped:
+            burn_scoped_token(credential)
+            raise Unauthorized()
+        return Authz.from_scoped_token(credential)
 
     role = Role.by_api_key(credential)
     if role is not None:
@@ -92,7 +144,9 @@ def get_authz(request):
         authz = _get_credential_authz(credential)
 
     if authz is None and "api_key" in request.args:
-        authz = _get_credential_authz(request.args.get("api_key"))
+        # URLs end up in logs, browser histories and referrers: a scoped
+        # token is only accepted in the `Authorization` header.
+        authz = _get_credential_authz(request.args.get("api_key"), allow_scoped=False)
 
     return authz
 
@@ -102,6 +156,14 @@ def enable_authz(request):
 
     authz = authz or Authz.from_role(role=None)
     request.authz = authz
+
+
+def enforce_scope(request):
+    """Refuse a scoped token on every endpoint that is not allowlisted."""
+    if request.authz.scope is None:
+        return
+    if request.endpoint not in SCOPED_TOKEN_ENDPOINTS:
+        raise Forbidden()
 
 
 def get_rate_limit(resource, limit=100, interval=60, unit=1):
@@ -137,6 +199,7 @@ def setup_request():
     # when we log their activity or enforce rate limits
     enable_authz(request)
     setup_logging_context(request)
+    enforce_scope(request)
     enable_rate_limit(request)
 
 
@@ -187,8 +250,11 @@ def finalize_response(resp):
 
 def setup_logging_context(request):
     role_id = None
+    scoped_token_id = None
     if hasattr(request, "authz"):
         role_id = request.authz.id
+        if request.authz.scope is not None:
+            scoped_token_id = request.authz.scope.key_id
     # Set up context variables for structured logging. The context is included
     # with every log entry produced by this particular request
     clear_contextvars()
@@ -201,6 +267,7 @@ def setup_logging_context(request):
         ua=str(request.user_agent),
         begin_time=datetime.utcfromtimestamp(request._begin_time).isoformat(),
         role_id=role_id,
+        scoped_token_id=scoped_token_id,
         session_id=getattr(request, "_session_id", None),
         locale=getattr(request, "_app_locale", None),
         url=request.url,
