@@ -351,7 +351,7 @@ def view(entity_id):
     entity["safeHtml"] = [sanitize_html(value, source_url) for value in html]
     entity["shallow"] = False
 
-    if request.authz.logged_in:
+    if request.authz.logged_in and request.authz.scope is None:
         bookmark = Bookmark.query.filter_by(
             role_id=request.authz.id,
             collection_id=int(entity.get("collection_id")),
