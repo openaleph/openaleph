@@ -33,6 +33,7 @@ export class PdfViewer extends Component {
     this.state = {
       width: null,
       resolvedPdfUrl: null,
+      pdfNumPages: null,
       components: {
         Document: SectionLoading,
         Page: SectionLoading,
@@ -89,7 +90,7 @@ export class PdfViewer extends Component {
   // a fresh signed URL that pdf.js can fetch without an Authorization header.
   resolvePdfUrl() {
     const { pdfUrl } = this.props;
-    this.setState({ resolvedPdfUrl: null });
+    this.setState({ resolvedPdfUrl: null, pdfNumPages: null });
     resolveArchiveUrl(pdfUrl)
       .then((url) => {
         if (!this.unmounted && this.props.pdfUrl === pdfUrl) {
@@ -100,6 +101,7 @@ export class PdfViewer extends Component {
   }
 
   onDocumentLoad(pdf) {
+    this.setState({ pdfNumPages: pdf.numPages });
     // Handle a resize event (to check document width) after loading
     // Note: onDocumentLoad actually happens *before* rendering, but the
     // rendering calls happen a bit too often as we don't have sophisticated
@@ -198,7 +200,8 @@ export class PdfViewer extends Component {
 
   renderPdf() {
     const { document, page, rotate, numPages, pdfUrl } = this.props;
-    const { effectiveRotation, resolvedPdfUrl, width } = this.state;
+    const { effectiveRotation, pdfNumPages, resolvedPdfUrl, width } =
+      this.state;
     const { Document, Page } = this.state.components;
 
     const loading = <Skeleton.Text type="div" length={4000} />;
@@ -207,14 +210,18 @@ export class PdfViewer extends Component {
       return loading;
     }
 
+    // The PDF itself is authoritative; the Page entity count may still be 0
+    // if the Pages entity got indexed before its Page children.
+    const pageCount = pdfNumPages || numPages;
+
     return (
       <>
-        {numPages !== null && numPages > 0 && (
+        {pageCount > 0 && (
           <PagingButtons
             page={page}
             rotate={rotate}
             document={document}
-            numberOfPages={numPages}
+            numberOfPages={pageCount}
             showRotateButtons
           />
         )}
@@ -228,7 +235,7 @@ export class PdfViewer extends Component {
                   Only render Page when width has been set and numPages has been figured out.
                   This limits flashing / visible resizing when displaying page for the first time.
               */}
-            {width !== null && numPages > 0 && (
+            {width !== null && pdfNumPages > 0 && (
               <Page
                 pageNumber={page}
                 className="page"
@@ -259,7 +266,10 @@ export class PdfViewer extends Component {
       location: routerLocation,
     } = this.props;
 
-    if (document.isPending || numPages === undefined || numPages === null) {
+    // The page view renders from the PDF alone, the text view needs the Page
+    // entity count.
+    const countPending = numPages === undefined || numPages === null;
+    if (document.isPending || (countPending && activeMode !== 'view')) {
       return <SectionLoading />;
     }
     return (
