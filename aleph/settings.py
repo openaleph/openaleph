@@ -63,6 +63,10 @@ class Settings:
         )
         self.APP_UI_URL = self.APP_PARSED_UI_URL.geturl()
 
+        # Number of reverse proxies in front of the API whose X-Forwarded-For
+        # entries are trusted to determine the client IP (0 disables)
+        self.TRUSTED_PROXIES = env.to_int("ALEPH_TRUSTED_PROXIES", 1)
+
         ##############################################################################
         # Security and authentication.
 

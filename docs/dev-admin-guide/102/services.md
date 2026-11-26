@@ -141,3 +141,5 @@ Run command: `nginx`
 Dependencies: None, or api service if using default pass through.
 
 Recommendation: Per default, a reverse proxy would forward requests to only this service. But you can as well expose the Api services directly to the reverse proxy to handle all `/api/...` path requests directly.
+
+The UI's nginx is not a public-facing proxy: TLS, security headers, CORS and rate limiting must be configured in the reverse proxy in front, see [Reverse proxy](reverse-proxy.md).

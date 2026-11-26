@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 from urllib.parse import urlencode, urljoin
 
 import sentry_sdk
@@ -17,6 +18,7 @@ from servicelayer.cache import get_redis
 from servicelayer.extensions import get_extensions
 from werkzeug.local import LocalProxy
 from werkzeug.middleware.profiler import ProfilerMiddleware
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from aleph import __version__ as aleph_version
 from aleph.cache import Cache
@@ -48,7 +50,7 @@ def _remove_session(*args, **kwargs):
     db.session.remove()
 
 
-def create_app(config=None):
+def create_app(config: dict[str, Any] | None = None) -> Flask:
     if config is None:
         config = {}
 
@@ -99,6 +101,10 @@ def create_app(config=None):
 
     if SETTINGS.PROFILE:
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
+
+    if SETTINGS.TRUSTED_PROXIES > 0:
+        # Only the client IP: external URLs are built from ALEPH_UI_URL.
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=SETTINGS.TRUSTED_PROXIES, x_proto=0)
 
     migrate.init_app(app, db, directory=SETTINGS.ALEMBIC_DIR)
     configure_oauth(app, cache=get_cache())

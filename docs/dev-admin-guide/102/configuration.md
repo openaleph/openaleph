@@ -88,7 +88,7 @@ This document provides a comprehensive reference for all configuration parameter
 
 ## Security and HTTPS
 
-HTTPS enforcement, HSTS, security headers (Content Security Policy, Permissions-Policy, etc.), CORS, and rate limiting are reverse proxy concerns and are not handled by the API application. Configure them in the reverse proxy in front of Aleph (see the `ui/nginx.conf` shipped with the UI image for a starting point).
+HTTPS enforcement, HSTS, security headers (Content Security Policy, Permissions-Policy, etc.), CORS, and rate limiting are reverse proxy concerns and are not handled by the API application. See [Reverse proxy](reverse-proxy.md) for the required settings.
 
 #### `ALEPH_FORCE_HTTPS`
 - **Type**: Boolean
@@ -99,6 +99,11 @@ HTTPS enforcement, HSTS, security headers (Content Security Policy, Permissions-
 - **Type**: String
 - **Default**: `"https"` if `ALEPH_FORCE_HTTPS` is true, otherwise `"http"`
 - **Description**: Preferred URL scheme for generated links.
+
+#### `ALEPH_TRUSTED_PROXIES`
+- **Type**: Integer
+- **Default**: `1`
+- **Description**: Number of reverse proxies in front of the API. The API reads the client IP from the `X-Forwarded-For` header at that many hops back. `0` disables this and logs the connecting peer's address. See [Reverse proxy](reverse-proxy.md#client-ip).
 
 ---
 
