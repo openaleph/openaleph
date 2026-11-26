@@ -51,7 +51,7 @@ followthemoney-compare @ git+https://github.com/dataresearchcenter/followthemone
 followthemoney==4.11.3 ; python_version >= "3.12" and python_version < "3.15"
 frozenlist==1.8.0 ; python_version >= "3.12" and python_version < "3.15"
 fsspec==2026.9.0 ; python_version >= "3.12" and python_version < "3.15"
-ftm-lakehouse==0.10.2 ; python_version >= "3.12" and python_version < "3.15"
+ftm-lakehouse @ git+https://github.com/openaleph/ftm-lakehouse.git@adc524077d38f48d818193b71b54c67be141f314 ; python_version >= "3.12" and python_version < "3.15"
 ftmq==5.3.3 ; python_version >= "3.12" and python_version < "3.15"
 fuzzywuzzy==0.18.0 ; python_version >= "3.12" and python_version < "3.15"
 google-api-core==2.44.0 ; python_version >= "3.12" and python_version < "3.15"
