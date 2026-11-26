@@ -179,7 +179,15 @@ class EntityReferencesMode extends React.Component {
       <tr key={`${entity.id}-expanded`}>
         <td />
         <td colSpan={colSpan}>
-          <EntityProperties entity={entity} showMetadata={false} />
+          <Entity.Load id={entity.id} deep>
+            {(fullEntity) =>
+              fullEntity.shallow && !fullEntity.isError ? (
+                <Skeleton.Text type="span" length={50} />
+              ) : (
+                <EntityProperties entity={fullEntity} showMetadata={false} />
+              )
+            }
+          </Entity.Load>
         </td>
       </tr>,
     ];
@@ -216,6 +224,7 @@ class EntityReferencesMode extends React.Component {
       result,
       results,
       schema,
+      columns,
       isThing,
       hideCollection,
       navigate,
@@ -231,10 +240,6 @@ class EntityReferencesMode extends React.Component {
         />
       );
     }
-    const { property } = reference;
-    const columns = schema
-      .getFeaturedProperties()
-      .filter((prop) => prop.name !== property.name);
     const schemaLabel = reference.schema.plural.toLowerCase();
     const placeholder =
       schema.name === 'Thing'
@@ -330,15 +335,28 @@ const mapStateToProps = (state, ownProps) => {
   const { location, reference, query } = ownProps;
   const parsedHash = queryString.parse(location.hash);
   const schema = selectSchema(state, reference.schema);
+  const columns = schema
+    .getFeaturedProperties()
+    .filter((prop) => prop.name !== reference.property.name);
+
+  // the reference queries are dehydrated, so request the column fields back.
+  // Email:from cells resolve the sender via the `emitters` entity property.
+  const includeProps = columns.map((prop) => prop.name);
+  if (columns.some((prop) => prop.qname === 'Email:from')) {
+    includeProps.push('emitters');
+  }
 
   // Default sort by most recent dates
-  const sortedQuery = query.defaultSortBy('dates', 'desc');
+  const sortedQuery = query
+    .defaultSortBy('dates', 'desc')
+    .addIncludeFields(includeProps.map((name) => ({ name, isProperty: true })));
 
   const result = selectEntitiesResult(state, sortedQuery);
   const results = _.uniqBy(ensureArray(result.results), 'id');
 
   return {
     schema,
+    columns,
     parsedHash,
     expandedId: parsedHash.expand,
     previewId: parsedHash["preview:id"],

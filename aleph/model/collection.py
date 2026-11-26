@@ -1,8 +1,9 @@
 import logging
 from datetime import datetime
 from functools import cache
+from typing import TYPE_CHECKING, Any
 
-from banal import ensure_dict, ensure_list
+from banal import as_bool, ensure_dict, ensure_list
 from flask_babel import lazy_gettext
 from followthemoney.dataset.util import dataset_name_check
 from followthemoney.exc import InvalidData
@@ -16,6 +17,9 @@ from aleph.core import db
 from aleph.model.common import IdModel, SoftDeleteModel, make_textid
 from aleph.model.permission import Permission
 from aleph.model.role import Role
+
+if TYPE_CHECKING:
+    from aleph.authz import Authz
 
 log = logging.getLogger(__name__)
 
@@ -87,6 +91,14 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
     # external managed, appears read-only in UI even for admins
     external = db.Column(db.Boolean, default=False)
 
+    # read-only for everyone (incl. admins), like the global ALEPH_MAINTENANCE
+    # flag but scoped to this collection
+    maintenance = db.Column(db.Boolean, default=False)
+
+    # location of the data in an external lakehouse, only for external
+    # collections
+    lakehouse_uri = db.Column(db.Unicode, nullable=True)
+
     # Collection inherits the `updated_at` column from `DatedModel`.
     # These two fields are used to express different semantics: while
     # `updated_at` is used to describe the last change of the metadata,
@@ -108,7 +120,7 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
         self.data_updated_at = datetime.utcnow()
         db.session.add(self)
 
-    def update(self, data, authz):
+    def update(self, data: dict[str, Any], authz: "Authz") -> None:
         self.label = data.get("label", self.label)
         self.summary = data.get("summary", self.summary)
         self.publisher = data.get("publisher", self.publisher)
@@ -131,25 +143,39 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
         self.updated_at = datetime.utcnow()
 
         # contains ai generated content
-        self.contains_ai = data.get("contains_ai")
-        self.contains_ai_comment = data.get("contains_ai_comment")
-
-        # tagging functionality (external collections can't be tagged)
-        self.taggable = data.get("taggable", self.taggable) and not self.external
+        self.contains_ai = data.get("contains_ai", self.contains_ai)
+        self.contains_ai_comment = data.get(
+            "contains_ai_comment", self.contains_ai_comment
+        )
 
         # Some fields are editable only by admins in order to have a strict
         # separation between source evidence and case material. As well,
         # casefiles must never be "external"
         if authz.is_admin:
             self.category = data.get("category", self.category)
-            self.external = data.get("external", False)
+            self.external = as_bool(data.get("external", self.external))
+            self.maintenance = as_bool(data.get("maintenance", self.maintenance))
             if self.external and self.category == self.CASEFILE:
                 raise InvalidData("Can't set casefile for external collection")
+            if "lakehouse_uri" in data:
+                self.lakehouse_uri = stringify(data["lakehouse_uri"])
+            elif not self.external:
+                # un-setting `external` drops the lakehouse location as well
+                self.lakehouse_uri = None
+            if self.lakehouse_uri and not self.external:
+                raise InvalidData("Can't set lakehouse_uri for non-external collection")
             creator = ensure_dict(data.get("creator"))
             creator_id = data.get("creator_id", creator.get("id"))
             creator = Role.by_id(creator_id)
             if creator is not None:
                 self.creator = creator
+
+        # tagging functionality (external collections can't be tagged), this
+        # needs to run after `external` is updated above
+        if self.external and as_bool(data.get("taggable")):
+            raise InvalidData("Can't set taggable for external collection")
+        taggable = as_bool(data.get("taggable", self.taggable))
+        self.taggable = taggable and not self.external
 
         db.session.add(self)
         db.session.flush()
@@ -192,7 +218,7 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
             self._ns = Namespace(self.foreign_id)
         return self._ns
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         data = self.to_dict_dates()
         data["category"] = self.CASEFILE
         if self.category in self.CATEGORIES:
@@ -228,6 +254,8 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
                 "contains_ai": self.contains_ai,
                 "contains_ai_comment": self.contains_ai_comment,
                 "external": self.external,
+                "maintenance": self.maintenance,
+                "lakehouse_uri": self.lakehouse_uri,
                 "taggable": self.taggable,
             }
         )
@@ -294,6 +322,11 @@ class Collection(db.Model, IdModel, SoftDeleteModel):
             collection.creator = authz.role
         collection.deleted_at = None
         collection.data_updated_at = None
+        # `casefile` is derived from `category`, but clients send it as an
+        # explicit flag on creation – honour it over the payload category,
+        # which they may be filling with a default value.
+        if as_bool(data.get("casefile")):
+            data = {**data, "category": cls.CASEFILE}
         collection.update(data, authz)
         db.session.flush()
         if collection.creator is not None:

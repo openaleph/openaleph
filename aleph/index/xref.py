@@ -5,8 +5,8 @@ from random import randint
 from banal import hash_data
 from elasticsearch.helpers import scan
 from followthemoney.types import registry
+from openaleph_search.index.configure import configure_index
 from openaleph_search.index.indexer import bulk_actions, query_delete
-from openaleph_search.index.indexes import configure_index
 from openaleph_search.index.mapping import FieldType
 from openaleph_search.index.util import index_name, index_settings, unpack_result
 

@@ -38,7 +38,7 @@ export class CollectionIndex extends Component {
   onSearch(queryText) {
     const { query } = this.props;
     const newQuery = query.set('q', queryText);
-    this.updateQuery(newQuery);
+    this.updateQuery(queryText ? newQuery.sortBy('relevance', 'desc') : newQuery.sortBy('created_at', 'desc'));
   }
 
   updateQuery(newQuery) {
@@ -117,7 +117,7 @@ export class CollectionIndex extends Component {
             <SortingBar
               query={query}
               updateQuery={this.updateQuery}
-              sortingFields={['created_at', 'count', 'label', 'updated_at']}
+              sortingFields={['relevance', 'created_at', 'count', 'label', 'updated_at']}
               filterButton={
                 <Button
                   text={intl.formatMessage(

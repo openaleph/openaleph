@@ -78,7 +78,7 @@ export class EntityPreview extends React.Component {
   }
 
   renderContext() {
-    const { entity, activeMode, profile, ftmAssetsApi } = this.props;
+    const { entity, activeMode, profile, ftmAssetsRoot } = this.props;
     if (entity.isError) {
       return <ErrorSection error={entity.error} />;
     }
@@ -88,12 +88,14 @@ export class EntityPreview extends React.Component {
     return (
       <div className="ItemOverview preview">
         <div className="ItemOverview__heading">
-          <EntityImage
-            api={ftmAssetsApi}
-            entity={entity}
-            thumbnail
-            fallback={false}
-          />
+          {ftmAssetsRoot && (
+            <EntityImage
+              root={ftmAssetsRoot}
+              entity={entity}
+              thumbnail
+              fallback={false}
+            />
+          )}
           <span>
             {this.renderTags()}
             <EntityHeading entity={entity} isPreview />
@@ -157,7 +159,7 @@ const mapStateToProps = (state, ownProps) => {
       ownProps.location
     ),
     locale: selectLocale(state),
-    ftmAssetsApi: selectServiceUrl(state, 'ftm_assets'),
+    ftmAssetsRoot: selectServiceUrl(state, 'ftm_assets'),
   };
 };
 

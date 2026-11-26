@@ -34,7 +34,7 @@ import {
   entityMentionsQuery,
   entityThreadQuery,
   entityNearbyQuery,
-  folderDocumentsQuery,
+  folderChildrenCountQuery,
   entityReferencesQuery,
 } from 'queries';
 
@@ -87,7 +87,8 @@ class EntityContextLoader extends PureComponent {
     }
 
     const { threadQuery, threadResult } = this.props;
-    const showThread = entity?.schema?.isA("Email");
+    const showThread =
+      entity?.schema?.isA("Email") || entity?.schema?.isA("Message");
     if (showThread && threadResult.shouldLoad) {
       this.props.queryThread({ query: threadQuery });
     }
@@ -99,7 +100,7 @@ class EntityContextLoader extends PureComponent {
     }
 
     const { childrenResult, childrenQuery } = this.props;
-    if (entity?.schema?.isA('Folder') && childrenResult.shouldLoad) {
+    if (entity?.schema?.isDocument() && childrenResult.shouldLoad) {
       this.props.queryEntities({ query: childrenQuery });
     }
   }
@@ -117,7 +118,7 @@ const mapStateToProps = (state, ownProps) => {
   const mentionsQuery = entityMentionsQuery(location, entityId);
   const threadQuery = entityThreadQuery(location, entityId);
   const nearbyQuery = entityNearbyQuery(location, entityId);
-  const childrenQuery = folderDocumentsQuery(location, entityId, undefined);
+  const childrenQuery = folderChildrenCountQuery(location, entityId);
   const expandQuery = entityReferencesQuery(entityId);
   return {
     entity: selectEntity(state, entityId),

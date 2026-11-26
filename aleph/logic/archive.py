@@ -1,11 +1,22 @@
 import logging
+from typing import Any, Generator
 
+from followthemoney import model
+from followthemoney.types import registry
+from openaleph_search.core import get_es
 from openaleph_search.index.entities import checksums_count
+from openaleph_search.index.indexes import entities_read_index
+from openaleph_search.index.util import MAX_REQUEST_TIMEOUT, MAX_TIMEOUT
 
-from aleph.core import archive
-from aleph.model import Document, Export
+from aleph.core import archive, db
+from aleph.model import Collection, Document, Export
 
 log = logging.getLogger(__name__)
+
+# how many checksum buckets to fetch per composite aggregation page
+INDEX_PAGE_SIZE = 1000
+# how many rows to buffer when streaming the documents table
+DOCUMENT_BATCH_SIZE = 10000
 
 
 def _chunked_hashes(prefix, batch_size=500):
@@ -44,3 +55,75 @@ def cleanup_archive(prefix=None):
             # log.info("Dangling hash [%s]: %s", content_hash, path)
             log.info("Dangling hash: %s", content_hash)
             archive.delete_file(content_hash)
+
+
+def lakehouse_collection_ids() -> list[int]:
+    """The ids of the collections that keep their blobs in their own lakehouse
+    dataset instead of in the archive behind aleph."""
+    q = db.session.query(Collection.id)
+    q = q.filter(Collection.lakehouse_uri != None)  # noqa: E711
+    q = q.filter(Collection.lakehouse_uri != "")
+    return [collection_id for (collection_id,) in q]
+
+
+def iter_document_checksums(
+    batch_size: int = DOCUMENT_BATCH_SIZE,
+) -> Generator[str, None, None]:
+    """Stream the distinct content hashes stored in the documents table,
+    skipping the collections that have a `lakehouse_uri`."""
+    q = db.session.query(Document.content_hash).distinct()
+    q = q.filter(Document.content_hash != None)  # noqa: E711
+    exclude = lakehouse_collection_ids()
+    if len(exclude):
+        q = q.filter(Document.collection_id.notin_(exclude))
+    for (content_hash,) in q.yield_per(batch_size):
+        yield content_hash
+
+
+def iter_index_checksums(
+    page_size: int = INDEX_PAGE_SIZE,
+) -> Generator[str, None, None]:
+    """Stream the distinct checksums mentioned by entities in the search
+    index. This sweeps the checksum group field of all schemata that can
+    carry one (documents, but also e.g. pages and packages) using a
+    composite aggregation, which pages through the terms in order. The
+    collections that have a `lakehouse_uri` are skipped."""
+    schemata = model.get_type_schemata(registry.checksum)
+    index = entities_read_index(schemata)
+    es = get_es()
+    exclude = lakehouse_collection_ids()
+    query: dict[str, Any] = {"match_all": {}}
+    if len(exclude):
+        # `collection_id` is indexed as a keyword, so the ids have to be
+        # stringified to match.
+        collection_ids = [str(collection_id) for collection_id in exclude]
+        query = {"bool": {"must_not": [{"terms": {"collection_id": collection_ids}}]}}
+    after: dict[str, Any] | None = None
+    while True:
+        composite: dict[str, Any] = {
+            "size": page_size,
+            "sources": [{"checksum": {"terms": {"field": registry.checksum.group}}}],
+        }
+        if after is not None:
+            composite["after"] = after
+        body = {
+            "size": 0,
+            "query": query,
+            "timeout": MAX_TIMEOUT,
+            "aggs": {"checksums": {"composite": composite}},
+        }
+        result = es.search(index=index, body=body, request_timeout=MAX_REQUEST_TIMEOUT)
+        agg = result.get("aggregations", {}).get("checksums", {})
+        buckets = agg.get("buckets", [])
+        for bucket in buckets:
+            yield bucket.get("key", {}).get("checksum")
+        after = agg.get("after_key")
+        if after is None or not len(buckets):
+            break
+
+
+def iter_checksums() -> Generator[str, None, None]:
+    """Stream all the content hashes aleph knows about from the documents table
+    and the search index."""
+    yield from iter_document_checksums()
+    yield from iter_index_checksums()

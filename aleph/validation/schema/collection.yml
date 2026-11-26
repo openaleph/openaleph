@@ -55,6 +55,13 @@ Collection:
       type: string
     taggable:
       type: boolean
+    external:
+      type: boolean
+    maintenance:
+      type: boolean
+    lakehouse_uri:
+      type: string
+      nullable: true
 
 CollectionCreate:
   type: object
@@ -93,6 +100,8 @@ CollectionCreate:
       type: string
       format: ftm-url
       nullable: true
+    casefile:
+      type: boolean
     category:
       type: string
       format: category
@@ -109,6 +118,13 @@ CollectionCreate:
       type: string
     taggable:
       type: boolean
+    external:
+      type: boolean
+    maintenance:
+      type: boolean
+    lakehouse_uri:
+      type: string
+      nullable: true
   required: ["label"]
 
 CollectionUpdate:

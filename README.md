@@ -21,6 +21,8 @@ Discover how to install, use, and contribute to OpenAleph through our [documenta
 
 OpenAleph can be deployed locally with Docker, for testing purposes:
 
+Run `./contrib/start-local.sh` to start a single-user local instance with a generated secret key. Or configure the stack manually:
+
 1. Run `cp aleph.env.tmpl aleph.env` and then edit `aleph.env`. Assign a value to `ALEPH_SECRET_KEY` — the Docker images already default to the bundled postgres, elasticsearch and redis services; see the [Docker setup guide](https://openaleph.org/docs/dev-admin-guide/102/docker/) for more configuration options. You can also set `ALEPH_SINGLE_USER=true` or create an admin user following the instructions [in the documentation](https://openaleph.org/docs/dev-admin-guide/104/setup/).
 2. Run `docker compose -f docker-compose.example.yml up -d` to start the full stack with prebuilt images (or `make up` to run it in the foreground).
 3. Once Elasticsearch reports a green health status in the logs, run `docker compose -f docker-compose.example.yml run --rm worker aleph upgrade` to initialize the database and search index.

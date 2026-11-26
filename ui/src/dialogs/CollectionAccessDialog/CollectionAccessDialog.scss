@@ -5,17 +5,52 @@
     margin-bottom: 0;
   }
 
+  &__body {
+    max-height: 60vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: $aleph-grid-size;
+  }
+
   .header-topic {
     font-weight: bold;
   }
 
   .settings-table {
+    width: 100%;
     border-spacing: 0 2px;
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
 
     td {
       padding-top: $aleph-grid-size * 0.5;
       padding-bottom: $aleph-grid-size * 0.5;
+      vertical-align: middle;
     }
+
+    .other-rows,
+    th:not(:first-child):not(.action-cell) {
+      width: $aleph-grid-size * 7;
+      text-align: center;
+
+      .#{$bp-ns}-checkbox {
+        display: inline-block;
+        margin-right: 0;
+      }
+    }
+
+    .action-cell {
+      width: $aleph-grid-size * 4;
+      text-align: center;
+    }
+  }
+
+  .email-row .#{$bp-ns}-input-group {
+    width: 100%;
   }
 
   .#{$bp-ns}-callout {

@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from functools import lru_cache
 
 from babel import Locale
@@ -82,6 +81,7 @@ def _metadata_locale(locale):
             "timelines": as_bool(SETTINGS.ENABLE_TIMELINES),
             "lists": as_bool(SETTINGS.ENABLE_LISTS),
             "diagrams": as_bool(SETTINGS.ENABLE_NETWORK_DIAGRAMS),
+            "share_suggest_roles": as_bool(SETTINGS.SHARE_SUGGEST_ROLES),
         },
         "feedback_urls": {
             "documents": SETTINGS.FEEDBACK_URL_DOCUMENTS,
@@ -267,11 +267,11 @@ def _check_redis():
 
 
 def _check_archive():
-    from openaleph_procrastinate.archive import get_archive
+    from openaleph_procrastinate.repository import get_archive
 
     try:
-        archive = get_archive()
-        archive.put("healthz", datetime.now())
+        archive = get_archive("healthz")
+        archive.healthz()
     except Exception as exc:
         raise RuntimeError(f"Archive health check failed: {exc}")
 

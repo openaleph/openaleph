@@ -34,7 +34,7 @@ This document provides a comprehensive reference for all configuration parameter
 #### `ALEPH_MAINTENANCE`
 - **Type**: Boolean
 - **Default**: `false`
-- **Description**: Puts the system into read-only mode. Use together with `ALEPH_APP_BANNER` to display a notification for users (see below).
+- **Description**: Puts the system into read-only mode. Use together with `ALEPH_APP_BANNER` to display a notification for users (see below). To put a single collection into read-only mode instead, use `aleph configure-collection <foreign_id> --maintenance` (and `--no-maintenance` to lift it).
 
 ---
 
@@ -192,6 +192,11 @@ HTTPS enforcement, HSTS, security headers (Content Security Policy, Permissions-
 - **Type**: Boolean
 - **Default**: `true` if OAuth is disabled, otherwise `false`
 - **Description**: Enables password-based authentication. Typically disabled when using SSO/OAuth.
+
+#### `ALEPH_SHARE_SUGGEST_ROLES`
+- **Type**: Boolean
+- **Default**: `true`
+- **Description**: When sharing a collection, suggest user accounts matching a typed name prefix. This lets any logged-in user look up other users' names, so it should be turned off on public instances with open registration. When disabled, collections can only be shared by entering a user's exact e-mail address.
 
 ### Session Management
 
@@ -383,6 +388,11 @@ HTTPS enforcement, HSTS, security headers (Content Security Policy, Permissions-
 - **Default**: `"1000"`
 - **Description**: Number of documents to fetch per scroll request during cross-referencing.
 
+#### `ALEPH_XREF_REIFY_MENTIONS`
+- **Type**: Boolean
+- **Default**: `True`
+- **Description**: Disable generating entities from NER results during xref
+
 #### `FTM_COMPARE_MODEL`
 - **Type**: String
 - **Default**: None
@@ -446,7 +456,7 @@ HTTPS enforcement, HSTS, security headers (Content Security Policy, Permissions-
 #### `FTM_ASSETS_URL`
 - **Type**: String (URL)
 - **Default**: None
-- **Description**: Base URL for Follow the Money (FTM) assets and resources.
+- **Description**: Base URL the [ftm-assets](https://github.com/dataresearchcenter/ftm-assets) images are served from statically. Entity images are looked up by `wikidataId` at `<url>/<id>/meta.json`.
 
 ---
 

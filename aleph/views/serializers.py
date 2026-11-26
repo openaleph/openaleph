@@ -139,7 +139,9 @@ class RoleSerializer(Serializer):
         obj["links"] = {"self": url_for("roles_api.view", id=obj.get("id"))}
         obj["writeable"] = request.authz.can_write_role(obj.get("id"))
         obj["shallow"] = obj.get("shallow", True)
-        if self.nested or not obj["writeable"]:
+        if self.nested:
+            obj.pop("api_key", None)
+        if not obj["writeable"]:
             obj.pop("has_password", None)
             obj.pop("is_admin", None)
             obj.pop("is_muted", None)
@@ -176,6 +178,7 @@ class CollectionSerializer(Serializer):
     def _serialize(self, obj):
         pk = obj.get("id")
         authz = request.authz if obj.get("secret") else None
+        can_write = request.authz.can(pk, request.authz.WRITE)
         obj["links"] = {
             "self": url_for("collections_api.view", collection_id=pk),
             "xref_export": url_for("xref_api.export", collection_id=pk, _authz=authz),
@@ -183,9 +186,8 @@ class CollectionSerializer(Serializer):
             "ui": collection_url(pk),
         }
         obj["shallow"] = obj.get("shallow", True)
-        obj["writeable"] = not obj.get("external") and request.authz.can(
-            pk, request.authz.WRITE
-        )
+        obj["writeable"] = not obj.get("external") and can_write
+        obj["shareable"] = can_write
         creator_id = obj.pop("creator_id", None)
         obj["creator"] = self.resolve(Role, creator_id, RoleSerializer)
         obj["team"] = []
@@ -220,8 +222,11 @@ class EntitySerializer(Serializer):
             prop = schema.get(name)
             if prop is None or prop.type != registry.entity:
                 continue
+            prop_range = prop.range
+            if prop_range is not None and prop_range.is_a(Document.SCHEMA):
+                prop_range = model.get(Document.SCHEMA)
             for value in ensure_list(values):
-                self.queue(Entity, value, schema=prop.range)
+                self.queue(Entity, value, schema=prop_range)
 
     def _serialize(self, obj):  # noqa: C901
         proxy = make_entity_proxy(dict(obj))
@@ -296,7 +301,8 @@ class EntitySerializer(Serializer):
                     "entities_api.translate", entity_id=proxy.id
                 )
 
-            tracer = defer.tasks.translate.get_tracer(TRACER_URI)
+            dataset = "collection_%s" % obj["collection"]["id"]
+            tracer = defer.tasks.translate.get_tracer(dataset, TRACER_URI)
             obj["processing_status"] = {"translate": tracer.is_processing(obj["id"])}
 
         return obj

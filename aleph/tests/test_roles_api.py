@@ -23,6 +23,13 @@ class RolesApiTestCase(TestCase):
         assert res.status_code == 200, res
         assert res.json["total"] >= 3, res.json
 
+    def test_suggest_disabled(self):
+        _, headers = self.login(is_admin=True)
+        SETTINGS.SHARE_SUGGEST_ROLES = False
+        res = self.client.get("/api/2/roles/_suggest?prefix=user", headers=headers)
+        assert res.status_code == 403, res
+        SETTINGS.SHARE_SUGGEST_ROLES = True
+
     def test_view(self):
         res = self.client.get("/api/2/roles/%s" % self.rolex)
         assert res.status_code == 404, res

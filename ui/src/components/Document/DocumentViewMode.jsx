@@ -26,16 +26,16 @@ const PdfViewer = lazy(() =>
 export class DocumentViewMode extends React.Component {
   shouldDisableSearch() {
     const { activeMode, textMode, location } = this.props;
-    
+
     // Only disable search for view mode (not text mode) when in search preview
     if (activeMode === 'view' && !textMode && location) {
       const parsedHash = queryString.parse(location.hash);
       const parsedSearch = queryString.parse(location.search);
-      
+
       // Check if we're in a search preview
       return !!(parsedHash['preview:id'] && parsedHash.q && (parsedSearch.q || parsedSearch.csq));
     }
-    
+
     return false;
   }
 
@@ -47,11 +47,13 @@ export class DocumentViewMode extends React.Component {
     if (processingError && processingError.length) {
       return <DefaultViewer document={document} dir={dir} />;
     }
+    // The browse tab lists child documents for any schema, e.g. an
+    // Email's attachments or the files embedded in a PDF.
+    if (activeMode === 'browse') {
+      return <FolderViewer document={document} dir={dir} />;
+    }
 
     if (document.schema.isA('Email')) {
-      if (activeMode === 'browse') {
-        return <FolderViewer document={document} dir={dir} />;
-      }
       return (
         <EmailViewer document={document} activeMode={activeMode} dir={dir} />
       );
@@ -92,9 +94,9 @@ export class DocumentViewMode extends React.Component {
     if (document.schema.isA('Pages')) {
       return (
         <Suspense fallback={<SectionLoading />}>
-          <PdfViewer 
-            document={document} 
-            activeMode={activeMode} 
+          <PdfViewer
+            document={document}
+            activeMode={activeMode}
             dir={dir}
             disableSearch={disableSearch}
           />

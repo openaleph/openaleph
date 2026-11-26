@@ -2,8 +2,8 @@ import logging
 
 from followthemoney import model
 from normality import normalize
+from openaleph_search.index.configure import configure_index
 from openaleph_search.index.indexer import (
-    configure_index,
     delete_safe,
     index_safe,
     query_delete,
@@ -88,6 +88,8 @@ def configure_collections():
             "contains_ai_comment": {"type": "text"},
             "taggable": FieldType.BOOL,
             "external": FieldType.BOOL,
+            "maintenance": FieldType.BOOL,
+            "lakehouse_uri": FieldType.KEYWORD,
             "created_at": {"type": "date"},
             "updated_at": {"type": "date"},
             "count": {"type": "long"},

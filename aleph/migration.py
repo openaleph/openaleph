@@ -14,13 +14,13 @@ def upgrade_system():
     flask_migrate.upgrade()
     archive.upgrade()
     create_system_roles()
+    # openaleph-procrastinate:
+    tasks_db = get_db()
+    tasks_db.configure()
     upgrade_search()
     # transition to OpenAleph 6
     # this breaks and users have to manually fix foreign_ids in database
     validate_collection_foreign_ids()
-    # openaleph-procrastinate:
-    db = get_db()
-    db.configure()
 
 
 def cleanup_deleted():

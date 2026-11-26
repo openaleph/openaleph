@@ -2,6 +2,7 @@ import logging
 from typing import Any, Iterator
 
 from banal import ensure_list
+from flask import request
 from followthemoney import EntityProxy
 from openaleph_search import EntitiesQuery, Query, SearchQueryParser
 from openaleph_search.core import get_es
@@ -31,7 +32,7 @@ class CollectionsQuery(Query):
     def get_filters(self, **kwargs):
         filters = super(CollectionsQuery, self).get_filters(**kwargs)
         if self.parser.getbool("filter:writeable"):
-            ids = self.parser.authz.collections(self.parser.authz.WRITE)
+            ids = request.authz.collections(request.authz.WRITE)
             filters.append({"ids": {"values": ids}})
         return filters
 
@@ -60,6 +61,13 @@ class CollectionsQuery(Query):
             )
 
         return query
+
+    def get_sort(self):
+        # if self.parser.sorts[0][0] == "relevance" crashes on empty
+        sort = [f for (f, d) in self.parser.sorts]
+        if sort == ["relevance"]:
+            return self.SORT_DEFAULT
+        return super().get_sort()
 
     def get_index(self):
         return collections_index()
@@ -173,7 +181,10 @@ class MessageThreadQuery:
     SCHEMATA = ("Email", "Message")
     # FIXME this needs a bit rethink about the ?dehydrate=True param for
     # EntityReferenceMode and similar UI logic in general
-    INCLUDES = {"Email": ["sender", "emitters", "recipients"]}
+    INCLUDES = {
+        "Email": ["sender", "emitters", "recipients"],
+        "Message": ["sender", "recipients"],
+    }
 
     # Hard backend caps — callers can request a lower limit via the parser
     # but cannot exceed these.

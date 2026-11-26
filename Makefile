@@ -147,5 +147,6 @@ migrations:
 
 documentation:
 	zensical build
+	putfs sync --delete ./site putfs://static.darc.zone/darc.li/docs/openaleph
 
 .PHONY: services stop api worker ui upgrade update shell tail test lint format build install dev clean up

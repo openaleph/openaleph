@@ -8,9 +8,9 @@ const DEFAULT_LANG = 'en';
 interface IImageAttribution {
   readonly license: string;
   readonly license_url: string;
-  readonly author?: string;
-  readonly source?: string;
-  readonly source_url?: string;
+  readonly author?: string | null;
+  readonly source?: string | null;
+  readonly source_url?: string | null;
 }
 
 interface IImageAlt {
@@ -21,16 +21,17 @@ interface IImageAlt {
 interface IImageMeta {
   readonly id: string;
   readonly name: string;
+  readonly sha256?: string | null;
   readonly url: string;
-  readonly original_url: string;
   readonly thumbnail_url: string;
+  readonly original_url?: string | null;
   readonly alt: IImageAlt[];
-  readonly attribution: IImageAttribution;
+  readonly attribution?: IImageAttribution | null;
 }
 
 interface IComponent {
   readonly entity: Entity;
-  readonly api: string;
+  readonly root: string; // base url the asset store is served from
   readonly thumbnail?: boolean;
   readonly fallback?: boolean;
 }
@@ -45,26 +46,29 @@ const extractAlt = (image: IImageMeta, lang: string = DEFAULT_LANG): string => {
   return image.alt[0]?.text || image.name;
 };
 
-const makeMetaUrl = (api: string, id: string): string => `${api}/img/${id}`;
+const makeMetaUrl = (root: string, id: string): string =>
+  `${root}/${id}/meta.json`;
 
-async function fetchImageMeta(
-  url: string,
-  opts: RequestInit = {}
-): Promise<any> {
-  const res = await fetch(url, opts);
-  if (res.ok) {
-    const data = await res.json();
-    return data;
-  }
-  throw new Error(`Fetch error: ${res.status} ${res.statusText}`);
-}
+// urls in meta.json are relative to its location
+const resolveUrl = (url: string, base: string): string =>
+  new URL(url, base).toString();
 
 const getImage = async (
-  api: string,
+  root: string,
   id: string,
   opts: RequestInit = {}
-): Promise<IImageMeta> =>
-  fetchImageMeta(makeMetaUrl(api, id), opts) as Promise<IImageMeta>;
+): Promise<IImageMeta> => {
+  const res = await fetch(makeMetaUrl(root, id), opts);
+  if (!res.ok) {
+    throw new Error(`Fetch error: ${res.status} ${res.statusText}`);
+  }
+  const image: IImageMeta = await res.json();
+  return {
+    ...image,
+    url: resolveUrl(image.url, res.url),
+    thumbnail_url: resolveUrl(image.thumbnail_url, res.url),
+  };
+};
 
 export function ImageAttribution(props: { attribution: IImageAttribution }) {
   const { license, license_url, author, source, source_url } =
@@ -98,7 +102,7 @@ export default function EntityImage(props: IComponent) {
     // currently, only qid is supported
     if (id) {
       setLoading(true);
-      getImage(props.api, id.toString())
+      getImage(props.root, id.toString())
         .then((r) => {
           setImage(r);
           setLoading(false);
@@ -111,7 +115,7 @@ export default function EntityImage(props: IComponent) {
       setLoading(false);
       setImage(null);
     }
-  }, [id, props.api]);
+  }, [id, props.root]);
 
   if (loading) {
     return (

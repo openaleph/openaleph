@@ -23,7 +23,7 @@ import {
   entityReferenceQuery,
   entitySimilarQuery,
   entityMoreLikeThisQuery,
-  folderDocumentsQuery,
+  folderChildrenCountQuery,
   entityThreadQuery,
 } from 'queries';
 import {
@@ -101,7 +101,9 @@ class EntityViews extends React.Component {
     const hasTextOnlyMode = entity.schema.isAny(['Pages', 'Image']);
     const hasTextMode =
       hasTextOnlyMode || entity.schema.isAny(['Video', 'Audio']);
-    const hasBrowseMode = entity.schema.isA('Folder');
+    const isFolder = entity.schema.isA('Folder');
+    const hasBrowseMode =
+      isFolder || (entity.schema.isDocument() && children.total > 0);
     const hasCSVExplorer = !isPreview && entity.schema.isA('Table');
     const hasViewer = entity.schema.isAny([
       'Pages',
@@ -112,7 +114,7 @@ class EntityViews extends React.Component {
       'PlainText',
     ]);
     const hasDocumentViewMode =
-      hasViewer || (!hasBrowseMode && !hasTextOnlyMode);
+      hasViewer || (!isFolder && !hasTextOnlyMode);
     const hasViewMode = entity.schema.isDocument() && hasDocumentViewMode;
     const hasTranslation = !!entity.getFirst('translatedText');
     const processingError = entity.getProperty('processingError');
@@ -179,6 +181,7 @@ class EntityViews extends React.Component {
           {hasCSVExplorer && (
             <Tab
               id="csv-explorer"
+              disabled={!!processingError?.length}
               title={
                 <>
                   <Icon icon="database" className="left-icon" />
@@ -296,13 +299,16 @@ class EntityViews extends React.Component {
           {!references.total && references.isPending && (
             <Tab id="loading" title={<TextLoading loading={true} />} />
           )}
-          {entity.schema.isA("Email") && (
+          {(entity.schema.isA("Email") || entity.schema.isA("Message")) && (
             <Tab
               id="thread"
               disabled={thread.total === 0}
               title={
                 <TextLoading loading={thread.isPending}>
-                  <Schema.Icon schema="Email" className="left-icon" />
+                  <Schema.Icon
+                    schema={entity.schema.name}
+                    className="left-icon"
+                  />
                   <FormattedMessage
                     id="entity.info.thread"
                     defaultMessage="Thread"
@@ -409,7 +415,7 @@ class EntityViews extends React.Component {
               panel={<EntityMoreLikeThisMode entity={entity} />}
             />
           )}
-          {entity.schema.isDocument() && !isPreview && (
+          {entity.schema.isDocument() && !isPreview && !entity.schema.isA('Table') && (
             <Tab
               id="screening"
               disabled={screening.total === 0}
@@ -429,6 +435,7 @@ class EntityViews extends React.Component {
           {entity?.collection?.writeable && entity.schema.isA('Table') && (
             <Tab
               id="mapping"
+              disabled={!!processingError?.length}
               title={
                 <>
                   <Icon icon="new-object" className="left-icon" />
@@ -449,7 +456,7 @@ class EntityViews extends React.Component {
 
 const mapStateToProps = (state, ownProps) => {
   const { entity, location, activeMode, isPreview } = ownProps;
-  const childrenQuery = folderDocumentsQuery(location, entity.id, undefined);
+  const childrenQuery = folderChildrenCountQuery(location, entity.id);
   const reference = selectEntityReference(state, entity.id, activeMode);
 
   // Check if we're in a search preview and get search result count

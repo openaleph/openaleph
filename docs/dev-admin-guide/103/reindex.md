@@ -10,7 +10,7 @@ We are indexing more information now, most notably about person and company name
 
 The reindexing is parallelized and can be as fast as resources available.
 
-On [search.openaleph.org](https://search.openaleph.org) we can re-index several TB within one day. On our managed [DARC](https://darc.li) deployments we have seen throughput of 40.000 entity docs / second. More full-text requires more computation time for Elasticsearch, as the ICU analysis is heavy.
+On [search.openaleph.org](https://search.openaleph.org) we can re-index several TB within one day. On our managed [DARC](https://darc.li) deployments we have seen throughput of 100.000 entity docs / second. More full-text requires more computation time for Elasticsearch, as the ICU analysis is heavy.
 
 It is hard to predict as many factors impact the speed for reindexing, but a rule of thumb is that an OpenAleph instance with less than 1 TB of index data can be reindexed within 24h.
 
@@ -139,6 +139,39 @@ This creates multiple tasks for 10,000 entity batches that workers will consume 
 - Worker logs
 - OpenAleph Status dashboard
 - Database task queue
+
+To keep a large reindex apart from the regular workload, route the batches to a dedicated worker queue with `--queue-name` (it implies `--queue-batches`) and run index workers on that queue:
+
+```bash
+aleph reindex-full --queue --queue-name reindex
+procrastinate worker -q reindex
+```
+
+To skip specific collections (e.g. very large ones you reindex separately), pass their foreign IDs with `--exclude` (repeatable):
+
+```bash
+aleph reindex-full --queue --queue-batches --exclude big_leak --exclude other_dataset
+```
+
+For very large collections, walking all entity ids to cut the batches can be slower than the workers index them. `--sample-ranges` cuts the batches from a table sample in one query instead. `--batch-size` then counts fragments rather than entities (a document can have many), so raise it for document-heavy collections:
+
+```bash
+aleph reindex big_leak --queue-batches --sample-ranges --batch-size 50000
+```
+
+To continue a stopped `aleph reindex` of a collection, pass the last id of its last queued batch as `--resume-id`. Batches that were already queued stay in the queue, and the pre-index steps already ran, so skip them:
+
+```sql
+-- in the procrastinate database
+SELECT args->'payload'->'id_range'->>'last' FROM procrastinate_jobs
+WHERE task_name = 'aleph.procrastinate.tasks.index_entities_by_ids'
+  AND args->>'dataset' = 'collection_<id>'
+ORDER BY id DESC LIMIT 1;
+```
+
+```bash
+aleph reindex big_leak --queue-batches --no-model --no-mappings --no-profiles --resume-id <id>
+```
 
 #### Synchronous Reindexing (For Development or Debugging)
 
