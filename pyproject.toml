@@ -89,9 +89,6 @@ lxml = "^6.1.1"
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry.requires-plugins]
-poetry-plugin-export = ">=1.8"
-
 [tool.pytest_env]
 DEBUG = 1
 OPENALEPH_INGEST_DEFER = 0
