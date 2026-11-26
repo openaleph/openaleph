@@ -126,3 +126,5 @@ docker compose run --rm worker aleph upgrade
 ```
 
 OpenAleph is then reachable at [localhost:8080](http://localhost:8080)
+
+For a public deployment, put a [reverse proxy](reverse-proxy.md) in front of the `ui` service.

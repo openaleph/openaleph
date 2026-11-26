@@ -101,6 +101,7 @@ nav:
       - Deployment:
         - Services overview: dev-admin-guide/102/services.md
         - Configuration reference: dev-admin-guide/102/configuration.md
+        - Reverse proxy: dev-admin-guide/102/reverse-proxy.md
         - Docker example: dev-admin-guide/102/docker.md
         - Backup strategy: dev-admin-guide/102/backup.md
       - Migration:

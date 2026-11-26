@@ -1160,26 +1160,8 @@ def resetcache():
 @cli.command()
 @click.option("-o", "--outfile", type=click.File("w"), default="-")
 def checksums(outfile: TextIO) -> None:
-    r"""Stream all the content hashes aleph knows about, one per line.
-
-    This covers the content hashes in the documents table as well as the
-    checksums mentioned by entities in the search index. Hashes can occur
-    more than once as the two sources overlap, pipe through `sort -u` to
-    get a unique listing.
-
-    Collections that have a `lakehouse_uri` are left out: their blobs are
-    stored in that external lakehouse dataset, not in the aleph archive.
-
-    The counterpart is the listing of the blobs that are actually stored
-    in a local (file-based) archive. Those live in the leaf directories
-    of the archive path, each of which is named after the content hash it
-    holds, so printing just the last path segment gives the hashes:
-
-        find /path/to/archive -type d -links 2 -printf '%f\n'
-
-    Diffing the two sorted listings shows which blobs are dangling in the
-    archive and which ones are missing from it.
-    """
+    """Export an unsorted and not deduped stream of all checksums of internal
+    collections from documents table and search index."""
     for content_hash in iter_checksums():
         outfile.write("%s\n" % content_hash)
 

@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 from urllib.parse import urlencode, urljoin
 
 import sentry_sdk
@@ -6,11 +7,9 @@ from anystore.logging import configure_logging
 from flask import Flask, request
 from flask import url_for as flask_url_for
 from flask_babel import Babel
-from flask_cors import CORS
 from flask_mail import Mail
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-from flask_talisman import Talisman
 from followthemoney import set_model_locale
 from openaleph_search.core import get_es
 from sentry_sdk.integrations.flask import FlaskIntegration
@@ -19,6 +18,7 @@ from servicelayer.cache import get_redis
 from servicelayer.extensions import get_extensions
 from werkzeug.local import LocalProxy
 from werkzeug.middleware.profiler import ProfilerMiddleware
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from aleph import __version__ as aleph_version
 from aleph.cache import Cache
@@ -26,14 +26,12 @@ from aleph.metrics.flask import PrometheusExtension
 from aleph.oauth import configure_oauth
 from aleph.settings import SETTINGS
 
-NONE = "'none'"
 log = logging.getLogger(__name__)
 
 db = SQLAlchemy()
 migrate = Migrate()
 mail = Mail()
 babel = Babel()
-talisman = Talisman()
 prometheus = PrometheusExtension()
 
 
@@ -52,7 +50,7 @@ def _remove_session(*args, **kwargs):
     db.session.remove()
 
 
-def create_app(config=None):
+def create_app(config: dict[str, Any] | None = None) -> Flask:
     if config is None:
         config = {}
 
@@ -104,35 +102,16 @@ def create_app(config=None):
     if SETTINGS.PROFILE:
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
 
+    if SETTINGS.TRUSTED_PROXIES > 0:
+        # Only the client IP: external URLs are built from ALEPH_UI_URL.
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=SETTINGS.TRUSTED_PROXIES, x_proto=0)
+
     migrate.init_app(app, db, directory=SETTINGS.ALEMBIC_DIR)
     configure_oauth(app, cache=get_cache())
     mail.init_app(app)
     db.init_app(app)
     babel.init_app(app, locale_selector=determine_locale)
     prometheus.init_app(app)
-    CORS(
-        app,
-        resources=r"/api/*",
-        origins=SETTINGS.CORS_ORIGINS,
-        supports_credentials=True,
-    )
-    feature_policy = {
-        "accelerometer": NONE,
-        "camera": NONE,
-        "geolocation": NONE,
-        "gyroscope": NONE,
-        "magnetometer": NONE,
-        "microphone": NONE,
-        "payment": NONE,
-        "usb": NONE,
-    }
-    talisman.init_app(
-        app,
-        force_https=SETTINGS.FORCE_HTTPS,
-        strict_transport_security=SETTINGS.FORCE_HTTPS,
-        feature_policy=feature_policy,
-        content_security_policy=SETTINGS.CONTENT_POLICY,
-    )
 
     from aleph.views import mount_app_blueprints
 

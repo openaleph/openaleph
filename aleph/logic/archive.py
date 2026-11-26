@@ -123,20 +123,7 @@ def iter_index_checksums(
 
 
 def iter_checksums() -> Generator[str, None, None]:
-    r"""Stream all the content hashes aleph knows about: the ones stored in
-    the documents table, followed by the ones mentioned by entities in the
-    search index. Hashes are de-duplicated within each of the two sources,
-    but not across them.
-
-    Only the collections without a `lakehouse_uri` are considered: the blobs
-    of a collection that has one don't live in the archive behind aleph but
-    in that (external) lakehouse dataset.
-
-    This does not touch the archive itself. The hashes of the blobs stored
-    in a local (file-based) archive are the names of its leaf directories,
-    so they can be listed without aleph:
-
-        find /path/to/archive -type d -links 2 -printf '%f\n'
-    """
+    """Stream all the content hashes aleph knows about from the documents table
+    and the search index."""
     yield from iter_document_checksums()
     yield from iter_index_checksums()

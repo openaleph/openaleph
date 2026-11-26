@@ -88,26 +88,22 @@ This document provides a comprehensive reference for all configuration parameter
 
 ## Security and HTTPS
 
+HTTPS enforcement, HSTS, security headers (Content Security Policy, Permissions-Policy, etc.), CORS, and rate limiting are reverse proxy concerns and are not handled by the API application. See [Reverse proxy](reverse-proxy.md) for the required settings.
+
 #### `ALEPH_FORCE_HTTPS`
 - **Type**: Boolean
 - **Default**: `true` if `ALEPH_UI_URL` starts with "https", otherwise `false`
-- **Description**: Forces HTTPS for all connections. Automatically enabled when UI URL uses HTTPS.
+- **Description**: Determines the default URL scheme for generated external links. Automatically enabled when UI URL uses HTTPS.
 
 #### `ALEPH_URL_SCHEME`
 - **Type**: String
 - **Default**: `"https"` if `ALEPH_FORCE_HTTPS` is true, otherwise `"http"`
 - **Description**: Preferred URL scheme for generated links.
 
-#### `ALEPH_CONTENT_POLICY`
-- **Type**: String
-- **Default**: `"default-src: 'self' 'unsafe-inline' 'unsafe-eval' data: *"`
-- **Description**: Content Security Policy header value. Defines allowed sources for scripts, styles, and other resources.
-
-#### `ALEPH_CORS_ORIGINS`
-- **Type**: List (pipe-separated)
-- **Default**: `["*"]`
-- **Separator**: `|`
-- **Description**: Cross-Origin Resource Sharing (CORS) allowed origins. Use pipe character to separate multiple origins (e.g., `http://localhost:3000|https://example.com`).
+#### `ALEPH_TRUSTED_PROXIES`
+- **Type**: Integer
+- **Default**: `1`
+- **Description**: Number of reverse proxies in front of the API. The API reads the client IP from the `X-Forwarded-For` header at that many hops back. `0` disables this and logs the connecting peer's address. See [Reverse proxy](reverse-proxy.md#client-ip).
 
 ---
 
@@ -251,13 +247,6 @@ This document provides a comprehensive reference for all configuration parameter
 - **Type**: Integer
 - **Default**: `200`
 - **Description**: Maximum number of entities to return per property when expanding entity relationships.
-
-### Rate Limiting
-
-#### `ALEPH_API_RATE_LIMIT`
-- **Type**: Integer (requests per minute)
-- **Default**: `30`
-- **Description**: Maximum API requests per minute for anonymous users. The rate window is fixed at 15 minutes.
 
 ### Export Limits
 
@@ -499,7 +488,6 @@ This document provides a comprehensive reference for all configuration parameter
 The following settings are defined in the code but are not typically overridden:
 
 - **`SITEMAP_FLOOR`**: `"2019-06-22"` - Minimum update date for sitemap.xml
-- **`API_RATE_WINDOW`**: `15` minutes - Fixed time window for rate limiting
 - **`REACT_FTM_URL`**: CDN URL for React FTM embeds
 - **`PROCRASTINATE_TASKS`**: `"aleph.procrastinate.tasks"` - Python module path for task definitions
 - **`SQLALCHEMY_TRACK_MODIFICATIONS`**: `false` - Disables SQLAlchemy event system for model changes
