@@ -16,7 +16,7 @@ dependencies = [
     "openaleph-search (>=5.4.0,<6.0.0)",
     "openaleph-procrastinate (>=5.4.1,<6.0.0)",
     "ftmq[postgres] (>=5.3.3,<6.0.0)",
-    "ftm-lakehouse @ git+https://github.com/openaleph/ftm-lakehouse.git",
+    "ftm-lakehouse (>=0.10.3,<0.11.0)",
     "nomenklatura (>=4.17.6,<5.0.0)",
     "normality (>=3.1.0,<4.0.0)",
     "pydantic (>=2.10.6,<3.0.0)",
